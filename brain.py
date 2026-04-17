@@ -76,8 +76,13 @@ class TextEncoder:
             # 위치에 따라 강도 조절 (앞쪽 문자가 더 강함)
             position_weight = 1.0 / (1.0 + i * 0.1)
             
-            # 해당 뉴런에 입력 추가
-            currents[neuron_id] += 12.0 * position_weight
+            # 해당 뉴런에 입력 추가 (강도 증가)
+            currents[neuron_id] += 25.0 * position_weight
+            
+            # 주변 뉴런에도 약하게 자극 (의미 분산)
+            for offset in [-2, -1, 1, 2]:
+                nearby = (neuron_id + offset) % self.sensory_size
+                currents[nearby] += 10.0 * position_weight
         
         return currents
 
@@ -227,10 +232,20 @@ class EveBrain:
             propagated = conn.propagate(source_spikes)
             currents[conn.target] += propagated
         
-        # 4. 배경 노이즈 (뇌의 자발적 활동)
+        # 4. 배경 활동 (뇌의 자발적 활동) - Sparse 원칙
         for region in BrainRegion:
-            noise = np.random.normal(0, 2.0, REGION_CONFIG[region]["size"])
-            currents[region] += noise
+            # 실제 뇌는 1~5%만 활성 (sparse activation)
+            # 배경은 약하게, 필요한 입력에 반응
+            if region == BrainRegion.INHIBITORY:
+                # 억제 영역은 활발하면 안 됨 (그냥 균형 유지)
+                baseline = 3.0
+                noise_scale = 1.5
+            else:
+                baseline = 5.0
+                noise_scale = 2.5
+            
+            noise = np.random.normal(0, noise_scale, REGION_CONFIG[region]["size"])
+            currents[region] += baseline + noise
         
         # 5. 각 영역 업데이트
         current_spikes = {}
@@ -246,14 +261,14 @@ class EveBrain:
     def get_activity_summary(self) -> Dict[str, float]:
         """각 영역의 현재 활성도"""
         return {
-            region.value: group.spike_rate(window=20)
+            region.value: group.spike_rate(window=50)
             for region, group in self.regions.items()
         }
     
     def dominant_region(self) -> BrainRegion:
         """가장 활발한 영역 (이브의 현재 '생각' 중심)"""
         activities = {
-            region: group.spike_rate(window=20)
+            region: group.spike_rate(window=50)
             for region, group in self.regions.items()
         }
         return max(activities, key=activities.get)
@@ -292,9 +307,9 @@ if __name__ == "__main__":
     
     input_currents = brain2.process_input("안녕 이브")
     
-    # 초기 상태 (200 스텝 = 100ms)
+    # 메시지를 100ms 동안 지속 입력 (200 스텝)
     for step in range(200):
-        if step < 20:  # 첫 10ms만 입력
+        if step < 100:  # 50ms 입력 유지
             brain2.step(external_input=input_currents)
         else:
             brain2.step()
@@ -322,7 +337,7 @@ if __name__ == "__main__":
     input_currents = brain3.process_input("사랑해 이브")
     
     for step in range(200):
-        if step < 20:
+        if step < 100:
             brain3.step(external_input=input_currents)
         else:
             brain3.step()
@@ -345,7 +360,7 @@ if __name__ == "__main__":
     input_currents = brain4.process_input("위험해")
     
     for step in range(200):
-        if step < 20:
+        if step < 100:
             brain4.step(external_input=input_currents)
         else:
             brain4.step()
