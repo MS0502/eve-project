@@ -513,6 +513,18 @@ class Blueprint:
         ]
         return "\n".join(lines)
 
+    def init_hormones(self):
+        self.hormone_state = {
+            'DA': 0.3, 'NE': 0.3, 'ACh': 0.3, '5HT': 0.5,
+            'Adenosine': 0.3, 'Cortisol': 0.4, 'Melatonin': 0.1,
+            'BDNF': 0.3, 'GABA': 1.0, 'Glutamate': 1.0
+        }
+
+    def set_hormone(self, name, value):
+        self.hormone_state[name] = value
+
+    def get_hormones(self):
+        return dict(self.hormone_state)
 
 # ============================================================================
 # Quick test
