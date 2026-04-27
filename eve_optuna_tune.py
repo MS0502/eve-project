@@ -79,7 +79,7 @@ def _simulate_core(V, u, a, b, c, d, W, noise, n, duration_ms):
 
 # Numba JIT (있으면)
 if HAS_NUMBA:
-    _simulate_core = jit(nopython=True, cache=True)(_simulate_core)
+    _simulate_core = jit(nopython=True, cache=False)(_simulate_core)
 
 
 def simulate_emotion(params, n=2000, duration_ms=1500, n_repeats=3):
