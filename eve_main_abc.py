@@ -112,7 +112,7 @@ class EVE_TierAB:
         def gnw_to_hormone(focus, salience, ctx):
             self.hs.category_to_hormone({focus}, strength=0.05 * salience)
             self.broadcast_count += 1
-        self.wm.add_broadcast_listener(gnw_to_hormone)
+        self.wm.register_listener('hormone_modulator', gnw_to_hormone)
 
     # ============= 외부 입력 =============
     def perceive(self, category: str, strength: float = 0.7,
