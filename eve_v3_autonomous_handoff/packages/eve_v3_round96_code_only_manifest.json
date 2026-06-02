@@ -1,0 +1,6 @@
+{
+  "file": "eve_v3_round96_code_only_no_medium_vectors.zip",
+  "size_bytes": 8062328,
+  "sha256": "f90b8084ed73ec95836977a3fcc0f6a96e0797934fb1c7e354e447a419096dd9",
+  "note": "Code/source package under 25MB for GitHub upload. Excludes seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy. The omitted medium vector file is only needed for broader fastText-backed validation, not for Round95-Round96 focused mapping fixture/precheck tests used in ChatGPT runtime."
+}
