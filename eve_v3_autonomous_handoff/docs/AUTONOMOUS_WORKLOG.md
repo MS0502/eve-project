@@ -223,6 +223,48 @@ Next recommendation:
 
 - Make `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01`, `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02`, and `eve_v3_round96_split_manifest.json` visible under `eve_v3_autonomous_handoff/packages/` in this checkout, then rerun `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.
 
+## Round97 code-only package restore path update
+
+Goal:
+
+- Prefer the new 7.7MB Round96 code-only package over the legacy split package, verify it by manifest SHA-256, and use it for Round96 focused validation and Round97 enable smoke when visible.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/packages/README.md`
+- `eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/DECISION_LOG.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND_V3_R97_CODE_ONLY_PACKAGE_STATUS.md`
+- `eve_v3_autonomous_handoff/validation/ROUND97_CODE_ONLY_PACKAGE_VALIDATION_STATUS.json`
+
+Commands run:
+
+- `find eve_v3_autonomous_handoff/packages -maxdepth 1 -type f -printf '%f %s\n' | sort`
+- `find /workspace -type f \( -name 'eve_v3_round96_code_only_no_medium_vectors.zip' -o -name 'eve_v3_round96_code_only_manifest.json' \) -printf '%p %s\n' | sort`
+- `python -m py_compile eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `python eve_v3_autonomous_handoff/packages/restore_round96_package.py --verify-only`
+- `python -m json.tool eve_v3_autonomous_handoff/validation/ROUND97_CODE_ONLY_PACKAGE_VALIDATION_STATUS.json`
+- `git diff --check`
+
+Results:
+
+- The restore helper now prefers `eve_v3_round96_code_only_no_medium_vectors.zip` with `eve_v3_round96_code_only_manifest.json`.
+- The helper still supports legacy split inputs.
+- The helper verifies SHA-256 and zip integrity before extraction.
+- The code-only package omission of `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy` is documented as a full-validation limitation when medium vectors are required.
+
+Failures / limitations:
+
+- The code-only zip and manifest are still not visible in this execution checkout, so restore, Round96 validation, and Round97 implementation could not proceed here.
+
+Next recommendation:
+
+- Make the two code-only package files visible under `eve_v3_autonomous_handoff/packages/`, then run `python eve_v3_autonomous_handoff/packages/restore_round96_package.py` and continue Round96 validation → Round97 controlled enable smoke.
+
 ## Next log entry format
 
 ```md

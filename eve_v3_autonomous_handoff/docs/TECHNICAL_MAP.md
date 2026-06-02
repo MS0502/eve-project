@@ -118,3 +118,21 @@ Until the files are visible in this execution checkout, the expected restored ou
 - `eve_v3_autonomous_handoff/packages/round96_source/`
 
 Round96 validation and Round97 controlled runtime mapping enable smoke are still blocked by source-package absence, not by code logic.
+
+
+## Preferred Round96 code-only package path
+
+Preferred Round96 source restoration now uses:
+
+- `eve_v3_autonomous_handoff/packages/eve_v3_round96_code_only_no_medium_vectors.zip`
+- `eve_v3_autonomous_handoff/packages/eve_v3_round96_code_only_manifest.json`
+
+The restore helper verifies SHA-256, runs zip integrity testing, and extracts into:
+
+- `eve_v3_autonomous_handoff/packages/round96_source/`
+
+Known omission from the code-only package:
+
+- `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy`
+
+Round95~Round96 focused/adjacent validation and Round97 controlled runtime mapping enable smoke should proceed with the code-only source if present. Full validation requiring the medium vector must be recorded as blocked/partial.

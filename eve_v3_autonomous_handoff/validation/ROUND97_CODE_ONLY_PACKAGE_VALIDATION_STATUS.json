@@ -1,0 +1,43 @@
+{
+  "round": 97,
+  "validation_version": "v3_round97_code_only_package_status",
+  "status": "blocked_code_only_package_not_visible_in_checkout",
+  "preferred_package": {
+    "zip": "eve_v3_autonomous_handoff/packages/eve_v3_round96_code_only_no_medium_vectors.zip",
+    "manifest": "eve_v3_autonomous_handoff/packages/eve_v3_round96_code_only_manifest.json",
+    "missing_medium_vector": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy"
+  },
+  "restore_script": "eve_v3_autonomous_handoff/packages/restore_round96_package.py",
+  "restore_script_supports": [
+    "preferred_code_only_zip",
+    "legacy_split_zip_parts"
+  ],
+  "commands_run": [
+    "find eve_v3_autonomous_handoff/packages -maxdepth 1 -type f -printf '%f %s\\n' | sort",
+    "find /workspace -type f \\( -name 'eve_v3_round96_code_only_no_medium_vectors.zip' -o -name 'eve_v3_round96_code_only_manifest.json' \\) -printf '%p %s\\n' | sort",
+    "python -m py_compile eve_v3_autonomous_handoff/packages/restore_round96_package.py",
+    "python eve_v3_autonomous_handoff/packages/restore_round96_package.py --verify-only",
+    "python -m json.tool eve_v3_autonomous_handoff/validation/ROUND97_CODE_ONLY_PACKAGE_VALIDATION_STATUS.json",
+    "git diff --check"
+  ],
+  "restore_verify_only": {
+    "status": "failed_expected",
+    "reason": "Neither the preferred code-only package nor the legacy split package inputs are visible in this checkout."
+  },
+  "round96_validation": {
+    "status": "not_run",
+    "reason": "Round96 source package could not be restored."
+  },
+  "round97_enable_smoke": {
+    "status": "not_started",
+    "reason": "Round96 source package could not be restored."
+  },
+  "full_validation_medium_vector_status": {
+    "status": "blocked_if_required",
+    "reason": "The preferred code-only package intentionally omits the medium fastText vector file."
+  },
+  "runtime_mapping_enabled": false,
+  "enforcement_enabled": false,
+  "mutations_performed": false,
+  "hard_stop_active": "round96_package_files_not_visible_in_execution_checkout"
+}

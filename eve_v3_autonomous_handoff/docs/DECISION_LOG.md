@@ -131,3 +131,26 @@ Rejected alternatives:
 Result:
 
 - The active hard stop remains `missing_split_package_files_in_execution_checkout`.
+
+
+## D007 — Why the code-only Round96 package is preferred
+
+Choice:
+
+- Prefer `eve_v3_round96_code_only_no_medium_vectors.zip` over the legacy split package when it is visible in the checkout.
+
+Reason:
+
+- The code-only package is below the GitHub upload limit and avoids the repeated split-file visibility problem.
+- It excludes only the medium fastText vector file, which is not required for the Round95~Round96 focused/adjacent mapping validation or Round97 controlled runtime mapping enable smoke.
+- The manifest SHA-256 check and zip integrity test still provide deterministic package validation.
+
+Rejected alternatives:
+
+1. Keep relying only on the split package: repeatedly blocked by checkout visibility issues.
+2. Treat code-only validation as full fastText-backed validation: inaccurate because the medium vector is intentionally absent.
+3. Continue without package verification: unsafe.
+
+Result:
+
+- Codex should use the code-only zip first, and mark any medium-vector-dependent full validation as blocked or partial.

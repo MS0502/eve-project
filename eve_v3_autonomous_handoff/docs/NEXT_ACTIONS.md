@@ -5,7 +5,7 @@
 Round97 preflight note:
 
 - On 2026-06-02, Codex searched `/workspace/eve-project` and `/workspace` for the latest Round96 package and found no `.zip`, `.tar.gz`, `.tgz`, or expanded source tree.
-- Round97 implementation is blocked until the split package parts in `eve_v3_autonomous_handoff/packages/` are visible in this execution checkout, restored, verified, and expanded. A checkout update attempt found no configured git remote and no visible uploaded binary files.
+- Round97 implementation is blocked until either the preferred code-only Round96 package or the legacy split package is visible in `eve_v3_autonomous_handoff/packages/`, verified, and expanded. A checkout update attempt found no configured git remote and no visible uploaded binary files.
 
 
 Latest known generated package:
@@ -27,11 +27,18 @@ Status:
 
 ### Step 1 — Put source package into the repo
 
-Current status: **blocked / still required** until the split files are present.
+Current status: **blocked / still required** until the code-only package files or legacy split files are present in this checkout.
 
-Upload the split Round96 package files into `eve_v3_autonomous_handoff/packages/`, then restore and extract them so Codex can edit the real source directly.
+Upload the preferred code-only Round96 package files into `eve_v3_autonomous_handoff/packages/`, then restore and extract them so Codex can edit the real source directly.
 
-Required files:
+Preferred code-only files:
+
+- `eve_v3_round96_code_only_no_medium_vectors.zip`
+- `eve_v3_round96_code_only_manifest.json`
+
+Note: this package intentionally excludes `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy`. Use it for Round95~Round96 focused/adjacent validation and Round97 controlled runtime mapping enable smoke. If fastText medium-vector full validation is required, record that validation as blocked/partial.
+
+Legacy split files are still accepted:
 
 - `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01` or `part01`
 - `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02` or `part02`
@@ -41,18 +48,18 @@ Restore commands:
 
 ```bash
 cd eve_v3_autonomous_handoff/packages
+python restore_round96_package.py --verify-only
+python restore_round96_package.py
+```
+
+Legacy manual split restore if the split package is used:
+
+```bash
+cd eve_v3_autonomous_handoff/packages
 cat eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01 \
     eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02 \
     > eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
-sha256sum eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
-python restore_round96_package.py --verify-only
-unzip eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip -d round96_source
-```
-
-Equivalent one-command restore after upload:
-
-```bash
-python eve_v3_autonomous_handoff/packages/restore_round96_package.py
+python restore_round96_package.py
 ```
 
 Recommended branch:
@@ -115,16 +122,26 @@ Candidate order after Round97:
 
 ## If Codex resumes before the source package is available
 
-Do not attempt to reconstruct or fake the Round96 source tree. Check `eve_v3_autonomous_handoff/packages/` for split package files first. If the files are still absent, record the package as still missing, keep runtime mapping disabled, and wait for the actual source package parts to be uploaded.
+Do not attempt to reconstruct or fake the Round96 source tree. Check `eve_v3_autonomous_handoff/packages/` for the preferred code-only package first, then the legacy split package. If both are absent, record the package as still missing, keep runtime mapping disabled, and wait for package files to become visible in this checkout.
 
 
 ## Latest checkout update attempt
 
-Codex attempted to update/inspect the checkout after the operator reported that the split package files were uploaded to PR #1. In this execution environment:
+Codex attempted to update/inspect the checkout after the operator reported package files were uploaded to PR #1. In this execution environment:
 
 - `.git/config` has no configured remote.
 - `git ls-remote https://github.com/MS0502/eve-project.git` failed with `CONNECT tunnel failed, response 403`.
 - `eve_v3_autonomous_handoff/packages/` still contains only `README.md` and `restore_round96_package.py`.
-- `/workspace` contains no `part01`, `part02`, `manifest`, or long-named Round96 split files.
+- `/workspace` contains no code-only package files, `part01`, `part02`, `manifest`, or long-named Round96 split files.
 
-Next action remains: make the three binary files visible in this checkout, then run `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.
+Next action remains: make either the two code-only package files or the three legacy split files visible in this checkout, then run `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.
+
+
+## Code-only package update
+
+The preferred package is now the 7.7MB code-only zip:
+
+- `eve_v3_round96_code_only_no_medium_vectors.zip`
+- `eve_v3_round96_code_only_manifest.json`
+
+Codex should use this package before the legacy split workflow when it is visible in the checkout. The medium vector omission must be recorded honestly in validation results if any full validation path requires it.

@@ -139,3 +139,21 @@ find eve_v3_autonomous_handoff/packages -maxdepth 1 -type f -printf '%f %s\n' | 
 ```
 
 The output must include the two `.part` files and the manifest before Round96 restoration can start.
+
+
+## Preferred code-only package upload checklist
+
+The fastest unblock path is now the code-only package. Upload these two files to `eve_v3_autonomous_handoff/packages/`:
+
+```text
+eve_v3_round96_code_only_no_medium_vectors.zip
+eve_v3_round96_code_only_manifest.json
+```
+
+This package excludes only:
+
+```text
+seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy
+```
+
+Codex should use it for Round95~Round96 focused/adjacent validation and Round97 controlled runtime mapping enable smoke. If a fastText medium-vector full validation path needs the missing vector, Codex must mark that validation as blocked/partial rather than claiming a full pass.
