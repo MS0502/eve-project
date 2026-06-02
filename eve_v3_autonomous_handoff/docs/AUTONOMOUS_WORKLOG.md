@@ -140,6 +140,45 @@ Next recommendation:
 
 - Upload `part01`, `part02`, and `manifest` to `eve_v3_autonomous_handoff/packages/`, then run `python eve_v3_autonomous_handoff/packages/restore_round96_package.py` and continue Round97.
 
+## Round97 restore workflow filename-alias update
+
+Goal:
+
+- Support the operator-provided short split-package filenames `part01`, `part02`, and `manifest` in addition to the long package filenames.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/packages/README.md`
+- `eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/reports/ROUND_V3_R97_PACKAGE_RESTORE_READINESS.md`
+- `eve_v3_autonomous_handoff/validation/ROUND97_PACKAGE_RESTORE_READINESS_VALIDATION_STATUS.json`
+
+Commands run:
+
+- `find eve_v3_autonomous_handoff/packages -maxdepth 2 -type f -printf '%p %s\n' | sort`
+- `find /workspace -type f \( -name '*round96*part*' -o -name '*part01' -o -name '*part02' -o -name '*split_manifest*' -o -name 'manifest' -o -name '*.zip' \) -printf '%p %s\n' | sort | head -200`
+- `python -m py_compile eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `python eve_v3_autonomous_handoff/packages/restore_round96_package.py --verify-only`
+- `python -m json.tool eve_v3_autonomous_handoff/validation/ROUND97_PACKAGE_RESTORE_READINESS_VALIDATION_STATUS.json`
+- `git diff --check`
+
+Results:
+
+- The restore script now accepts either long split-package names or short uploaded names.
+- The local checkout still does not contain the uploaded binary part files, so Round96 restoration and Round97 implementation remain blocked here.
+
+Failures / limitations:
+
+- User reported that files were uploaded, but they are not visible in this execution checkout.
+
+Next recommendation:
+
+- Ensure the uploaded binary files are present in this checkout under `eve_v3_autonomous_handoff/packages/`, then rerun `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.
+
 ## Next log entry format
 
 ```md

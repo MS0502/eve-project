@@ -10,12 +10,22 @@
 eve_v3_autonomous_handoff/packages/
 ```
 
-필수 파일:
+필수 파일은 긴 파일명 또는 짧은 업로드 파일명 중 하나로 인식된다.
+
+긴 파일명:
 
 ```text
 eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01
 eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02
 eve_v3_round96_split_manifest.json
+```
+
+짧은 업로드 파일명:
+
+```text
+part01
+part02
+manifest
 ```
 
 예상 크기:
@@ -31,11 +41,14 @@ eve_v3_round96_split_manifest.json
 cat eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01 \
     eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02 \
     > eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
+
+# 짧은 파일명으로 업로드한 경우:
+cat part01 part02 > eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
 ```
 
 ## Verify SHA-256
 
-`eve_v3_round96_split_manifest.json`의 `source_sha256` 값과 복원된 zip의 SHA-256이 같아야 한다.
+`eve_v3_round96_split_manifest.json` 또는 `manifest`의 `source_sha256` 값과 복원된 zip의 SHA-256이 같아야 한다.
 
 ```bash
 sha256sum eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip

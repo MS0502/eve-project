@@ -16,11 +16,11 @@ import zipfile
 from pathlib import Path
 
 PACKAGE_STEM = "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip"
-PART_NAMES = (
-    f"{PACKAGE_STEM}.part01",
-    f"{PACKAGE_STEM}.part02",
+PART_CANDIDATES = (
+    (f"{PACKAGE_STEM}.part01", "part01"),
+    (f"{PACKAGE_STEM}.part02", "part02"),
 )
-MANIFEST_NAME = "eve_v3_round96_split_manifest.json"
+MANIFEST_CANDIDATES = ("eve_v3_round96_split_manifest.json", "manifest")
 EXTRACT_DIR = "round96_source"
 
 
@@ -40,12 +40,30 @@ def load_expected_sha256(manifest_path: Path) -> str:
     return expected.lower()
 
 
+def first_existing(package_dir: Path, candidates: tuple[str, ...]) -> Path | None:
+    for name in candidates:
+        path = package_dir / name
+        if path.exists():
+            return path
+    return None
+
+
 def require_inputs(package_dir: Path) -> tuple[list[Path], Path]:
-    part_paths = [package_dir / name for name in PART_NAMES]
-    manifest_path = package_dir / MANIFEST_NAME
-    missing = [path.name for path in [*part_paths, manifest_path] if not path.exists()]
-    if missing:
-        missing_list = "\n".join(f"- {name}" for name in missing)
+    part_paths: list[Path] = []
+    missing_groups: list[str] = []
+    for candidates in PART_CANDIDATES:
+        path = first_existing(package_dir, candidates)
+        if path is None:
+            missing_groups.append(" or ".join(candidates))
+        else:
+            part_paths.append(path)
+
+    manifest_path = first_existing(package_dir, MANIFEST_CANDIDATES)
+    if manifest_path is None:
+        missing_groups.append(" or ".join(MANIFEST_CANDIDATES))
+
+    if missing_groups:
+        missing_list = "\n".join(f"- {name}" for name in missing_groups)
         raise FileNotFoundError(
             "Round96 split package inputs are missing:\n"
             f"{missing_list}\n\n"
@@ -85,6 +103,10 @@ def main() -> int:
 
     try:
         part_paths, manifest_path = require_inputs(package_dir)
+        print("Using split package inputs:")
+        for part_path in part_paths:
+            print(f"- {part_path.name}")
+        print(f"- {manifest_path.name}")
         restore_zip(part_paths, zip_path)
         expected_sha256 = load_expected_sha256(manifest_path)
         actual_sha256 = sha256_file(zip_path)

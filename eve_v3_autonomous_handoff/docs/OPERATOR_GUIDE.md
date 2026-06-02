@@ -106,3 +106,23 @@ python eve_v3_autonomous_handoff/packages/restore_round96_package.py
 ```
 
 If restoration succeeds, Codex should run Round96 validation and continue to Round97. If Round97 succeeds and no hard stop appears, Codex should continue to the next safe round without waiting for another “다음 ㄱㄱ”.
+
+## Filename note for uploaded package parts
+
+Codex now accepts either filename style in `eve_v3_autonomous_handoff/packages/`:
+
+```text
+eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01
+eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02
+eve_v3_round96_split_manifest.json
+```
+
+or:
+
+```text
+part01
+part02
+manifest
+```
+
+In this local checkout, the binary files are still not visible. If they were uploaded through GitHub, ensure the current working branch/checkout includes them before asking Codex to continue Round97.

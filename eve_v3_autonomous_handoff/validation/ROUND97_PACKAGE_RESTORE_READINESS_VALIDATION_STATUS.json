@@ -1,7 +1,7 @@
 {
   "round": 97,
   "validation_version": "v3_round97_package_restore_readiness",
-  "status": "restore_workflow_ready_but_parts_absent",
+  "status": "restore_workflow_ready_but_parts_absent_in_checkout",
   "expected_upload_directory": "eve_v3_autonomous_handoff/packages",
   "required_files": [
     "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01",
@@ -23,11 +23,23 @@
   },
   "restore_verify_only": {
     "status": "expected_failure",
-    "reason": "Split package files have not been uploaded into this checkout yet."
+    "reason": "Split package files were not present in this local checkout; the helper now accepts both long package filenames and short uploaded names."
   },
   "runtime_mapping_enabled": false,
   "enforcement_enabled": false,
   "mutations_performed": false,
   "continue_after_round97": true,
-  "hard_stop_active": "missing_split_package_files"
+  "hard_stop_active": "missing_split_package_files_in_local_checkout",
+  "accepted_file_name_sets": {
+    "long_names": [
+      "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01",
+      "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02",
+      "eve_v3_round96_split_manifest.json"
+    ],
+    "short_upload_names": [
+      "part01",
+      "part02",
+      "manifest"
+    ]
+  }
 }

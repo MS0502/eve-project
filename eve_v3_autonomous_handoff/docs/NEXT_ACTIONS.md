@@ -33,9 +33,9 @@ Upload the split Round96 package files into `eve_v3_autonomous_handoff/packages/
 
 Required files:
 
-- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01`
-- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02`
-- `eve_v3_round96_split_manifest.json`
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01` or `part01`
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02` or `part02`
+- `eve_v3_round96_split_manifest.json` or `manifest`
 
 Restore commands:
 

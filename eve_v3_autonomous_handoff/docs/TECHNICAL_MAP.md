@@ -96,9 +96,9 @@ The Round96 source package should now be restored through:
 
 Expected upload inputs:
 
-- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01`
-- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02`
-- `eve_v3_round96_split_manifest.json`
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01` or `part01`
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02` or `part02`
+- `eve_v3_round96_split_manifest.json` or `manifest`
 
 Expected restored outputs after successful verification:
 

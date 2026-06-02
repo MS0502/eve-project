@@ -85,3 +85,25 @@ Rejected alternatives:
 Result:
 
 - Round97 remains blocked only until the split binary files and manifest are uploaded, after which restoration and validation can proceed deterministically.
+
+## D005 — Why short package filenames are accepted
+
+Choice:
+
+- Accept both long split-package filenames and the operator-provided short names `part01`, `part02`, and `manifest`.
+
+Reason:
+
+- The operator reported the upload files by short names.
+- Requiring only long names could falsely block restoration even when the correct binary payloads are present.
+- SHA-256 verification still protects against corrupted, swapped, or partial inputs regardless of filename style.
+
+Rejected alternatives:
+
+1. Require users to rename short files: unnecessary friction.
+2. Trust short files without manifest verification: unsafe.
+3. Proceed without seeing files in this checkout: impossible and unsafe.
+
+Result:
+
+- The restore workflow is filename-tolerant but still blocked in this local checkout until the binary files are visible on disk.

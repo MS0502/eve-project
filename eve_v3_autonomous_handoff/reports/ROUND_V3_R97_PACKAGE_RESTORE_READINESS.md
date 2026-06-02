@@ -12,10 +12,20 @@ Convert the Round97 source-package blocker into an actionable restore workflow f
 
 ## Required uploaded inputs
 
+Long filenames:
+
 ```text
 eve_v3_autonomous_handoff/packages/eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01
 eve_v3_autonomous_handoff/packages/eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02
 eve_v3_autonomous_handoff/packages/eve_v3_round96_split_manifest.json
+```
+
+Short uploaded filenames are also accepted:
+
+```text
+eve_v3_autonomous_handoff/packages/part01
+eve_v3_autonomous_handoff/packages/part02
+eve_v3_autonomous_handoff/packages/manifest
 ```
 
 ## Restore workflow
@@ -33,7 +43,7 @@ The helper will:
 
 ## Current status
 
-The restore workflow is ready, but the binary part files are not present in this checkout. Round97 runtime implementation is therefore still blocked until the split files are uploaded.
+The restore workflow is ready and now accepts both long filenames and the short uploaded names `part01`, `part02`, and `manifest`. However, the binary part files are still not present in this local checkout. Round97 runtime implementation is therefore still blocked until the split files are uploaded.
 
 ## Safety state
 
