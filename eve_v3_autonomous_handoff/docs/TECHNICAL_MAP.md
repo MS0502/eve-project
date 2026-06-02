@@ -71,3 +71,38 @@ Added fields:
 ## Next code path
 
 Round97 should be a controlled enable-smoke round. It must not silently persist broad runtime behavior. It should first create checkpoint and rollback artifacts, then enable only the minimal accepted mapping path for smoke verification.
+
+
+## Round97 preflight finding
+
+The repository still contains the handoff documents but not the expanded Round96 source tree. The following expected code paths are absent and therefore could not be modified or validated:
+
+- `adapters/lex_concept_mapping_adapter.py`
+- `adapters/runtime_smoke_runner.py`
+- `adapters/state_debug_adapter.py`
+- `tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py`
+- `tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py`
+- `tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py`
+
+Round97 controlled runtime mapping enable smoke remains the next code path after the source package is uploaded or expanded.
+
+
+## Round97 package restore path
+
+The Round96 source package should now be restored through:
+
+- `eve_v3_autonomous_handoff/packages/README.md`
+- `eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+
+Expected upload inputs:
+
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01`
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02`
+- `eve_v3_round96_split_manifest.json`
+
+Expected restored outputs after successful verification:
+
+- `eve_v3_autonomous_handoff/packages/eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip`
+- `eve_v3_autonomous_handoff/packages/round96_source/`
+
+After `round96_source/` exists, run the Round96 validation commands from `NEXT_ACTIONS.md`, then proceed into Round97.

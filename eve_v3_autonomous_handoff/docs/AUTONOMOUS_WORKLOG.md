@@ -61,6 +61,85 @@ Result:
 - Runtime mapping remained disabled.
 - Enforcement remained disabled.
 
+## Round97 preflight — source package availability check
+
+Goal:
+
+- Start the Round97 controlled runtime mapping enable-smoke sequence by locating or expanding the latest Round96 source package.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND_V3_R97_PREFLIGHT_SOURCE_PACKAGE_STATUS.md`
+- `eve_v3_autonomous_handoff/validation/ROUND97_PREFLIGHT_SOURCE_PACKAGE_STATUS.json`
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/DECISION_LOG.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+
+Commands run:
+
+- `pwd && rg --files -g 'AGENTS.md' -g 'CODEX_AUTONOMOUS_PROMPT.md' -g 'NEXT_ACTIONS.md' -g '*Round96*' -g '*round96*'`
+- `find .. -name AGENTS.md -print && find . -maxdepth 3 -iname '*round96*' -o -iname '*source*package*' | sed 's#^./##' | head -100`
+- `find /workspace -maxdepth 4 -type f -name '*round96*.zip' -o -name '*Round96*.zip' -o -name 'eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip'`
+- `find /workspace -type f \( -iname '*.zip' -o -iname '*.tar.gz' -o -iname '*.tgz' \) -print | head -200`
+
+Results:
+
+- No Round96 zip or expanded EVE v3 source tree was found in `/workspace/eve-project` or `/workspace`.
+- Round97 runtime mutation was not attempted.
+- Runtime mapping and enforcement remain disabled.
+
+Failures / limitations:
+
+- Focused tests, collect-only, compileall, and full pytest could not be run because the Round96 source tree is absent.
+
+Next recommendation:
+
+- Upload or expand `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip` into the repository, then rerun the Round97 controlled runtime mapping enable smoke gate.
+
+## Round97 package-restore readiness update
+
+Goal:
+
+- Address the source-package blocker by adding a deterministic restore location, restore script, and explicit Round97+ autonomous continuation instructions.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/packages/README.md`
+- `eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `eve_v3_autonomous_handoff/CODEX_AUTONOMOUS_PROMPT.md`
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/DECISION_LOG.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND_V3_R97_PACKAGE_RESTORE_READINESS.md`
+- `eve_v3_autonomous_handoff/validation/ROUND97_PACKAGE_RESTORE_READINESS_VALIDATION_STATUS.json`
+
+Commands run:
+
+- `find eve_v3_autonomous_handoff -maxdepth 4 -type f | sort`
+- `python -m py_compile eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `python eve_v3_autonomous_handoff/packages/restore_round96_package.py --verify-only`
+- `python -m json.tool eve_v3_autonomous_handoff/validation/ROUND97_PACKAGE_RESTORE_READINESS_VALIDATION_STATUS.json`
+- `git diff --check`
+
+Results:
+
+- Added the exact `packages/` upload location and documented the three required split-package files.
+- Added a restore helper that concatenates part files, verifies `source_sha256`, and extracts to `packages/round96_source`.
+- Updated autonomous instructions so Codex must continue past Round97 when validation passes and no hard stop applies.
+- The restore helper correctly reports missing part files in the current repository state.
+
+Failures / limitations:
+
+- The binary part files are still not present in this checkout, so the Round96 zip could not be restored in this pass.
+
+Next recommendation:
+
+- Upload `part01`, `part02`, and `manifest` to `eve_v3_autonomous_handoff/packages/`, then run `python eve_v3_autonomous_handoff/packages/restore_round96_package.py` and continue Round97.
+
 ## Next log entry format
 
 ```md

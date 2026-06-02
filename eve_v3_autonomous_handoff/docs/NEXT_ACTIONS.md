@@ -2,6 +2,12 @@
 
 ## Current position
 
+Round97 preflight note:
+
+- On 2026-06-02, Codex searched `/workspace/eve-project` and `/workspace` for the latest Round96 package and found no `.zip`, `.tar.gz`, `.tgz`, or expanded source tree.
+- Round97 implementation is blocked until the split package parts in `eve_v3_autonomous_handoff/packages/` are uploaded, restored, verified, and expanded.
+
+
 Latest known generated package:
 
 - `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip`
@@ -21,7 +27,33 @@ Status:
 
 ### Step 1 — Put source package into the repo
 
-Upload or expand the latest Round96 package into this repository so Codex can edit the real source directly.
+Current status: **blocked / still required** until the split files are present.
+
+Upload the split Round96 package files into `eve_v3_autonomous_handoff/packages/`, then restore and extract them so Codex can edit the real source directly.
+
+Required files:
+
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01`
+- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02`
+- `eve_v3_round96_split_manifest.json`
+
+Restore commands:
+
+```bash
+cd eve_v3_autonomous_handoff/packages
+cat eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01 \
+    eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02 \
+    > eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
+sha256sum eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
+python restore_round96_package.py --verify-only
+unzip eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip -d round96_source
+```
+
+Equivalent one-command restore after upload:
+
+```bash
+python eve_v3_autonomous_handoff/packages/restore_round96_package.py
+```
 
 Recommended branch:
 
@@ -69,9 +101,18 @@ Stop if:
 - enabling treats vector evidence as AGP anchor
 - tests need weakening
 
-## Phase after Round97
+## Continue after Round97
+
+Do not stop merely because Round97 is complete. If Round97 controlled runtime mapping enable smoke passes validation and no hard stop applies, update docs and choose the next highest-value safe round autonomously.
+
+Candidate order after Round97:
 
 1. AGP proof object expansion
 2. Progress/Feasibility check for autonomous loop
 3. false coherence diagnostics
 4. event/frame graph later
+
+
+## If Codex resumes before the source package is available
+
+Do not attempt to reconstruct or fake the Round96 source tree. Check `eve_v3_autonomous_handoff/packages/` for split package files first. If the files are still absent, record the package as still missing, keep runtime mapping disabled, and wait for the actual source package parts to be uploaded.

@@ -1,0 +1,33 @@
+{
+  "round": 97,
+  "validation_version": "v3_round97_package_restore_readiness",
+  "status": "restore_workflow_ready_but_parts_absent",
+  "expected_upload_directory": "eve_v3_autonomous_handoff/packages",
+  "required_files": [
+    "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01",
+    "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02",
+    "eve_v3_round96_split_manifest.json"
+  ],
+  "restore_script": "eve_v3_autonomous_handoff/packages/restore_round96_package.py",
+  "expected_restored_zip": "eve_v3_autonomous_handoff/packages/eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip",
+  "expected_extract_dir": "eve_v3_autonomous_handoff/packages/round96_source",
+  "commands_run": [
+    "find eve_v3_autonomous_handoff -maxdepth 4 -type f | sort",
+    "python -m py_compile eve_v3_autonomous_handoff/packages/restore_round96_package.py",
+    "python eve_v3_autonomous_handoff/packages/restore_round96_package.py --verify-only",
+    "python -m json.tool eve_v3_autonomous_handoff/validation/ROUND97_PACKAGE_RESTORE_READINESS_VALIDATION_STATUS.json",
+    "git diff --check"
+  ],
+  "py_compile": {
+    "status": "passed"
+  },
+  "restore_verify_only": {
+    "status": "expected_failure",
+    "reason": "Split package files have not been uploaded into this checkout yet."
+  },
+  "runtime_mapping_enabled": false,
+  "enforcement_enabled": false,
+  "mutations_performed": false,
+  "continue_after_round97": true,
+  "hard_stop_active": "missing_split_package_files"
+}

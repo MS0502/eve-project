@@ -74,3 +74,35 @@ Next risky step:
 - Round97 controlled runtime mapping enable smoke.
 
 This next step is allowed only with checkpoint, rollback, audit, and tests.
+
+
+## Round97 preflight operator note
+
+Codex attempted to start Round97 by locating the latest Round96 package, but the package is not currently present in the repository. Nothing was enabled or mutated.
+
+To unblock development, upload or expand this package into the repository root or a clearly named source directory:
+
+```text
+eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip
+```
+
+After that, tell Codex to continue from `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`.
+
+
+## Split package upload checklist
+
+Upload these three files to `eve_v3_autonomous_handoff/packages/`:
+
+```text
+eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01
+eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02
+eve_v3_round96_split_manifest.json
+```
+
+Then Codex can run:
+
+```bash
+python eve_v3_autonomous_handoff/packages/restore_round96_package.py
+```
+
+If restoration succeeds, Codex should run Round96 validation and continue to Round97. If Round97 succeeds and no hard stop appears, Codex should continue to the next safe round without waiting for another “다음 ㄱㄱ”.

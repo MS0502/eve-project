@@ -14,6 +14,8 @@ EVE v3를 가능한 한 멀리 자율 개발한다. 사용자는 기획자/운�
 - `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
 - `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
 - `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND_*.md`
+- `eve_v3_autonomous_handoff/validation/ROUND*_VALIDATION_STATUS.json`
 - `eve_v3_autonomous_handoff/EVE_DESIGN_v3_SUMMARY.md`
 
 ## Current state
@@ -24,6 +26,7 @@ EVE v3를 가능한 한 멀리 자율 개발한다. 사용자는 기획자/운�
 - Enforcement remains disabled.
 - Ready token for future controlled enable smoke: `민석`.
 - Next recommended round: Round97 controlled runtime mapping enable smoke.
+- Round97 is not a stopping point: if Round97 passes validation and no hard stop applies, choose the next highest-value safe round and continue autonomously.
 
 ## Internal roles
 
@@ -45,6 +48,22 @@ Before any real mutation, create:
 
 After mutation, run tests, compare pre/post state, prove no unrelated mutation occurred, and update all docs.
 
+Do not stop after one successful round. Repeat implementation → self-review → tests → fixes → documentation → next-round selection until a hard stop is reached.
+
+## Hard stops
+
+Stop autonomous implementation only if one of these occurs:
+
+- Required files, seed, model, or data are missing.
+- Full validation or documented split validation is impossible.
+- Tests must be weakened to pass.
+- Nondeterminism would be required.
+- AGP would need to be bypassed.
+- A lexical, EveSpecific, or seed vector would need to be used as an AGP anchor.
+- Memory/category/SA/AGP mutation would be required without checkpoint, rollback, audit, and tests.
+- External API or internet dependency is required.
+- EVE Core would need LLM/Transformer/RWKV/Mamba/SSM/BERT.
+
 ## Absolute restrictions
 
 - Do not add LLM/Transformer/RWKV/Mamba/SSM/BERT to EVE Core.
@@ -63,6 +82,8 @@ After mutation, run tests, compare pre/post state, prove no unrelated mutation o
 - `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
 - `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
 - `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND_*.md`
+- `eve_v3_autonomous_handoff/validation/ROUND*_VALIDATION_STATUS.json`
 
 ## Final output
 

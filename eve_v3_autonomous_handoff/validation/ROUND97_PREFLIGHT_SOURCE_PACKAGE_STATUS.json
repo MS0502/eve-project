@@ -1,0 +1,37 @@
+{
+  "round": 97,
+  "validation_version": "v3_round97_source_package_preflight_status",
+  "status": "blocked",
+  "blocker": "missing_round96_source_package_or_expanded_source_tree",
+  "expected_package": "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip",
+  "search_scope": [
+    "/workspace/eve-project",
+    "/workspace"
+  ],
+  "commands_run": [
+    "pwd && rg --files -g 'AGENTS.md' -g 'CODEX_AUTONOMOUS_PROMPT.md' -g 'NEXT_ACTIONS.md' -g '*Round96*' -g '*round96*'",
+    "find .. -name AGENTS.md -print && find . -maxdepth 3 -iname '*round96*' -o -iname '*source*package*' | sed 's#^./##' | head -100",
+    "find /workspace -maxdepth 4 -type f -name '*round96*.zip' -o -name '*Round96*.zip' -o -name 'eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip'",
+    "find /workspace -type f \\( -iname '*.zip' -o -iname '*.tar.gz' -o -iname '*.tgz' \\) -print | head -200"
+  ],
+  "compileall": {
+    "status": "not_run",
+    "reason": "Round96 source files are absent from this repository."
+  },
+  "focused_tests": {
+    "status": "not_run",
+    "reason": "Round96 source files and Round94-Round96 tests are absent from this repository."
+  },
+  "collect_only": {
+    "status": "not_run",
+    "reason": "Expanded EVE v3 source tree is absent from this repository."
+  },
+  "full_suite": {
+    "status": "not_run",
+    "reason": "Expanded EVE v3 source tree is absent from this repository."
+  },
+  "runtime_mapping_enabled": false,
+  "enforcement_enabled": false,
+  "mutations_performed": false,
+  "next_required_action": "Upload or expand the Round96 source package, then start Round97 controlled runtime mapping enable smoke."
+}

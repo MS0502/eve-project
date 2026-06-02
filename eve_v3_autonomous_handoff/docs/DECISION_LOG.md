@@ -39,3 +39,49 @@ Reason:
 Result:
 
 - Future Codex sessions should read this directory first.
+
+
+## D003 — Why Round97 stopped at source-package preflight
+
+Choice:
+
+- Do not implement Round97 runtime enable smoke until the actual Round96 source package or expanded source tree is present in the repository.
+
+Reason:
+
+- Round97 is behavior-changing work and must be implemented against the real source files, not reconstructed from handoff notes.
+- The required checkpoint, rollback, audit, tests, and invariant checklist cannot be truthful without the real source tree.
+- Fabricating a source tree or tests would violate the autonomous prompt restrictions.
+
+Rejected alternatives:
+
+1. Recreate source files from documentation: unsafe and likely inaccurate.
+2. Add placeholder tests for missing code: fake validation.
+3. Enable runtime mapping without the Round96 baseline: violates controlled mutation gates.
+
+Result:
+
+- Round97 is blocked on uploading or expanding `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip`.
+
+
+## D004 — Why split package restoration is codified in the repo
+
+Choice:
+
+- Add a dedicated `packages/` upload location, README, and deterministic restore script for the split Round96 zip.
+
+Reason:
+
+- The source package is too large for the text-oriented handoff path and was split into two binary parts.
+- Future Codex sessions need an exact, repeatable restore process before attempting Round97 runtime behavior changes.
+- SHA-256 verification prevents Codex from using a corrupted or partial source package.
+
+Rejected alternatives:
+
+1. Continue documenting only that the package is missing: insufficient after the operator prepared split files.
+2. Guess or recreate the Round96 source: unsafe and fake validation.
+3. Skip manifest verification: unsafe for a behavior-changing round.
+
+Result:
+
+- Round97 remains blocked only until the split binary files and manifest are uploaded, after which restoration and validation can proceed deterministically.
