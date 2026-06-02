@@ -1,0 +1,27 @@
+{
+  "round": 96,
+  "validation_version": "v3_round96_validation_status",
+  "commands_run": [
+    "python -m compileall adapters/lex_concept_mapping_adapter.py adapters/runtime_smoke_runner.py adapters/state_debug_adapter.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py",
+    "pytest -q tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py --disable-warnings --maxfail=1",
+    "pytest --collect-only -q",
+    "pytest -q --disable-warnings --maxfail=1 attempted but interrupted by chat runtime limit"
+  ],
+  "compileall": {
+    "status": "passed",
+    "files": 6
+  },
+  "focused_and_adjacent_tests": {
+    "status": "passed",
+    "count": 7
+  },
+  "collect_only": {
+    "status": "passed",
+    "tests_collected": 1217
+  },
+  "full_suite": {
+    "status": "not_completed",
+    "reason": "Chat execution environment interrupted before pytest result was available."
+  },
+  "honest_status": "Round94-Round96 focused/adjacent tests and collect-only passed. Full suite still needs long-running validation."
+}
