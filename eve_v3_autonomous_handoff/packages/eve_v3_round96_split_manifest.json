@@ -1,0 +1,19 @@
+{
+  "source_file": "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip",
+  "source_size_bytes": 41617491,
+  "source_sha256": "53a39d67c59b5e627ba7a4a5076e3499b6dcad441d645819d231784c6cfcfd64",
+  "parts": [
+    {
+      "filename": "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01",
+      "size_bytes": 24000000,
+      "sha256": "1ec3e2287886200d75ceaa845232a50fff2d510467168781747ea3a18d2b0a29"
+    },
+    {
+      "filename": "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02",
+      "size_bytes": 17617491,
+      "sha256": "f56f3fedaae92e34d92870b1d5da1842ed318b5ed2f858c0a85ece9514e73729"
+    }
+  ],
+  "reconstruct_linux_mac_termux": "cat eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01 eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02 > eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip",
+  "reconstruct_windows_powershell": "Get-Content -Encoding Byte eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01, eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02 | Set-Content -Encoding Byte eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip"
+}
