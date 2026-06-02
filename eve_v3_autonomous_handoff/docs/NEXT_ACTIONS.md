@@ -5,7 +5,7 @@
 Round97 preflight note:
 
 - On 2026-06-02, Codex searched `/workspace/eve-project` and `/workspace` for the latest Round96 package and found no `.zip`, `.tar.gz`, `.tgz`, or expanded source tree.
-- Round97 implementation is blocked until the split package parts in `eve_v3_autonomous_handoff/packages/` are uploaded, restored, verified, and expanded.
+- Round97 implementation is blocked until the split package parts in `eve_v3_autonomous_handoff/packages/` are visible in this execution checkout, restored, verified, and expanded. A checkout update attempt found no configured git remote and no visible uploaded binary files.
 
 
 Latest known generated package:
@@ -116,3 +116,15 @@ Candidate order after Round97:
 ## If Codex resumes before the source package is available
 
 Do not attempt to reconstruct or fake the Round96 source tree. Check `eve_v3_autonomous_handoff/packages/` for split package files first. If the files are still absent, record the package as still missing, keep runtime mapping disabled, and wait for the actual source package parts to be uploaded.
+
+
+## Latest checkout update attempt
+
+Codex attempted to update/inspect the checkout after the operator reported that the split package files were uploaded to PR #1. In this execution environment:
+
+- `.git/config` has no configured remote.
+- `git ls-remote https://github.com/MS0502/eve-project.git` failed with `CONNECT tunnel failed, response 403`.
+- `eve_v3_autonomous_handoff/packages/` still contains only `README.md` and `restore_round96_package.py`.
+- `/workspace` contains no `part01`, `part02`, `manifest`, or long-named Round96 split files.
+
+Next action remains: make the three binary files visible in this checkout, then run `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.

@@ -106,3 +106,15 @@ Expected restored outputs after successful verification:
 - `eve_v3_autonomous_handoff/packages/round96_source/`
 
 After `round96_source/` exists, run the Round96 validation commands from `NEXT_ACTIONS.md`, then proceed into Round97.
+
+
+## Round97 checkout update blocker
+
+A checkout update was attempted, but this local repository has no configured git remote and the uploaded binary files are not visible under `eve_v3_autonomous_handoff/packages/` or anywhere under `/workspace`.
+
+Until the files are visible in this execution checkout, the expected restored outputs remain absent:
+
+- `eve_v3_autonomous_handoff/packages/eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip`
+- `eve_v3_autonomous_handoff/packages/round96_source/`
+
+Round96 validation and Round97 controlled runtime mapping enable smoke are still blocked by source-package absence, not by code logic.

@@ -1,0 +1,48 @@
+{
+  "round": 97,
+  "validation_version": "v3_round97_checkout_update_status",
+  "status": "blocked_checkout_does_not_include_uploaded_split_files",
+  "current_branch": "work",
+  "current_commit": "c0f7ca2",
+  "git_remote_configured": false,
+  "direct_github_probe": {
+    "command": "git ls-remote https://github.com/MS0502/eve-project.git | head -20",
+    "status": "failed",
+    "reason": "CONNECT tunnel failed, response 403"
+  },
+  "expected_upload_directory": "eve_v3_autonomous_handoff/packages",
+  "required_files": [
+    "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01",
+    "eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02",
+    "eve_v3_round96_split_manifest.json"
+  ],
+  "visible_package_files": [
+    "README.md",
+    "restore_round96_package.py"
+  ],
+  "commands_run": [
+    "git status --short --branch",
+    "git remote -v",
+    "git branch -a -vv",
+    "find eve_v3_autonomous_handoff/packages -maxdepth 1 -type f -printf '%f %s\\n' | sort",
+    "find /workspace -type f \\( -name 'eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01' -o -name 'eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02' -o -name 'eve_v3_round96_split_manifest.json' -o -name 'part01' -o -name 'part02' -o -name 'manifest' \\) -printf '%p %s\\n' | sort",
+    "git ls-remote https://github.com/MS0502/eve-project.git | head -20",
+    "python eve_v3_autonomous_handoff/packages/restore_round96_package.py"
+  ],
+  "restore": {
+    "status": "failed_expected",
+    "reason": "Required split package inputs are absent from this checkout."
+  },
+  "round96_validation": {
+    "status": "not_run",
+    "reason": "Round96 source package could not be restored."
+  },
+  "round97_enable_smoke": {
+    "status": "not_started",
+    "reason": "Round96 source package could not be restored."
+  },
+  "runtime_mapping_enabled": false,
+  "enforcement_enabled": false,
+  "mutations_performed": false,
+  "hard_stop_active": "missing_split_package_files_in_execution_checkout"
+}

@@ -107,3 +107,27 @@ Rejected alternatives:
 Result:
 
 - The restore workflow is filename-tolerant but still blocked in this local checkout until the binary files are visible on disk.
+
+
+## D006 — Why Round97 still cannot proceed after checkout update attempt
+
+Choice:
+
+- Stop before Round96 restoration and Round97 runtime mutation because the uploaded split package files are not visible in the current execution checkout.
+
+Reason:
+
+- Round97 depends on the real Round96 source package.
+- This local repo has no configured git remote, so Codex cannot update the checkout from a PR branch.
+- A direct GitHub probe is blocked in this environment.
+- Proceeding without the binary parts would require fabricating or reconstructing source, which is forbidden.
+
+Rejected alternatives:
+
+1. Reconstruct the source package from docs: fake source state.
+2. Skip SHA-256 verification: unsafe.
+3. Implement Round97 against absent source files: invalid validation.
+
+Result:
+
+- The active hard stop remains `missing_split_package_files_in_execution_checkout`.

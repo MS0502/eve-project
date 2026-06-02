@@ -179,6 +179,50 @@ Next recommendation:
 
 - Ensure the uploaded binary files are present in this checkout under `eve_v3_autonomous_handoff/packages/`, then rerun `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.
 
+## Round97 checkout update attempt — split files still absent
+
+Goal:
+
+- Update the current checkout to include the operator-uploaded Round96 split package files and then restore Round96 source.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/DECISION_LOG.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND_V3_R97_CHECKOUT_UPDATE_STATUS.md`
+- `eve_v3_autonomous_handoff/validation/ROUND97_CHECKOUT_UPDATE_VALIDATION_STATUS.json`
+
+Commands run:
+
+- `git status --short --branch`
+- `git remote -v`
+- `git branch -a -vv`
+- `find eve_v3_autonomous_handoff/packages -maxdepth 1 -type f -printf '%f %s\n' | sort`
+- `find /workspace -type f \( -name 'eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01' -o -name 'eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02' -o -name 'eve_v3_round96_split_manifest.json' -o -name 'part01' -o -name 'part02' -o -name 'manifest' \) -printf '%p %s\n' | sort`
+- `git ls-remote https://github.com/MS0502/eve-project.git | head -20`
+- `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`
+- `python -m json.tool eve_v3_autonomous_handoff/validation/ROUND97_CHECKOUT_UPDATE_VALIDATION_STATUS.json`
+- `git diff --check`
+
+Results:
+
+- This execution checkout still shows only `README.md` and `restore_round96_package.py` in `eve_v3_autonomous_handoff/packages/`.
+- No split package files were found anywhere under `/workspace`.
+- `.git/config` has no remote, so there is no configured branch to pull from.
+- A direct GitHub ls-remote probe failed with `CONNECT tunnel failed, response 403`.
+- Restore failed as expected because all required binary inputs are absent.
+
+Failures / limitations:
+
+- Round96 restoration, Round96 validation, and Round97 controlled enable smoke cannot proceed until the uploaded files are visible in this exact checkout.
+
+Next recommendation:
+
+- Make `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part01`, `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip.part02`, and `eve_v3_round96_split_manifest.json` visible under `eve_v3_autonomous_handoff/packages/` in this checkout, then rerun `python eve_v3_autonomous_handoff/packages/restore_round96_package.py`.
+
 ## Next log entry format
 
 ```md

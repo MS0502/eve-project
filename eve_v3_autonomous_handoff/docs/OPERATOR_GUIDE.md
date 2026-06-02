@@ -126,3 +126,16 @@ manifest
 ```
 
 In this local checkout, the binary files are still not visible. If they were uploaded through GitHub, ensure the current working branch/checkout includes them before asking Codex to continue Round97.
+
+
+## Current checkout visibility warning
+
+Codex attempted to proceed after the reported PR upload, but this execution checkout still cannot see the uploaded binary files. It also has no configured git remote to pull from.
+
+Before asking Codex to continue Round97, verify that this exact checkout lists the files with:
+
+```bash
+find eve_v3_autonomous_handoff/packages -maxdepth 1 -type f -printf '%f %s\n' | sort
+```
+
+The output must include the two `.part` files and the manifest before Round96 restoration can start.
