@@ -1,0 +1,30 @@
+{
+  "adapter_import_sites": [
+    "adapters/activation_adapter.py",
+    "adapters/memory_adapter.py",
+    "adapters/nl_adapter.py"
+  ],
+  "agp_bypass_used": false,
+  "diagnosis_status": "working_memory_import_blocker_active",
+  "diagnosis_version": "v3_round127_working_memory_import_blocker_diagnosis",
+  "enforcement_enabled_default": false,
+  "module_available_at_root": false,
+  "module_name": "working_memory",
+  "primary_blocker": "missing working_memory compatibility import",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "recommended_round128_action": "add_minimal_compatibility_shim",
+  "retained_legacy_candidate": "legacy/eve_modules/working_memory.py",
+  "retained_legacy_class": "WorkingMemory",
+  "root_import_site_count": 4,
+  "root_import_sites": [
+    "eve_main_ab.py",
+    "eve_main_abc.py",
+    "test_episodic.py",
+    "test_natural_lang_v2.py"
+  ],
+  "round": 127,
+  "runtime_mapping_enabled_default": false,
+  "source_round": null,
+  "vectors_npy_committed": false
+}

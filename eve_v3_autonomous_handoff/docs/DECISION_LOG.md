@@ -291,3 +291,73 @@ Rationale:
 - Round124 collect-only still fails on the next legacy root import family: `working_memory`.
 - Broader validation is therefore still partial/blocked.
 - Runtime mapping defaults and enforcement defaults remain disabled.
+
+## Round127
+
+Decision: diagnose `working_memory` as the next root legacy import blocker after `spreading_activation` recovery.
+
+Rationale:
+
+- Collect-only had progressed past `spreading_activation` and now failed on missing `working_memory` imports.
+- A retained implementation exists under `legacy/eve_modules/working_memory.py`, so a compatibility decision was possible without faking behavior.
+
+Outcome:
+
+- Round128 selected a minimal re-export shim rather than an isolation hard stop.
+
+## Round128
+
+Decision: add a root `working_memory.py` compatibility shim that re-exports retained legacy `WorkingMemory` and `WMSlot`.
+
+Rationale:
+
+- Legacy root files and adapters import `working_memory` directly.
+- The retained implementation is available and inspectable.
+- Re-exporting the retained implementation satisfies the compatibility rule without adding dummy behavior or vectors.
+
+Outcome:
+
+- `working_memory` import errors were removed from the next collect-only run.
+- Production persistence, runtime mapping by default, and enforcement remained disabled.
+
+## Round129
+
+Decision: classify collect-only as improved but still blocked/partial.
+
+Rationale:
+
+- The `working_memory` import blocker is gone.
+- Pytest collection now reaches a separate pre-existing legacy collection-time `SystemExit` in `test_natural_lang_v2.py`.
+- Weakening or deleting the legacy test is forbidden.
+
+Outcome:
+
+- Next blocker family is `legacy_collection_side_effect_system_exit`.
+
+## Round130
+
+Decision: record broader validation as blocked/partial, not passed.
+
+Rationale:
+
+- Compile and focused shim tests passed.
+- Collect-only and broader pytest both stop during collection due to the legacy side-effect blocker.
+- Claiming broader validation success would be dishonest.
+
+Outcome:
+
+- Validation taxonomy is `broader_validation_partial_or_blocked`.
+
+## Round131
+
+Decision: keep final recommendation as NO-GO.
+
+Rationale:
+
+- Production persistence remains explicitly forbidden.
+- Collect-only is still not green even though the `working_memory` critical blocker improved.
+- Broader validation remains blocked/partial.
+
+Outcome:
+
+- Final recommendation remains NO-GO until collect-only and critical blockers improve further.

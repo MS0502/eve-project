@@ -1,0 +1,70 @@
+{
+  "agp_bypass_used": false,
+  "blocked_or_partial_items": [
+    {
+      "category": "collect_only",
+      "command": "pytest --collect-only -q",
+      "reason": "legacy_collection_side_effect_system_exit in test_natural_lang_v2.py",
+      "return_code": 3,
+      "status": "blocked_partial"
+    },
+    {
+      "category": "broader_validation",
+      "command": "pytest -q",
+      "reason": "same collection-time SystemExit blocker prevents broader run",
+      "return_code": 3,
+      "status": "blocked_partial"
+    },
+    {
+      "category": "collect_only",
+      "reason": "legacy_collection_side_effect_system_exit",
+      "status": "blocked_partial"
+    }
+  ],
+  "enforcement_enabled_default": false,
+  "primary_remaining_blocker_family": "legacy_collection_side_effect_system_exit",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "round": 130,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 129,
+  "taxonomy_status": "broader_validation_partial_or_blocked",
+  "taxonomy_version": "v3_round130_broader_validation_taxonomy_refresh",
+  "validation_categories": {
+    "broader_validation": [
+      {
+        "category": "broader_validation",
+        "command": "pytest -q",
+        "reason": "same collection-time SystemExit blocker prevents broader run",
+        "return_code": 3,
+        "status": "blocked_partial"
+      }
+    ],
+    "collect_only": [
+      {
+        "category": "collect_only",
+        "command": "pytest --collect-only -q",
+        "reason": "legacy_collection_side_effect_system_exit in test_natural_lang_v2.py",
+        "return_code": 3,
+        "status": "blocked_partial"
+      }
+    ],
+    "compile_checks": [
+      {
+        "category": "compile_checks",
+        "command": "python -m compileall -q adapters tests main.py",
+        "status": "pass"
+      }
+    ],
+    "focused_round127_129_tests": [
+      {
+        "category": "focused_round127_129_tests",
+        "command": "pytest -q tests/test_v3_round127_129_working_memory_import_recovery.py",
+        "status": "pass",
+        "tests": 5
+      }
+    ]
+  },
+  "vectors_npy_committed": false,
+  "working_memory_blocker_recovered": true
+}

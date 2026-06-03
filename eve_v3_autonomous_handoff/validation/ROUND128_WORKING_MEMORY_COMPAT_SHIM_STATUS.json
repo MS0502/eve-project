@@ -1,0 +1,25 @@
+{
+  "agp_bypass_used": false,
+  "behavior_source": "legacy_reexport_only",
+  "compatibility_version": "v3_round128_working_memory_import_compatibility_shim",
+  "decision_status": "minimal_compatibility_shim_applied",
+  "enforcement_enabled_default": false,
+  "fake_behavior_markers_present": [],
+  "import_check_passed": true,
+  "isolation_plan": [],
+  "legacy_source_exists": true,
+  "legacy_source_path": "legacy/eve_modules/working_memory.py",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "reexported_symbols": [
+    "WMSlot",
+    "WorkingMemory"
+  ],
+  "round": 128,
+  "runtime_mapping_enabled_default": false,
+  "shim_exists": true,
+  "shim_is_minimal_reexport": true,
+  "shim_path": "working_memory.py",
+  "source_round": 127,
+  "vectors_npy_committed": false
+}
