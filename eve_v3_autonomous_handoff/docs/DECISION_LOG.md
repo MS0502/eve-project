@@ -149,3 +149,19 @@ Outcome:
 
 - The decision packet may report `persistence_ready_but_not_applied`.
 - Runtime mapping and enforcement remain disabled.
+
+## Round107
+
+Decision: add the runtime mapping persistence activation dry-run harness before any real persistence enablement.
+
+Rationale:
+
+- The project needs explicit checkpoint, rollback, audit-log, state-debug, and touch-plan formats before a later activation patch can safely change runtime defaults.
+- Defining these formats as a dry-run preserves the disabled boundary while making future activation auditable.
+
+Outcome:
+
+- `runtime_mapping_enabled` remains `False` by default.
+- `enforcement_enabled` remains `False` by default.
+- No runtime mapping persistence is applied.
+- No AGP/vector/category/concept-memory mutation is performed.

@@ -129,3 +129,27 @@ Never `git add`:
 - `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy`.
 
 Only proceed to Round97/98 validation when `hard_stop_released=true`.
+
+## Round107 operator guide — activation dry-run only
+
+Round107 is the final harness before a possible future runtime mapping persistence activation. It does not enable persistence.
+
+Artifacts to review:
+
+- `eve_v3_autonomous_handoff/reports/ROUND107_RUNTIME_MAPPING_PERSISTENCE_ACTIVATION_DRYRUN.md`
+- `eve_v3_autonomous_handoff/validation/ROUND107_RUNTIME_MAPPING_PERSISTENCE_ACTIVATION_DRYRUN_STATUS.json`
+
+What Round107 defines:
+
+- Future checkpoint JSON format.
+- Future rollback JSON format.
+- Future append-only audit JSONL schema.
+- State-debug export key: `lex_concept_mapping.runtime_mapping_persistence_activation`.
+- Exact files and state a future activation patch would touch.
+
+Current defaults after Round107:
+
+- `runtime_mapping_enabled=False`
+- `enforcement_enabled=False`
+
+Do not treat Round107 as activation approval. A later patch must explicitly write checkpoint/rollback/audit artifacts and pass validation before enabling persistent runtime mapping.

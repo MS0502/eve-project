@@ -1,0 +1,43 @@
+{
+  "activation_status": "dry_run_only_not_enabled",
+  "agp_verify_called": false,
+  "audit_log_schema_version": "v3_round107_runtime_mapping_persistence_activation_dryrun.audit_log.v1",
+  "checkpoint_schema_version": "v3_round107_runtime_mapping_persistence_activation_dryrun.checkpoint.v1",
+  "embedding_lookup_called": false,
+  "enforcement_default_changed": false,
+  "enforcement_enabled_now": false,
+  "future_activation_touch_files": [
+    "adapters/lex_concept_mapping_adapter.py",
+    "adapters/state_debug_adapter.py",
+    "main.py",
+    "eve_v3_autonomous_handoff/validation/runtime_mapping_persistence_checkpoint.json",
+    "eve_v3_autonomous_handoff/validation/runtime_mapping_persistence_rollback.json",
+    "eve_v3_autonomous_handoff/validation/runtime_mapping_persistence_audit_log.jsonl"
+  ],
+  "no_agp_vector_category_memory_mutation": true,
+  "read_only": true,
+  "rollback_schema_version": "v3_round107_runtime_mapping_persistence_activation_dryrun.rollback.v1",
+  "round": 107,
+  "runtime_mapping_default_changed": false,
+  "runtime_mapping_enabled_now": false,
+  "status_version": "v3_round107_runtime_mapping_persistence_activation_dryrun",
+  "validation_commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round107_runtime_mapping_persistence_activation_dryrun.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round106_runtime_mapping_persistence_decision.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round104_105_persistence_agp_proof.py",
+      "status": "passed"
+    }
+  ],
+  "vectors_npy_committed": false
+}

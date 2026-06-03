@@ -154,3 +154,28 @@ Immediate next actions:
 2. Run Round102 restore and Round103 manual validation until the local validation status passes.
 3. Re-run the runtime mapping approval/proof/decision tests.
 4. If persistence should actually be applied, do so in a later explicit mutation patch with rollback and full validation.
+
+## Round107 update — activation dry-run harness complete
+
+Current position:
+
+- Round107 defines checkpoint, rollback, audit-log, state-debug, and future touch-plan surfaces for runtime mapping persistence activation.
+- The dry-run execution proves disabled defaults remain unchanged.
+- Persistence is still not enabled.
+
+Required next step if activation is requested:
+
+1. Create a separate explicit activation patch.
+2. Write real checkpoint and rollback JSON artifacts before changing flags.
+3. Append future activation audit events using the Round107 schema.
+4. Apply only the reviewed runtime mapping persistence state changes.
+5. Rerun focused, adjacent, collect-only, compileall, and any broader validation required by the operator.
+6. Confirm rollback restores `runtime_mapping_enabled=False` and `enforcement_enabled=False`.
+
+Still forbidden until that explicit patch:
+
+- Runtime mapping default changes.
+- Enforcement default changes.
+- AGP bypass or vector-as-anchor shortcuts.
+- `vectors.npy` commits.
+- Semantic memory/quarantine mutation.
