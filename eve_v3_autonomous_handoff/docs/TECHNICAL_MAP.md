@@ -104,3 +104,47 @@ Boundary:
 - Release assets are operator-supplied external artifacts.
 - Wrapper zips, raw parts, restored zip, and `vectors.npy` remain forbidden in PR diffs.
 - Runtime mapping validation remains blocked until `hard_stop_released=true` is observed and the ignored local seed vector is installed.
+
+## Round103 manual medium vector validation surfaces
+
+- `adapters/medium_vector_manual_validation.py`
+  - `validate_round103_manual_medium_vectors(...)`: read-only fail-closed validation over release-restore status and a candidate medium `vectors.npy` audit.
+  - `write_round103_manual_medium_vector_validation(...)`: writes JSON only.
+
+Boundary:
+
+- Does not copy, install, create, or commit vector artifacts.
+- Does not relax manifest checksum, shape, or dtype gates.
+
+## Round104 runtime mapping persistence approval surfaces
+
+- `adapters/runtime_mapping_persistence_approval.py`
+  - `build_runtime_mapping_persistence_approval(...)`: builds an operator approval packet from Round98 and Round103 evidence.
+  - `write_round104_runtime_mapping_persistence_approval(...)`: writes JSON only.
+
+Boundary:
+
+- Does not enable or persist runtime mapping.
+- Does not mutate concept memory, categories, AGP, or vector stores.
+
+## Round105 AGP proof object expansion surfaces
+
+- `adapters/agp_proof_object_expansion.py`
+  - `build_agp_proof_object_expansion(...)`: expands proof rows for approved runtime mapping candidates.
+  - `write_round105_agp_proof_object_expansion(...)`: writes JSON only.
+
+Boundary:
+
+- Anchor source remains explicit category plus SA activation only.
+- Lexical, EveSpecific, and seed vectors are evidence only, never AGP anchors.
+
+## Round106 runtime mapping persistence decision surfaces
+
+- `adapters/runtime_mapping_persistence_decision.py`
+  - `build_runtime_mapping_persistence_decision(...)`: records a decision packet and defers any state-changing persistence application.
+  - `write_round106_runtime_mapping_persistence_decision(...)`: writes JSON only.
+
+Boundary:
+
+- Runtime mapping and enforcement remain disabled.
+- Persistent application requires a later explicit patch.

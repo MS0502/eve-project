@@ -249,3 +249,75 @@ Failures / limitations:
 Next recommendation:
 
 - Run the Round102 helper in a network-enabled environment or with manually downloaded assets, confirm `hard_stop_released=true`, then rerun Round97/98 and Round92~98 focused validation before proceeding to runtime mapping persistence approval or AGP proof expansion.
+
+## Round103 — manual medium vector validation checkpoint
+
+Goal:
+
+- Add a fail-closed manual validation checkpoint after Round102 release restore.
+
+Changed files:
+
+- `adapters/medium_vector_manual_validation.py`
+- `tests/test_v3_round103_manual_medium_vector_validation.py`
+- `eve_v3_autonomous_handoff/reports/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_STATUS.json`
+
+Results:
+
+- Missing, fake, wrong-shape, or checksum-mismatched vector candidates remain blocked.
+- The validator writes JSON only and never installs or commits `vectors.npy`.
+
+## Round104 — runtime mapping persistence approval packet
+
+Goal:
+
+- Recreate the operator-facing approval packet for runtime mapping persistence.
+
+Changed files:
+
+- `adapters/runtime_mapping_persistence_approval.py`
+- `tests/test_v3_round104_105_persistence_agp_proof.py`
+- `eve_v3_autonomous_handoff/reports/ROUND104_RUNTIME_MAPPING_PERSISTENCE_APPROVAL_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND104_RUNTIME_MAPPING_PERSISTENCE_APPROVAL.json`
+
+Results:
+
+- Approval requires a ready gate, passed manual validation, mapped rows, and explicit operator approval.
+- Runtime mapping remains disabled and unpersisted.
+
+## Round105 — AGP proof object expansion
+
+Goal:
+
+- Recreate the AGP proof object expansion for approved runtime mapping candidates.
+
+Changed files:
+
+- `adapters/agp_proof_object_expansion.py`
+- `tests/test_v3_round104_105_persistence_agp_proof.py`
+- `eve_v3_autonomous_handoff/reports/ROUND105_AGP_PROOF_OBJECT_EXPANSION_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND105_AGP_PROOF_OBJECT_EXPANSION.json`
+
+Results:
+
+- Proof rows preserve the explicit-category plus SA-activation anchor boundary.
+- Lexical, EveSpecific, and seed vectors remain evidence only and are not AGP anchors.
+
+## Round106 — runtime mapping persistence decision packet
+
+Goal:
+
+- Recreate the final decision packet without applying persistent runtime mapping.
+
+Changed files:
+
+- `adapters/runtime_mapping_persistence_decision.py`
+- `tests/test_v3_round106_runtime_mapping_persistence_decision.py`
+- `eve_v3_autonomous_handoff/reports/ROUND106_RUNTIME_MAPPING_PERSISTENCE_DECISION_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND106_RUNTIME_MAPPING_PERSISTENCE_DECISION.json`
+
+Results:
+
+- Ready approval/proof inputs produce a `persistence_ready_but_not_applied` decision.
+- Any actual persistence application remains deferred to a separate explicit patch.
