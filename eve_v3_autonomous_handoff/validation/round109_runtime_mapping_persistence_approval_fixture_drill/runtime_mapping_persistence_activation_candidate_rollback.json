@@ -1,0 +1,51 @@
+{
+  "json_only": true,
+  "restore_enforcement_enabled": false,
+  "restore_runtime_mapping_enabled": false,
+  "rollback_verification": {
+    "checks": {
+      "agp_bypass_used": false,
+      "agp_stats_unchanged": true,
+      "concept_categories_unchanged": true,
+      "concept_commit_records_unchanged": true,
+      "concept_memory_stats_unchanged": true,
+      "enforcement_enabled_restored_false": true,
+      "eve_specific_vector_store_unchanged": true,
+      "runtime_mapping_enabled_restored_false": true,
+      "sa_active_categories_unchanged": true,
+      "vectors_npy_committed": false
+    },
+    "rollback_verification_version": "v3_round108_runtime_mapping_persistence_activation_candidate.rollback_verification.v1",
+    "rollback_verified": true,
+    "state_after_rollback": {
+      "agp_stats": {
+        "name": "agp",
+        "read_only": true
+      },
+      "concept_categories": {},
+      "concept_commit_records": [],
+      "concept_memory_stats": {
+        "name": "concept_memory",
+        "read_only": true
+      },
+      "enforcement_enabled": false,
+      "eve_specific_vector_store": {
+        "count": 1,
+        "dimension": 300,
+        "read_only": true
+      },
+      "runtime_mapping_enabled": false,
+      "sa_active_categories": [
+        "concept_category::lex::민석"
+      ],
+      "wrapper_telemetry": {
+        "eve_specific_hits": 0,
+        "fallback_uses": 0,
+        "primary_hits": 0,
+        "total_calls": 0
+      }
+    }
+  },
+  "rollback_version": "v3_round108_runtime_mapping_persistence_activation_candidate.rollback.v1",
+  "source_checkpoint_version": "v3_round108_runtime_mapping_persistence_activation_candidate.checkpoint.v1"
+}

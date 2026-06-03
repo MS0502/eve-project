@@ -183,3 +183,10 @@ Next:
   - `verify_runtime_mapping_rollback(...)`: verifies disabled flags plus unchanged category/audit/vector/SA/concept-memory/AGP surfaces.
 - `LexConceptMappingAdapter.stats()` and `StateDebugAdapter.snapshot_state()` now advertise the Round108 candidate surface while keeping `runtime_mapping_enabled=False` and `enforcement_enabled=False` by default.
 - Round108 does not add default startup wiring and does not enable enforcement.
+
+## Round109 runtime mapping persistence approval fixture
+
+- `adapters/runtime_mapping_persistence_approval_fixture.py`
+  - `build_round109_operator_approval_fixture(...)`: builds the limited-scope operator approval fixture for `runtime_mapping_persistence_only` and `["민석"]`.
+  - `run_round109_runtime_mapping_persistence_approval_fixture_drill(...)`: runs the Round108 candidate in test/dry-run drill mode, verifies checkpoint-before-mutation, audit ordering, rollback, protected surfaces, and state-debug exports.
+  - `write_round109_runtime_mapping_persistence_approval_fixture(...)`: writes JSON only and does not enable runtime mapping or enforcement.

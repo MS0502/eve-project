@@ -321,3 +321,9 @@ Results:
 
 - Ready approval/proof inputs produce a `persistence_ready_but_not_applied` decision.
 - Any actual persistence application remains deferred to a separate explicit patch.
+
+## Round109 runtime mapping persistence approval fixture
+
+- Added `adapters/runtime_mapping_persistence_approval_fixture.py` for a deterministic operator approval fixture scoped to `runtime_mapping_persistence_only`.
+- The fixture allowlist is `["민석"]` only and candidate activation runs through the Round108 ephemeral apply-then-rollback path in test/dry-run drill mode only.
+- Exported Round109 report/status artifacts and confirmed rollback restores disabled runtime mapping/enforcement flags without AGP/vector/category/memory mutation.
