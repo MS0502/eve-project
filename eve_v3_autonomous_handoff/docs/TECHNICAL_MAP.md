@@ -34,3 +34,57 @@
 - Audit is read-only.
 - Persistence is not applied.
 - Operator approval and full validation remain required before persistence.
+
+## Round99 post-merge validation map
+
+Validation surfaces checked:
+
+- `main.py`: `build_full_engine()` still attempts medium 30k fastText load first and records a code-only blocked state if subset vectors are absent.
+- `adapters/eve_self_learning_adapter.py`: `commit_eve_specific_vectors(...)` still requires observed Eve-specific candidates plus known fastText context.
+- `adapters/eve_vector_store.py`: vector creation still derives deterministic 300d vectors from loaded fastText context vectors only.
+- `tests/test_v3_round92_runtime_mapping_gate_dry_run.py` through `tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`: fixtures require `민석` EveSpecific vector creation before runtime mapping dry-run/smoke checks.
+
+Observed technical blocker:
+
+- No subset `vectors.npy` is present under `seeds/subsets/cc.ko.300.subset.medium.30k/`, `small.5k/`, or `mini.1k/`.
+- FastText adapter remains unloaded, so context words `오늘` and `군대` are not known context.
+- The Eve-specific commit gate rejects `민석` with `insufficient_known_context`; this blocks Round92~Round98 focused runtime-mapping validations.
+
+Boundary preserved:
+
+- No vectors were treated as AGP anchors.
+- No runtime mapping persistence was applied.
+- No enforcement was enabled.
+- No AGP bypass or threshold relaxation was introduced.
+
+## Round100 medium vector restoration surfaces
+
+- `adapters/medium_vector_restoration.py`
+  - `scan_subset_artifact_paths(...)`: read-only medium/small/mini artifact path, checksum, shape, and dtype scan.
+  - `audit_operator_supplied_medium_vectors(...)`: read-only fail-closed audit for an externally supplied medium `vectors.npy`.
+  - `build_round100_restoration_plan(...)`: deterministic plan that separates medium/full, small/focused, and blocked validation states.
+  - `write_round100_restoration_status(...)`: writes JSON status only; never writes vectors.
+
+Validation boundary:
+
+- Medium/full validation requires `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy` with checksum `SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05`, shape `(30000, 300)`, and dtype `float32`.
+- Small/focused fallback requires the exact small 5k artifact; it cannot be reported as medium/full validation.
+- Mini 1k remains fixture boundary only.
+- The helper does not copy, create, or mutate vector artifacts.
+
+## Round101 artifact workflow surfaces
+
+- `adapters/medium_vector_restoration.py`
+  - `build_round101_artifact_workflow(...)`: read-only workflow object for GitHub Release/operator-supplied artifact handling.
+  - `write_round101_artifact_status(...)`: writes workflow JSON only; never writes vectors.
+
+Expected medium artifact:
+
+```text
+path = seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy
+sha256 = SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05
+shape = (30000, 300)
+dtype = float32
+```
+
+Workflow status is fail-closed unless the installed artifact or supplied candidate passes checksum/shape/dtype audit. The helper does not download, copy, create, split, or install vector artifacts.

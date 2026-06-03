@@ -31,3 +31,51 @@ Outcome:
 
 - Persistence gate status is ready for operator decision.
 - Persistence remains unapplied.
+
+## Round99
+
+Decision: classify the merged PR #2 state as `blocked_partial` rather than passed.
+
+Rationale:
+
+- The required Round97/98 and Round92~Round98 test fixtures depend on creating an EveSpecific vector for `민석` from known fastText context words.
+- `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy` is absent, and no small/mini fallback `vectors.npy` artifact is present in this checkout.
+- Without a loaded fastText subset, the commit gate correctly rejects the candidate with `insufficient_known_context`.
+- Marking the validation passed would violate the hard stop against claiming full validation while medium vectors are absent.
+
+Outcome:
+
+- Round100 feature work was not started.
+- Next selected recommendation: medium vector restoration / validation plan before AGP proof expansion or persistence approval design.
+
+## Round100
+
+Decision: implement an operator-supplied artifact audit and validation-tier separation instead of adding a binary vector artifact to the repository.
+
+Rationale:
+
+- The medium 30k `vectors.npy` file is required for honest medium/full validation, but adding it to the PR diff would violate the code-only handoff boundary.
+- Creating dummy vectors or fake checksums is forbidden.
+- Small 5k fallback may only be used for focused validation if the exact manifest-verified small artifact is present; it is not a medium validation substitute.
+
+Outcome:
+
+- Added `adapters/medium_vector_restoration.py` and focused Round100 tests.
+- Runtime mapping persistence remains disabled.
+- AGP proof expansion remains deferred until validation is unblocked or the operator explicitly approves a partial-validation path.
+
+## Round101
+
+Decision: use a GitHub Release asset or operator-supplied artifact workflow for the medium 30k vector file instead of committing binary data to the repo.
+
+Rationale:
+
+- `vectors.npy` is required for honest medium/full validation but should not enter PR diffs.
+- A release/operator artifact keeps the repo clean while preserving checksum/shape/dtype verification.
+- Split binary chunks in the repo are lower priority because they still add binary churn and UI risk.
+
+Outcome:
+
+- Runtime mapping persistence remains disabled.
+- Medium/full validation remains blocked until the exact artifact is supplied and verified.
+- Round97/98 and Round92~98 rerun conditions are now explicit in the workflow.

@@ -127,3 +127,62 @@ Results:
 - Gate status: ready for operator persistence decision.
 - Runtime mapping remains disabled by default.
 - Persistence is not applied and still requires operator approval plus full/medium validation.
+
+## Round99 — post-merge validation
+
+Goal:
+
+- Validate the PR #2 merged state before any new feature round.
+
+Results:
+
+- Merge commit validated in this checkout: `c607dc1f9f77326d81fd17f19ca428c036d38e16`.
+- Focused compile check passed: `python -m compileall -q adapters tests main.py`.
+- Round97/98 focused validation is blocked/partial because the committed handoff checkout contains no `vectors.npy` for the medium 30k subset and no fallback subset vector file.
+- Round92~Round98 adjacent validation is blocked/partial for the same missing known-fastText-context prerequisite.
+- Collect-only remains partial due pre-existing legacy root `spreading_activation` imports.
+- Repository-wide compile probe remains partial due pre-existing legacy root SyntaxError blockers in `eve_foundation_v10_2.py` and `eve_foundation_v12_0.py`.
+
+Decision:
+
+- Do not proceed to Round100 AGP proof object expansion until the validation substrate is unblocked or the operator explicitly approves a partial-validation path.
+- Recommended next round changes to `Round100: medium vector restoration / validation plan`.
+
+## Round100 — medium vector restoration / validation plan
+
+Goal:
+
+- Resolve the Round99 validation blocker without committing binary `.npy` artifacts or weakening tests.
+
+Results:
+
+- Added a read-only restoration/audit helper for operator-supplied medium 30k vectors.
+- Confirmed current checkout has no medium, small, or mini `vectors.npy` artifact under `seeds/subsets/`.
+- Medium/full validation remains blocked until the exact medium `vectors.npy` is restored and passes checksum/shape/dtype audit.
+- Small/focused fallback validation is also blocked in this checkout because the small vector artifact is absent.
+- Round97/98 and Round92~98 failures are directly caused by empty known fastText context, which prevents `민석` EveSpecific vector commit.
+
+Validation:
+
+- `python -m compileall -q adapters tests main.py` passed.
+- `pytest -q tests/test_v3_round100_medium_vector_restoration.py` passed: 5 passed.
+- Round97/98 and Round92~98 focused commands remain blocked/partial for the missing-vector prerequisite.
+
+## Round101 — medium vector artifact workflow
+
+Goal:
+
+- Decide how the medium 30k vector artifact should be supplied without committing binary vectors to the repository.
+
+Results:
+
+- Selected GitHub Release asset or operator-supplied local artifact as the preferred workflow.
+- Added Round101 workflow data to `adapters/medium_vector_restoration.py`.
+- Documented expected target path, checksum, shape `(30000, 300)`, and dtype `float32`.
+- Confirmed helper remains read-only: no download, copy, split, dummy vector creation, runtime persistence, or AGP bypass.
+- Medium/full validation remains blocked until the operator supplies and installs a verified artifact.
+
+Validation:
+
+- `python -m compileall -q adapters tests main.py` passed.
+- `pytest -q tests/test_v3_round100_medium_vector_restoration.py` passed: 7 passed.

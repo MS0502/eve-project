@@ -40,3 +40,71 @@ Required Round99 outputs:
 - validation plan distinguishing focused pass from medium/full blocked
 - no AGP bypass
 - no vector-as-anchor shortcut
+
+## Round99 update — validation-first gate
+
+Current position after post-merge validation:
+
+- Focused compile check passed.
+- Round97/98 focused tests are blocked/partial due absent subset vector files.
+- Round92~Round98 adjacent tests are blocked/partial for the same reason.
+- Collect-only and repository-wide compile probes still have separated pre-existing legacy root blockers.
+
+Highest-value next round is now:
+
+```text
+Round100: medium vector restoration / validation plan
+```
+
+Required Round100 outputs:
+
+- Decide how the medium 30k vector artifact is restored or validated outside the code-only package.
+- Preserve manifest provenance/checksum rules; do not create fake checksums or seed files.
+- Re-run Round97/98 focused and Round92~Round98 adjacent validation after restoration.
+- Keep runtime mapping persistence disabled until validation is honestly passed or the operator explicitly approves partial validation.
+
+Deferred until validation is unblocked:
+
+- AGP proof object expansion.
+- Runtime mapping persistence approval gate implementation.
+- Any persistence mutation or enforcement enablement.
+
+## Round100 update — artifact restoration gate
+
+Current position:
+
+- Round100 restoration/audit helper is implemented and tested.
+- Medium, small, and mini vector artifacts are absent in this checkout.
+- Runtime mapping focused validation remains blocked until known fastText context vectors are available.
+
+Next required operator action:
+
+1. Obtain the original medium 30k `vectors.npy` outside the PR diff.
+2. Run `python -m adapters.medium_vector_restoration --candidate /path/to/vectors.npy`.
+3. Install the artifact only if the audit reports `acceptable_for_manual_install=true`.
+4. Rerun medium and focused runtime mapping validation.
+
+Still deferred:
+
+- AGP proof object expansion.
+- Runtime mapping persistence approval gate.
+- Any persistence/enforcement mutation.
+
+## Round101 update — supply medium artifact outside repo
+
+Current position:
+
+- Preferred artifact supply method is GitHub Release asset or operator-supplied local artifact.
+- Repo must contain only manifest/checksum/audit workflow code, not `vectors.npy`.
+- Medium/full validation remains blocked until the artifact is installed and verified.
+
+Operator unblock checklist:
+
+1. Upload or locate `cc.ko.300.subset.medium.30k.vectors.npy` outside the repo.
+2. Run `python -m adapters.medium_vector_restoration --candidate /path/to/vectors.npy`.
+3. Require `acceptable_for_manual_install=true`.
+4. Place the verified file at `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy`.
+5. Run medium artifact tests: `pytest -q tests/test_v3_round50_subset_medium_30k.py tests/test_v3_round51_wrapper_primary_medium_swap.py`.
+6. Rerun Round97/98 and Round92~98 focused validation.
+
+Do not start runtime mapping persistence or AGP proof expansion until the artifact validation blocker is cleared or the operator explicitly approves a partial-validation path.
