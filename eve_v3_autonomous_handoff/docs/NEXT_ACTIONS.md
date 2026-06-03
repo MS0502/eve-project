@@ -192,3 +192,21 @@ Still forbidden until that explicit patch:
 - Review the Round109 approval fixture and rollback drill artifacts before considering any real persistence enablement.
 - Keep persistence disabled by default and enforcement disabled unless a future explicit round introduces a guarded, checkpointed, audited mutation path.
 - Do not include `vectors.npy` or seed subset artifacts in runtime mapping persistence PR diffs.
+
+## After Round112
+
+1. Review `validation/ROUND110_RUNTIME_MAPPING_LIMITED_PERSISTENCE_SANDBOX_STATUS.json` for sandbox checkpoint/audit/rollback proof.
+2. Review `validation/ROUND111_SANDBOX_ROLLBACK_CLEANUP_STATUS.json` for sandbox state cleanup proof.
+3. Review `validation/ROUND112_POST_SANDBOX_AUDIT_REPLAY_STATUS.json` for read-only replay proof.
+4. Next highest-value round: Round113 state-debug/audit replay viewer.
+5. Keep `runtime_mapping_enabled=False` and `enforcement_enabled=False` by default.
+6. Do not enable production persistence until a later explicit operator approval round.
+7. Continue forbidding `vectors.npy`, `_operator_artifacts`, zip/part/upload artifacts, and seed subset binary diffs.
+
+## Broader validation follow-up
+
+- Before any production persistence discussion, resolve or explicitly quarantine the current broader validation blockers:
+  - root-level legacy import failure for `spreading_activation` under `pytest -q` collection;
+  - missing local seed `vectors.npy` fixture artifacts required by historical seed tests;
+  - older baseline expectation failures in `pytest -q tests`.
+- Do not report full-suite success until those checks pass in the target environment.
