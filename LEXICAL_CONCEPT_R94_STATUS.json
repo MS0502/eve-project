@@ -1,0 +1,17 @@
+{
+  "candidate_count": 2,
+  "enforcement_enabled": false,
+  "next_recommended_round": "round95_runtime_mapping_operator_acceptance_fixture",
+  "read_only": true,
+  "round": 94,
+  "runtime_mapping_enabled": false,
+  "status_version": "v3_round94_runtime_mapping_enforcement_dry_run_status",
+  "would_apply_count": 1,
+  "would_apply_tokens": [
+    "민석"
+  ],
+  "would_block_count": 1,
+  "would_block_tokens": [
+    "EVE"
+  ]
+}

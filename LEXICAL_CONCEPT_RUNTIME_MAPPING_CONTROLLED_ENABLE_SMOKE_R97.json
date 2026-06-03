@@ -1,0 +1,140 @@
+{
+  "axis": "controlled_runtime_lexical_to_concept_mapping_enable_smoke",
+  "blocked_count": 0,
+  "blocked_rows": [],
+  "blocked_tokens": [],
+  "candidate_count": 1,
+  "enforcement_enabled_after_rollback": false,
+  "enforcement_enabled_before": false,
+  "enforcement_enabled_during_smoke": false,
+  "mapped_count": 1,
+  "mapped_tokens": [
+    "민석"
+  ],
+  "mutation_checks": {
+    "agp_verify_called_during_enable_smoke": false,
+    "category_created_during_enable_smoke": false,
+    "category_snapshot_unchanged_during_enable_smoke": true,
+    "concept_commit_audit_unchanged_during_enable_smoke": true,
+    "concept_memory_mutation_during_enable_smoke": false,
+    "embedding_lookup_called_during_enable_smoke": false,
+    "enforcement_enabled_now": false,
+    "eve_specific_vector_commit_called": false,
+    "eve_specific_vector_store_unchanged_during_enable_smoke": true,
+    "frame_hypergraph_mutation_during_enable_smoke": false,
+    "runtime_mapping_persisted": false,
+    "sa_activation_created_during_enable_smoke": false,
+    "sa_active_categories_unchanged_during_enable_smoke": true,
+    "wrapper_telemetry_unchanged_during_enable_smoke": true
+  },
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "controlled_enable_smoke_only": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "eve_specific_vector_is_not_concept": true,
+    "lexical_vector_is_evidence_only": true,
+    "runtime_mapping_ephemeral_only": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "post_smoke_recommendation": {
+    "may_attempt_persistence_gate_next_round": true,
+    "next_recommended_round": "round98_runtime_mapping_persistence_gate_audit",
+    "runtime_mapping_should_remain_disabled_by_default": true
+  },
+  "read_only": false,
+  "rollback": {
+    "enforcement_flag_restored": true,
+    "ephemeral_mapping_table_cleared": true,
+    "rollback_complete": true,
+    "runtime_mapping_flag_restored": true
+  },
+  "round": 97,
+  "runner_safety_checks": {
+    "concept_commit_not_called_by_round97_runner": true,
+    "enforcement_enabled_after_runner": false,
+    "enforcement_not_enabled_by_runner": true,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled_after_runner": false,
+    "runtime_mapping_not_persisted_by_runner": true,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "runtime_mapping_enabled_after_rollback": false,
+  "runtime_mapping_enabled_before": false,
+  "runtime_mapping_enabled_during_smoke": true,
+  "smoke_rows": [
+    {
+      "agp_verify_called_during_runtime_mapping_enable_smoke": false,
+      "agp_verify_called_now": false,
+      "anchor_source": "explicit_category_plus_sa_activation_only",
+      "anchor_source_required": "explicit_category_plus_sa_activation_only",
+      "api_path_dry_run": [
+        "RuntimeLexConceptMapper.resolve(token)",
+        "LexConceptMappingAdapter.runtime_mapping_gate",
+        "ConceptCategoryRegistry.lookup(category_id)",
+        "SAActivation.check(category_id)",
+        "return MappingResult(category_id)"
+      ],
+      "blocked_reasons": [],
+      "category_created_now": false,
+      "concept_memory_mutation_now": false,
+      "embedding_lookup_called_during_enable_smoke": false,
+      "embedding_lookup_called_now": false,
+      "enforcement_enabled_during_smoke": false,
+      "enforcement_enabled_now": false,
+      "enforcement_status": "would_apply_if_runtime_mapping_enabled",
+      "eve_specific_vector_commit_called": false,
+      "frame_hypergraph_mutation_now": false,
+      "lexical_token": "민석",
+      "mapping_result": {
+        "anchor_source": "explicit_category_plus_sa_activation_only",
+        "category_id": "concept_category::lex::민석",
+        "lexical_token": "민석",
+        "mapping_status": "ephemeral_runtime_mapping_success",
+        "persisted": false
+      },
+      "operator_acceptance_fixture": true,
+      "operator_decision_status": "operator_accepted_fixture_not_persisted",
+      "precheck_blocked_reasons": [],
+      "precheck_checks": {
+        "has_simulated_mapping_result": true,
+        "has_target_category_id": true,
+        "operator_accepted": true,
+        "uses_eve_specific_vector_as_anchor": false,
+        "uses_lexical_vector_as_anchor": false,
+        "uses_seed_vector_as_anchor": false,
+        "would_apply_after_fixture": true
+      },
+      "precheck_status": "ready_for_separate_enable_smoke_round",
+      "remaining_blocked_reasons": [],
+      "resolved_reasons": [
+        "operator_acceptance_required"
+      ],
+      "round97_smoke": true,
+      "runtime_mapping_applied_during_smoke": true,
+      "runtime_mapping_applied_now": false,
+      "runtime_mapping_enabled_during_smoke": true,
+      "runtime_mapping_enabled_now": false,
+      "runtime_mapping_persisted": false,
+      "sa_activation_created_now": false,
+      "simulated_mapping_result": {
+        "anchor_source": "explicit_category_plus_sa_activation_only",
+        "category_id": "concept_category::lex::민석",
+        "category_label": "민석",
+        "lexical_token": "민석",
+        "mapping_status": "simulated_runtime_mapping_success"
+      },
+      "smoke_blocked_reasons": [],
+      "smoke_status": "controlled_runtime_mapping_success",
+      "target_category_id": "concept_category::lex::민석",
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false,
+      "would_apply_if_runtime_mapping_enabled": true,
+      "would_apply_runtime_mapping_after_fixture": true
+    }
+  ],
+  "smoke_version": "v3_round97_controlled_runtime_mapping_enable_smoke",
+  "source_precheck_version": "v3_round96_runtime_mapping_enable_smoke_precheck"
+}

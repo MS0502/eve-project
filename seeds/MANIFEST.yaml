@@ -1,0 +1,91 @@
+# EVE v3 External Seed Manifest
+#
+# Round24 scope: strict provenance registration only.
+# No external seed binary is committed, loaded, parsed, or used here.
+seeds:
+  - name: cc.ko.300.bin
+    source: https://fasttext.cc/docs/en/crawl-vectors.html
+    download_url: https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.ko.300.bin.gz
+    license: CC-BY-SA-3.0
+    version: 2017-12
+    downloaded_at: 2026-05-11
+    checksum: SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7
+    file_size_bytes: 7243669409
+    file_location: "external (Google Drive: /eve_seeds/cc.ko.300.bin.gz)"
+    imported_at_round: 24
+    imported_at_patch: v3_round24
+  - name: cc.ko.300.subset.mini.1k
+    file_location: seeds/subsets/cc.ko.300.subset.mini.1k
+    entry_type: subset
+    parent_seed: cc.ko.300.bin
+    parent_checksum: SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7
+    selection_method: fasttext_frequency_order_top_k
+    filter_rule: remove_words_containing_unicode_replacement_char
+    vocab_size: 1000
+    vector_dim: 300
+    vocab_file: vocab.txt
+    vectors_file: vectors.npy
+    subset_manifest_file: subset_manifest.json
+    vocab_checksum: SHA256:5e7eb8da5cb96f9c1d207846f8f4ef781f48f74a0f9b3eb4ee112cdc47d53064
+    vectors_checksum: SHA256:ac987683f9ad733cea97ed13ff5b39e73a2ed91ba5d489466f690b2e747d6f2a
+    subset_manifest_checksum: SHA256:137631552e9a0c6efca941c48e0fa4bd35854ba59519d87dcdcdfa29a38b1caa
+    extracted_at: 2026-05-11
+    extracted_by: operator (Colab + fasttext-wheel)
+    raw_vocab_size: 2000000
+    clean_vocab_size: 1999987
+    filtered_corrupted: 13
+    determinism_verified: two identical extractions produced identical checksums
+    status: extracted
+    imported_at_round: 29
+    imported_at_patch: v3_round29
+  - name: cc.ko.300.subset.small.5k
+    file_location: seeds/subsets/cc.ko.300.subset.small.5k
+    entry_type: subset
+    parent_seed: cc.ko.300.bin
+    parent_checksum: SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7
+    selection_method: fasttext_frequency_order_top_k
+    filter_rule: remove_words_containing_unicode_replacement_char
+    vocab_size: 5000
+    vector_dim: 300
+    vocab_file: vocab.txt
+    vectors_file: vectors.npy
+    subset_manifest_file: subset_manifest.json
+    vocab_checksum: SHA256:c8d0d5ab119e7da119b7ca14d28a48f13767d2b86f8860ce0edbd51158cb701b
+    vectors_checksum: SHA256:6b55eb8eef00a003164b3ae5ce74424673d3539a0007e94f27edf08683bb2309
+    subset_manifest_checksum: SHA256:fddb35096e6acb4b541a5a96f28de4cc0478b56b28d724f8a2718e846bb0a856
+    extracted_at: 2026-05-11
+    extracted_by: operator (Colab + fasttext-wheel)
+    raw_vocab_size: 2000000
+    clean_vocab_size: 1999987
+    filtered_corrupted: 13
+    determinism_verified: two identical extractions produced identical checksums
+    purpose: production_lexical_seed
+    status: extracted
+    imported_at_round: 31
+    imported_at_patch: v3_round31
+  - name: cc.ko.300.subset.medium.30k
+    file_location: seeds/subsets/cc.ko.300.subset.medium.30k
+    entry_type: subset
+    parent_seed: cc.ko.300.bin
+    parent_checksum: SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7
+    selection_method: fasttext_frequency_order_top_k
+    filter_rule: remove_words_containing_unicode_replacement_char
+    vocab_size: 30000
+    vector_dim: 300
+    vocab_file: vocab.txt
+    vectors_file: vectors.npy
+    subset_manifest_file: subset_manifest.json
+    vocab_checksum: SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308
+    vectors_checksum: SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05
+    subset_manifest_checksum: SHA256:28222ff89e1fa0d2c20463eeef79729d731bf0484f0f4f8161863088c2724c3a
+    extracted_at: 2026-05-12
+    extracted_by: operator (Colab + fasttext-wheel)
+    raw_vocab_size: 2000000
+    clean_vocab_size: 1999987
+    filtered_corrupted: 13
+    determinism_verified: operator deterministic extraction, checksums recorded
+    purpose: production_lexical_seed_expanded
+    supersedes_small_5k_for_lexical_coverage: true
+    status: extracted
+    imported_at_round: 50
+    imported_at_patch: v3_round50

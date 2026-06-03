@@ -1,0 +1,12 @@
+{
+  "pass": 13,
+  "fail": 0,
+  "timeout": 0,
+  "done_chunks": 13,
+  "total_chunks": 13,
+  "total_files": 126,
+  "passed_tests_by_chunk_sum": 1177,
+  "finished": true,
+  "manual_resume_note": "chunks 3 and 8-13 were resumed via equivalent explicit pytest chunk commands after runner process window interruption",
+  "updated_at": 1780309628.4086673
+}

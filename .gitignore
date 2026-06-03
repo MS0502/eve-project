@@ -24,3 +24,6 @@ outputs/
 figures/
 .env
 Thumbs.db
+
+# Code-only handoff binary vector artifacts stay out of PR diffs
+seeds/subsets/*/vectors.npy

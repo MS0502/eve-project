@@ -1,0 +1,130 @@
+{
+  "accepted_fixture_count": 1,
+  "blocked_count": 1,
+  "blocked_rows": [
+    {
+      "agp_anchor_created": false,
+      "blocked_reasons": [
+        "blocked_insufficient_lexical_evidence"
+      ],
+      "category_created": false,
+      "lexical_token": "EVE",
+      "operator_acceptance_fixture": false,
+      "operator_decision_status": "not_ready_for_operator_acceptance"
+    }
+  ],
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "candidate_count": 2,
+  "dry_run_version": "v3_round84_concept_memory_frame_evidence_dry_run",
+  "enforcement_enabled": false,
+  "evidence_dry_run_count": 1,
+  "evidence_rows": [
+    {
+      "agp_anchor_created": false,
+      "agp_verify_called": false,
+      "category_created": false,
+      "concept_evidence_dry_run": {
+        "category_id": "concept_category::lex::민석",
+        "concept_memory_persisted": false,
+        "concept_memory_reference": "concept_memory_candidate::lex::민석",
+        "evidence_plan_id": "concept_evidence::lex::민석",
+        "frame_persisted": false,
+        "frame_slots": [
+          {
+            "slot": "lexical_label",
+            "source": "round84_dry_run",
+            "value": "민석"
+          },
+          {
+            "slot": "source_candidate",
+            "source": "round84_dry_run",
+            "value": "lex::민석"
+          }
+        ],
+        "hypergraph_mutation": false,
+        "lexical_token": "민석",
+        "would_attach_concept_memory_reference": true,
+        "would_attach_frame_slots": true,
+        "would_attach_hypergraph_relation": false
+      },
+      "concept_memory_mutation": false,
+      "frame_hypergraph_mutation": false,
+      "lexical_token": "민석",
+      "operator_acceptance_fixture": true,
+      "remaining_blocked_reasons": [
+        "explicit_category_creation_dry_run_only",
+        "sa_activation_path_required",
+        "concept_memory_or_frame_evidence_dry_run_only",
+        "agp_bridge_smoke_test_required"
+      ],
+      "sa_activation_created": false,
+      "source_category_plan": {
+        "activated": false,
+        "agp_anchor_created": false,
+        "category_id": "concept_category::lex::민석",
+        "created": false,
+        "display_name": "민석",
+        "persisted": false,
+        "sa_activation_created": false,
+        "source": "round83_operator_acceptance_fixture_category_creation_dry_run",
+        "would_create": true
+      },
+      "would_pass_mapping_gate_after_evidence_fixture": false
+    }
+  ],
+  "evidence_tokens": [
+    "민석"
+  ],
+  "next_round_recommendation": {
+    "allowed_scope": "read_only_path_plan_no_sa_mutation_no_agp_anchor",
+    "round85": "sa_activation_path_dry_run"
+  },
+  "operator_recommendation": "proceed_to_sa_activation_path_dry_run",
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "concept_memory_frame_evidence_dry_run_only": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "lexical_vector_is_evidence_only": true,
+    "no_agp_anchor_creation": true,
+    "no_agp_verify_call": true,
+    "no_category_creation": true,
+    "no_concept_memory_mutation": true,
+    "no_embedding_wrapper_lookup": true,
+    "no_enforcement": true,
+    "no_frame_hypergraph_mutation": true,
+    "no_runtime_mapping": true,
+    "no_sa_activation_creation": true,
+    "no_vector_commit": true
+  },
+  "read_only": true,
+  "read_only_checks": {
+    "agp_anchor_created": false,
+    "agp_verify_called": false,
+    "audit_records_unchanged_during_evidence_dry_run": true,
+    "category_created": false,
+    "concept_memory_mutation": false,
+    "enforcement_enabled_after_run": false,
+    "frame_hypergraph_mutation": false,
+    "operator_decision_persisted": false,
+    "runtime_mapping_enabled_after_run": false,
+    "sa_activation_created": false,
+    "self_learning_policy_unchanged_during_evidence_dry_run": true,
+    "telemetry_unchanged_during_evidence_dry_run": true,
+    "vector_commit_called": false,
+    "vector_store_unchanged_during_evidence_dry_run": true,
+    "wrapper_lookup_called": false
+  },
+  "remaining_blocked_reason_counts": {
+    "agp_bridge_smoke_test_required": 1,
+    "blocked_insufficient_lexical_evidence": 1,
+    "concept_memory_or_frame_evidence_dry_run_only": 1,
+    "explicit_category_creation_dry_run_only": 1,
+    "sa_activation_path_required": 1
+  },
+  "round": 84,
+  "runtime_mapping_enabled": false,
+  "source_round83_dry_run_version": "v3_round83_operator_acceptance_category_creation_dry_run",
+  "would_pass_mapping_gate_count": 0
+}

@@ -1,0 +1,135 @@
+{
+  "artifact_manifest": {
+    "artifact_count": 14,
+    "operator_export_artifact": "EVE_CONCEPT_COMMIT_REPLAY_EXPORT_CHECKPOINT_R91.json",
+    "required_artifacts": [
+      "LEXICAL_CONCEPT_MAPPING_PLAN_R77.json",
+      "LEXICAL_CONCEPT_CANDIDATE_DRY_RUN_R78.json",
+      "LEXICAL_CONCEPT_CANDIDATE_EVIDENCE_QUALITY_R79.json",
+      "LEXICAL_CONCEPT_PROPOSAL_R80.json",
+      "LEXICAL_CONCEPT_MAPPING_GATE_DRY_RUN_R81.json",
+      "LEXICAL_CONCEPT_MAPPING_GATE_PROPOSAL_R82.json",
+      "LEXICAL_CONCEPT_OPERATOR_ACCEPTANCE_CATEGORY_DRY_RUN_R83.json",
+      "LEXICAL_CONCEPT_MEMORY_FRAME_EVIDENCE_DRY_RUN_R84.json",
+      "LEXICAL_CONCEPT_SA_ACTIVATION_PATH_DRY_RUN_R85.json",
+      "LEXICAL_CONCEPT_AGP_BRIDGE_SMOKE_DRY_RUN_R86.json",
+      "LEXICAL_CONCEPT_MAPPING_READINESS_DASHBOARD_R87.json",
+      "LEXICAL_CONCEPT_MAPPING_V0_PROPOSAL_FREEZE_R88.json",
+      "EVE_CONCEPT_COMMIT_SMOKE_R89.json",
+      "EVE_CONCEPT_COMMIT_DELTA_REPLAY_R90.json"
+    ]
+  },
+  "axis": "lexical_to_concept_mapping_v0_checkpoint",
+  "checkpoint_version": "v3_round91_concept_commit_replay_export_v0_checkpoint",
+  "operator_summary": {
+    "agp_negative_without_sa_guard_count": 1,
+    "agp_replay_pass_count": 1,
+    "category_count": 1,
+    "category_tokens": [
+      "민석"
+    ],
+    "concept_commit_audit_count": 1,
+    "concept_memory_replay_found_count": 1,
+    "explicit_concept_commit_tokens": [
+      "민석"
+    ],
+    "next_recommended_round": "round92_runtime_mapping_gate_dry_run",
+    "replay_row_count": 1,
+    "sa_activation_replay_found_count": 1
+  },
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "checkpoint_is_read_only": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "eve_specific_vector_is_not_concept": true,
+    "lexical_vector_is_evidence_only": true,
+    "runtime_mapping_still_disabled": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "read_only": true,
+  "read_only_checks": {
+    "agp_bypass": false,
+    "category_created_during_checkpoint": false,
+    "category_snapshot_unchanged_during_checkpoint": true,
+    "concept_commit_audit_unchanged_during_checkpoint": true,
+    "concept_memory_mutation_during_checkpoint": false,
+    "eve_specific_vector_commit_called": false,
+    "eve_specific_vector_store_unchanged_during_checkpoint": true,
+    "fasttext_seed_mutation": false,
+    "frame_hypergraph_mutation_during_checkpoint": false,
+    "sa_activation_created_during_checkpoint": false,
+    "sa_active_categories_unchanged_during_checkpoint": true,
+    "wrapper_telemetry_unchanged_during_checkpoint": true
+  },
+  "replay_guards": {
+    "agp_anchor_source": "explicit_category_plus_sa_activation_only",
+    "agp_negative_without_sa_guard_tokens": [
+      "민석"
+    ],
+    "agp_replay_pass_tokens": [
+      "민석"
+    ],
+    "eve_specific_vector_used_as_anchor": false,
+    "explicit_category_without_sa_fails_agp": true,
+    "lexical_vector_used_as_anchor": false,
+    "seed_vector_used_as_anchor": false
+  },
+  "replay_rows": [
+    {
+      "agp_negative_without_sa_passed": false,
+      "agp_negative_without_sa_reason": "unknown_category",
+      "agp_replay_called": true,
+      "agp_replay_passed": true,
+      "agp_replay_reason": "anchored",
+      "anchor_source": "explicit_category_plus_sa_activation",
+      "category_id": "concept_category::lex::민석",
+      "category_record_present": true,
+      "concept_memory_present": true,
+      "frame_hypergraph_edge_present": true,
+      "frame_slot_count": 3,
+      "lexical_token": "민석",
+      "read_only_replay": true,
+      "sa_activation_present": true,
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false
+    }
+  ],
+  "round": 91,
+  "runner_read_only_checks": {
+    "concept_commit_not_called_by_round91_runner": true,
+    "enforcement_enabled": false,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled": false,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "runtime_policy": {
+    "auto_category_creation_enabled": false,
+    "broad_lexical_to_concept_mapping_enabled": false,
+    "enforcement_enabled": false,
+    "explicit_operator_gate_required_before_runtime_mapping": true,
+    "next_round_is_dry_run_only": true,
+    "runtime_mapping_enabled": false
+  },
+  "source_commit_version": "v3_round89_explicit_concept_commit_smoke",
+  "source_replay_version": "v3_round90_concept_commit_delta_replay_report",
+  "source_rounds": [
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90
+  ],
+  "status": "checkpoint_ready_runtime_mapping_disabled"
+}

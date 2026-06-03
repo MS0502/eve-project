@@ -1,0 +1,51 @@
+{
+  "audit_version": "v3_round98_runtime_mapping_persistence_gate_audit",
+  "blocked_count": 0,
+  "enforcement_enabled": false,
+  "hard_stop": false,
+  "hard_stop_reasons": [],
+  "mapped_count": 1,
+  "operator_recommendation": {
+    "default_action": "keep_runtime_mapping_disabled_until_operator_persistence_round",
+    "next_recommended_round": "operator_persistence_decision_with_full_validation",
+    "persist_runtime_mapping_now": false,
+    "requires_operator_approval": true,
+    "requires_split_full_suite_with_medium_vectors": true
+  },
+  "persistence_gate_status": "ready_for_operator_persistence_decision",
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "enforcement_still_disabled": true,
+    "lexical_vector_is_evidence_only": true,
+    "persistence_gate_audit_only": true,
+    "runtime_mapping_still_disabled_by_default": true
+  },
+  "read_only": true,
+  "read_only_checks": {
+    "agp_verify_called_during_persistence_gate_audit": false,
+    "category_created_during_persistence_gate_audit": false,
+    "category_snapshot_unchanged_during_persistence_gate_audit": true,
+    "concept_commit_audit_unchanged_during_persistence_gate_audit": true,
+    "concept_memory_mutation_during_persistence_gate_audit": false,
+    "embedding_lookup_called_during_persistence_gate_audit": false,
+    "eve_specific_vector_store_unchanged_during_persistence_gate_audit": true,
+    "frame_hypergraph_mutation_during_persistence_gate_audit": false,
+    "runtime_mapping_persisted": false,
+    "sa_activation_created_during_persistence_gate_audit": false,
+    "sa_active_categories_unchanged_during_persistence_gate_audit": true,
+    "wrapper_telemetry_unchanged_during_persistence_gate_audit": true
+  },
+  "round": 98,
+  "runner_read_only_checks": {
+    "concept_commit_not_called_by_round98_runner": true,
+    "enforcement_enabled_after_runner": false,
+    "enforcement_not_enabled_by_runner": true,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled_after_runner": false,
+    "runtime_mapping_not_persisted_by_runner": true,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "runtime_mapping_enabled": false,
+  "source_smoke_version": "v3_round97_controlled_runtime_mapping_enable_smoke"
+}

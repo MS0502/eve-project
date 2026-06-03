@@ -1,0 +1,14 @@
+{
+  "collect_only": "1190 tests collected",
+  "compileall": "passed",
+  "failures": 0,
+  "full_split_suite": "not_run_read_only_report_round",
+  "round": 82,
+  "round50_to_82_adjacent_sweep": "179 passed",
+  "round60_to_82_focused_sweep": "75 passed",
+  "round77_to_82_focused": "18 passed",
+  "round82_focused": "3 passed",
+  "test_policy": "read_only_report_round_focused_adjacent_compile_collect_only",
+  "timeouts": 0,
+  "validation_status_version": "v3_round82_validation_status"
+}

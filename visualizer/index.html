@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVE 2D Visualizer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e8;
+    padding: 12px;
+    min-height: 100vh;
+}
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+@media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+}
+.panel {
+    background: #15151c;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 12px;
+}
+.panel h2 {
+    font-size: 14px;
+    color: #8a8aa0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.connection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f44;
+    box-shadow: 0 0 8px currentColor;
+}
+.dot.connected { background: #5d5; }
+.url-input {
+    flex: 1;
+    background: #0a0a10;
+    border: 1px solid #2a2a3a;
+    color: #e0e0e8;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+.btn {
+    background: #2a4d6e;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.btn:hover { background: #3a5d7e; }
+.btn:disabled { background: #333; cursor: not-allowed; }
+
+/* 호르몬 바 */
+.hormones {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+}
+.hormone {
+    background: #0a0a10;
+    border-radius: 4px;
+    padding: 6px 8px;
+    border-left: 3px solid;
+}
+.hormone-name {
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 4px;
+}
+.hormone-bar {
+    height: 6px;
+    background: #1a1a25;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+.hormone-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+.hormone-baseline {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.4);
+}
+.hormone-value {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+    text-align: right;
+}
+
+/* 방 평면도 */
+#room-canvas {
+    width: 100%;
+    height: 280px;
+    background: #0a0a10;
+    border-radius: 4px;
+    display: block;
+}
+
+/* 카테고리 */
+.categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.cat-tag {
+    background: #1a3a4a;
+    color: #aaccdd;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+.cat-tag .level {
+    font-size: 9px;
+    color: #66aacc;
+    margin-left: 4px;
+}
+
+/* 채팅 */
+.chat {
+    height: 220px;
+    overflow-y: auto;
+    background: #0a0a10;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+.msg {
+    margin: 4px 0;
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+.msg.user {
+    background: #2a3550;
+    color: #cce0ff;
+    margin-left: 30px;
+}
+.msg.eve {
+    background: #1f2530;
+    color: #e0e0e8;
+    margin-right: 30px;
+}
+.chat-input-row {
+    display: flex;
+    gap: 6px;
+}
+.chat-input {
+    flex: 1;
+    background: #0a0a10;
+    border: 1px solid #2a2a3a;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* 상태 라인 */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid #2a2a3a;
+    font-size: 12px;
+}
+.stat-row:last-child { border: none; }
+.stat-label { color: #8a8aa0; }
+.stat-value { color: #e0e0e8; font-weight: 500; }
+
+.feeling {
+    color: #ffa;
+    font-size: 13px;
+    padding: 6px 0;
+}
+</style>
+</head>
+<body>
+
+<div class="connection">
+    <span class="dot" id="conn-dot"></span>
+    <input class="url-input" id="ws-url" value="ws://localhost:8765">
+    <button class="btn" id="connect-btn">연결</button>
+</div>
+
+<div class="grid">
+
+<!-- 호르몬 -->
+<div class="panel">
+    <h2>호르몬 26종</h2>
+    <div class="hormones" id="hormones"></div>
+</div>
+
+<!-- 방 + 신체 감각 -->
+<div class="panel">
+    <h2>위치 / 신체</h2>
+    <canvas id="room-canvas"></canvas>
+    <div class="feeling" id="feeling">—</div>
+</div>
+
+<!-- 활성 카테고리 -->
+<div class="panel">
+    <h2>활성 카테고리</h2>
+    <div class="categories" id="categories"></div>
+</div>
+
+<!-- 상태 요약 -->
+<div class="panel">
+    <h2>상태</h2>
+    <div class="stat-row">
+        <span class="stat-label">위치</span>
+        <span class="stat-value" id="stat-location">—</span>
+    </div>
+    <div class="stat-row">
+        <span class="stat-label">집인가?</span>
+        <span class="stat-value" id="stat-home">—</span>
+    </div>
+    <div class="stat-row">
+        <span class="stat-label">민석 친밀도</span>
+        <span class="stat-value" id="stat-intimacy">—</span>
+    </div>
+    <div class="stat-row">
+        <span class="stat-label">자율 step</span>
+        <span class="stat-value" id="stat-step">—</span>
+    </div>
+    <div style="margin-top: 8px; display: flex; gap: 6px;">
+        <button class="btn" id="tick-btn">tick</button>
+        <button class="btn" id="tick10-btn">tick 10</button>
+        <button class="btn" id="save-btn">저장</button>
+    </div>
+</div>
+
+<!-- 채팅 -->
+<div class="panel" style="grid-column: 1 / -1;">
+    <h2>대화</h2>
+    <div class="chat" id="chat"></div>
+    <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" placeholder="민석아 말해봐..." />
+        <button class="btn" id="send-btn">보내기</button>
+    </div>
+</div>
+
+</div>
+
+<script>
+// ===== WebSocket =====
+let ws = null;
+let chatBuffer = [];
+
+function $(id) { return document.getElementById(id); }
+
+function setConnected(c) {
+    $("conn-dot").classList.toggle("connected", c);
+}
+
+function connect() {
+    const url = $("ws-url").value;
+    try {
+        ws = new WebSocket(url);
+        ws.onopen = () => {
+            setConnected(true);
+            console.log("connected");
+        };
+        ws.onclose = () => {
+            setConnected(false);
+            console.log("closed");
+        };
+        ws.onerror = (e) => {
+            setConnected(false);
+            console.error(e);
+        };
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                handleMessage(msg);
+            } catch (err) {
+                console.error("parse error", err);
+            }
+        };
+    } catch (e) {
+        alert("연결 실패: " + e.message);
+    }
+}
+
+function send(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(obj));
+    }
+}
+
+// ===== 메시지 처리 =====
+
+function handleMessage(msg) {
+    if (msg.type === "state") {
+        renderState(msg);
+    } else if (msg.type === "chunk") {
+        // chunk 누적
+        chatBuffer.push(msg.text);
+        appendChat("eve-streaming", msg.text);
+    } else if (msg.type === "done") {
+        chatBuffer = [];
+    } else if (msg.type === "tick_result") {
+        const action = msg.action || "(없음)";
+        appendChat("system", `[step ${msg.step}] needs=${msg.needs.join(",")} action=${action}`);
+    } else if (msg.type === "saved") {
+        appendChat("system", `저장됨: ${msg.path}`);
+    } else if (msg.type === "error") {
+        appendChat("system", `에러: ${msg.msg}`);
+    }
+}
+
+// ===== 렌더 =====
+
+function renderHormones(hormones) {
+    const container = $("hormones");
+    container.innerHTML = "";
+    for (const [name, h] of Object.entries(hormones)) {
+        const div = document.createElement("div");
+        div.className = "hormone";
+        div.style.borderLeftColor = h.color;
+        const pct = Math.max(0, Math.min(100, h.level * 100));
+        const baseline_pct = Math.max(0, Math.min(100, h.baseline * 100));
+        div.innerHTML = `
+            <div class="hormone-name">${name}</div>
+            <div class="hormone-bar">
+                <div class="hormone-fill" style="width:${pct}%; background:${h.color}"></div>
+                <div class="hormone-baseline" style="left:${baseline_pct}%"></div>
+            </div>
+            <div class="hormone-value">${h.level.toFixed(2)} / ${h.baseline.toFixed(2)}</div>
+        `;
+        container.appendChild(div);
+    }
+}
+
+function renderCategories(cats) {
+    const container = $("categories");
+    container.innerHTML = "";
+    cats.forEach(c => {
+        const span = document.createElement("span");
+        span.className = "cat-tag";
+        span.innerHTML = `${c.name}<span class="level">${c.level.toFixed(2)}</span>`;
+        container.appendChild(span);
+    });
+    if (cats.length === 0) {
+        container.innerHTML = '<span style="color:#666">활성 카테고리 없음</span>';
+    }
+}
+
+function renderRoom(s) {
+    const canvas = $("room-canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 320;
+    
+    const W = canvas.width, H = canvas.height;
+    
+    // 배경
+    ctx.fillStyle = "#0a0a10";
+    ctx.fillRect(0, 0, W, H);
+    
+    // 방 외곽
+    ctx.strokeStyle = "#3a3a4a";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+    
+    // 위치 라벨
+    ctx.fillStyle = "#888";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(s.location || "?", 30, 40);
+    
+    // 객체
+    const objects = s.objects || [];
+    const positions = {
+        "침대": [W * 0.25, H * 0.35, "🛏"],
+        "책상": [W * 0.75, H * 0.30, "🪑"],
+        "의자": [W * 0.75, H * 0.50, "🪑"],
+        "창문": [W * 0.5, H * 0.15, "🪟"],
+        "일기장": [W * 0.75, H * 0.40, "📖"],
+        "책": [W * 0.5, H * 0.5, "📚"],
+    };
+    objects.forEach(obj => {
+        const pos = positions[obj];
+        if (pos) {
+            ctx.font = "20px sans-serif";
+            ctx.fillText(pos[2], pos[0] - 10, pos[1] + 5);
+            ctx.font = "10px sans-serif";
+            ctx.fillStyle = "#aaa";
+            ctx.fillText(obj, pos[0] - 15, pos[1] + 20);
+            ctx.fillStyle = "#888";
+        }
+    });
+    
+    // 호르몬 우세 → 색
+    const hormones = s.hormones || {};
+    let eveColor = "#aaccff";
+    let dom = null, domLevel = 0;
+    for (const [n, h] of Object.entries(hormones)) {
+        if (h.level > domLevel) {
+            domLevel = h.level;
+            dom = n;
+            eveColor = h.color;
+        }
+    }
+    
+    // 캐릭터 정보 (라운드 25)
+    const character = s.character || {expression: "neutral", motion: "idle", speaking: false};
+    
+    // EVE 위치 — 모션에 따라 다르게
+    const motion = character.motion;
+    let eveX = W * 0.5, eveY = H * 0.65;
+    if (motion === "sleeping") {
+        eveX = W * 0.25;     // 침대 위
+        eveY = H * 0.35;
+    } else if (motion === "reading" || motion === "sitting") {
+        eveX = W * 0.75;     // 책상 옆
+        eveY = H * 0.45;
+    } else if (motion === "walking") {
+        // 시간에 따라 좌우 흔들림
+        const t = Date.now() / 600;
+        eveX = W * 0.5 + Math.sin(t) * (W * 0.15);
+        eveY = H * 0.65;
+    } else if (motion === "looking_around") {
+        eveY = H * 0.65 + Math.sin(Date.now() / 500) * 5;
+    }
+    
+    // 글로우
+    const glowSize = motion === "sleeping" ? 25 : 50;
+    const gradient = ctx.createRadialGradient(eveX, eveY, 0, eveX, eveY, glowSize);
+    gradient.addColorStop(0, eveColor);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(eveX - glowSize, eveY - glowSize, glowSize * 2, glowSize * 2);
+    
+    // 캐릭터 본체 — 추상 (구체 + 눈빛)
+    drawCharacter(ctx, eveX, eveY, eveColor, character);
+    
+    // 라벨
+    ctx.fillStyle = "white";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("EVE", eveX, eveY + 35);
+    ctx.fillStyle = "#aaa";
+    ctx.font = "9px sans-serif";
+    ctx.fillText(`${character.expression} · ${motion}`, eveX, eveY + 47);
+    if (character.speaking) {
+        ctx.fillStyle = "#ffa";
+        ctx.fillText("♪ 말하는 중", eveX, eveY + 58);
+    }
+    ctx.textAlign = "left";
+    
+    // NPC (외출 중)
+    const npcs = s.npcs || [];
+    if (npcs.length > 0 && !s.is_home) {
+        npcs.forEach((npc, i) => {
+            const nx = W * 0.85 + (i - npcs.length/2) * 25;
+            const ny = H * 0.55;
+            ctx.beginPath();
+            ctx.arc(nx, ny, 8, 0, Math.PI * 2);
+            ctx.fillStyle = "#aa9988";
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.font = "9px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(npc, nx, ny + 18);
+            ctx.textAlign = "left";
+        });
+    }
+}
+
+// 캐릭터 그리기 — 추상 (구체 + 눈빛 + 표정)
+function drawCharacter(ctx, x, y, color, character) {
+    const expr = character.expression;
+    const motion = character.motion;
+    const speaking = character.speaking;
+    
+    // 자세
+    let bodyW = 14, bodyH = 14;
+    if (motion === "sleeping") {
+        // 옆으로 누움
+        bodyW = 24; bodyH = 10;
+    } else if (motion === "sitting" || motion === "reading") {
+        bodyH = 18;
+    }
+    
+    // 본체 (구체)
+    ctx.beginPath();
+    ctx.ellipse(x, y, bodyW, bodyH, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // 자고 있을 때는 눈/입 안 그림
+    if (motion === "sleeping") {
+        // Z Z Z
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.font = "10px sans-serif";
+        ctx.fillText("z", x + 18, y - 8);
+        ctx.font = "8px sans-serif";
+        ctx.fillText("z", x + 22, y - 14);
+        return;
+    }
+    
+    // 눈 (표정에 따라)
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    const eyeY = y - 3;
+    const eyeOffsetX = 5;
+    
+    if (expr === "happy" || expr === "warm") {
+        // 휘어진 눈 ^^
+        ctx.beginPath();
+        ctx.arc(x - eyeOffsetX, eyeY + 1, 2.5, Math.PI * 0.2, Math.PI * 0.8, false);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + eyeOffsetX, eyeY + 1, 2.5, Math.PI * 0.2, Math.PI * 0.8, false);
+        ctx.stroke();
+    } else if (expr === "sad" || expr === "cold") {
+        // 처진 눈
+        ctx.beginPath();
+        ctx.arc(x - eyeOffsetX, eyeY, 2, Math.PI * 1.2, Math.PI * 1.8, true);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + eyeOffsetX, eyeY, 2, Math.PI * 1.2, Math.PI * 1.8, true);
+        ctx.stroke();
+    } else if (expr === "sleepy") {
+        // 반쯤 감김
+        ctx.fillRect(x - eyeOffsetX - 2, eyeY, 4, 1);
+        ctx.fillRect(x + eyeOffsetX - 2, eyeY, 4, 1);
+    } else if (expr === "surprised") {
+        // 큰 눈
+        ctx.beginPath();
+        ctx.arc(x - eyeOffsetX, eyeY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + eyeOffsetX, eyeY, 3, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (expr === "angry") {
+        // 사선 눈썹
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(0,0,0,0.8)";
+        ctx.beginPath();
+        ctx.moveTo(x - eyeOffsetX - 3, eyeY - 3); ctx.lineTo(x - eyeOffsetX + 2, eyeY - 1);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + eyeOffsetX + 3, eyeY - 3); ctx.lineTo(x + eyeOffsetX - 2, eyeY - 1);
+        ctx.stroke();
+        // 눈
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.beginPath(); ctx.arc(x - eyeOffsetX, eyeY + 1, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + eyeOffsetX, eyeY + 1, 1.5, 0, Math.PI * 2); ctx.fill();
+    } else if (expr === "shy") {
+        // 작은 눈 + 볼터치
+        ctx.beginPath(); ctx.arc(x - eyeOffsetX, eyeY, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + eyeOffsetX, eyeY, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255, 100, 120, 0.5)";
+        ctx.beginPath(); ctx.arc(x - eyeOffsetX - 4, eyeY + 4, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + eyeOffsetX + 4, eyeY + 4, 2, 0, Math.PI * 2); ctx.fill();
+    } else if (expr === "doubtful") {
+        // 한쪽 올라간 눈썹
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.beginPath(); ctx.moveTo(x - eyeOffsetX - 2, eyeY - 3); ctx.lineTo(x - eyeOffsetX + 2, eyeY - 4); ctx.stroke();
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.beginPath(); ctx.arc(x - eyeOffsetX, eyeY, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + eyeOffsetX, eyeY, 1.5, 0, Math.PI * 2); ctx.fill();
+    } else {
+        // 기본 (neutral)
+        ctx.beginPath(); ctx.arc(x - eyeOffsetX, eyeY, 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + eyeOffsetX, eyeY, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    
+    // 입 — 표정 + 입모양 (말하는 중)
+    const mouthY = y + 5;
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    
+    if (speaking) {
+        // 말하는 중 — 시간에 따라 입 열림 정도
+        const t = (Date.now() / 100) % 6;
+        const openness = (t < 3) ? t / 3 : (6 - t) / 3;       // 0~1~0
+        const mouthH = 1 + openness * 4;
+        ctx.fillStyle = "rgba(50,30,30,0.8)";
+        ctx.beginPath();
+        ctx.ellipse(x, mouthY, 3, mouthH, 0, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (expr === "happy" || expr === "warm") {
+        // 웃음
+        ctx.beginPath();
+        ctx.arc(x, mouthY - 1, 4, Math.PI * 0.1, Math.PI * 0.9, false);
+        ctx.stroke();
+    } else if (expr === "sad") {
+        // 슬픈
+        ctx.beginPath();
+        ctx.arc(x, mouthY + 5, 4, Math.PI * 1.1, Math.PI * 1.9, false);
+        ctx.stroke();
+    } else if (expr === "surprised") {
+        // O 모양
+        ctx.beginPath();
+        ctx.arc(x, mouthY, 2, 0, Math.PI * 2);
+        ctx.stroke();
+    } else if (expr === "angry") {
+        // 일자 입
+        ctx.beginPath();
+        ctx.moveTo(x - 3, mouthY); ctx.lineTo(x + 3, mouthY);
+        ctx.stroke();
+    } else {
+        // 기본 — 살짝 미소
+        ctx.beginPath();
+        ctx.arc(x, mouthY - 1, 3, Math.PI * 0.2, Math.PI * 0.8, false);
+        ctx.stroke();
+    }
+}
+
+// ===== 채팅 =====
+
+function appendChat(kind, text) {
+    const chat = $("chat");
+    if (kind === "eve-streaming") {
+        // 마지막 EVE 메시지에 이어 붙이기
+        const last = chat.lastChild;
+        if (last && last.dataset.streaming === "1") {
+            last.textContent += " " + text;
+        } else {
+            const div = document.createElement("div");
+            div.className = "msg eve";
+            div.dataset.streaming = "1";
+            div.textContent = text;
+            chat.appendChild(div);
+        }
+    } else {
+        // 새 메시지
+        const div = document.createElement("div");
+        div.className = "msg " + (kind === "user" ? "user" : "eve");
+        div.textContent = text;
+        chat.appendChild(div);
+    }
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function sendMessage() {
+    const input = $("chat-input");
+    const text = input.value.trim();
+    if (!text || !ws) return;
+    appendChat("user", text);
+    // 새 EVE 메시지 시작 (이전 streaming 종료)
+    const chat = $("chat");
+    const last = chat.lastChild;
+    if (last && last.dataset.streaming === "1") {
+        delete last.dataset.streaming;
+    }
+    send({type: "user_message", text: text});
+    input.value = "";
+}
+
+// ===== 이벤트 =====
+
+$("connect-btn").addEventListener("click", connect);
+$("send-btn").addEventListener("click", sendMessage);
+$("chat-input").addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+});
+$("tick-btn").addEventListener("click", () => send({type: "tick", n: 1}));
+$("tick10-btn").addEventListener("click", () => send({type: "tick", n: 10}));
+$("save-btn").addEventListener("click", () => send({type: "save", path: "/tmp/eve.ckpt"}));
+
+// 자동 연결 시도
+setTimeout(connect, 200);
+
+// 애니메이션 루프 — 마지막 state 캐싱 + 60fps 캐릭터 리렌더
+let _lastState = null;
+function renderState(s) {
+    _lastState = s;
+    renderHormones(s.hormones || {});
+    renderCategories(s.active_categories || []);
+    renderRoom(s);
+    $("feeling").textContent = s.feeling || "—";
+    $("stat-location").textContent = s.location || "—";
+    $("stat-home").textContent = s.is_home ? "집 (내방)" : "외출";
+    $("stat-intimacy").textContent = (s.intimacy || 0).toFixed(3);
+    $("stat-step").textContent = s.step_count || 0;
+}
+
+function animationLoop() {
+    if (_lastState) {
+        renderRoom(_lastState);     // 캐릭터 모션/입모양 부드럽게
+    }
+    requestAnimationFrame(animationLoop);
+}
+requestAnimationFrame(animationLoop);
+</script>
+
+</body>
+</html>

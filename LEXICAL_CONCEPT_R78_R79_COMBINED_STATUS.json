@@ -1,0 +1,52 @@
+{
+  "combined_version": "v3_round78_79_lexical_concept_candidate_dry_run_and_quality_report",
+  "policy_unchanged": {
+    "agp_anchor_created": false,
+    "auto_promotion_enabled": false,
+    "category_created": false,
+    "commit_gate_enabled": true,
+    "enforcement_enabled": false,
+    "runtime_mapping_enabled": false
+  },
+  "round78": {
+    "candidate_count": 2,
+    "dry_run_version": "v3_round78_lexical_concept_candidate_schema_dry_run",
+    "read_only_checks": {
+      "agp_verify_called": false,
+      "audit_records_unchanged_during_dry_run": true,
+      "category_created": false,
+      "enforcement_enabled_after_dry_run": false,
+      "runtime_mapping_enabled_after_dry_run": false,
+      "self_learning_policy_unchanged_during_dry_run": true,
+      "telemetry_unchanged_during_dry_run": true,
+      "vector_store_unchanged_during_dry_run": true
+    },
+    "ready_tokens": [
+      "민석"
+    ]
+  },
+  "round79": {
+    "agp_anchor_created_count": 0,
+    "blocked_candidate_count": 1,
+    "candidate_count": 2,
+    "concept_category_created_count": 0,
+    "lexical_evidence_ready_count": 1,
+    "operator_recommendation": "proceed_to_concept_proposal_report",
+    "read_only_checks": {
+      "agp_verify_called": false,
+      "audit_records_unchanged_during_report": true,
+      "category_created": false,
+      "enforcement_enabled_after_report": false,
+      "runtime_mapping_enabled_after_report": false,
+      "self_learning_policy_unchanged_during_report": true,
+      "telemetry_unchanged_during_report": true,
+      "vector_store_unchanged_during_report": true
+    },
+    "report_version": "v3_round79_lexical_concept_candidate_evidence_quality_report"
+  },
+  "rounds": [
+    78,
+    79
+  ],
+  "target_word": "민석"
+}

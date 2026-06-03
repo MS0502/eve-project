@@ -1,0 +1,12 @@
+{
+  "all_chunks_passed": true,
+  "chunks_requested": 14,
+  "chunks_run": 14,
+  "collect_only_tests": 1168,
+  "failures": 0,
+  "note": "Chunks were executed in separate sandbox calls to avoid command-window timeout; each chunk returned 0.",
+  "passed_tests_by_chunk_sum": 1168,
+  "suite_version": "v3_round75_split_suite",
+  "test_file_count": 124,
+  "timeouts": 0
+}

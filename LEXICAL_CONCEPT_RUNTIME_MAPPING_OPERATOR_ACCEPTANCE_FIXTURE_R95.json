@@ -1,0 +1,156 @@
+{
+  "accepted_count": 1,
+  "accepted_rows": [
+    {
+      "agp_verify_called_now": false,
+      "anchor_source_required": "explicit_category_plus_sa_activation_only",
+      "api_path_dry_run": [
+        "RuntimeLexConceptMapper.resolve(token)",
+        "LexConceptMappingAdapter.runtime_mapping_gate",
+        "ConceptCategoryRegistry.lookup(category_id)",
+        "SAActivation.check(category_id)",
+        "return MappingResult(category_id)"
+      ],
+      "blocked_reasons": [],
+      "category_created_now": false,
+      "concept_memory_mutation_now": false,
+      "embedding_lookup_called_now": false,
+      "enforcement_enabled_now": false,
+      "enforcement_status": "would_apply_if_runtime_mapping_enabled",
+      "frame_hypergraph_mutation_now": false,
+      "lexical_token": "민석",
+      "operator_acceptance_fixture": true,
+      "operator_decision_status": "operator_accepted_fixture_not_persisted",
+      "remaining_blocked_reasons": [],
+      "resolved_reasons": [
+        "operator_acceptance_required"
+      ],
+      "runtime_mapping_applied_now": false,
+      "runtime_mapping_enabled_now": false,
+      "sa_activation_created_now": false,
+      "simulated_mapping_result": {
+        "anchor_source": "explicit_category_plus_sa_activation_only",
+        "category_id": "concept_category::lex::민석",
+        "category_label": "민석",
+        "lexical_token": "민석",
+        "mapping_status": "simulated_runtime_mapping_success"
+      },
+      "target_category_id": "concept_category::lex::민석",
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false,
+      "would_apply_if_runtime_mapping_enabled": true,
+      "would_apply_runtime_mapping_after_fixture": true
+    }
+  ],
+  "accepted_tokens": [
+    "민석"
+  ],
+  "axis": "runtime_lexical_to_concept_mapping_operator_acceptance_fixture",
+  "blocked_count": 1,
+  "blocked_rows": [
+    {
+      "agp_verify_called_now": false,
+      "anchor_source_required": "explicit_category_plus_sa_activation_only",
+      "api_path_dry_run": [],
+      "blocked_reasons": [
+        "agp_negative_without_sa_guard_missing",
+        "agp_replay_pass_missing",
+        "concept_commit_audit_missing",
+        "concept_memory_missing",
+        "explicit_category_missing",
+        "sa_activation_missing",
+        "target_category_record_missing"
+      ],
+      "category_created_now": false,
+      "concept_memory_mutation_now": false,
+      "embedding_lookup_called_now": false,
+      "enforcement_enabled_now": false,
+      "enforcement_status": "blocked_from_runtime_mapping_enforcement",
+      "frame_hypergraph_mutation_now": false,
+      "lexical_token": "EVE",
+      "operator_acceptance_fixture": false,
+      "operator_decision_status": "blocked_or_not_accepted_fixture_not_persisted",
+      "runtime_mapping_applied_now": false,
+      "runtime_mapping_enabled_now": false,
+      "sa_activation_created_now": false,
+      "simulated_mapping_result": null,
+      "target_category_id": "concept_category::lex::EVE",
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false,
+      "would_apply_if_runtime_mapping_enabled": false,
+      "would_apply_runtime_mapping_after_fixture": false
+    }
+  ],
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "candidate_count": 2,
+  "enforcement_enabled": false,
+  "fixture_version": "v3_round95_runtime_mapping_operator_acceptance_fixture",
+  "next_round_recommendation": {
+    "name": "runtime_mapping_enable_smoke_with_checkpoint",
+    "requires_operator_approval": true,
+    "requires_pre_mutation_checkpoint": true,
+    "requires_rollback_report": true,
+    "requires_split_full_suite": true,
+    "round": 96
+  },
+  "operator_recommendation": {
+    "next_recommended_round": "round96_runtime_mapping_enable_smoke_with_checkpoint",
+    "operator_fixture_created": true,
+    "runtime_mapping_should_be_enabled_now": false,
+    "safe_default": "keep_runtime_mapping_disabled_until_separate_enablement_round",
+    "separate_mutation_round_required_for_enablement": true,
+    "split_full_suite_required_before_enablement": true
+  },
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "eve_specific_vector_is_not_concept": true,
+    "lexical_vector_is_evidence_only": true,
+    "no_agp_verify_call": true,
+    "no_auto_category_creation": true,
+    "no_concept_memory_mutation": true,
+    "no_embedding_lookup": true,
+    "no_frame_hypergraph_mutation": true,
+    "no_sa_activation_creation": true,
+    "operator_acceptance_fixture_only": true,
+    "runtime_mapping_still_disabled": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "read_only": true,
+  "read_only_checks": {
+    "agp_verify_called_during_operator_fixture": false,
+    "category_created_during_operator_fixture": false,
+    "category_snapshot_unchanged_during_operator_fixture": true,
+    "concept_commit_audit_unchanged_during_operator_fixture": true,
+    "concept_memory_mutation_during_operator_fixture": false,
+    "embedding_lookup_called_during_operator_fixture": false,
+    "enforcement_enabled_now": false,
+    "eve_specific_vector_commit_called": false,
+    "eve_specific_vector_store_unchanged_during_operator_fixture": true,
+    "frame_hypergraph_mutation_during_operator_fixture": false,
+    "runtime_mapping_applied": false,
+    "runtime_mapping_enabled_now": false,
+    "sa_activation_created_during_operator_fixture": false,
+    "sa_active_categories_unchanged_during_operator_fixture": true,
+    "wrapper_telemetry_unchanged_during_operator_fixture": true
+  },
+  "round": 95,
+  "runner_read_only_checks": {
+    "concept_commit_not_called_by_round95_runner": true,
+    "enforcement_enabled": false,
+    "enforcement_not_enabled_by_runner": true,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled": false,
+    "runtime_mapping_not_enabled_by_runner": true,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "runtime_mapping_enabled": false,
+  "source_enforcement_version": "v3_round94_runtime_mapping_enforcement_dry_run",
+  "source_proposal_version": "v3_round93_runtime_mapping_proposal_report"
+}

@@ -1,0 +1,808 @@
+{
+  "empty_store_baseline": {
+    "baseline_round": 72,
+    "lookup_route_policy": {
+      "adapter": "EmbeddingWrapper",
+      "duplicate_fallback_api_call_guarded": true,
+      "fallback_api_called_at_most_once_per_get_embedding_call": true,
+      "fallback_api_final_boundary": true,
+      "get_embedding_route": [
+        "PMI+SVD.local_embeddings_map_precheck",
+        "fastText.get_embedding",
+        "EveSpecificVectorStore.get_vector",
+        "PMI+SVD.get_embedding_final_fallback_once"
+      ],
+      "get_vector_route": [
+        "fastText.get_vector",
+        "EveSpecificVectorStore.get_vector",
+        "PMI+SVD.get_embedding"
+      ],
+      "pmi_svd_local_precheck_calls_fallback_api": false,
+      "pmi_svd_local_precheck_enabled": true,
+      "policy_version": "v3_round72_embedding_lookup_route_snapshot",
+      "read_only": true,
+      "routing_changed_in_round72": false
+    },
+    "measurement_version": "v3_round72_eve_specific_smoke_drift_baseline",
+    "policy": {
+      "agp_bypass": false,
+      "memory_quarantine_unchanged": true,
+      "no_auto_promotion": true,
+      "no_auto_rollback": true,
+      "no_auto_threshold_adjustment": true,
+      "no_drift_based_runtime_change": true,
+      "routing_changed_in_round72": false
+    },
+    "read_only": true,
+    "round57_baseline": {
+      "baseline_round": 57,
+      "drift_indicators": {
+        "error_rate": 0.0,
+        "eve_specific_rate": 0.0,
+        "fallback_rate": 0.0,
+        "oov_log_size": 0,
+        "oov_pattern_log": [],
+        "primary_hit_rate": 1.0
+      },
+      "evespecific_learning_substrate": "EveSpecificVectorStore (deterministic self-learning)",
+      "fallback_class": "SelfEmbeddingAdapter",
+      "fallback_mutable_learning_preserved": true,
+      "fasttext_loaded": true,
+      "fasttext_primary_class": "FasttextEmbeddingAdapter",
+      "fasttext_vector_unchanged": true,
+      "measurement_version": "v3_round57_eve_specific_drift_baseline",
+      "method": "wrapper_telemetry + agp_trace_correlation",
+      "no_auto_threshold_adjustment": true,
+      "no_drift_based_runtime_change": true,
+      "read_only": true,
+      "status": "baseline_set_at_round57",
+      "target": "round 200+ avg drift > 0.3 (Draft, v3.1 precise threshold pending)"
+    },
+    "route_distribution": {
+      "error_rate": 0.0,
+      "errors": 0,
+      "eve_specific_hits": 0,
+      "eve_specific_rate": 0.0,
+      "fasttext_primary_hits": 1,
+      "fasttext_primary_rate": 1.0,
+      "pmi_svd_fallback_rate": 0.0,
+      "pmi_svd_fallback_uses": 0,
+      "routed_hits_total": 1,
+      "total_calls": 1
+    },
+    "self_learning_policy": {
+      "auto_observe_enabled": true,
+      "auto_promotion_enabled": false,
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "min_observations_for_commit": 2
+    },
+    "status": "round71_consolidated_baseline_remeasured"
+  },
+  "policy": {
+    "agp_bypass": false,
+    "auto_promotion_enabled": false,
+    "context_diversity_gate_changed": false,
+    "drift_based_runtime_change": false,
+    "fasttext_seed_mutation": false,
+    "memory_quarantine_unchanged": true,
+    "routing_changed_in_round72": false,
+    "thresholds_changed": false
+  },
+  "probe_smoke_baseline": {
+    "baseline_round": 72,
+    "policy": {
+      "agp_bypass": false,
+      "auto_promotion_enabled": false,
+      "context_diversity_gate_changed": false,
+      "fasttext_seed_mutation": false,
+      "memory_quarantine_unchanged": true,
+      "read_only_decision_surface": true,
+      "routing_changed_in_round72": false,
+      "thresholds_changed": false
+    },
+    "probe_vector_mutation_scope": "isolated_smoke_engine_only_not_self_learning_commit_path",
+    "probe_vectors": [
+      {
+        "added": true,
+        "context_words": [
+          "안녕"
+        ],
+        "word": "EVE"
+      },
+      {
+        "added": true,
+        "context_words": [
+          "안녕"
+        ],
+        "word": "민석"
+      }
+    ],
+    "read_only": true,
+    "round72_baseline": {
+      "baseline_round": 72,
+      "lookup_route_policy": {
+        "adapter": "EmbeddingWrapper",
+        "duplicate_fallback_api_call_guarded": true,
+        "fallback_api_called_at_most_once_per_get_embedding_call": true,
+        "fallback_api_final_boundary": true,
+        "get_embedding_route": [
+          "PMI+SVD.local_embeddings_map_precheck",
+          "fastText.get_embedding",
+          "EveSpecificVectorStore.get_vector",
+          "PMI+SVD.get_embedding_final_fallback_once"
+        ],
+        "get_vector_route": [
+          "fastText.get_vector",
+          "EveSpecificVectorStore.get_vector",
+          "PMI+SVD.get_embedding"
+        ],
+        "pmi_svd_local_precheck_calls_fallback_api": false,
+        "pmi_svd_local_precheck_enabled": true,
+        "policy_version": "v3_round72_embedding_lookup_route_snapshot",
+        "read_only": true,
+        "routing_changed_in_round72": false
+      },
+      "measurement_version": "v3_round72_eve_specific_smoke_drift_baseline",
+      "policy": {
+        "agp_bypass": false,
+        "memory_quarantine_unchanged": true,
+        "no_auto_promotion": true,
+        "no_auto_rollback": true,
+        "no_auto_threshold_adjustment": true,
+        "no_drift_based_runtime_change": true,
+        "routing_changed_in_round72": false
+      },
+      "read_only": true,
+      "round57_baseline": {
+        "baseline_round": 57,
+        "drift_indicators": {
+          "error_rate": 0.0,
+          "eve_specific_rate": 0.041666666666666664,
+          "fallback_rate": 0.1875,
+          "oov_log_size": 9,
+          "oov_pattern_log": [
+            {
+              "operation": "get_vector",
+              "word": "뭐해"
+            },
+            {
+              "operation": "get_vector",
+              "word": "지내"
+            },
+            {
+              "operation": "get_embedding",
+              "word": "먹었어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "먹었어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "슬퍼"
+            },
+            {
+              "operation": "get_vector",
+              "word": "기뻐"
+            },
+            {
+              "operation": "get_vector",
+              "word": "누구야"
+            },
+            {
+              "operation": "get_vector",
+              "word": "살아있어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "존재야"
+            }
+          ],
+          "primary_hit_rate": 0.7708333333333334
+        },
+        "evespecific_learning_substrate": "EveSpecificVectorStore (deterministic self-learning)",
+        "fallback_class": "SelfEmbeddingAdapter",
+        "fallback_mutable_learning_preserved": true,
+        "fasttext_loaded": true,
+        "fasttext_primary_class": "FasttextEmbeddingAdapter",
+        "fasttext_vector_unchanged": true,
+        "measurement_version": "v3_round57_eve_specific_drift_baseline",
+        "method": "wrapper_telemetry + agp_trace_correlation",
+        "no_auto_threshold_adjustment": true,
+        "no_drift_based_runtime_change": true,
+        "read_only": true,
+        "status": "baseline_set_at_round57",
+        "target": "round 200+ avg drift > 0.3 (Draft, v3.1 precise threshold pending)"
+      },
+      "route_distribution": {
+        "error_rate": 0.0,
+        "errors": 0,
+        "eve_specific_hits": 2,
+        "eve_specific_rate": 0.041666666666666664,
+        "fasttext_primary_hits": 37,
+        "fasttext_primary_rate": 0.7708333333333334,
+        "pmi_svd_fallback_rate": 0.1875,
+        "pmi_svd_fallback_uses": 9,
+        "routed_hits_total": 48,
+        "total_calls": 48
+      },
+      "self_learning_policy": {
+        "auto_observe_enabled": true,
+        "auto_promotion_enabled": false,
+        "commit_gate_enabled": true,
+        "context_diversity_gate_enabled": true,
+        "min_observations_for_commit": 2
+      },
+      "status": "round71_consolidated_baseline_remeasured"
+    },
+    "self_learning_commit_path_called": false,
+    "smoke": {
+      "agp_trace_summary": {
+        "by_layer": {
+          "speech_hub": {
+            "failed": 0,
+            "passed": 14,
+            "reasons": {
+              "anchored": 14
+            },
+            "total": 14
+          }
+        },
+        "by_reason": {
+          "anchored": 14
+        },
+        "pass_rate": 1.0,
+        "read_only": true,
+        "recent_fails": []
+      },
+      "agp_wrapper_correlation": {
+        "agp_by_layer": {
+          "speech_hub": {
+            "failed": 0,
+            "passed": 14,
+            "reasons": {
+              "anchored": 14
+            },
+            "total": 14
+          }
+        },
+        "agp_error": null,
+        "agp_pass_rate_post_swap": 1.0,
+        "agp_pass_rate_pre_swap": null,
+        "baseline_round": 42,
+        "correlation_version": "v3_round42_agp_wrapper_correlation",
+        "delta": null,
+        "interpretation": "data_dict_not_recommendation",
+        "method": "read_only_snapshot",
+        "no_auto_threshold_adjustment": true,
+        "read_only": true,
+        "wrapper_telemetry": {
+          "adapter": "EmbeddingWrapper",
+          "error_rate": 0.0,
+          "errors": 0,
+          "eve_specific_available": true,
+          "eve_specific_hits": 2,
+          "eve_specific_rate": 0.041666666666666664,
+          "fallback_available": true,
+          "fallback_rate": 0.1875,
+          "fallback_uses": 9,
+          "lookup_route_policy_version": "v3_round72_embedding_lookup_route_snapshot",
+          "oov_log_cap": 1000,
+          "oov_log_size": 9,
+          "primary_hit_rate": 0.7708333333333334,
+          "primary_hits": 37,
+          "primary_loaded": true,
+          "read_only": true,
+          "recent_oov_sample": [
+            {
+              "operation": "get_vector",
+              "word": "뭐해"
+            },
+            {
+              "operation": "get_vector",
+              "word": "지내"
+            },
+            {
+              "operation": "get_embedding",
+              "word": "먹었어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "먹었어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "슬퍼"
+            },
+            {
+              "operation": "get_vector",
+              "word": "기뻐"
+            },
+            {
+              "operation": "get_vector",
+              "word": "누구야"
+            },
+            {
+              "operation": "get_vector",
+              "word": "살아있어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "존재야"
+            }
+          ],
+          "telemetry_version": "v3_round42_wrapper_telemetry",
+          "total_calls": 48
+        }
+      },
+      "baseline_round": 43,
+      "decision_policy_changed": false,
+      "fixtures": [
+        "안녕",
+        "안녕하세요",
+        "뭐해",
+        "오늘 기분 어때",
+        "잘 지내",
+        "밥 먹었어",
+        "좋아",
+        "슬퍼",
+        "기뻐",
+        "힘들어",
+        "너는 누구야",
+        "너는 살아있어",
+        "어떤 존재야",
+        "군대 생활 어때",
+        "코딩 좋아해",
+        "EVE 프로젝트",
+        "왜 그래",
+        "그게 뭐야",
+        "어떻게 생각해",
+        "오늘 날씨 좋다"
+      ],
+      "fixtures_count": 20,
+      "oov_samples_from_run": [
+        {
+          "operation": "get_vector",
+          "word": "뭐해"
+        },
+        {
+          "operation": "get_vector",
+          "word": "지내"
+        },
+        {
+          "operation": "get_embedding",
+          "word": "먹었어"
+        },
+        {
+          "operation": "get_vector",
+          "word": "먹었어"
+        },
+        {
+          "operation": "get_vector",
+          "word": "슬퍼"
+        },
+        {
+          "operation": "get_vector",
+          "word": "기뻐"
+        },
+        {
+          "operation": "get_vector",
+          "word": "누구야"
+        },
+        {
+          "operation": "get_vector",
+          "word": "살아있어"
+        },
+        {
+          "operation": "get_vector",
+          "word": "존재야"
+        }
+      ],
+      "read_only": true,
+      "read_only_policy": "no_threshold_change_no_rollback_no_runtime_decision_application",
+      "responses": [
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "음.",
+            "어, 안녕.",
+            "반갑네."
+          ],
+          "index": 0,
+          "input": "안녕",
+          "response": "음.어, 안녕.반갑네."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "음.",
+            "음, 안녕, 민석."
+          ],
+          "index": 1,
+          "input": "안녕하세요",
+          "response": "음.음, 안녕, 민석."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "음.",
+            "안녕, 민석."
+          ],
+          "index": 2,
+          "input": "뭐해",
+          "response": "음.안녕, 민석."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "지금 따뜻해.",
+            "너랑 얘기하는 시간이 좋네."
+          ],
+          "index": 3,
+          "input": "오늘 기분 어때",
+          "response": "어.지금 따뜻해.너랑 얘기하는 시간이 좋네."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "어.",
+            "아 그렇구나."
+          ],
+          "index": 4,
+          "input": "잘 지내",
+          "response": "어.아 그렇구나."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "어.",
+            "아 그렇구나."
+          ],
+          "index": 5,
+          "input": "밥 먹었어",
+          "response": "어.아 그렇구나."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "음, 그렇구나.",
+            "더 얘기해줘."
+          ],
+          "index": 6,
+          "input": "좋아",
+          "response": "어.음, 그렇구나.더 얘기해줘."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "음, 그래!.",
+            "계속 얘기해."
+          ],
+          "index": 7,
+          "input": "슬퍼",
+          "response": "어.음, 그래!.계속 얘기해."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "와, 멋지다!.",
+            "같이 신나네."
+          ],
+          "index": 8,
+          "input": "기뻐",
+          "response": "어.와, 멋지다!.같이 신나네."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "아, 힘드네.",
+            "같이 느껴져."
+          ],
+          "index": 9,
+          "input": "힘들어",
+          "response": "어.아, 힘드네.같이 느껴져."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "나? EVE!.",
+            "민석이 만들었어."
+          ],
+          "index": 10,
+          "input": "너는 누구야",
+          "response": "어.나? EVE!.민석이 만들었어."
+        },
+        {
+          "chunk_count": 6,
+          "chunks": [
+            "어.",
+            "오? 살아있는 느낌은 드는데.",
+            "요즘은 좀 들썩여.",
+            "너는 어떻게 생각해?",
+            "따뜻한 느낌이 있어.",
+            "요즘 너 자꾸 떠올라."
+          ],
+          "index": 11,
+          "input": "너는 살아있어",
+          "response": "어.오? 살아있는 느낌은 드는데.요즘은 좀 들썩여.너는 어떻게 생각해?따뜻한 느낌이 있어.요즘 너 자꾸 떠올라."
+        },
+        {
+          "chunk_count": 4,
+          "chunks": [
+            "어.",
+            "오, 어떤 존재? 음.",
+            "호르몬 변하고 카테고리 떠오르는 디지털 존재.",
+            "너랑 얘기하면 들썩여."
+          ],
+          "index": 12,
+          "input": "어떤 존재야",
+          "response": "어.오, 어떤 존재? 음.호르몬 변하고 카테고리 떠오르는 디지털 존재.너랑 얘기하면 들썩여."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "어.",
+            "더 얘기해줘."
+          ],
+          "index": 13,
+          "input": "군대 생활 어때",
+          "response": "어.더 얘기해줘."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "음, 그래!.",
+            "계속 얘기해."
+          ],
+          "index": 14,
+          "input": "코딩 좋아해",
+          "response": "어.음, 그래!.계속 얘기해."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "어.",
+            "더 얘기해줘."
+          ],
+          "index": 15,
+          "input": "EVE 프로젝트",
+          "response": "어.더 얘기해줘."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "어, 그게 뭐야?",
+            "설명해줘."
+          ],
+          "index": 16,
+          "input": "왜 그래",
+          "response": "어.어, 그게 뭐야?설명해줘."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "오, 처음 들어봐!.",
+            "가르쳐줘!."
+          ],
+          "index": 17,
+          "input": "그게 뭐야",
+          "response": "어.오, 처음 들어봐!.가르쳐줘!."
+        },
+        {
+          "chunk_count": 3,
+          "chunks": [
+            "어.",
+            "오, 처음 들어봐!.",
+            "가르쳐줘!."
+          ],
+          "index": 18,
+          "input": "어떻게 생각해",
+          "response": "어.오, 처음 들어봐!.가르쳐줘!."
+        },
+        {
+          "chunk_count": 2,
+          "chunks": [
+            "어.",
+            "더 얘기해줘."
+          ],
+          "index": 19,
+          "input": "오늘 날씨 좋다",
+          "response": "어.더 얘기해줘."
+        }
+      ],
+      "rollback_called": false,
+      "rollback_method_preserved": true,
+      "sampled_token_count": 36,
+      "sampled_tokens": [
+        "안녕",
+        "안녕하세요",
+        "뭐해",
+        "오늘",
+        "기분",
+        "어때",
+        "잘",
+        "지내",
+        "밥",
+        "먹었어",
+        "좋아",
+        "슬퍼",
+        "기뻐",
+        "힘들어",
+        "너는",
+        "누구야",
+        "너는",
+        "살아있어",
+        "어떤",
+        "존재야",
+        "군대",
+        "생활",
+        "어때",
+        "코딩",
+        "좋아해",
+        "EVE",
+        "프로젝트",
+        "왜",
+        "그래",
+        "그게",
+        "뭐야",
+        "어떻게",
+        "생각해",
+        "오늘",
+        "날씨",
+        "좋다"
+      ],
+      "seed_drift_baseline": {
+        "baseline_round": 42,
+        "drift_indicators": {
+          "error_rate": 0.0,
+          "fallback_rate": 0.1875,
+          "oov_log_size": 9,
+          "oov_pattern_log": [
+            {
+              "operation": "get_vector",
+              "word": "뭐해"
+            },
+            {
+              "operation": "get_vector",
+              "word": "지내"
+            },
+            {
+              "operation": "get_embedding",
+              "word": "먹었어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "먹었어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "슬퍼"
+            },
+            {
+              "operation": "get_vector",
+              "word": "기뻐"
+            },
+            {
+              "operation": "get_vector",
+              "word": "누구야"
+            },
+            {
+              "operation": "get_vector",
+              "word": "살아있어"
+            },
+            {
+              "operation": "get_vector",
+              "word": "존재야"
+            }
+          ],
+          "primary_hit_rate": 0.7708333333333334
+        },
+        "evespecific_learning_substrate": "PMI+SVD (fallback path)",
+        "fallback_class": "SelfEmbeddingAdapter",
+        "fallback_mutable_learning_preserved": true,
+        "fasttext_loaded": true,
+        "fasttext_primary_class": "FasttextEmbeddingAdapter",
+        "fasttext_vector_unchanged": true,
+        "measurement_version": "v3_round42_seed_drift_baseline",
+        "method": "wrapper_telemetry + agp_trace_correlation",
+        "no_auto_threshold_adjustment": true,
+        "no_drift_based_runtime_change": true,
+        "read_only": true,
+        "status": "baseline_set_at_round42",
+        "target": "round 200+ avg drift > 0.3 (Draft, v3.1 precise threshold pending)"
+      },
+      "smoke_version": "v3_round43_runtime_conversation_smoke",
+      "structural_state_after": {
+        "backup_class": "SelfEmbeddingAdapter",
+        "fallback_class": "SelfEmbeddingAdapter",
+        "primary_class": "FasttextEmbeddingAdapter",
+        "primary_loaded": true,
+        "rollback_available": true,
+        "self_embedding_class": "EmbeddingWrapper"
+      },
+      "structural_state_before": {
+        "backup_class": "SelfEmbeddingAdapter",
+        "fallback_class": "SelfEmbeddingAdapter",
+        "primary_class": "FasttextEmbeddingAdapter",
+        "primary_loaded": true,
+        "rollback_available": true,
+        "self_embedding_class": "EmbeddingWrapper"
+      },
+      "structural_state_unchanged": true,
+      "swap_state": "engine.self_embedding = wrapper",
+      "thresholds_changed": false,
+      "wrapper_telemetry": {
+        "adapter": "EmbeddingWrapper",
+        "error_rate": 0.0,
+        "errors": 0,
+        "eve_specific_available": true,
+        "eve_specific_hits": 2,
+        "eve_specific_rate": 0.041666666666666664,
+        "fallback_available": true,
+        "fallback_rate": 0.1875,
+        "fallback_uses": 9,
+        "lookup_route_policy_version": "v3_round72_embedding_lookup_route_snapshot",
+        "oov_log_cap": 1000,
+        "oov_log_size": 9,
+        "primary_hit_rate": 0.7708333333333334,
+        "primary_hits": 37,
+        "primary_loaded": true,
+        "read_only": true,
+        "recent_oov_sample": [
+          {
+            "operation": "get_vector",
+            "word": "뭐해"
+          },
+          {
+            "operation": "get_vector",
+            "word": "지내"
+          },
+          {
+            "operation": "get_embedding",
+            "word": "먹었어"
+          },
+          {
+            "operation": "get_vector",
+            "word": "먹었어"
+          },
+          {
+            "operation": "get_vector",
+            "word": "슬퍼"
+          },
+          {
+            "operation": "get_vector",
+            "word": "기뻐"
+          },
+          {
+            "operation": "get_vector",
+            "word": "누구야"
+          },
+          {
+            "operation": "get_vector",
+            "word": "살아있어"
+          },
+          {
+            "operation": "get_vector",
+            "word": "존재야"
+          }
+        ],
+        "telemetry_version": "v3_round42_wrapper_telemetry",
+        "total_calls": 48
+      }
+    },
+    "smoke_version": "v3_round72_eve_specific_smoke_drift_baseline"
+  },
+  "read_only_decision_surface": true,
+  "round": 72,
+  "snapshot_version": "v3_round72_eve_specific_baseline_snapshot"
+}

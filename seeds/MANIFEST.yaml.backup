@@ -1,0 +1,16 @@
+# EVE v3 External Seed Manifest
+#
+# Round21 scope: placeholder only. No external seed is loaded in this round.
+# Future seed entries must satisfy External Seed Policy provenance rules.
+#
+# Example format for future rounds:
+# seeds:
+#   - name: cc.ko.300.bin
+#     source: https://fasttext.cc/docs/en/crawl-vectors.html
+#     license: CC-BY-SA-3.0
+#     version: "2017-12"
+#     downloaded_at: YYYY-MM-DD
+#     checksum: SHA256:<64 lowercase hex chars>
+#     imported_at_round: 22
+#     imported_at_patch: v3_round22
+seeds: []

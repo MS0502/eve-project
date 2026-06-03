@@ -1,0 +1,23 @@
+[
+  {
+    "chunk_index": 1,
+    "status": "pass",
+    "returncode": 0,
+    "duration": 12.16,
+    "files": [
+      "tests/test_hormone_adapter.py",
+      "tests/test_mvp_streaming.py",
+      "tests/test_round10_humanity.py",
+      "tests/test_round11_advanced_thinking.py",
+      "tests/test_round12_reasoning.py",
+      "tests/test_round13_world_sim.py",
+      "tests/test_round14_autonomous.py",
+      "tests/test_round15_learning.py",
+      "tests/test_round16_frame_hg_sd.py",
+      "tests/test_round17_self_presence.py",
+      "tests/test_round18_social_outing.py",
+      "tests/test_round19_enhancer_proactive.py"
+    ],
+    "output_tail": "........................................................................ [ 54%]\n.............................................................            [100%]\n133 passed in 9.64s\n"
+  }
+]

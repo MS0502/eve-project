@@ -1,0 +1,15 @@
+{
+  "collect_only": "1187 tests collected",
+  "compileall": "passed",
+  "failures": 0,
+  "full_suite_required": false,
+  "full_suite_requirement_rule": "focused+adjacent for read-only report/dry-run; split full suite for policy/gate/routing/AGP/freeze changes",
+  "round": 81,
+  "round50_to_81_adjacent_sweep": "194 passed",
+  "round60_to_81_focused_sweep": "86 passed",
+  "round77_to_81_focused": "15 passed",
+  "round81_focused": "3 passed",
+  "split_full_suite": "not run; read-only dry-run round",
+  "status_version": "v3_round81_validation_status",
+  "timeouts": 0
+}

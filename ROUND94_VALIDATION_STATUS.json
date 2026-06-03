@@ -1,0 +1,14 @@
+{
+  "collect_only": "1212 tests collected",
+  "compileall": "passed",
+  "failures": 0,
+  "full_split_suite_reason": "Round94 is read-only dry-run/report; focused + adjacent + collect-only + compileall were sufficient by current validation policy.",
+  "full_split_suite_run": false,
+  "round": 94,
+  "round50_94_adjacent_by_split": "201 passed",
+  "round60_94_focused_by_split": "97 passed",
+  "round77_94_focused": "40 passed",
+  "round94_focused": "2 passed",
+  "timeouts": 0,
+  "validation_version": "v3_round94_validation_status"
+}

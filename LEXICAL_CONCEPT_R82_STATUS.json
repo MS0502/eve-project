@@ -1,0 +1,17 @@
+{
+  "agp_anchor_created": false,
+  "blocked_candidate_count": 1,
+  "candidate_count": 2,
+  "category_created": false,
+  "commit_created_for_fixture": true,
+  "enforcement_enabled": false,
+  "operator_action_item_count": 6,
+  "proposal_count": 1,
+  "read_only": true,
+  "round": 82,
+  "runtime_mapping_enabled": false,
+  "source_report_version": "v3_round82_concept_mapping_gate_proposal_report",
+  "status_version": "v3_round82_validation_status",
+  "would_block_count": 2,
+  "would_pass_count": 0
+}

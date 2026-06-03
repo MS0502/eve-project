@@ -1,0 +1,134 @@
+{
+  "accepted_fixture_count": 1,
+  "accepted_rows": [
+    {
+      "agp_anchor_created": false,
+      "agp_verify_called": false,
+      "category_created": false,
+      "category_creation_dry_run": {
+        "activated": false,
+        "agp_anchor_created": false,
+        "category_id": "concept_category::lex::민석",
+        "created": false,
+        "display_name": "민석",
+        "persisted": false,
+        "sa_activation_created": false,
+        "source": "round83_operator_acceptance_fixture_category_creation_dry_run",
+        "would_create": true
+      },
+      "concept_memory_mutation": false,
+      "frame_hypergraph_mutation": false,
+      "lexical_token": "민석",
+      "operator_acceptance_fixture": true,
+      "operator_decision_status": "operator_accepted_fixture_not_persisted",
+      "remaining_blocked_reasons": [
+        "explicit_category_creation_dry_run_only",
+        "sa_activation_path_required",
+        "concept_memory_or_frame_evidence_required",
+        "agp_bridge_smoke_test_required"
+      ],
+      "resolved_reasons": [
+        "operator_acceptance_required"
+      ],
+      "sa_activation_created": false,
+      "source_blocked_reasons": [
+        "operator_acceptance_required",
+        "explicit_category_creation_required",
+        "sa_activation_path_required",
+        "concept_memory_or_frame_evidence_required",
+        "agp_bridge_smoke_test_required"
+      ],
+      "source_gate_status": "would_block_future_mapping_gate",
+      "would_create_explicit_category": true,
+      "would_pass_mapping_gate_after_fixture": false
+    }
+  ],
+  "accepted_tokens": [
+    "민석"
+  ],
+  "blocked_count": 1,
+  "blocked_rows": [
+    {
+      "agp_anchor_created": false,
+      "blocked_reasons": [
+        "blocked_insufficient_lexical_evidence"
+      ],
+      "category_created": false,
+      "lexical_token": "EVE",
+      "operator_acceptance_fixture": false,
+      "operator_decision_status": "not_ready_for_operator_acceptance"
+    }
+  ],
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "candidate_count": 2,
+  "category_creation_dry_run_count": 1,
+  "category_creation_dry_run_rows": [
+    {
+      "category_id": "concept_category::lex::민석",
+      "created": false,
+      "dry_run_status": "would_create_explicit_category_record_later",
+      "lexical_token": "민석",
+      "requires_future_agp_bridge_smoke_test": true,
+      "requires_future_concept_memory_or_frame_evidence": true,
+      "requires_future_sa_activation_path": true,
+      "would_create": true
+    }
+  ],
+  "dry_run_version": "v3_round83_operator_acceptance_category_creation_dry_run",
+  "enforcement_enabled": false,
+  "next_round_recommendation": {
+    "allowed_scope": "read_only_evidence_attachment_no_runtime_mapping_no_agp_anchor",
+    "round84": "concept_memory_or_frame_evidence_dry_run"
+  },
+  "operator_recommendation": "proceed_to_concept_memory_or_frame_evidence_dry_run",
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "explicit_category_creation_dry_run_only": true,
+    "lexical_vector_is_evidence_only": true,
+    "no_agp_anchor_creation": true,
+    "no_agp_verify_call": true,
+    "no_category_creation": true,
+    "no_concept_memory_mutation": true,
+    "no_embedding_wrapper_lookup": true,
+    "no_enforcement": true,
+    "no_frame_hypergraph_mutation": true,
+    "no_runtime_mapping": true,
+    "no_sa_activation_creation": true,
+    "no_vector_commit": true,
+    "operator_acceptance_fixture_only": true,
+    "operator_decision_not_persisted": true
+  },
+  "proposal_count": 1,
+  "read_only": true,
+  "read_only_checks": {
+    "agp_anchor_created": false,
+    "agp_verify_called": false,
+    "audit_records_unchanged_during_dry_run": true,
+    "category_created": false,
+    "concept_memory_mutation": false,
+    "enforcement_enabled_after_dry_run": false,
+    "frame_hypergraph_mutation": false,
+    "operator_decision_persisted": false,
+    "runtime_mapping_enabled_after_dry_run": false,
+    "sa_activation_created": false,
+    "self_learning_policy_unchanged_during_dry_run": true,
+    "telemetry_unchanged_during_dry_run": true,
+    "vector_commit_called": false,
+    "vector_store_unchanged_during_dry_run": true,
+    "wrapper_lookup_called": false
+  },
+  "remaining_blocked_reason_counts": {
+    "agp_bridge_smoke_test_required": 1,
+    "blocked_insufficient_lexical_evidence": 1,
+    "concept_memory_or_frame_evidence_required": 1,
+    "explicit_category_creation_dry_run_only": 1,
+    "sa_activation_path_required": 1
+  },
+  "round": 83,
+  "runtime_mapping_enabled": false,
+  "source_gate_proposal_report_version": "v3_round82_concept_mapping_gate_proposal_report",
+  "would_pass_mapping_gate_count": 0
+}

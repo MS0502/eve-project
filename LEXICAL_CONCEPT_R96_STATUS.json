@@ -1,0 +1,14 @@
+{
+  "enforcement_enabled": false,
+  "latest_completed_round": 96,
+  "next_recommended_round": "round97_controlled_runtime_mapping_enable_smoke",
+  "round": 96,
+  "round95_fixture_ready_tokens": [
+    "민석"
+  ],
+  "round96_precheck_ready_tokens": [
+    "민석"
+  ],
+  "runtime_mapping_enabled": false,
+  "status_version": "v3_round96_status"
+}

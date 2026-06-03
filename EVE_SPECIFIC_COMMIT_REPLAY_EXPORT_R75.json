@@ -1,0 +1,235 @@
+{
+  "audit_event_type_counts": {
+    "audit": 1,
+    "commit": 1
+  },
+  "audit_record_count": 2,
+  "audit_record_delta": 2,
+  "audit_records": [
+    {
+      "active_policy_version": "v3_round69_context_diversity_gate_enforced",
+      "audit_version": "v3_round59_commit_gate_audit",
+      "candidate_reports": [
+        {
+          "context_diverse": true,
+          "evidence_status": "threshold_met_context_diverse",
+          "is_eve_specific_candidate": true,
+          "observed_count": 2,
+          "passed": true,
+          "reasons": [],
+          "word": "민석"
+        }
+      ],
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "context_words": [
+        "오늘",
+        "군대"
+      ],
+      "eligible_words": [
+        "민석"
+      ],
+      "event_type": "audit",
+      "gate_pass": true,
+      "index": 1,
+      "known_context_count": 2,
+      "known_context_words": [
+        "오늘",
+        "군대"
+      ],
+      "min_known_context_words_for_commit": 1,
+      "min_observations_for_commit": 2,
+      "read_only": true,
+      "rejected_words": [],
+      "round": 59,
+      "target_words": [
+        "민석"
+      ]
+    },
+    {
+      "active_policy_version": "v3_round69_context_diversity_gate_enforced",
+      "audit_version": "v3_round59_commit_gate_audit",
+      "candidate_reports": [
+        {
+          "context_diverse": true,
+          "evidence_status": "threshold_met_context_diverse",
+          "is_eve_specific_candidate": true,
+          "observed_count": 2,
+          "passed": true,
+          "reasons": [],
+          "word": "민석"
+        }
+      ],
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "context_words": [
+        "오늘",
+        "군대"
+      ],
+      "eligible_words": [
+        "민석"
+      ],
+      "event_type": "commit",
+      "gate_pass": true,
+      "index": 2,
+      "known_context_count": 2,
+      "known_context_words": [
+        "오늘",
+        "군대"
+      ],
+      "min_known_context_words_for_commit": 1,
+      "min_observations_for_commit": 2,
+      "read_only": true,
+      "rejected_words": [],
+      "round": 59,
+      "target_words": [
+        "민석"
+      ]
+    }
+  ],
+  "baseline_round": 75,
+  "commit_context_words": [
+    "오늘",
+    "군대"
+  ],
+  "commit_created_target": true,
+  "decision_policy_changed": false,
+  "eligible_total": 2,
+  "gate_pass_record_count": 2,
+  "observation_texts": [
+    "민석 오늘",
+    "민석 군대"
+  ],
+  "policy": {
+    "agp_bypass": false,
+    "auto_promotion_enabled": false,
+    "automatic_rollback_enabled": false,
+    "commit_gate_enabled": true,
+    "context_diversity_gate_changed": false,
+    "context_diversity_gate_enabled": true,
+    "drift_based_runtime_change": false,
+    "explicit_self_learning_commit_path_used": true,
+    "fasttext_seed_mutation": false,
+    "memory_quarantine_unchanged": true,
+    "min_observations_for_commit": 2,
+    "replay_does_not_append_audit": true,
+    "replay_does_not_call_commit": true,
+    "replay_does_not_call_lookup": true,
+    "replay_does_not_mutate_vectors": true,
+    "replay_export_read_only": true,
+    "round72_probe_path_used": false,
+    "thresholds_changed": false
+  },
+  "read_only": true,
+  "rejected_total": 0,
+  "replay_export_version": "v3_round75_commit_audit_replay_export",
+  "replay_read_only_checks": {
+    "audit_records_unchanged_during_replay": true,
+    "policy_changed_during_replay": false,
+    "telemetry_unchanged_during_replay": true,
+    "vector_store_unchanged_during_replay": true
+  },
+  "replay_steps": [
+    {
+      "eve_specific_hit_delta": 0,
+      "fallback_delta": 1,
+      "found": false,
+      "name": "pre_commit_target_lookup",
+      "read_only": true,
+      "source": "round74_delta_report.target_lookup_before_commit",
+      "step": 1
+    },
+    {
+      "name": "observe_text_evidence",
+      "observation_count": 2,
+      "observation_texts": [
+        "민석 오늘",
+        "민석 군대"
+      ],
+      "read_only": true,
+      "source": "round73_commit_smoke.observations",
+      "step": 2
+    },
+    {
+      "eligible_words": [
+        "민석"
+      ],
+      "event_type": "audit",
+      "gate_pass": true,
+      "name": "audit_record_audit",
+      "read_only": true,
+      "record_index": 1,
+      "rejected_words": [],
+      "source": "EveSelfLearningAdapter.commit_audit_records",
+      "step": 3
+    },
+    {
+      "eligible_words": [
+        "민석"
+      ],
+      "event_type": "commit",
+      "gate_pass": true,
+      "name": "audit_record_commit",
+      "read_only": true,
+      "record_index": 2,
+      "rejected_words": [],
+      "source": "EveSelfLearningAdapter.commit_audit_records",
+      "step": 4
+    },
+    {
+      "eve_specific_hit_delta": 1,
+      "fallback_delta": 0,
+      "found": true,
+      "name": "post_commit_target_lookup",
+      "read_only": true,
+      "source": "round74_delta_report.target_lookup_after_commit",
+      "step": 5
+    }
+  ],
+  "replay_verification": {
+    "audit_record_delta_at_least_two": true,
+    "has_audit_and_commit_records": true,
+    "pre_commit_lookup_not_eve_specific": true,
+    "store_delta_is_one": true,
+    "target_created": true,
+    "target_lookup_shifted_to_eve_specific": true
+  },
+  "route_shift_summary": {
+    "audit_record_delta": 2,
+    "eve_specific_hits_increased": true,
+    "post_commit_lookup_used_eve_specific": true,
+    "pre_commit_lookup_used_eve_specific": false,
+    "store_delta": 1
+  },
+  "source_commit_smoke_version": "v3_round73_explicit_eve_specific_commit_smoke",
+  "source_delta_report_version": "v3_round74_explicit_commit_drift_telemetry_delta",
+  "store_delta": 1,
+  "target_lookup_after_commit": {
+    "eve_specific_hit_delta": 1,
+    "fallback_delta": 0,
+    "found": true,
+    "telemetry_delta": {
+      "errors": 0,
+      "eve_specific_hits": 1,
+      "fallback_uses": 0,
+      "oov_log_size": 0,
+      "primary_hits": 0,
+      "total_calls": 1
+    }
+  },
+  "target_lookup_before_commit": {
+    "eve_specific_hit_delta": 0,
+    "fallback_delta": 1,
+    "found": false,
+    "telemetry_delta": {
+      "errors": 0,
+      "eve_specific_hits": 0,
+      "fallback_uses": 1,
+      "oov_log_size": 1,
+      "primary_hits": 0,
+      "total_calls": 1
+    }
+  },
+  "target_word": "민석",
+  "wrapper_vector_found_after_commit": true
+}

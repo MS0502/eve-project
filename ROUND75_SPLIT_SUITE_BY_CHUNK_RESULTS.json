@@ -1,0 +1,156 @@
+[
+  {
+    "chunk": 1,
+    "duration_sec": 8.147,
+    "file_count": 9,
+    "first_file": "tests/test_hormone_adapter.py",
+    "last_file": "tests/test_round16_frame_hg_sd.py",
+    "output_tail": "92 passed",
+    "passed": 92,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 2,
+    "duration_sec": 14.279,
+    "file_count": 9,
+    "first_file": "tests/test_round17_self_presence.py",
+    "last_file": "tests/test_round24_visualizer.py",
+    "output_tail": "112 passed",
+    "passed": 112,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 3,
+    "duration_sec": 17.35,
+    "file_count": 9,
+    "first_file": "tests/test_round25_character.py",
+    "last_file": "tests/test_round31_mood.py",
+    "output_tail": "151 passed",
+    "passed": 151,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 4,
+    "duration_sec": 7.527,
+    "file_count": 9,
+    "first_file": "tests/test_round32_module_learning.py",
+    "last_file": "tests/test_round3_dmn.py",
+    "output_tail": "134 passed",
+    "passed": 134,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 5,
+    "duration_sec": 4.953,
+    "file_count": 9,
+    "first_file": "tests/test_round4_vsa_ai.py",
+    "last_file": "tests/test_round73_patch8_weather_route_guard.py",
+    "output_tail": "48 passed",
+    "passed": 48,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 6,
+    "duration_sec": 4.0,
+    "file_count": 9,
+    "first_file": "tests/test_round73_patch9_object_appraisal_guard.py",
+    "last_file": "tests/test_v3_round14_agp_compositor_veto.py",
+    "output_tail": "56 passed",
+    "passed": 56,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 7,
+    "duration_sec": 5.467,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round15_agp_speech_hub_veto.py",
+    "last_file": "tests/test_v3_round22_external_seed_dryrun.py",
+    "output_tail": "62 passed",
+    "passed": 62,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 8,
+    "duration_sec": 4.015,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round23_external_seed_acquisition_workflow.py",
+    "last_file": "tests/test_v3_round30_subset_validation_audit.py",
+    "output_tail": "73 passed",
+    "passed": 73,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 9,
+    "duration_sec": 12.315,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round31_subset_extraction_small_5k.py",
+    "last_file": "tests/test_v3_round39_streaming_migration.py",
+    "output_tail": "106 passed",
+    "passed": 106,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 10,
+    "duration_sec": 15.271,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round3_appraisal_classifier.py",
+    "last_file": "tests/test_v3_round47_agp_meaning_bridge.py",
+    "output_tail": "126 passed",
+    "passed": 126,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 11,
+    "duration_sec": 11.483,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round48_post_bridge_smoke.py",
+    "last_file": "tests/test_v3_round55_eve_vector_store.py",
+    "output_tail": "114 passed",
+    "passed": 114,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 12,
+    "duration_sec": 6.522,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round56_wrapper_eve_specific_integration.py",
+    "last_file": "tests/test_v3_round63_threshold_proposal_report.py",
+    "output_tail": "34 passed",
+    "passed": 34,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 13,
+    "duration_sec": 5.97,
+    "file_count": 9,
+    "first_file": "tests/test_v3_round64_commit_threshold_enforcement.py",
+    "last_file": "tests/test_v3_round71_self_learning_consolidation.py",
+    "output_tail": "31 passed",
+    "passed": 31,
+    "returncode": 0,
+    "timed_out": false
+  },
+  {
+    "chunk": 14,
+    "duration_sec": 4.83,
+    "file_count": 7,
+    "first_file": "tests/test_v3_round72_smoke_drift_baseline.py",
+    "last_file": "tests/test_v3_round9_agp_speech_hub_observation.py",
+    "output_tail": "29 passed",
+    "passed": 29,
+    "returncode": 0,
+    "timed_out": false
+  }
+]

@@ -1,76 +1,32 @@
 # OPERATOR_GUIDE
 
-이 파일은 기술 디테일을 모르는 운영자가 결과를 확인하는 용도다.
+## Round97/98 operator summary
 
-## You only need to check these items
+Round97 opened runtime lexical→concept mapping only inside a controlled smoke path for `민석`, then rolled back. Round98 audited the result and did not persist runtime mapping.
 
-### 1. What round is complete?
+Current flags after Round98:
 
-Look at:
+- `runtime_mapping_enabled=False`
+- `enforcement_enabled=False`
 
-- `docs/AUTONOMOUS_WORKLOG.md`
-- latest `ROUND*_REPORT.md`
+## What passed
 
-### 2. Did tests actually run?
+- Round96 package manifest SHA/size validation and zip integrity.
+- Round97/98 focused tests.
+- Round92~Round98 focused/adjacent tests.
+- Focused compileall for `adapters`, `tests`, and `main.py`.
 
-Look for exact command lines and results.
+## What is partial / blocked
 
-Good:
+- Medium fastText validation is blocked because `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy` is absent.
+- Full collect-only is partial due legacy root tests importing missing `spreading_activation`.
+- Full repository compileall is partial due pre-existing syntax errors in legacy root files.
 
-- `passed`
-- collected test count shown
-- command names listed
+## Operator decision needed before persistence
 
-Bad:
+Do not persist runtime mapping unless you approve one of these paths:
 
-- vague phrases like `seems fine`
-- no command output
-- docs changed but no tests run
+1. Restore the medium vector artifact and require full validation.
+2. Explicitly approve a partial-validation persistence experiment.
 
-### 3. Was runtime behavior changed?
-
-Important flags:
-
-- `runtime_mapping_enabled`
-- `enforcement_enabled`
-- category creation
-- concept memory mutation
-- SA activation creation
-- AGP verify/fallback behavior
-
-For Round95/Round96 these should stay false.
-
-### 4. Is there a rollback plan?
-
-For any real mutation, there must be:
-
-- checkpoint
-- rollback notes
-- validation JSON
-- failure condition
-
-### 5. What should you say next?
-
-If everything looks good, you can say:
-
-```text
-다음 ㄱㄱ
-```
-
-Codex or the assistant should then read `NEXT_ACTIONS.md` and continue.
-
-## Current plain-language status
-
-EVE is not fully finished. The current work is around safely connecting lexical tokens to concept categories at runtime.
-
-Current safe result:
-
-- `민석` has enough fixture evidence to be considered for controlled runtime mapping smoke.
-- `EVE` is still blocked because required concept/category evidence is missing.
-- Actual runtime mapping is not enabled yet.
-
-Next risky step:
-
-- Round97 controlled runtime mapping enable smoke.
-
-This next step is allowed only with checkpoint, rollback, audit, and tests.
+In both paths, vectors remain evidence only and must not become AGP anchors.

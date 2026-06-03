@@ -2,76 +2,41 @@
 
 ## Current position
 
-Latest known generated package:
+Latest completed rounds:
 
-- `eve_v3_round96_runtime_mapping_enable_smoke_precheck.zip`
-
-Latest completed round:
-
-- Round96 runtime mapping enable-smoke precheck
+- Round97 controlled runtime mapping enable smoke
+- Round98 runtime mapping persistence gate audit
 
 Status:
 
-- `runtime_mapping_enabled=False`
+- `runtime_mapping_enabled=False` after rollback
 - `enforcement_enabled=False`
-- Ready token: `민석`
-- Full suite still needs long-running validation outside the chat runtime.
+- Ephemerally smoke-mapped token: `민석`
+- Persistence gate: `ready_for_operator_persistence_decision`
+- Persistence applied now: `false`
 
-## Immediate next steps
+## Validation boundary
 
-### Step 1 — Put source package into the repo
+Passed focused/adjacent validation is recorded in `validation/ROUND97_VALIDATION_STATUS.json` and `validation/ROUND98_VALIDATION_STATUS.json`.
 
-Upload or expand the latest Round96 package into this repository so Codex can edit the real source directly.
+Blocked/partial validation is intentionally separated:
 
-Recommended branch:
+- `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy` is absent from the code-only package.
+- Full medium fastText validation is blocked until that artifact is restored.
+- Repository-wide collect-only/compileall still hits legacy root issues unrelated to Round97/98.
 
-- `work/autonomous-loop`
+## Highest-value next round
 
-### Step 2 — Run validation
+Round99 should design an operator persistence decision path, but must not persist runtime mapping unless one of these is true:
 
-Commands to run from the expanded source root:
+1. Medium vectors are restored and split/full validation passes.
+2. The operator explicitly accepts a partial-validation persistence experiment.
 
-```bash
-python -m compileall adapters/lex_concept_mapping_adapter.py adapters/runtime_smoke_runner.py adapters/state_debug_adapter.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py
-pytest -q tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py --disable-warnings --maxfail=1
-pytest --collect-only -q
-pytest -q --disable-warnings --maxfail=1
-```
+Required Round99 outputs:
 
-Expected known results from chat runtime:
-
-- compileall passed
-- focused/adjacent tests: 7 passed
-- collect-only: 1217 tests collected
-- full pytest not completed in chat runtime due time limit
-
-### Step 3 — Round97 controlled runtime mapping enable smoke
-
-Goal:
-
-- Turn on the smallest possible runtime mapping path for the accepted fixture token only.
-- Keep rollback and audit explicit.
-
-Required before implementation:
-
-- pre-mutation checkpoint
-- rollback report
-- invariant checklist
-- focused tests
-- adjacent tests
-- validation JSON
-
-Stop if:
-
-- full validation cannot run
-- enabling requires broad refactor
-- enabling bypasses AGP
-- enabling treats vector evidence as AGP anchor
-- tests need weakening
-
-## Phase after Round97
-
-1. AGP proof object expansion
-2. Progress/Feasibility check for autonomous loop
-3. false coherence diagnostics
-4. event/frame graph later
+- explicit persistence preconditions
+- operator approval schema
+- rollback checklist
+- validation plan distinguishing focused pass from medium/full blocked
+- no AGP bypass
+- no vector-as-anchor shortcut

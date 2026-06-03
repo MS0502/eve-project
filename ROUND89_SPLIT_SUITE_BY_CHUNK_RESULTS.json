@@ -1,0 +1,261 @@
+[
+  {
+    "chunk": 1,
+    "duration_sec": 9.148,
+    "file_count": 10,
+    "files": [
+      "tests/test_hormone_adapter.py",
+      "tests/test_round21_voice_loop.py",
+      "tests/test_round33_morph_analyzer.py",
+      "tests/test_round73_patch5_lazy_embedding.py",
+      "tests/test_v3_round17_agp_trace_first_pass_analysis.py",
+      "tests/test_v3_round2_agp_skeleton.py",
+      "tests/test_v3_round42_wrapper_telemetry_and_drift.py",
+      "tests/test_v3_round55_eve_vector_store.py",
+      "tests/test_v3_round68_context_diversity_proposal_report.py",
+      "tests/test_v3_round81_concept_mapping_gate_dry_run.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 83%]\n..............                                                           [100%]\n86 passed in 5.61s"
+  },
+  {
+    "chunk": 2,
+    "duration_sec": 8.873,
+    "file_count": 10,
+    "files": [
+      "tests/test_mvp_streaming.py",
+      "tests/test_round22_web_vision.py",
+      "tests/test_round34_sentence_structure.py",
+      "tests/test_round73_patch7_state_debug.py",
+      "tests/test_v3_round18_agp_threshold_decision.py",
+      "tests/test_v3_round30_subset_validation_audit.py",
+      "tests/test_v3_round43_runtime_smoke_sampling.py",
+      "tests/test_v3_round56_wrapper_eve_specific_integration.py",
+      "tests/test_v3_round69_context_diversity_gate_enforcement.py",
+      "tests/test_v3_round82_concept_mapping_gate_proposal_report.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 88%]\n.........                                                                [100%]\n81 passed in 5.96s"
+  },
+  {
+    "chunk": 3,
+    "duration_sec": 8.263,
+    "file_count": 10,
+    "files": [
+      "tests/test_round10_humanity.py",
+      "tests/test_round23_curiosity.py",
+      "tests/test_round35_safety.py",
+      "tests/test_round73_patch8_weather_route_guard.py",
+      "tests/test_v3_round19_agp_post_decision_stabilization.py",
+      "tests/test_v3_round31_subset_extraction_small_5k.py",
+      "tests/test_v3_round44_smoke_data_analysis.py",
+      "tests/test_v3_round57_post_eve_specific_smoke.py",
+      "tests/test_v3_round6_agp_minimal_verifier.py",
+      "tests/test_v3_round83_operator_acceptance_category_creation_dry_run.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 77%]\n.....................                                                    [100%]\n93 passed in 5.59s"
+  },
+  {
+    "chunk": 4,
+    "duration_sec": 9.678,
+    "file_count": 10,
+    "files": [
+      "tests/test_round11_advanced_thinking.py",
+      "tests/test_round24_visualizer.py",
+      "tests/test_round36_urge.py",
+      "tests/test_round73_patch9_object_appraisal_guard.py",
+      "tests/test_v3_round1_alignment.py",
+      "tests/test_v3_round32_self_embedding_rewrite_scaffold.py",
+      "tests/test_v3_round45_coverage_and_agp_root_cause.py",
+      "tests/test_v3_round58_continuous_eve_self_learning.py",
+      "tests/test_v3_round70_context_diversity_rollback_drill.py",
+      "tests/test_v3_round84_88_concept_mapping_read_only_batch.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 93%]\n.....                                                                    [100%]\n77 passed in 6.97s"
+  },
+  {
+    "chunk": 5,
+    "duration_sec": 9.547,
+    "file_count": 10,
+    "files": [
+      "tests/test_round12_reasoning.py",
+      "tests/test_round25_character.py",
+      "tests/test_round37_38_dynamic_state.py",
+      "tests/test_round7_continual_persist.py",
+      "tests/test_v3_round20_agp_operational_snapshot.py",
+      "tests/test_v3_round33_fasttext_load_and_lookup.py",
+      "tests/test_v3_round46_agp_extraction_trace.py",
+      "tests/test_v3_round59_commit_gate.py",
+      "tests/test_v3_round71_self_learning_consolidation.py",
+      "tests/test_v3_round89_explicit_concept_commit_smoke.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 77%]\n.....................                                                    [100%]\n93 passed in 6.68s"
+  },
+  {
+    "chunk": 6,
+    "duration_sec": 8.55,
+    "file_count": 10,
+    "files": [
+      "tests/test_round13_world_sim.py",
+      "tests/test_round26_openai_api.py",
+      "tests/test_round39a_emotion_cause.py",
+      "tests/test_round8_env_autonomy.py",
+      "tests/test_v3_round21_external_seed_manifest.py",
+      "tests/test_v3_round34_state_debug_fasttext_migration.py",
+      "tests/test_v3_round47_agp_meaning_bridge.py",
+      "tests/test_v3_round5_agp_input_interface.py",
+      "tests/test_v3_round72_smoke_drift_baseline.py",
+      "tests/test_v3_round8_agp_compositor_observation.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 76%]\n......................                                                   [100%]\n94 passed in 5.82s"
+  },
+  {
+    "chunk": 7,
+    "duration_sec": 11.359,
+    "file_count": 10,
+    "files": [
+      "tests/test_round14_autonomous.py",
+      "tests/test_round27_alive.py",
+      "tests/test_round39b_thought_chain.py",
+      "tests/test_round9_reasoning.py",
+      "tests/test_v3_round22_external_seed_dryrun.py",
+      "tests/test_v3_round35_attention_analyzer_migration.py",
+      "tests/test_v3_round48_post_bridge_smoke.py",
+      "tests/test_v3_round60_commit_audit_export.py",
+      "tests/test_v3_round73_explicit_eve_specific_commit_smoke.py",
+      "tests/test_v3_round9_agp_speech_hub_observation.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 75%]\n.......................                                                  [100%]\n95 passed in 8.17s"
+  },
+  {
+    "chunk": 8,
+    "duration_sec": 8.688,
+    "file_count": 9,
+    "files": [
+      "tests/test_round15_learning.py",
+      "tests/test_round28_doubting.py",
+      "tests/test_round3_dmn.py",
+      "tests/test_v3_round10_agp_trace_helper.py",
+      "tests/test_v3_round23_external_seed_acquisition_workflow.py",
+      "tests/test_v3_round36_compositor_migration.py",
+      "tests/test_v3_round49_lexical_coverage_planning.py",
+      "tests/test_v3_round61_commit_audit_dashboard.py",
+      "tests/test_v3_round74_explicit_commit_delta_report.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 91%]\n.......                                                                  [100%]\n79 passed in 5.89s"
+  },
+  {
+    "chunk": 9,
+    "duration_sec": 9.009,
+    "file_count": 9,
+    "files": [
+      "tests/test_round16_frame_hg_sd.py",
+      "tests/test_round29_orchestrator.py",
+      "tests/test_round4_vsa_ai.py",
+      "tests/test_v3_round11_agp_trace_analytics.py",
+      "tests/test_v3_round24_first_seed_registration.py",
+      "tests/test_v3_round37_concept_memory_migration.py",
+      "tests/test_v3_round4_appraisal_meaning_fields.py",
+      "tests/test_v3_round62_commit_threshold_dry_run.py",
+      "tests/test_v3_round75_commit_audit_replay_export.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 90%]\n........                                                                 [100%]\n80 passed in 6.40s"
+  },
+  {
+    "chunk": 10,
+    "duration_sec": 7.754,
+    "file_count": 9,
+    "files": [
+      "tests/test_round17_self_presence.py",
+      "tests/test_round2_nl_sd.py",
+      "tests/test_round5_goal_norm.py",
+      "tests/test_v3_round12_agp_threshold_analysis.py",
+      "tests/test_v3_round25_fasttext_loader_scaffold.py",
+      "tests/test_v3_round38_situation_responder_migration.py",
+      "tests/test_v3_round50_subset_medium_30k.py",
+      "tests/test_v3_round63_threshold_proposal_report.py",
+      "tests/test_v3_round76_self_learning_v1_freeze_baseline.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 92%]\n......                                                                   [100%]\n78 passed in 4.73s"
+  },
+  {
+    "chunk": 11,
+    "duration_sec": 10.449,
+    "file_count": 9,
+    "files": [
+      "tests/test_round18_social_outing.py",
+      "tests/test_round30_situation.py",
+      "tests/test_round6_codegen.py",
+      "tests/test_v3_round13_agp_threshold_configurable.py",
+      "tests/test_v3_round26_fasttext_load_workflow.py",
+      "tests/test_v3_round39_streaming_migration.py",
+      "tests/test_v3_round51_wrapper_primary_medium_swap.py",
+      "tests/test_v3_round64_commit_threshold_enforcement.py",
+      "tests/test_v3_round77_lexical_to_concept_mapping_planning.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 73%]\n..........................                                               [100%]\n98 passed in 7.72s"
+  },
+  {
+    "chunk": 12,
+    "duration_sec": 11.57,
+    "file_count": 9,
+    "files": [
+      "tests/test_round19_enhancer_proactive.py",
+      "tests/test_round30_situation_responder.py",
+      "tests/test_round73_patch10_negative_object_appraisal_guard.py",
+      "tests/test_v3_round14_agp_compositor_veto.py",
+      "tests/test_v3_round27_seed_verification_runner.py",
+      "tests/test_v3_round3_appraisal_classifier.py",
+      "tests/test_v3_round52_post_medium_smoke.py",
+      "tests/test_v3_round65_threshold_policy_snapshot.py",
+      "tests/test_v3_round78_79_lexical_concept_candidate_dry_run.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [100%]\n72 passed in 8.80s"
+  },
+  {
+    "chunk": 13,
+    "duration_sec": 8.317,
+    "file_count": 9,
+    "files": [
+      "tests/test_round1_sa_em.py",
+      "tests/test_round31_mood.py",
+      "tests/test_round73_patch11_threat_discomfort_guard.py",
+      "tests/test_v3_round15_agp_speech_hub_veto.py",
+      "tests/test_v3_round28_external_verification_and_subset_plan.py",
+      "tests/test_v3_round40_pre_swap_audit.py",
+      "tests/test_v3_round53_self_learning_design.py",
+      "tests/test_v3_round66_observation_evidence_quality.py",
+      "tests/test_v3_round7_agp_fallback_generation.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 82%]\n...............                                                          [100%]\n87 passed in 5.74s"
+  },
+  {
+    "chunk": 14,
+    "duration_sec": 9.902,
+    "file_count": 9,
+    "files": [
+      "tests/test_round20_sensory.py",
+      "tests/test_round32_module_learning.py",
+      "tests/test_round73_patch12_affective_tone_guard.py",
+      "tests/test_v3_round16_agp_integration_audit.py",
+      "tests/test_v3_round29_subset_extraction_mini_1k.py",
+      "tests/test_v3_round41_final_swap.py",
+      "tests/test_v3_round54_eve_vocab_tracker_observe.py",
+      "tests/test_v3_round67_context_diversity_gate_dry_run.py",
+      "tests/test_v3_round80_concept_proposal_report.py"
+    ],
+    "returncode": 0,
+    "tail": "........................................................................ [ 80%]\n.................                                                        [100%]\n89 passed in 7.32s"
+  }
+]

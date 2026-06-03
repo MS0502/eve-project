@@ -1,0 +1,131 @@
+{
+  "agp_anchor_created_count": 0,
+  "blocked_candidate_count": 1,
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "candidate_count": 2,
+  "candidate_rows": [
+    {
+      "agp_anchor_created": false,
+      "agp_anchor_policy": "lexical_vector_is_evidence_only_explicit_category_and_sa_required",
+      "candidate_id": "lex::EVE",
+      "candidate_status": "blocked_insufficient_lexical_evidence",
+      "category_created": false,
+      "concept_evidence": {
+        "concept_memory_reference": null,
+        "explicit_category_id": null,
+        "frame_slots": [],
+        "hypergraph_relation_reference": null
+      },
+      "lexical_evidence": {
+        "context_diverse": false,
+        "eve_specific_candidate": false,
+        "eve_specific_vector_present": false,
+        "evidence_status": "not_eve_specific_candidate",
+        "meets_current_observation_threshold": false,
+        "observed_count": 0,
+        "peer_token_sample": [],
+        "unique_context_count": 0,
+        "unique_peer_token_count": 0,
+        "unique_text_count": 0
+      },
+      "lexical_evidence_ready": false,
+      "lexical_route_estimate": "lexical_observation_pending_or_seed_fallback",
+      "lexical_token": "EVE",
+      "mapping_stage": "round78_candidate_schema_dry_run_only",
+      "operator_decision": "undecided",
+      "proposed_concept_category": null,
+      "sa_activation_requirement": "required_before_agp_anchor"
+    },
+    {
+      "agp_anchor_created": false,
+      "agp_anchor_policy": "lexical_vector_is_evidence_only_explicit_category_and_sa_required",
+      "candidate_id": "lex::민석",
+      "candidate_status": "lexical_evidence_ready_concept_missing",
+      "category_created": false,
+      "concept_evidence": {
+        "concept_memory_reference": null,
+        "explicit_category_id": null,
+        "frame_slots": [],
+        "hypergraph_relation_reference": null
+      },
+      "lexical_evidence": {
+        "context_diverse": true,
+        "eve_specific_candidate": true,
+        "eve_specific_vector_present": true,
+        "evidence_status": "threshold_met_context_diverse",
+        "meets_current_observation_threshold": true,
+        "observed_count": 2,
+        "peer_token_sample": [
+          "군대",
+          "오늘"
+        ],
+        "unique_context_count": 2,
+        "unique_peer_token_count": 2,
+        "unique_text_count": 2
+      },
+      "lexical_evidence_ready": true,
+      "lexical_route_estimate": "eve_specific_vector_store",
+      "lexical_token": "민석",
+      "mapping_stage": "round78_candidate_schema_dry_run_only",
+      "operator_decision": "undecided",
+      "proposed_concept_category": null,
+      "sa_activation_requirement": "required_before_agp_anchor"
+    }
+  ],
+  "candidate_status_counts": {
+    "blocked_insufficient_lexical_evidence": 1,
+    "lexical_evidence_ready_concept_missing": 1
+  },
+  "concept_category_created_count": 0,
+  "enforcement_enabled": false,
+  "eve_specific_vector_present_count": 1,
+  "eve_specific_vector_present_tokens": [
+    "민석"
+  ],
+  "lexical_evidence_ready_count": 1,
+  "lexical_evidence_status_counts": {
+    "not_eve_specific_candidate": 1,
+    "threshold_met_context_diverse": 1
+  },
+  "missing_concept_category_tokens": [
+    "EVE",
+    "민석"
+  ],
+  "missing_explicit_concept_category_count": 2,
+  "next_round_recommendation": {
+    "allowed_scope": "operator_proposal_only_no_mapping_enforcement",
+    "round80": "concept_proposal_report"
+  },
+  "operator_recommendation": "proceed_to_concept_proposal_report",
+  "policy": {
+    "no_agp_verify_call": true,
+    "no_category_creation": true,
+    "no_concept_memory_mutation": true,
+    "no_embedding_wrapper_lookup": true,
+    "no_enforcement": true,
+    "no_frame_hypergraph_mutation": true,
+    "no_runtime_mapping": true,
+    "no_vector_commit": true,
+    "read_only_report_only": true
+  },
+  "read_only": true,
+  "read_only_checks": {
+    "agp_verify_called": false,
+    "audit_records_unchanged_during_report": true,
+    "category_created": false,
+    "enforcement_enabled_after_report": false,
+    "runtime_mapping_enabled_after_report": false,
+    "self_learning_policy_unchanged_during_report": true,
+    "telemetry_unchanged_during_report": true,
+    "vector_store_unchanged_during_report": true
+  },
+  "ready_tokens": [
+    "민석"
+  ],
+  "report_version": "v3_round79_lexical_concept_candidate_evidence_quality_report",
+  "round": 79,
+  "runtime_mapping_enabled": false,
+  "source_dry_run_version": "v3_round78_lexical_concept_candidate_schema_dry_run"
+}

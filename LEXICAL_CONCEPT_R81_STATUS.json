@@ -1,0 +1,19 @@
+{
+  "agp_anchor_created": false,
+  "candidate_count": 2,
+  "category_created": false,
+  "enforcement_enabled": false,
+  "proposal_count": 1,
+  "read_only": true,
+  "round": 81,
+  "round81_gate_dry_run_version": "v3_round81_concept_mapping_gate_dry_run",
+  "runtime_mapping_enabled": false,
+  "status_version": "v3_round81_validation_status",
+  "would_block_count": 2,
+  "would_block_tokens": [
+    "EVE",
+    "민석"
+  ],
+  "would_pass_count": 0,
+  "would_pass_tokens": []
+}

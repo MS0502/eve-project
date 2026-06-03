@@ -1,0 +1,42 @@
+{
+  "round": 98,
+  "status": "passed_focused_partial_broader_blocked",
+  "artifact": "LEXICAL_CONCEPT_RUNTIME_MAPPING_PERSISTENCE_GATE_AUDIT_R98.json",
+  "passed_checks": [
+    {
+      "command": "pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+      "result": "passed",
+      "details": "3 passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py && python -m compileall -q adapters tests main.py",
+      "result": "passed",
+      "details": "14 passed; compileall over focused source/test surfaces passed"
+    }
+  ],
+  "failed_or_blocked_checks": [
+    {
+      "command": "python -m pytest --collect-only -q",
+      "result": "blocked_partial",
+      "details": "1220 tests collected, then 4 legacy root test collection errors due missing spreading_activation module"
+    },
+    {
+      "command": "python -m compileall -q .",
+      "result": "blocked_partial",
+      "details": "legacy root files eve_foundation_v10_2.py and eve_foundation_v12_0.py contain pre-existing SyntaxError; focused compileall passed"
+    },
+    {
+      "command": "full medium fastText validation",
+      "result": "blocked",
+      "details": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy is absent by package design"
+    }
+  ],
+  "persistence_gate": {
+    "hard_stop": false,
+    "status": "ready_for_operator_persistence_decision",
+    "persist_runtime_mapping_now": false,
+    "requires_operator_approval": true,
+    "requires_split_full_suite_with_medium_vectors": true
+  },
+  "hard_stop": false
+}

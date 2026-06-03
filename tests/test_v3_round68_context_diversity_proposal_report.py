@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+from main import build_full_engine
+
+
+def _candidate(report: dict, word: str) -> dict:
+    for item in report["candidate_reports"]:
+        if item["word"] == word:
+            return item
+    raise AssertionError(f"missing candidate report for {word}")
+
+
+def test_round68_context_diversity_proposal_defers_repeated_context_without_policy_change() -> None:
+    engine = build_full_engine()
+    learner = engine.eve_self_learning
+    learner.observe_text("민석 오늘", source="unit")
+    learner.observe_text("민석 오늘", source="unit")
+
+    before_vectors = engine.eve_specific_vector_store.stats()["stored_count"]
+    before_records = len(learner.commit_audit_records())
+    proposal = learner.context_diversity_proposal_report(words=["민석"], context_words=["오늘", "군대"])
+    after_vectors = engine.eve_specific_vector_store.stats()["stored_count"]
+    after_records = len(learner.commit_audit_records())
+
+    assert proposal["proposal_version"] == "v3_round68_context_diversity_proposal_report"
+    assert proposal["round"] == 68
+    assert proposal["read_only"] is True
+    assert proposal["active_policy_unchanged"] is True
+    assert proposal["current_context_diversity_gate_enforced"] is True
+    assert proposal["proposed_context_diversity_gate_enforced"] is True
+    assert proposal["audit_records_unchanged"] is True
+    assert proposal["vector_store_unchanged"] is True
+    assert proposal["current_gate_ready_words"] == []
+    assert proposal["newly_blocked_by_context_diversity"] == []
+    assert proposal["eligible_under_proposal"] == []
+    assert proposal["recommendation"] == "insufficient_evidence"
+    assert proposal["operator_review_required"] is True
+    assert proposal["policy"]["auto_promotion_enabled"] is False
+    assert proposal["policy"]["no_context_diversity_policy_change"] is True
+    assert before_vectors == after_vectors
+    assert before_records == after_records
+
+    item = _candidate(proposal, "민석")
+    assert item["current_gate_pass"] is False
+    assert item["dry_run_pass"] is False
+    assert item["context_diverse"] is False
+    assert "insufficient_context_diversity" in item["dry_run_reasons"]
+    assert learner.stats()["min_observations_for_commit"] == 2
+
+
+def test_round68_context_diversity_proposal_allows_operator_consideration_for_diverse_context() -> None:
+    engine = build_full_engine()
+    learner = engine.eve_self_learning
+    learner.observe_text("민석 오늘", source="unit_a")
+    learner.observe_text("민석 군대", source="unit_b")
+
+    proposal = learner.context_diversity_proposal_report(words=["민석"], context_words=["오늘", "군대"])
+    item = _candidate(proposal, "민석")
+
+    assert proposal["eligible_under_proposal"] == ["민석"]
+    assert proposal["blocked_under_proposal"] == []
+    assert proposal["newly_blocked_by_context_diversity"] == []
+    assert proposal["current_gate_ready_count"] == 1
+    assert proposal["recommendation"] == "operator_may_consider_context_diversity_gate"
+    assert proposal["policy"]["context_diversity_gate_enforced"] is True
+    assert proposal["policy"]["no_threshold_change"] is True
+    assert item["current_gate_pass"] is True
+    assert item["dry_run_pass"] is True
+    assert item["context_diverse"] is True
+
+
+def test_round68_state_debug_and_drift_report_surface_context_diversity_proposal() -> None:
+    from adapters.external_seed_manifest import measure_eve_self_learning_drift_accumulation
+
+    engine = build_full_engine()
+    learner = engine.eve_self_learning
+    learner.observe_text("민석 오늘", source="unit_a")
+    learner.observe_text("민석 군대", source="unit_b")
+
+    stats = learner.stats()
+    state = engine.state_debug.snapshot_state()
+    report = measure_eve_self_learning_drift_accumulation(engine)
+
+    assert stats["round"] == 71
+    assert stats["latest_round"] == 71
+    assert stats["implementation_phase"] == "round71_self_learning_policy_consolidation"
+    assert stats["context_diversity_proposal_version"] == "v3_round68_context_diversity_proposal_report"
+    assert stats["context_diversity_proposal"]["read_only"] is True
+    assert state["eve_self_learning"]["context_diversity_proposal_version"] == "v3_round68_context_diversity_proposal_report"
+    assert state["eve_self_learning"]["context_diversity_proposal"]["operator_review_required"] is True
+    assert report["commit_gate"]["context_diversity_proposal_version"] == "v3_round68_context_diversity_proposal_report"
+    assert report["context_diversity_proposal"]["policy"]["context_diversity_gate_enforced"] is True
+    assert report["policy"]["auto_promotion_enabled"] is False
+    assert report["policy"]["context_diversity_gate_enforced"] is True
+    assert report["policy"]["context_diversity_proposal_report_only"] is False

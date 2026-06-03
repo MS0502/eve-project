@@ -1,0 +1,32 @@
+{
+  "collect_only": {
+    "collected": 1206
+  },
+  "compileall": {
+    "passed": true
+  },
+  "enforcement_enabled": false,
+  "focused": {
+    "command": "pytest -q tests/test_v3_round91_concept_commit_replay_export_checkpoint.py",
+    "failed": 0,
+    "passed": 2
+  },
+  "full_split_suite_reason": "round91_is_read_only_checkpoint_export_round; focused_adjacent_compileall_collect_only validation used",
+  "full_split_suite_run": false,
+  "read_only": true,
+  "round": 91,
+  "round50_91_adjacent_sweep": {
+    "failed": 0,
+    "passed": 213
+  },
+  "round60_91_focused_sweep": {
+    "failed": 0,
+    "passed": 105
+  },
+  "round77_91_focused": {
+    "failed": 0,
+    "passed": 69
+  },
+  "runtime_mapping_enabled": false,
+  "status_version": "v3_round91_validation_status"
+}

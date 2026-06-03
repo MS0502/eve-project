@@ -1,0 +1,141 @@
+{
+  "blocked_candidate_count": 1,
+  "blocked_reason_counts": {
+    "agp_bridge_smoke_test_required": 1,
+    "blocked_insufficient_lexical_evidence": 1,
+    "concept_memory_or_frame_evidence_required": 1,
+    "explicit_category_creation_required": 1,
+    "operator_acceptance_required": 1,
+    "sa_activation_path_required": 1
+  },
+  "blocked_rows": [
+    {
+      "agp_anchor_created": false,
+      "agp_verify_called": false,
+      "blocked_reasons": [
+        "blocked_insufficient_lexical_evidence"
+      ],
+      "category_created": false,
+      "concept_memory_mutation": false,
+      "frame_hypergraph_mutation": false,
+      "lexical_token": "EVE",
+      "may_create_agp_anchor_now": false,
+      "may_create_category_now": false,
+      "may_enable_mapping_now": false,
+      "operator_decision_status": "not_ready_for_operator_acceptance",
+      "sa_activation_created": false,
+      "source_dry_run_status": "blocked_before_mapping_gate",
+      "would_pass_mapping_gate": false
+    }
+  ],
+  "candidate_count": 2,
+  "enforcement_enabled": false,
+  "gate_proposal_rows": [
+    {
+      "agp_anchor_created": false,
+      "agp_verify_called": false,
+      "blocked_reasons": [
+        "operator_acceptance_required",
+        "explicit_category_creation_required",
+        "sa_activation_path_required",
+        "concept_memory_or_frame_evidence_required",
+        "agp_bridge_smoke_test_required"
+      ],
+      "category_created": false,
+      "concept_memory_mutation": false,
+      "frame_hypergraph_mutation": false,
+      "lexical_token": "민석",
+      "may_create_agp_anchor_now": false,
+      "may_create_category_now": false,
+      "may_enable_mapping_now": false,
+      "operator_decision_status": "operator_review_required",
+      "sa_activation_created": false,
+      "source_dry_run_status": "would_block_future_mapping_gate",
+      "would_pass_mapping_gate": false
+    }
+  ],
+  "next_round_recommendation": {
+    "allowed_scope": "still_no_runtime_mapping_until_category_and_agp_bridge_tests_exist",
+    "round83": "operator_acceptance_fixture_or_explicit_category_creation_dry_run"
+  },
+  "operator_action_item_count": 6,
+  "operator_action_items": [
+    {
+      "blocked_reason": "agp_bridge_smoke_test_required",
+      "count": 1,
+      "operator_action": "future_patch_must_add_agp_bridge_smoke_test",
+      "required_before_enforcement": true
+    },
+    {
+      "blocked_reason": "blocked_insufficient_lexical_evidence",
+      "count": 1,
+      "operator_action": "collect_more_lexical_observation_evidence_before_proposal",
+      "required_before_enforcement": true
+    },
+    {
+      "blocked_reason": "concept_memory_or_frame_evidence_required",
+      "count": 1,
+      "operator_action": "future_patch_must_attach_concept_memory_or_frame_evidence",
+      "required_before_enforcement": true
+    },
+    {
+      "blocked_reason": "explicit_category_creation_required",
+      "count": 1,
+      "operator_action": "future_patch_must_create_an_explicit_category_record",
+      "required_before_enforcement": true
+    },
+    {
+      "blocked_reason": "operator_acceptance_required",
+      "count": 1,
+      "operator_action": "operator_must_explicitly_accept_the_concept_proposal",
+      "required_before_enforcement": true
+    },
+    {
+      "blocked_reason": "sa_activation_path_required",
+      "count": 1,
+      "operator_action": "future_patch_must_prove_sa_activation_path_for_the_category",
+      "required_before_enforcement": true
+    }
+  ],
+  "operator_recommendation": "do_not_enable_runtime_mapping_until_all_action_items_are_resolved",
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "lexical_vector_is_evidence_only": true,
+    "no_agp_anchor_creation": true,
+    "no_agp_verify_call": true,
+    "no_category_creation": true,
+    "no_concept_memory_mutation": true,
+    "no_embedding_wrapper_lookup": true,
+    "no_enforcement": true,
+    "no_frame_hypergraph_mutation": true,
+    "no_runtime_mapping": true,
+    "no_sa_activation_creation": true,
+    "no_vector_commit": true,
+    "operator_proposal_report_only": true
+  },
+  "proposal_count": 1,
+  "read_only": true,
+  "read_only_checks": {
+    "agp_anchor_created": false,
+    "agp_verify_called": false,
+    "audit_records_unchanged_during_report": true,
+    "category_created": false,
+    "concept_memory_mutation": false,
+    "enforcement_enabled_after_report": false,
+    "frame_hypergraph_mutation": false,
+    "runtime_mapping_enabled_after_report": false,
+    "sa_activation_created": false,
+    "self_learning_policy_unchanged_during_report": true,
+    "telemetry_unchanged_during_report": true,
+    "vector_commit_called": false,
+    "vector_store_unchanged_during_report": true,
+    "wrapper_lookup_called": false
+  },
+  "report_version": "v3_round82_concept_mapping_gate_proposal_report",
+  "round": 82,
+  "runtime_mapping_enabled": false,
+  "source_gate_dry_run_version": "v3_round81_concept_mapping_gate_dry_run",
+  "would_block_count": 2,
+  "would_pass_count": 0
+}
