@@ -173,3 +173,13 @@ Boundary:
 Next:
 
 - A future activation patch must create real checkpoint/rollback/audit artifacts and explicitly apply state changes under tests; Round107 is only the harness and proof surface.
+
+## Round108 runtime mapping persistence activation candidate
+
+- `adapters/runtime_mapping_persistence_activation_candidate.py`
+  - `build_operator_approval_guard(...)`: fail-closed prerequisite/approval check over Round106 decision, Round107 dry-run, and the explicit Round108 operator token.
+  - `build_runtime_mapping_activation_checkpoint(...)`: JSON checkpoint payload created before any candidate mutation.
+  - `run_runtime_mapping_persistence_activation_candidate(...)`: default blocked/read-only; with explicit approval and `apply_candidate=True`, writes checkpoint/audit/state-debug artifacts, applies an ephemeral runtime mapping candidate flag, rolls back, and verifies protected state.
+  - `verify_runtime_mapping_rollback(...)`: verifies disabled flags plus unchanged category/audit/vector/SA/concept-memory/AGP surfaces.
+- `LexConceptMappingAdapter.stats()` and `StateDebugAdapter.snapshot_state()` now advertise the Round108 candidate surface while keeping `runtime_mapping_enabled=False` and `enforcement_enabled=False` by default.
+- Round108 does not add default startup wiring and does not enable enforcement.
