@@ -160,3 +160,20 @@ python -m adapters.medium_vector_manual_validation \
 ```
 
 Proceed to runtime mapping persistence approval gate only when Round103 reports validation success.
+
+## Round104/105 update — validation unblocked, proof expanded
+
+Current position:
+
+- Operator manually restored the medium vector artifact in Codespaces.
+- Operator reported Round97/98 focused validation `3 passed`, Round92~98 adjacent validation `14 passed`, and compile check passed.
+- Round104 records this as operator-reported validation and opens the persistence approval gate.
+- Round105 expands AGP proof data without mutation.
+
+Next recommended round:
+
+```text
+Round106: explicit runtime mapping persistence decision package
+```
+
+Round106 should not automatically enable persistence unless the operator explicitly approves it. If approval is given, the patch must include checkpoint, rollback, audit, state-debug exposure, and focused tests. If approval is not given, continue data-only proof/dashboard work.

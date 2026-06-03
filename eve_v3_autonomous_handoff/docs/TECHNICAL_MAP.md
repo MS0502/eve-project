@@ -122,3 +122,35 @@ Boundary:
 - Round103 does not download Release assets.
 - Round103 does not create or install vectors.
 - `vectors.npy` remains forbidden in PR diffs.
+
+## Round104 persistence approval gate surfaces
+
+- `adapters/runtime_mapping_persistence_approval.py`
+  - `round103_operator_unblocked_validation_status()`: records operator-reported Codespaces validation and artifact-safety flags.
+  - `runtime_mapping_persistence_approval_gate(...)`: read-only gate that checks required validation commands and binary-artifact safety before allowing future persistence approval.
+  - `write_round104_persistence_approval_status(...)`: writes JSON only.
+
+Boundary:
+
+- Round104 does not persist runtime mapping.
+- Round104 does not enable enforcement.
+- Round104 does not call AGP or mutate category/memory/vector state.
+
+## Round105 AGP proof object surfaces
+
+- `adapters/agp_proof_object_expansion.py`
+  - `expand_agp_proof_object(...)`: data-only proof expansion from Round104.
+  - `write_round105_agp_proof_status(...)`: writes JSON only.
+
+Boundary:
+
+- Valid AGP anchor source remains explicit category plus SA activation.
+- fastText/EveSpecific/PMI+SVD vectors and raw response text remain invalid anchor sources.
+- No AGP verify call or anchor creation occurs in Round105.
+
+## Round103 operator-unblocked validation status
+
+- `eve_v3_autonomous_handoff/validation/ROUND103_ARTIFACT_UNBLOCKED_VALIDATION_STATUS.json`
+  - Records operator-reported Codespaces validation after manual medium vector artifact installation.
+  - This is not a local Codex execution claim.
+  - Confirms binary artifact safety: `vectors.npy` ignored, temporary operator artifacts not committed, no dummy vector created.

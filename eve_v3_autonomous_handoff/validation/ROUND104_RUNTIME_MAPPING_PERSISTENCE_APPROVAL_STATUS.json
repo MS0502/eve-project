@@ -1,0 +1,71 @@
+{
+  "command_audit": {
+    "all_required_commands_passed": true,
+    "failed_required_commands": [],
+    "missing_required_commands": [],
+    "required_commands": [
+      "python -m compileall -q adapters tests main.py",
+      "pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+      "pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py"
+    ]
+  },
+  "hard_stop": false,
+  "hard_stop_reasons": [],
+  "operator_approval": {
+    "approval_id": null,
+    "approval_required_before_mutation": true,
+    "operator_approved": false
+  },
+  "operator_validation": {
+    "artifact_state": {
+      "binary_artifact_committed": false,
+      "dummy_vector_created": false,
+      "medium_vector_artifact_manually_restored": true,
+      "operator_artifacts_temporary": true,
+      "vectors_npy_gitignored": true
+    },
+    "commands": [
+      {
+        "command": "pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+        "details": "operator reported: 3 passed",
+        "result": "passed"
+      },
+      {
+        "command": "pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+        "details": "operator reported: 14 passed",
+        "result": "passed"
+      },
+      {
+        "command": "python -m compileall -q adapters tests main.py",
+        "details": "operator reported: passed",
+        "result": "passed"
+      }
+    ],
+    "focused_runtime_mapping_validation_unblocked": true,
+    "hard_stop_released": true,
+    "local_codex_execution": false,
+    "round": 103,
+    "source": "operator_reported_codespaces_validation",
+    "version": "v3_round103_operator_unblocked_validation_status"
+  },
+  "persistence_decision": {
+    "enforcement_enabled_after_gate": false,
+    "may_prepare_future_persistence_patch": false,
+    "may_proceed_to_agp_proof_expansion": true,
+    "runtime_mapping_enabled_default_after_gate": false,
+    "runtime_mapping_persisted_now": false
+  },
+  "policy": {
+    "approval_gate_only": true,
+    "lexical_vectors_are_evidence_not_agp_anchors": true,
+    "no_agp_bypass": true,
+    "no_enforcement_enablement": true,
+    "no_runtime_mapping_mutation": true,
+    "vectors_npy_must_remain_out_of_pr_diff": true
+  },
+  "read_only": true,
+  "round": 104,
+  "source_round98_audit_version": null,
+  "status": "ready_for_explicit_operator_persistence_approval",
+  "version": "v3_round104_runtime_mapping_persistence_approval_gate"
+}

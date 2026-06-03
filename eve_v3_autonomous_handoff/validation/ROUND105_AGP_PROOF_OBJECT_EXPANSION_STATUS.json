@@ -1,0 +1,57 @@
+{
+  "hard_stop": false,
+  "mutation_checks": {
+    "agp_anchor_created": false,
+    "agp_verify_called": false,
+    "category_created": false,
+    "concept_memory_mutated": false,
+    "enforcement_enabled": false,
+    "runtime_mapping_persisted": false,
+    "vectors_committed": false
+  },
+  "policy": {
+    "agp_bypass": false,
+    "explicit_category_and_sa_required": true,
+    "proof_object_only": true,
+    "vectors_are_evidence_not_anchors": true
+  },
+  "proof_object": {
+    "agp_role": "verify_explicit_category_against_active_sa_and_hormone_context",
+    "proof_id": "round105_runtime_mapping_agp_anchor_boundary_proof",
+    "proof_steps": [
+      {
+        "status": "passed_operator_reported",
+        "step": "medium_vector_artifact_validation",
+        "vectors_as_agp_anchor": false
+      },
+      {
+        "runtime_mapping_persisted": false,
+        "status": "passed_operator_reported",
+        "step": "runtime_mapping_smoke_validation"
+      },
+      {
+        "invalid_anchor_sources": [
+          "fastText_vector",
+          "EveSpecific_vector",
+          "PMI_SVD_vector",
+          "raw_response_text"
+        ],
+        "status": "expanded_data_only",
+        "step": "agp_anchor_boundary",
+        "valid_anchor_source": "explicit_category_plus_sa_activation_only"
+      }
+    ],
+    "required_for_future_agp_use": [
+      "explicit_generation_time_meaning_categories",
+      "matching_sa_activation_category",
+      "hormone_compatible_agp_result",
+      "no_vector_as_anchor_shortcut"
+    ],
+    "runtime_mapping_role": "candidate_category_lookup_only_after_explicit_persistence_patch"
+  },
+  "read_only": true,
+  "round": 105,
+  "source_round104_status": "ready_for_explicit_operator_persistence_approval",
+  "status": "agp_proof_object_expanded",
+  "version": "v3_round105_agp_proof_object_expansion"
+}

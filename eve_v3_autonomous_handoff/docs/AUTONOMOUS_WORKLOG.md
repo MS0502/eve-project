@@ -285,3 +285,56 @@ Failures / limitations:
 Next recommendation:
 
 - After manual Release asset restore in a network-enabled environment, run the Round103 single validation command and proceed only if it reports validation success.
+
+## Round104 — runtime mapping persistence approval gate
+
+Goal:
+
+- Record operator-unblocked medium-vector validation and convert it into a read-only runtime mapping persistence approval gate.
+
+Changed files:
+
+- `adapters/runtime_mapping_persistence_approval.py`
+- `tests/test_v3_round104_105_persistence_agp_proof.py`
+- `eve_v3_autonomous_handoff/reports/ROUND104_RUNTIME_MAPPING_PERSISTENCE_APPROVAL_GATE.md`
+- `eve_v3_autonomous_handoff/validation/ROUND103_ARTIFACT_UNBLOCKED_VALIDATION_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND104_RUNTIME_MAPPING_PERSISTENCE_APPROVAL_STATUS.json`
+- handoff docs
+
+Commands / inputs:
+
+- Operator-reported Codespaces validation: Round97/98 focused `3 passed`; Round92~98 adjacent `14 passed`; `python -m compileall -q adapters tests main.py` passed.
+- Local Codex check: `python -m compileall -q adapters tests main.py`
+- Local Codex check: `pytest -q tests/test_v3_round104_105_persistence_agp_proof.py`
+
+Results:
+
+- Medium-vector validation hard stop is released for planning based on operator-reported Codespaces validation.
+- Runtime mapping persistence remains unapplied.
+- Enforcement remains disabled.
+- Gate status: `ready_for_explicit_operator_persistence_approval`.
+
+Next recommendation:
+
+- Proceed to Round105 AGP proof object expansion as data-only evidence. Any actual runtime mapping persistence still requires explicit operator approval and a separate checkpoint/rollback/audit patch.
+
+## Round105 — AGP proof object expansion
+
+Goal:
+
+- Expand the AGP proof object after Round104 without mutating AGP, runtime mapping, categories, concept memory, or vectors.
+
+Changed files:
+
+- `adapters/agp_proof_object_expansion.py`
+- `tests/test_v3_round104_105_persistence_agp_proof.py`
+- `eve_v3_autonomous_handoff/reports/ROUND105_AGP_PROOF_OBJECT_EXPANSION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND105_AGP_PROOF_OBJECT_EXPANSION_STATUS.json`
+- handoff docs
+
+Results:
+
+- AGP proof object expanded.
+- Valid anchor source remains explicit category plus SA activation.
+- Invalid anchor sources are explicitly recorded: fastText vector, EveSpecific vector, PMI+SVD vector, and raw response text.
+- No AGP verify call, runtime mapping persistence, enforcement enablement, category creation, concept-memory mutation, or vector commit occurred.

@@ -142,3 +142,17 @@ python -m adapters.medium_vector_manual_validation \
 The command checks that `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy` is manifest-valid and not tracked by git before it runs the Round97/98 focused validation line.
 
 If it reports `blocked_manual_artifact_not_ready`, do not proceed to persistence or AGP proof expansion. Re-check the artifact restore and make sure `vectors.npy` is present locally but not staged or committed.
+
+## Round104/105 operator guide — after artifact-unblocked validation
+
+Your Codespaces validation is now recorded as operator-reported Round103 unblocked validation:
+
+- Round97/98 focused validation: 3 passed.
+- Round92~98 adjacent validation: 14 passed.
+- compile check: passed.
+
+Round104 did not persist runtime mapping. It only says the project is ready for an explicit persistence approval decision.
+
+Round105 expanded the AGP proof object. It did not call AGP verify or create anchors. Vectors remain evidence only; valid AGP anchors still require explicit categories plus SA activation.
+
+Before any persistence patch, decide explicitly whether to approve runtime mapping persistence. If approved, require checkpoint/rollback/audit and keep `vectors.npy` out of the PR diff.

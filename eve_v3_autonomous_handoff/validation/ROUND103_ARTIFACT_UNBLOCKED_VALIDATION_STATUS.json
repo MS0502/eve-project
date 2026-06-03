@@ -1,0 +1,32 @@
+{
+  "artifact_state": {
+    "binary_artifact_committed": false,
+    "dummy_vector_created": false,
+    "medium_vector_artifact_manually_restored": true,
+    "operator_artifacts_temporary": true,
+    "vectors_npy_gitignored": true
+  },
+  "commands": [
+    {
+      "command": "pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+      "details": "operator reported: 3 passed",
+      "result": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+      "details": "operator reported: 14 passed",
+      "result": "passed"
+    },
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "details": "operator reported: passed",
+      "result": "passed"
+    }
+  ],
+  "focused_runtime_mapping_validation_unblocked": true,
+  "hard_stop_released": true,
+  "local_codex_execution": false,
+  "round": 103,
+  "source": "operator_reported_codespaces_validation",
+  "version": "v3_round103_operator_unblocked_validation_status"
+}

@@ -113,3 +113,34 @@ Outcome:
 - Added `adapters/medium_vector_manual_validation.py` and focused tests.
 - Current hard stop remains active in this checkout because the medium `vectors.npy` is absent.
 - Runtime mapping persistence and AGP proof object expansion remain deferred until Round103 validation can run against a verified local artifact.
+
+## Round104
+
+Decision: accept the operator-reported Codespaces validation as the artifact-unblocked validation record for the persistence approval gate, without claiming it as local Codex execution.
+
+Rationale:
+
+- The Codex environment cannot download Release assets, but the operator manually restored the medium artifact in Codespaces and reported focused validation success.
+- Binary safety was preserved: `vectors.npy` is gitignored, `_operator_artifacts/` is temporary, and no binary artifact enters the PR diff.
+- Runtime mapping persistence is a separate mutation decision and must not be applied implicitly by a validation record.
+
+Outcome:
+
+- Round104 gate status is `ready_for_explicit_operator_persistence_approval`.
+- Runtime mapping remains disabled by default and enforcement remains disabled.
+- Round105 AGP proof object expansion is allowed as data-only work.
+
+## Round105
+
+Decision: expand AGP proof data only; do not call AGP verify or create anchors.
+
+Rationale:
+
+- Round104 has no hard stop for proof expansion.
+- AGP anchoring must remain explicit-category plus SA activation; lexical vectors remain evidence only.
+- Runtime mapping persistence has not been approved or applied, so proof expansion must not depend on runtime default changes.
+
+Outcome:
+
+- Added a read-only AGP proof object expansion.
+- No AGP bypass, runtime persistence, category/memory mutation, or vector commit occurred.
