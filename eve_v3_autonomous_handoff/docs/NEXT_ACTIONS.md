@@ -179,3 +179,10 @@ Still forbidden until that explicit patch:
 - AGP bypass or vector-as-anchor shortcuts.
 - `vectors.npy` commits.
 - Semantic memory/quarantine mutation.
+
+## Round108 update — guarded activation candidate complete
+
+- Round108 adds a guarded runtime mapping persistence activation candidate.
+- The candidate requires Round106 decision readiness, Round107 dry-run no-mutation proof, explicit operator approval, checkpoint creation, audit log emission, before/after state-debug export, and rollback verification.
+- Defaults remain disabled: `runtime_mapping_enabled=False`, `enforcement_enabled=False`.
+- Next round may review whether an operator-approved persistence activation should become a production startup path, but only as a separate explicit patch with full validation.

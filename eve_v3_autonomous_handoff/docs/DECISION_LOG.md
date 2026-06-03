@@ -165,3 +165,14 @@ Outcome:
 - `enforcement_enabled` remains `False` by default.
 - No runtime mapping persistence is applied.
 - No AGP/vector/category/concept-memory mutation is performed.
+
+## Round108
+
+Decision: add a guarded runtime mapping persistence activation candidate without default persistence enablement.
+
+- Requires Round106 decision and Round107 dry-run prerequisites.
+- Requires explicit operator approval token.
+- Creates checkpoint before candidate mutation.
+- Emits audit log and before/after state-debug exports.
+- Rolls back and verifies disabled runtime/enforcement flags plus protected state surfaces.
+- Keeps `runtime_mapping_enabled=False` and `enforcement_enabled=False` by default.

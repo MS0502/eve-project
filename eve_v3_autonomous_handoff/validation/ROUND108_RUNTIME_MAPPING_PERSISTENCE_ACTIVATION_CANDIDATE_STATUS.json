@@ -1,0 +1,47 @@
+{
+  "activation_status": "guarded_candidate_available_not_enabled_by_default",
+  "agp_bypass_used": false,
+  "agp_vector_category_memory_mutation_allowed_without_checkpoint": false,
+  "allowed_candidate_mutation": "ephemeral_runtime_mapping_enabled_true_after_checkpoint_then_rollback",
+  "approval_token_required": "ROUND108_OPERATOR_APPROVED_RUNTIME_MAPPING_PERSISTENCE_CANDIDATE",
+  "artifact_files": [
+    "runtime_mapping_persistence_activation_candidate_checkpoint.json",
+    "runtime_mapping_persistence_activation_candidate_rollback.json",
+    "runtime_mapping_persistence_activation_candidate_audit_log.jsonl",
+    "runtime_mapping_persistence_activation_candidate_state_debug_before.json",
+    "runtime_mapping_persistence_activation_candidate_state_debug_after.json",
+    "runtime_mapping_persistence_activation_candidate_state_debug_after_rollback.json"
+  ],
+  "audit_log_required": true,
+  "before_after_state_debug_export_required": true,
+  "checkpoint_before_mutation_required": true,
+  "enforcement_enabled_default": false,
+  "enforcement_enabled_now_after_candidate_tests": false,
+  "operator_approval_required": true,
+  "rollback_verification_required": true,
+  "round": 108,
+  "runtime_mapping_enabled_default": false,
+  "runtime_mapping_enabled_now_after_candidate_tests": false,
+  "source_decision_version": "v3_round106_runtime_mapping_persistence_decision",
+  "source_dry_run_version": "v3_round107_runtime_mapping_persistence_activation_dryrun",
+  "status_version": "v3_round108_runtime_mapping_persistence_activation_candidate",
+  "validation_commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round108_runtime_mapping_persistence_activation_candidate.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round107_runtime_mapping_persistence_activation_dryrun.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round106_runtime_mapping_persistence_decision.py",
+      "status": "passed"
+    }
+  ],
+  "vectors_npy_committed": false
+}

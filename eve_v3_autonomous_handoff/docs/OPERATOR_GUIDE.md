@@ -153,3 +153,17 @@ Current defaults after Round107:
 - `enforcement_enabled=False`
 
 Do not treat Round107 as activation approval. A later patch must explicitly write checkpoint/rollback/audit artifacts and pass validation before enabling persistent runtime mapping.
+
+## Round108 operator guide — guarded activation candidate
+
+Round108 is not default persistence enablement. It provides a guarded candidate runner for operator-reviewed activation drills.
+
+Operator-approved candidate runs must provide:
+
+- Round106 decision packet ready state.
+- Round107 activation dry-run no-mutation proof.
+- `operator_approved=True`.
+- Approval token: `ROUND108_OPERATOR_APPROVED_RUNTIME_MAPPING_PERSISTENCE_CANDIDATE`.
+- `apply_candidate=True`.
+
+The candidate writes checkpoint, rollback, audit JSONL, and before/after state-debug exports, then rolls runtime mapping back to disabled flags. Enforcement remains disabled throughout.
