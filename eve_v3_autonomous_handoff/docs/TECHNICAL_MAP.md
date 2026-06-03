@@ -148,3 +148,28 @@ Boundary:
 
 - Runtime mapping and enforcement remain disabled.
 - Persistent application requires a later explicit patch.
+
+## Round107 runtime mapping persistence activation dry-run surfaces
+
+- `adapters/runtime_mapping_persistence_activation_dryrun.py`
+  - `checkpoint_format()`: defines the future pre-activation checkpoint JSON schema without writing or applying it.
+  - `rollback_format()`: defines the future rollback JSON schema and required disabled-flag restoration path.
+  - `audit_log_schema()`: defines the future append-only JSONL activation audit schema.
+  - `future_activation_touch_plan()`: enumerates exact files and state a later activation patch would touch.
+  - `state_debug_export_surface()`: documents the state-debug export key and fields.
+  - `build_runtime_mapping_persistence_activation_dryrun(...)`: executes a read-only before/after proof that flags and AGP/vector/category/memory state remain unchanged.
+  - `write_round107_runtime_mapping_persistence_activation_dryrun(...)`: writes the dry-run report JSON only.
+- `adapters/lex_concept_mapping_adapter.py`
+  - `stats()` now advertises the Round107 dry-run state-debug surface while keeping `runtime_mapping_enabled=False` and `enforcement_enabled=False`.
+- `adapters/state_debug_adapter.py`
+  - snapshots `lex_concept_mapping.runtime_mapping_persistence_activation` as read-only debug data.
+
+Boundary:
+
+- No persistence activation is applied in Round107.
+- Runtime mapping and enforcement defaults remain disabled.
+- AGP, vectors, categories, concept memory, semantic memory, and quarantine remain unmutated.
+
+Next:
+
+- A future activation patch must create real checkpoint/rollback/audit artifacts and explicitly apply state changes under tests; Round107 is only the harness and proof surface.
