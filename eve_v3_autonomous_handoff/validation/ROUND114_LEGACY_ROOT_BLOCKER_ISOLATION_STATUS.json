@@ -1,0 +1,52 @@
+{
+  "agp_bypass_used": false,
+  "blocker_isolation_version": "v3_round114_legacy_root_blocker_isolation",
+  "checks": {
+    "agp_bypass_used": false,
+    "enforcement_enabled_default_remains_false": true,
+    "legacy_import_blockers_detected": true,
+    "missing_spreading_activation_module": true,
+    "production_persistence_enabled": false,
+    "root_tests_detected": true,
+    "runtime_mapping_enabled_default_remains_false": true,
+    "vectors_npy_committed": false
+  },
+  "isolated_blockers": [
+    {
+      "blocker_type": "legacy_root_collection_import_error",
+      "file": "test_episodic.py",
+      "isolated": true,
+      "missing_import": "spreading_activation"
+    },
+    {
+      "blocker_type": "legacy_root_collection_import_error",
+      "file": "test_natural_lang_v2.py",
+      "isolated": true,
+      "missing_import": "spreading_activation"
+    }
+  ],
+  "isolation_status": "legacy_root_blocker_isolated",
+  "primary_blocker": "missing spreading_activation import in legacy root tests",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "recommended_handling": "record root pytest/collect-only as blocked-pre-existing; do not weaken tests in this PR",
+  "root_test_files": [
+    "test_active_inference.py",
+    "test_episodic.py",
+    "test_eve_main_ab.py",
+    "test_eve_main_abc.py",
+    "test_natural_lang_v2.py"
+  ],
+  "round": 114,
+  "validation_commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q --collect-only",
+      "status": "blocked_pre_existing: root-level legacy tests import missing spreading_activation"
+    }
+  ],
+  "vectors_npy_committed": false
+}

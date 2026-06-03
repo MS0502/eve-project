@@ -183,3 +183,13 @@ The candidate writes checkpoint, rollback, audit JSONL, and before/after state-d
   - `enforcement_enabled=False`
   - `production_persistence_enabled=False`
 - Do not treat sandbox JSON artifacts as production mapping state.
+
+## Round113-117 operator review notes
+
+- Round113 viewer is read-only and may be used to inspect Round110-112 sandbox evidence.
+- Round114 blocker isolation explains why root collect-only can fail before focused tests run: legacy root tests import missing `spreading_activation`.
+- Round115 triage separates focused pass results from broader blocked/partial validation.
+- Round116 regression guard reruns the JSON-only sandbox replay and cleanup chain.
+- Round117 package is a no-go package for production persistence in this PR.
+- Do not treat any Round113-117 JSON as production mapping state.
+- Do not enable `runtime_mapping_enabled`, `enforcement_enabled`, or production persistence from these reports.

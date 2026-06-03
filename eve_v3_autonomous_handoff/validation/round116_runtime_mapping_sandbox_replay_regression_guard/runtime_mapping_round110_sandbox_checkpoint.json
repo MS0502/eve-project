@@ -1,0 +1,45 @@
+{
+  "audit_log_path": "eve_v3_autonomous_handoff/validation/round116_runtime_mapping_sandbox_replay_regression_guard/runtime_mapping_round110_sandbox_audit_log.jsonl",
+  "checkpoint_version": "v3_round110_runtime_mapping_limited_persistence_sandbox.checkpoint.v1",
+  "contains_vectors_npy": false,
+  "created_by_round": 110,
+  "enforcement_enabled_before": false,
+  "enforcement_enabled_default": false,
+  "json_only": true,
+  "mapped_tokens": [
+    "민석"
+  ],
+  "production_persistence_enabled": false,
+  "rollback_path": "eve_v3_autonomous_handoff/validation/round116_runtime_mapping_sandbox_replay_regression_guard/runtime_mapping_round110_sandbox_rollback.json",
+  "runtime_mapping_enabled_before": false,
+  "sandbox_state_path": "eve_v3_autonomous_handoff/validation/round116_runtime_mapping_sandbox_replay_regression_guard/runtime_mapping_round110_sandbox_state.json",
+  "source_fixture_version": "v3_round109_runtime_mapping_persistence_approval_fixture",
+  "state_before": {
+    "agp_stats": {
+      "name": "agp",
+      "read_only": true
+    },
+    "concept_categories": {},
+    "concept_commit_records": [],
+    "concept_memory_stats": {
+      "name": "concept_memory",
+      "read_only": true
+    },
+    "enforcement_enabled": false,
+    "eve_specific_vector_store": {
+      "count": 1,
+      "dimension": 300,
+      "read_only": true
+    },
+    "runtime_mapping_enabled": false,
+    "sa_active_categories": [
+      "concept_category::lex::민석"
+    ],
+    "wrapper_telemetry": {
+      "eve_specific_hits": 0,
+      "fallback_uses": 0,
+      "primary_hits": 0,
+      "total_calls": 0
+    }
+  }
+}

@@ -355,3 +355,30 @@ Results:
 - Focused/adjacent validation passed.
 - Full `pytest -q` is blocked at collection by root-level legacy tests importing missing `spreading_activation`.
 - `pytest -q tests` is not green in this environment; failures include missing seed `vectors.npy` fixture artifacts and older baseline expectation failures. No test was weakened and these blocked broader checks are recorded in the Round110-112 status JSON files.
+
+## Round113 — state-debug / audit replay viewer
+
+- Added `build_round113_state_debug_audit_replay_viewer(...)` as a read-only viewer over Round110-112 sandbox evidence.
+- Viewer reconstructs audit order, checkpoint/rollback/cleanup status, and state-debug before/during/after flags.
+- Production persistence, runtime mapping defaults, enforcement, and AGP behavior remain unchanged.
+
+## Round114 — legacy root blocker isolation
+
+- Added `build_round114_legacy_root_blocker_isolation(...)` to isolate root collect-only blockers without weakening tests.
+- Static scan identifies legacy root `test*.py` imports of missing `spreading_activation` as the current root collection blocker.
+
+## Round115 — broader validation triage
+
+- Added `build_round115_broader_validation_triage_report(...)` to record focused pass results separately from broader blocked/partial validation.
+- Broader collection blockers are recorded honestly as pre-existing; focused runtime mapping sandbox validation remains passing.
+
+## Round116 — sandbox replay regression guard
+
+- Added `run_round116_runtime_mapping_sandbox_replay_regression_guard(...)`.
+- Replays the Round110 sandbox, Round111 cleanup, and Round112 audit replay chain under a new JSON-only validation directory.
+- Confirms the transient sandbox state file is removed and disabled flags are restored.
+
+## Round117 — operator go/no-go package
+
+- Added `build_round117_operator_go_no_go_package(...)` to aggregate Round113-116 evidence for future operator review.
+- Package recommendation is no-go for production persistence in this PR; any real persistence enablement must be separate and explicit.
