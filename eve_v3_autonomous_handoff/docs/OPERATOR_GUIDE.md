@@ -193,3 +193,17 @@ The candidate writes checkpoint, rollback, audit JSONL, and before/after state-d
 - Round117 package is a no-go package for production persistence in this PR.
 - Do not treat any Round113-117 JSON as production mapping state.
 - Do not enable `runtime_mapping_enabled`, `enforcement_enabled`, or production persistence from these reports.
+
+## Round118-121 operator gate summary
+
+The current pre-activation package recommends `NO-GO`.
+
+Before any real production persistence enablement, the operator must provide all of the following in a separate decision path:
+
+1. Explicit approval for production persistence activation.
+2. A validation disposition: broader tests passed, or explicit acceptance of blocked/partial validation risk.
+3. Confirmation that `runtime_mapping_enabled` and `enforcement_enabled` defaults may only change in a dedicated activation patch.
+4. Confirmation that no AGP bypass is permitted.
+5. Confirmation that binary vectors, seed subsets, zip/part files, and `_operator_artifacts` remain outside the PR.
+
+Without those items, Round122 must not activate production persistence.

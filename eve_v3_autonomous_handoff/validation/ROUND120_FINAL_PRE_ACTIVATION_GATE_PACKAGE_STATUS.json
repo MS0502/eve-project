@@ -1,0 +1,27 @@
+{
+  "activation_action_taken": false,
+  "agp_bypass_used": false,
+  "enforcement_enabled_default": false,
+  "final_recommendation": "NO-GO",
+  "gate_package_version": "v3_round120_final_pre_activation_no_go_go_gate_package",
+  "gate_status": "pre_activation_gate_no_go",
+  "hard_blocks": [
+    "C1",
+    "C2",
+    "C5",
+    "broader_validation_blocked_or_partial",
+    "explicit_operator_approval_missing"
+  ],
+  "must_not_activate_without_explicit_operator_approval": true,
+  "operator_approval_present": false,
+  "operator_request_only": false,
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "round": 120,
+  "runtime_mapping_enabled_default": false,
+  "source_rounds": [
+    118,
+    119
+  ],
+  "vectors_npy_committed": false
+}

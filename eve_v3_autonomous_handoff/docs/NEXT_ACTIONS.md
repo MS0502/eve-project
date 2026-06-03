@@ -219,3 +219,26 @@ Still forbidden until that explicit patch:
 4. Review `validation/ROUND116_SANDBOX_REPLAY_REGRESSION_GUARD_STATUS.json` for replay regression guard evidence.
 5. Review `validation/ROUND117_OPERATOR_GO_NO_GO_PACKAGE_STATUS.json` for the no-go package.
 6. Next recommended work: resolve or explicitly quarantine the legacy root `spreading_activation` collection blocker in a separate validation hygiene round before considering real production persistence.
+
+## Round118-121 update — final pre-activation package is NO-GO
+
+Current position:
+
+- Round118 production persistence readiness audit: `NO-GO`.
+- Round119 minimal enablement risk matrix/checklist: required items unsatisfied.
+- Round120 final pre-activation gate package: `NO-GO`.
+- Round121 required blocker isolation completed.
+
+Blocked before real persistence enablement:
+
+1. Broader validation must pass, or the operator must explicitly accept a partial-validation activation risk.
+2. Explicit operator approval for production persistence must be supplied for a separate activation patch.
+3. `runtime_mapping_enabled` default and `enforcement_enabled` default must remain false until that separate patch.
+4. AGP boundary must remain intact; lexical persistence must not become an anchor bypass.
+5. No `vectors.npy`, seed subset, zip/part, or `_operator_artifacts` files may enter the PR.
+
+Next safe action:
+
+```text
+Review the Round120 gate and Round121 blockers. Do not activate production persistence until explicit operator approval and validation disposition are provided.
+```

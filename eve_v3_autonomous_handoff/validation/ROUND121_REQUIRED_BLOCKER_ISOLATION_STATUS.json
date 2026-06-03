@@ -1,0 +1,41 @@
+{
+  "activation_action_taken": false,
+  "agp_bypass_used": false,
+  "blocker_isolation_version": "v3_round121_required_blocker_isolation",
+  "enforcement_enabled_default": false,
+  "final_recommendation_inherited": "NO-GO",
+  "isolation_status": "required_blockers_isolated_no_activation",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "required_blockers": [
+    {
+      "blocker": "C1",
+      "blocks_real_persistence": true,
+      "required_resolution": "Round118 must not be NO-GO before activation."
+    },
+    {
+      "blocker": "C2",
+      "blocks_real_persistence": true,
+      "required_resolution": "Operator approval checklist item must be satisfied."
+    },
+    {
+      "blocker": "C5",
+      "blocks_real_persistence": true,
+      "required_resolution": "Broader validation must pass or be explicitly accepted as partial."
+    },
+    {
+      "blocker": "broader_validation_blocked_or_partial",
+      "blocks_real_persistence": true,
+      "required_resolution": "Resolve pre-existing blockers or obtain explicit operator acceptance of partial validation."
+    },
+    {
+      "blocker": "explicit_operator_approval_missing",
+      "blocks_real_persistence": true,
+      "required_resolution": "Provide explicit approval for a separate activation patch; this package must not activate by itself."
+    }
+  ],
+  "round": 121,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 120,
+  "vectors_npy_committed": false
+}
