@@ -177,3 +177,19 @@ Round106: explicit runtime mapping persistence decision package
 ```
 
 Round106 should not automatically enable persistence unless the operator explicitly approves it. If approval is given, the patch must include checkpoint, rollback, audit, state-debug exposure, and focused tests. If approval is not given, continue data-only proof/dashboard work.
+
+## Round106 update — persistence decision package ready
+
+Current position:
+
+- Round106 structures prerequisites, checkpoint/rollback/audit/state-debug requirements, and the operator approval schema.
+- Persistence activation remains dry-run only.
+- Runtime mapping and enforcement defaults remain false.
+
+Next recommended round:
+
+```text
+Round107: explicit runtime mapping persistence activation only if operator approval is supplied
+```
+
+If no approval is supplied, do not activate persistence. Continue read-only dashboard/proof work instead.

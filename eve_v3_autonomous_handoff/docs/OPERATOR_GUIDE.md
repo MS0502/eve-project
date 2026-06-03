@@ -156,3 +156,28 @@ Round104 did not persist runtime mapping. It only says the project is ready for 
 Round105 expanded the AGP proof object. It did not call AGP verify or create anchors. Vectors remain evidence only; valid AGP anchors still require explicit categories plus SA activation.
 
 Before any persistence patch, decide explicitly whether to approve runtime mapping persistence. If approved, require checkpoint/rollback/audit and keep `vectors.npy` out of the PR diff.
+
+## Round106 operator guide — persistence decision package
+
+Round106 does not enable runtime mapping persistence. It defines what you must approve before a future activation patch.
+
+Approval must include:
+
+- `operator_id`
+- `approval_id`
+- `approved_at_utc`
+- `scope = runtime_mapping_persistence_only`
+- approved token/category mappings
+- validation status reviewed
+- rollback acknowledged
+- binary artifact boundary acknowledged
+- AGP anchor boundary acknowledged
+
+Forbidden approval contents:
+
+- enabling enforcement in the same decision;
+- AGP bypass;
+- committing `vectors.npy`;
+- weakening tests.
+
+If you approve persistence, the next patch must include checkpoint, rollback, audit, state-debug exposure, and focused tests. If you do not approve, runtime mapping must remain disabled by default.

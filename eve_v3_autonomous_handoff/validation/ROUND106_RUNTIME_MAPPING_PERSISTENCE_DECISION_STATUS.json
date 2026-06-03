@@ -1,0 +1,118 @@
+{
+  "activation_dry_run_only": true,
+  "checkpoint_rollback_audit_requirements": {
+    "audit_requirements": [
+      "record approval_id and operator_id",
+      "record exact approved token/category mappings",
+      "record pre/post/rollback flag states",
+      "record validation command summaries",
+      "record binary artifact boundary confirmation"
+    ],
+    "checkpoint_requirements": [
+      "snapshot runtime_mapping_enabled and enforcement_enabled before activation",
+      "snapshot ephemeral/runtime mapping table before activation",
+      "snapshot concept category records and concept commit audit records",
+      "snapshot state-debug persistence surface before activation"
+    ],
+    "required_before_activation": true,
+    "rollback_requirements": [
+      "restore runtime_mapping_enabled to false",
+      "restore enforcement_enabled to false",
+      "clear or restore persisted runtime mapping table",
+      "verify AGP/category/memory/vector snapshots are unchanged"
+    ],
+    "state_debug_requirements": [
+      "surface persistence approval status",
+      "surface runtime_mapping_enabled default state",
+      "surface enforcement_enabled default state",
+      "surface checkpoint id and rollback availability",
+      "surface mutation counters as zero until activation patch"
+    ],
+    "version": "v3_round106_runtime_mapping_persistence_decision_package"
+  },
+  "decision_status": "awaiting_explicit_operator_approval_or_prerequisite_repair",
+  "enforcement_enabled_default": false,
+  "mutation_checks": {
+    "agp_bypassed": false,
+    "agp_verify_called": false,
+    "category_mutated": false,
+    "concept_memory_mutated": false,
+    "enforcement_enabled_changed": false,
+    "runtime_mapping_enabled_changed": false,
+    "vector_committed": false,
+    "vectors_npy_committed": false
+  },
+  "operator_approval_missing_fields": [],
+  "operator_approval_schema": {
+    "approval_required_before_mutation": true,
+    "forbidden_fields": {
+      "bypass_agp": true,
+      "commit_vectors_npy": true,
+      "enable_enforcement": true,
+      "weaken_tests": true
+    },
+    "required_fields": {
+      "agp_anchor_boundary_acknowledged": true,
+      "approval_id": "non_empty_string",
+      "approved_at_utc": "iso8601_string",
+      "approved_tokens": "non_empty_list_of_committed_runtime_mapping_tokens",
+      "binary_artifact_boundary_acknowledged": true,
+      "operator_id": "non_empty_string",
+      "rollback_acknowledged": true,
+      "scope": "runtime_mapping_persistence_only",
+      "validation_status": "round103_104_105_validation_reviewed"
+    },
+    "schema_version": "v3_round106_runtime_mapping_persistence_decision_package"
+  },
+  "operator_approval_supplied": false,
+  "operator_approval_valid": false,
+  "policy": {
+    "agp_bypass": false,
+    "dry_run_only": true,
+    "persistence_actual_activation": false,
+    "tests_weakened": false,
+    "undocumented_mutation": false
+  },
+  "prerequisites": {
+    "all_non_approval_prerequisites_satisfied": true,
+    "operator_approval_pending": true,
+    "prerequisites": [
+      {
+        "description": "medium vector artifact manually installed and validation unblocked",
+        "id": "medium_artifact_validated",
+        "satisfied": true
+      },
+      {
+        "description": "Round97/98 and Round92~98 focused validation passed",
+        "id": "focused_validation_passed",
+        "satisfied": true
+      },
+      {
+        "description": "vectors.npy is ignored and no binary artifact is committed",
+        "id": "binary_artifact_boundary_preserved",
+        "satisfied": true
+      },
+      {
+        "description": "Round104 approval gate has no hard stop",
+        "id": "round104_gate_ready",
+        "satisfied": true
+      },
+      {
+        "description": "operator approval is still required before any persistence mutation",
+        "id": "operator_explicit_approval_pending",
+        "intentionally_pending": true,
+        "satisfied": false
+      }
+    ],
+    "read_only": true,
+    "round": 106,
+    "source_round104_status": "ready_for_explicit_operator_persistence_approval",
+    "version": "v3_round106_runtime_mapping_persistence_decision_package"
+  },
+  "read_only": true,
+  "round": 106,
+  "runtime_mapping_enabled_default": false,
+  "runtime_mapping_persisted_now": false,
+  "version": "v3_round106_runtime_mapping_persistence_decision_package",
+  "would_allow_future_activation_patch": false
+}

@@ -144,3 +144,19 @@ Outcome:
 
 - Added a read-only AGP proof object expansion.
 - No AGP bypass, runtime persistence, category/memory mutation, or vector commit occurred.
+
+## Round106
+
+Decision: produce a runtime mapping persistence decision package, not a persistence activation patch.
+
+Rationale:
+
+- Round104 opened the approval gate and Round105 expanded proof data, but operator approval for mutation is still a separate decision.
+- Runtime mapping persistence needs checkpoint, rollback, audit, and state-debug requirements before any default flag changes.
+- Activation without an explicit operator approval object would violate the persistence policy.
+
+Outcome:
+
+- Added a dry-run-only Round106 decision package.
+- `runtime_mapping_enabled` and `enforcement_enabled` defaults remain false.
+- No AGP/vector/category/memory mutation occurred.

@@ -338,3 +338,36 @@ Results:
 - Valid anchor source remains explicit category plus SA activation.
 - Invalid anchor sources are explicitly recorded: fastText vector, EveSpecific vector, PMI+SVD vector, and raw response text.
 - No AGP verify call, runtime mapping persistence, enforcement enablement, category creation, concept-memory mutation, or vector commit occurred.
+
+## Round106 — runtime mapping persistence decision package
+
+Goal:
+
+- Complete the operator decision package required before any future runtime mapping persistence activation.
+
+Changed files:
+
+- `adapters/runtime_mapping_persistence_decision.py`
+- `tests/test_v3_round106_runtime_mapping_persistence_decision.py`
+- `eve_v3_autonomous_handoff/reports/ROUND106_RUNTIME_MAPPING_PERSISTENCE_DECISION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND106_RUNTIME_MAPPING_PERSISTENCE_DECISION_STATUS.json`
+- handoff docs
+
+Commands run:
+
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round106_runtime_mapping_persistence_decision.py`
+- `pytest -q tests/test_v3_round104_105_persistence_agp_proof.py`
+
+Results:
+
+- Added persistence activation prerequisites.
+- Added checkpoint/rollback/audit/state-debug requirements.
+- Added operator approval schema.
+- Added persistence activation dry-run.
+- Runtime mapping and enforcement defaults remain false.
+- No AGP, vector, category, or memory mutation occurred.
+
+Next recommendation:
+
+- Round107 may implement actual persistence only if the operator explicitly approves the Round106 schema. Otherwise continue read-only dashboard/proof work.

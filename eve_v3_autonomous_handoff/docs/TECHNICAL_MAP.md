@@ -154,3 +154,23 @@ Boundary:
   - Records operator-reported Codespaces validation after manual medium vector artifact installation.
   - This is not a local Codex execution claim.
   - Confirms binary artifact safety: `vectors.npy` ignored, temporary operator artifacts not committed, no dummy vector created.
+
+## Round106 runtime mapping persistence decision surfaces
+
+- `adapters/runtime_mapping_persistence_decision.py`
+  - `runtime_mapping_persistence_activation_prerequisites(...)`: read-only prerequisite list based on the Round104 gate.
+  - `checkpoint_rollback_audit_requirements()`: required controls for a future activation patch.
+  - `default_operator_approval_schema()`: explicit approval schema and forbidden fields.
+  - `runtime_mapping_persistence_activation_dry_run(...)`: dry-run decision object; does not enable persistence.
+  - `write_round106_persistence_decision_status(...)`: writes JSON status only.
+
+- `tests/test_v3_round106_runtime_mapping_persistence_decision.py`
+  - Confirms prerequisites are satisfied except explicit operator approval.
+  - Confirms dry-run leaves runtime mapping/enforcement false.
+  - Confirms even a valid approval only allows a future patch and does not mutate state now.
+
+Boundary:
+
+- Round106 does not persist runtime mapping.
+- Round106 does not enable enforcement.
+- Round106 does not call AGP verify, bypass AGP, mutate categories/memory, commit vectors, or weaken tests.
