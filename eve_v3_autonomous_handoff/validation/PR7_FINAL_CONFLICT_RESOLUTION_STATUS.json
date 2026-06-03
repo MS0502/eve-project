@@ -1,0 +1,59 @@
+{
+  "status_version": "pr7_final_conflict_resolution_pass",
+  "pr": 7,
+  "status": "local_conflict_resolution_validated",
+  "unmerged_paths_present": false,
+  "conflict_markers_in_round102_106_files": false,
+  "rounds_preserved": [102, 103, 104, 105, 106],
+  "preserved_files": {
+    "code": [
+      "adapters/medium_vector_release_restore.py",
+      "adapters/medium_vector_manual_validation.py",
+      "adapters/runtime_mapping_persistence_approval.py",
+      "adapters/agp_proof_object_expansion.py",
+      "adapters/runtime_mapping_persistence_decision.py"
+    ],
+    "tests": [
+      "tests/test_v3_round102_medium_vector_release_restore.py",
+      "tests/test_v3_round103_manual_medium_vector_validation.py",
+      "tests/test_v3_round104_105_persistence_agp_proof.py",
+      "tests/test_v3_round106_runtime_mapping_persistence_decision.py"
+    ],
+    "reports_and_validation": "Round101 through Round106 reports/status JSON retained"
+  },
+  "artifact_safety": {
+    "vectors_npy_added": false,
+    "operator_artifacts_added": false,
+    "medium_wrapper_zip_added": false,
+    "medium_raw_part_added": false,
+    "medium_restored_zip_added": false,
+    "upload_artifact_added": false,
+    "note": "pre-existing tracked Round96 handoff package part files are unchanged and are not Round102+ medium-vector artifacts"
+  },
+  "commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "result": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round106_runtime_mapping_persistence_decision.py",
+      "result": "passed",
+      "details": "4 passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round104_105_persistence_agp_proof.py",
+      "result": "passed",
+      "details": "3 passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round103_manual_medium_vector_validation.py tests/test_v3_round102_medium_vector_release_restore.py tests/test_v3_round100_medium_vector_restoration.py",
+      "result": "passed",
+      "details": "10 passed"
+    },
+    {
+      "command": "find . -maxdepth 5 \\( -name 'vectors.npy' -o -name '_operator_artifacts' -o -name '*.upload.zip' -o -name '*.part01' -o -name '*.part02' -o -name '*medium_30k*.zip' \\) -printf '%p %s\\n' 2>/dev/null | sort && git status --short --ignored",
+      "result": "passed_with_pre_existing_tracked_round96_parts_only"
+    }
+  ],
+  "hosted_mergeability_note": "If GitHub still reports mergeable=false, update/rebase the hosted PR branch against latest main in GitHub because this container has no configured remote and outbound GitHub access returns CONNECT 403."
+}

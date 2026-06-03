@@ -371,3 +371,22 @@ Results:
 Next recommendation:
 
 - Round107 may implement actual persistence only if the operator explicitly approves the Round106 schema. Otherwise continue read-only dashboard/proof work.
+
+## PR #7 final conflict resolution pass
+
+Goal:
+
+- Validate PR #7 after GitHub reported `mergeable=false` and preserve all Round102~106 work.
+
+Results:
+
+- No local unmerged paths or Round102~106 conflict markers were present in this checkout.
+- All Round102~106 code, tests, reports, and validation JSON remain present.
+- No `vectors.npy`, `_operator_artifacts/`, medium wrapper zip, medium raw part, restored zip, or upload artifact was added.
+
+Commands run:
+
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round106_runtime_mapping_persistence_decision.py`
+- `pytest -q tests/test_v3_round104_105_persistence_agp_proof.py`
+- `pytest -q tests/test_v3_round103_manual_medium_vector_validation.py tests/test_v3_round102_medium_vector_release_restore.py tests/test_v3_round100_medium_vector_restoration.py`
