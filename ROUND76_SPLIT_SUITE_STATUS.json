@@ -1,0 +1,14 @@
+{
+  "chunk_count": 13,
+  "chunks_run": 13,
+  "collect_only_count": 1172,
+  "compileall": "passed",
+  "execution_mode": "manual_split_commands_due_to_sandbox_timeout_window",
+  "failed_chunks": [],
+  "failures": 0,
+  "passed_chunks": 13,
+  "passed_tests_by_chunk_sum": 1172,
+  "suite_version": "v3_round76_split_suite",
+  "test_file_count": 125,
+  "timeouts": 0
+}

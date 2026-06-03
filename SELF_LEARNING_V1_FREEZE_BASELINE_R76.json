@@ -1,0 +1,237 @@
+{
+  "active_policy": {
+    "agp_anchor_policy": "explicit_categories_plus_sa_activation_only",
+    "agp_bypass": false,
+    "auto_observe_enabled": true,
+    "auto_promotion_enabled": false,
+    "automatic_rollback_enabled": false,
+    "commit_gate_enabled": true,
+    "context_diversity_gate_enabled": true,
+    "drift_based_runtime_change": false,
+    "fasttext_seed_mutation": false,
+    "memory_quarantine_mutation": false,
+    "min_known_context_words_for_commit": 1,
+    "min_observations_for_commit": 2
+  },
+  "artifact_manifest": [
+    "EVE_SPECIFIC_BASELINE_R72.json",
+    "EVE_SPECIFIC_COMMIT_DELTA_R74.json",
+    "EVE_SPECIFIC_COMMIT_REPLAY_EXPORT_R75.json",
+    "EVE_SPECIFIC_COMMIT_SMOKE_R73.json",
+    "ROUND_V3_R76_REPORT.md",
+    "SELF_LEARNING_POLICY_ROUND71.md",
+    "SELF_LEARNING_V1_FREEZE_BASELINE_R76.json"
+  ],
+  "baseline_name": "self_learning_v1",
+  "baseline_round": 76,
+  "component_roles": {
+    "AGPAdapter": "anchor_validation_from_explicit_categories_and_sa_activation_only",
+    "EmbeddingWrapper": "lookup_routing_and_telemetry_only",
+    "EveSelfLearningAdapter": "continuous_observation_and_explicit_commit_gate_owner",
+    "EveSpecificVectorStore": "deterministic_vector_storage_only",
+    "EveVocabTracker": "lexical_observation_only_no_vector_generation"
+  },
+  "covered_round_range": "round57-round75",
+  "covered_rounds": [
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75
+  ],
+  "freeze_baseline_version": "v3_round76_self_learning_v1_freeze_baseline",
+  "freeze_invariants": {
+    "agp_anchor_not_seed_vector": true,
+    "auto_observe_enabled": true,
+    "auto_promotion_enabled": true,
+    "automatic_rollback_enabled": true,
+    "commit_gate_enabled": true,
+    "context_diversity_gate_enabled": true,
+    "min_known_context_words_for_commit_is_1": true,
+    "min_observations_for_commit_is_2": true,
+    "round75_replay_export_read_only": true,
+    "wrapper_get_embedding_duplicate_fallback_guarded": true
+  },
+  "freeze_read_only_checks": {
+    "audit_records_unchanged_during_freeze": true,
+    "policy_changed_during_freeze": false,
+    "telemetry_unchanged_during_freeze": true,
+    "vector_store_unchanged_during_freeze": true
+  },
+  "freeze_scope": "policy_artifacts_tests_and_observability_only",
+  "frozen": true,
+  "future_change_rule": {
+    "automatic_promotion_requires_new_design_review": true,
+    "automatic_rollback_requires_new_design_review": true,
+    "context_diversity_change_requires_dry_run_then_proposal_then_enforcement": true,
+    "policy_change_requires_new_round_and_operator_review": true,
+    "threshold_change_requires_dry_run_then_proposal_then_enforcement": true
+  },
+  "learner_freeze_snapshot": {
+    "active_policy": {
+      "agp_anchor_policy": "explicit_categories_plus_sa_activation_only",
+      "agp_bypass": false,
+      "auto_observe_enabled": true,
+      "auto_promotion_enabled": false,
+      "automatic_rollback_enabled": false,
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "drift_based_runtime_change": false,
+      "fasttext_seed_mutation": false,
+      "memory_quarantine_mutation": false,
+      "min_known_context_words_for_commit": 1,
+      "min_observations_for_commit": 2
+    },
+    "active_policy_version": "v3_round69_context_diversity_gate_enforced",
+    "adapter": "EveSelfLearningAdapter",
+    "component_roles": {
+      "AGPAdapter": "anchor_validation_from_explicit_categories_and_sa_activation_only",
+      "EmbeddingWrapper": "lookup_routing_and_telemetry_only",
+      "EveSelfLearningAdapter": "continuous_observation_and_explicit_commit_gate_owner",
+      "EveSpecificVectorStore": "deterministic_vector_storage_only",
+      "EveVocabTracker": "lexical_observation_only_no_vector_generation"
+    },
+    "covered_round_range": "round57-round75",
+    "covered_rounds": [
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75
+    ],
+    "current_counts": {
+      "audit_calls": 1,
+      "commit_audit_record_count": 2,
+      "commit_calls": 1,
+      "observe_calls": 2,
+      "tracker_eve_specific_count": 1,
+      "vector_store_count": 1,
+      "vectors_created": 1,
+      "vectors_skipped": 0
+    },
+    "freeze_version": "v3_round76_self_learning_v1_freeze_baseline",
+    "frozen_artifacts": [
+      "SELF_LEARNING_POLICY_ROUND71.md",
+      "EVE_SPECIFIC_BASELINE_R72.json",
+      "EVE_SPECIFIC_COMMIT_SMOKE_R73.json",
+      "EVE_SPECIFIC_COMMIT_DELTA_R74.json",
+      "EVE_SPECIFIC_COMMIT_REPLAY_EXPORT_R75.json"
+    ],
+    "frozen_baseline_name": "self_learning_v1",
+    "implementation_phase": "round71_self_learning_policy_consolidation",
+    "locked_commit_gate": [
+      "observed_count >= 2",
+      "fastText-OOV / EVE-specific candidate",
+      "known_fastText_context_words >= 1",
+      "context_diverse == True",
+      "explicit_commit_call_required"
+    ],
+    "next_allowed_rounds": {
+      "automatic_promotion_still_forbidden": true,
+      "automatic_rollback_still_forbidden": true,
+      "requires_new_proposal_for_policy_change": true,
+      "round77": "post-freeze explicit commit regression or lexical_to_concept_mapping_planning"
+    },
+    "read_only": true,
+    "read_only_checks": {
+      "audit_records_unchanged": true,
+      "context_diversity_gate_changed": false,
+      "policy_changed": false,
+      "threshold_changed": false,
+      "vector_store_unchanged": true
+    },
+    "round": 76,
+    "verification_gates": [
+      "round71_split_full_suite",
+      "round72_split_full_suite",
+      "round73_explicit_commit_smoke",
+      "round74_commit_delta_report",
+      "round75_replay_export_read_only_checks",
+      "round76_freeze_snapshot_read_only_checks"
+    ]
+  },
+  "locked_commit_gate": [
+    "observed_count >= 2",
+    "fastText-OOV / EVE-specific candidate",
+    "known_fastText_context_words >= 1",
+    "context_diverse == True",
+    "explicit_commit_call_required"
+  ],
+  "policy": {
+    "agp_bypass": false,
+    "auto_promotion_enabled": false,
+    "automatic_rollback_enabled": false,
+    "context_diversity_gate_changed": false,
+    "drift_based_runtime_change": false,
+    "fasttext_seed_mutation": false,
+    "freeze_does_not_append_audit": true,
+    "freeze_does_not_call_commit": true,
+    "freeze_does_not_call_lookup": true,
+    "freeze_does_not_mutate_vectors": true,
+    "freeze_export_read_only": true,
+    "memory_quarantine_unchanged": true,
+    "thresholds_changed": false
+  },
+  "read_only": true,
+  "smoke_verification": {
+    "round73_commit_created_target": true,
+    "round74_route_shift_to_eve_specific": true,
+    "round75_replay_has_audit_and_commit_records": true,
+    "round75_replay_read_only": true,
+    "round75_store_delta_is_one": true
+  },
+  "source_commit_smoke_version": "v3_round73_explicit_eve_specific_commit_smoke",
+  "source_delta_report_version": "v3_round74_explicit_commit_drift_telemetry_delta",
+  "source_replay_export_version": "v3_round75_commit_audit_replay_export",
+  "target_word": "민석",
+  "wrapper_route_policy": {
+    "adapter": "EmbeddingWrapper",
+    "duplicate_fallback_api_call_guarded": true,
+    "fallback_api_called_at_most_once_per_get_embedding_call": true,
+    "fallback_api_final_boundary": true,
+    "get_embedding_route": [
+      "PMI+SVD.local_embeddings_map_precheck",
+      "fastText.get_embedding",
+      "EveSpecificVectorStore.get_vector",
+      "PMI+SVD.get_embedding_final_fallback_once"
+    ],
+    "get_vector_route": [
+      "fastText.get_vector",
+      "EveSpecificVectorStore.get_vector",
+      "PMI+SVD.get_embedding"
+    ],
+    "pmi_svd_local_precheck_calls_fallback_api": false,
+    "pmi_svd_local_precheck_enabled": true,
+    "policy_version": "v3_round72_embedding_lookup_route_snapshot",
+    "read_only": true,
+    "routing_changed_in_round72": false
+  }
+}

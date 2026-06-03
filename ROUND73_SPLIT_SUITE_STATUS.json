@@ -1,0 +1,20 @@
+{
+  "suite_version": "v3_round73_split_suite",
+  "status": "passed",
+  "collected_tests": 1160,
+  "chunks_total": 7,
+  "chunks_passed": 7,
+  "passed_tests_by_chunk_sum": 1160,
+  "failures": 0,
+  "timeouts": 0,
+  "compileall": "passed",
+  "chunks": [
+    {"chunk": "A", "file_index_range": "0-14", "test_count": 160, "status": "passed"},
+    {"chunk": "B", "file_index_range": "15-29", "test_count": 248, "status": "passed"},
+    {"chunk": "C", "file_index_range": "30-40", "test_count": 115, "status": "passed"},
+    {"chunk": "D", "file_index_range": "41-59", "test_count": 111, "status": "passed"},
+    {"chunk": "E", "file_index_range": "60-81", "test_count": 204, "status": "passed"},
+    {"chunk": "F", "file_index_range": "82-101", "test_count": 249, "status": "passed"},
+    {"chunk": "G", "file_index_range": "102-121", "test_count": 73, "status": "passed"}
+  ]
+}

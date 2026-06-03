@@ -1,0 +1,252 @@
+{
+  "after_store_count": 1,
+  "after_telemetry": {
+    "adapter": "EmbeddingWrapper",
+    "error_rate": 0.0,
+    "errors": 0,
+    "eve_specific_available": true,
+    "eve_specific_hits": 1,
+    "eve_specific_rate": 1.0,
+    "fallback_available": true,
+    "fallback_rate": 0.0,
+    "fallback_uses": 0,
+    "lookup_route_policy_version": "v3_round72_embedding_lookup_route_snapshot",
+    "oov_log_cap": 1000,
+    "oov_log_size": 0,
+    "primary_hit_rate": 0.0,
+    "primary_hits": 0,
+    "primary_loaded": true,
+    "read_only": true,
+    "recent_oov_sample": [],
+    "telemetry_version": "v3_round42_wrapper_telemetry",
+    "total_calls": 1
+  },
+  "baseline_after_commit": {
+    "baseline_round": 72,
+    "lookup_route_policy": {
+      "adapter": "EmbeddingWrapper",
+      "duplicate_fallback_api_call_guarded": true,
+      "fallback_api_called_at_most_once_per_get_embedding_call": true,
+      "fallback_api_final_boundary": true,
+      "get_embedding_route": [
+        "PMI+SVD.local_embeddings_map_precheck",
+        "fastText.get_embedding",
+        "EveSpecificVectorStore.get_vector",
+        "PMI+SVD.get_embedding_final_fallback_once"
+      ],
+      "get_vector_route": [
+        "fastText.get_vector",
+        "EveSpecificVectorStore.get_vector",
+        "PMI+SVD.get_embedding"
+      ],
+      "pmi_svd_local_precheck_calls_fallback_api": false,
+      "pmi_svd_local_precheck_enabled": true,
+      "policy_version": "v3_round72_embedding_lookup_route_snapshot",
+      "read_only": true,
+      "routing_changed_in_round72": false
+    },
+    "measurement_version": "v3_round72_eve_specific_smoke_drift_baseline",
+    "policy": {
+      "agp_bypass": false,
+      "memory_quarantine_unchanged": true,
+      "no_auto_promotion": true,
+      "no_auto_rollback": true,
+      "no_auto_threshold_adjustment": true,
+      "no_drift_based_runtime_change": true,
+      "routing_changed_in_round72": false
+    },
+    "read_only": true,
+    "round57_baseline": {
+      "baseline_round": 57,
+      "drift_indicators": {
+        "error_rate": 0.0,
+        "eve_specific_rate": 1.0,
+        "fallback_rate": 0.0,
+        "oov_log_size": 0,
+        "oov_pattern_log": [],
+        "primary_hit_rate": 0.0
+      },
+      "evespecific_learning_substrate": "EveSpecificVectorStore (deterministic self-learning)",
+      "fallback_class": "SelfEmbeddingAdapter",
+      "fallback_mutable_learning_preserved": true,
+      "fasttext_loaded": true,
+      "fasttext_primary_class": "FasttextEmbeddingAdapter",
+      "fasttext_vector_unchanged": true,
+      "measurement_version": "v3_round57_eve_specific_drift_baseline",
+      "method": "wrapper_telemetry + agp_trace_correlation",
+      "no_auto_threshold_adjustment": true,
+      "no_drift_based_runtime_change": true,
+      "read_only": true,
+      "status": "baseline_set_at_round57",
+      "target": "round 200+ avg drift > 0.3 (Draft, v3.1 precise threshold pending)"
+    },
+    "route_distribution": {
+      "error_rate": 0.0,
+      "errors": 0,
+      "eve_specific_hits": 1,
+      "eve_specific_rate": 1.0,
+      "fasttext_primary_hits": 0,
+      "fasttext_primary_rate": 0.0,
+      "pmi_svd_fallback_rate": 0.0,
+      "pmi_svd_fallback_uses": 0,
+      "routed_hits_total": 1,
+      "total_calls": 1
+    },
+    "self_learning_policy": {
+      "auto_observe_enabled": true,
+      "auto_promotion_enabled": false,
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "min_observations_for_commit": 2
+    },
+    "status": "round71_consolidated_baseline_remeasured"
+  },
+  "baseline_round": 73,
+  "before_store_count": 0,
+  "before_telemetry": {
+    "adapter": "EmbeddingWrapper",
+    "error_rate": 0.0,
+    "errors": 0,
+    "eve_specific_available": true,
+    "eve_specific_hits": 0,
+    "eve_specific_rate": 0.0,
+    "fallback_available": true,
+    "fallback_rate": 0.0,
+    "fallback_uses": 0,
+    "lookup_route_policy_version": "v3_round72_embedding_lookup_route_snapshot",
+    "oov_log_cap": 1000,
+    "oov_log_size": 0,
+    "primary_hit_rate": 0.0,
+    "primary_hits": 0,
+    "primary_loaded": true,
+    "read_only": true,
+    "recent_oov_sample": [],
+    "telemetry_version": "v3_round42_wrapper_telemetry",
+    "total_calls": 0
+  },
+  "commit_context_words": [
+    "오늘",
+    "군대"
+  ],
+  "commit_created_target": true,
+  "commit_rejected_target": false,
+  "commit_report": {
+    "adapter": "EveSelfLearningAdapter",
+    "audit_report": {
+      "active_policy_version": "v3_round69_context_diversity_gate_enforced",
+      "adapter": "EveSelfLearningAdapter",
+      "audit_version": "v3_round59_commit_gate_audit",
+      "candidate_reports": [
+        {
+          "context_diverse": true,
+          "evidence_status": "threshold_met_context_diverse",
+          "is_eve_specific_candidate": true,
+          "observed_count": 2,
+          "passed": true,
+          "reasons": [],
+          "word": "민석"
+        }
+      ],
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "context_diversity_gate_enforcement_version": "v3_round69_context_diversity_gate_enforcement",
+      "context_words": [
+        "오늘",
+        "군대"
+      ],
+      "eligible_words": [
+        "민석"
+      ],
+      "gate_pass": true,
+      "known_context_count": 2,
+      "known_context_words": [
+        "오늘",
+        "군대"
+      ],
+      "min_known_context_words_for_commit": 1,
+      "min_observations_for_commit": 2,
+      "policy_round": 70,
+      "read_only": true,
+      "rejected_words": [],
+      "round": 59,
+      "target_words": [
+        "민석"
+      ]
+    },
+    "auto_promotion_enabled": false,
+    "commit_gate_enabled": true,
+    "context_words": [
+      "오늘",
+      "군대"
+    ],
+    "created": [
+      "민석"
+    ],
+    "known_context_words": [
+      "오늘",
+      "군대"
+    ],
+    "read_only": false,
+    "rejected": [],
+    "skipped": []
+  },
+  "gate_pass": true,
+  "observation_texts": [
+    "민석 오늘",
+    "민석 군대"
+  ],
+  "observations": [
+    {
+      "adapter": "EveSelfLearningAdapter",
+      "auto_observe_enabled": true,
+      "auto_promotion_enabled": false,
+      "eve_specific_candidates": [
+        "민석"
+      ],
+      "observed_count": 2,
+      "read_only": true,
+      "tokens": [
+        "민석",
+        "오늘"
+      ]
+    },
+    {
+      "adapter": "EveSelfLearningAdapter",
+      "auto_observe_enabled": true,
+      "auto_promotion_enabled": false,
+      "eve_specific_candidates": [
+        "민석"
+      ],
+      "observed_count": 2,
+      "read_only": true,
+      "tokens": [
+        "민석",
+        "군대"
+      ]
+    }
+  ],
+  "policy": {
+    "agp_bypass": false,
+    "auto_promotion_enabled": false,
+    "automatic_rollback_enabled": false,
+    "commit_gate_enabled": true,
+    "context_diversity_gate_changed": false,
+    "context_diversity_gate_enabled": true,
+    "explicit_self_learning_commit_path_used": true,
+    "fasttext_seed_mutation": false,
+    "memory_quarantine_unchanged": true,
+    "min_observations_for_commit": 2,
+    "round72_probe_path_used": false,
+    "thresholds_changed": false
+  },
+  "read_only_decision_surface": true,
+  "self_learning_commit_path_called": true,
+  "smoke_version": "v3_round73_explicit_eve_specific_commit_smoke",
+  "store_delta": 1,
+  "stored_vocab": [
+    "민석"
+  ],
+  "target_update_count": 1,
+  "target_word": "민석",
+  "wrapper_vector_found_after_commit": true
+}

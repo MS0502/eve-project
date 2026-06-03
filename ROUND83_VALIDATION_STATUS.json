@@ -1,0 +1,16 @@
+{
+  "artifact": "LEXICAL_CONCEPT_OPERATOR_ACCEPTANCE_CATEGORY_DRY_RUN_R83.json",
+  "collect_only": "1193 tests collected",
+  "compileall": "passed",
+  "failures": 0,
+  "focused": "3 passed",
+  "full_split_suite_required": false,
+  "full_split_suite_run": false,
+  "reason": "Round83 is read-only dry-run/report surface; no gate/routing/AGP enforcement policy changed.",
+  "round": 83,
+  "round50_83_adjacent_sweep": "182 passed",
+  "round60_83_focused_sweep": "78 passed",
+  "round77_83_focused": "21 passed",
+  "status_version": "v3_round83_validation_status",
+  "timeouts": 0
+}

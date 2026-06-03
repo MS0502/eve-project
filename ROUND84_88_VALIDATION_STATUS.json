@@ -1,0 +1,13 @@
+{
+  "validation_version": "v3_round84_88_validation_status",
+  "full_split_suite_run": false,
+  "reason_full_split_suite_not_run": "read_only_batch_no_runtime_policy_or_gate_enforcement_change",
+  "focused_round84_88": "6 passed",
+  "focused_round77_88": "27 passed",
+  "focused_round60_88": "84 passed",
+  "adjacent_round50_88": "188 passed",
+  "collect_only": "1199 tests collected",
+  "compileall": "passed",
+  "failures": 0,
+  "timeouts": 0
+}

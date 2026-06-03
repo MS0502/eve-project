@@ -1,0 +1,12 @@
+{
+  "chunk_count": 13,
+  "chunk_groups_run": 6,
+  "chunks_passed": 13,
+  "collect_only_tests_collected": 1181,
+  "compileall": "passed",
+  "failures": 0,
+  "passed_tests_by_chunk_sum": 1181,
+  "source": "pytest split by file chunks; first long runner timed out after two chunks, resumed manually by chunk groups",
+  "suite_version": "v3_round78_79_split_suite",
+  "timeouts": 0
+}

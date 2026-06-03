@@ -1,0 +1,26 @@
+{
+  "accepted_fixture_count": 1,
+  "agp_anchor_created": false,
+  "agp_verify_called": false,
+  "blocked_count": 1,
+  "category_created": false,
+  "category_creation_dry_run_count": 1,
+  "concept_memory_mutation": false,
+  "enforcement_enabled": false,
+  "explicit_category_creation_dry_run_only": true,
+  "frame_hypergraph_mutation": false,
+  "next_round_recommendation": {
+    "allowed_scope": "read_only_evidence_attachment_no_runtime_mapping_no_agp_anchor",
+    "round84": "concept_memory_or_frame_evidence_dry_run"
+  },
+  "operator_acceptance_fixture_only": true,
+  "operator_decision_persisted": false,
+  "round": 83,
+  "round83_artifact": "LEXICAL_CONCEPT_OPERATOR_ACCEPTANCE_CATEGORY_DRY_RUN_R83.json",
+  "runtime_mapping_enabled": false,
+  "sa_activation_created": false,
+  "source_round82": "LEXICAL_CONCEPT_MAPPING_GATE_PROPOSAL_R82.json",
+  "status_version": "v3_round83_lexical_concept_status",
+  "vector_commit_called_from_round83": false,
+  "wrapper_lookup_called": false
+}

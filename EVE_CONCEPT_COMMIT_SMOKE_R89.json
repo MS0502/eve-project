@@ -1,0 +1,156 @@
+{
+  "agp_bridge_fail_count": 0,
+  "agp_bridge_fail_tokens": [],
+  "agp_bridge_pass_count": 1,
+  "agp_bridge_pass_tokens": [
+    "민석"
+  ],
+  "blocked_count": 1,
+  "blocked_rows": [
+    {
+      "blocked_reason": "not_ready_in_round88_freeze",
+      "category_created": false,
+      "lexical_token": "EVE"
+    }
+  ],
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "candidate_count": 2,
+  "commit_version": "v3_round89_explicit_concept_commit_smoke",
+  "committed_rows": [
+    {
+      "agp_bridge": {
+        "activated_categories": [
+          "concept_category::lex::민석"
+        ],
+        "agp_passed": true,
+        "agp_reason": "anchored",
+        "agp_verify_called": true,
+        "anchor_source": "explicit_category_plus_sa_activation",
+        "candidate_categories": [
+          "concept_category::lex::민석"
+        ],
+        "uses_eve_specific_vector_as_anchor": false,
+        "uses_lexical_vector_as_anchor": false,
+        "uses_seed_vector_as_anchor": false
+      },
+      "category_created": true,
+      "category_id": "concept_category::lex::민석",
+      "concept_memory": {
+        "concept_memory_key": "민석",
+        "concept_memory_persisted": true,
+        "definition": "민석 = operator-accepted EVE internal concept category from lexical evidence",
+        "source": "round89_explicit_concept_commit_smoke"
+      },
+      "enforcement_enabled": false,
+      "eve_specific_vector_is_not_agp_anchor": true,
+      "frame_hypergraph": {
+        "frame_hypergraph_mutation": true,
+        "frame_slots": [
+          {
+            "slot": "lexical_label",
+            "source": "round89_commit",
+            "value": "민석"
+          },
+          {
+            "slot": "category_id",
+            "source": "round89_commit",
+            "value": "concept_category::lex::민석"
+          },
+          {
+            "slot": "evidence_layer",
+            "source": "round89_commit",
+            "value": "lexical_to_concept"
+          }
+        ],
+        "hypergraph_edge_id": "3028ea36495b0ea8"
+      },
+      "lexical_token": "민석",
+      "lexical_vector_is_evidence_only": true,
+      "runtime_mapping_enabled": false,
+      "sa_activation": {
+        "activation_strength": 0.7,
+        "category_id": "concept_category::lex::민석",
+        "lexical_token": "민석",
+        "required_for_agp_anchor": true,
+        "sa_activation_created": true,
+        "working_memory_added": true
+      },
+      "seed_vector_is_not_agp_anchor": true,
+      "source_freeze_version": "v3_round88_concept_mapping_v0_proposal_freeze"
+    }
+  ],
+  "concept_memory_delta": 1,
+  "created_count": 1,
+  "created_tokens": [
+    "민석"
+  ],
+  "enforcement_enabled": false,
+  "hypergraph_stats_after": {
+    "add_count": 1,
+    "edge_count": 1,
+    "expand_count": 0,
+    "node_count": 3,
+    "query_count": 0,
+    "removed_count": 0,
+    "role_count": 3,
+    "top_connected": [
+      [
+        "concept_category::lex::민석",
+        1
+      ],
+      [
+        "concept_mapping_v0",
+        1
+      ],
+      [
+        "lex::민석",
+        1
+      ]
+    ]
+  },
+  "hypergraph_stats_before": {
+    "add_count": 0,
+    "edge_count": 0,
+    "expand_count": 0,
+    "node_count": 0,
+    "query_count": 0,
+    "removed_count": 0,
+    "role_count": 0,
+    "top_connected": []
+  },
+  "mutation_checks": {
+    "agp_bypass": false,
+    "audit_records_unchanged_except_concept_commit_audit": true,
+    "concept_category_delta": 1,
+    "concept_commit_audit_delta": 1,
+    "concept_memory_key_delta": 1,
+    "created_tokens_have_category_records": true,
+    "enforcement_enabled_after_commit": false,
+    "eve_specific_vector_store_unchanged_during_concept_commit": true,
+    "eve_specific_vector_used_as_anchor": false,
+    "lexical_vector_used_as_anchor": false,
+    "runtime_mapping_enabled_after_commit": false,
+    "sa_active_category_delta": 1,
+    "seed_vector_used_as_anchor": false,
+    "wrapper_lookup_telemetry_unchanged_during_concept_commit": true
+  },
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "explicit_commit_call_required": true,
+    "lexical_vector_is_evidence_only": true,
+    "no_auto_promotion": true,
+    "no_eve_specific_vector_commit": true,
+    "no_fasttext_seed_mutation": true,
+    "runtime_mapping_still_disabled": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "read_only": false,
+  "ready_token_count": 1,
+  "round": 89,
+  "runtime_mapping_enabled": false,
+  "source_freeze_version": "v3_round88_concept_mapping_v0_proposal_freeze"
+}

@@ -1,0 +1,24 @@
+{
+  "round": 72,
+  "status": "passed_by_chunk",
+  "single_pytest_tests_status": "not_used_as_source_of_truth_due_to_300s_sandbox_timeout",
+  "split_strategy": "sorted test*.py files in chunks of 12, final chunk of 1",
+  "total_files": 121,
+  "chunks_total": 11,
+  "chunks_passed": 11,
+  "failures": 0,
+  "timeouts": 0,
+  "passed_tests_by_chunk_sum": 1157,
+  "collect_only_tests_collected": 1157,
+  "compileall": "passed",
+  "policy": {
+    "routing_changed_in_round72": false,
+    "auto_promotion_enabled": false,
+    "thresholds_changed": false,
+    "context_diversity_gate_changed": false,
+    "agp_bypass": false,
+    "memory_quarantine_unchanged": true,
+    "fasttext_seed_mutation": false
+  },
+  "updated_at_unix": 1780304067.41283
+}

@@ -1,0 +1,12 @@
+{
+  "chunk_count": 14,
+  "chunks_passed": 14,
+  "chunks_run": 14,
+  "collect_only_tests": 1202,
+  "failures": 0,
+  "passed_tests_by_chunk_sum": 1202,
+  "results_file": "ROUND89_SPLIT_SUITE_BY_CHUNK_RESULTS.json",
+  "source_of_truth": "file_chunk_split_full_suite",
+  "suite_version": "v3_round89_split_full_suite",
+  "timeouts": 0
+}

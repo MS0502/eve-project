@@ -1,0 +1,114 @@
+{
+  "axis": "runtime_lexical_to_concept_mapping_proposal",
+  "blocked_count": 1,
+  "blocked_rows": [
+    {
+      "blocked_reasons": [
+        "explicit_category_missing",
+        "concept_commit_audit_missing",
+        "concept_memory_missing",
+        "sa_activation_missing",
+        "agp_replay_pass_missing",
+        "agp_negative_without_sa_guard_missing"
+      ],
+      "lexical_token": "EVE",
+      "proposal_status": "blocked_from_runtime_mapping_proposal",
+      "runtime_mapping_enabled_now": false,
+      "target_category_id": "concept_category::lex::EVE",
+      "would_map_if_runtime_mapping_enabled": false
+    }
+  ],
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "candidate_count": 2,
+  "enforcement_enabled": false,
+  "operator_action_item_count": 1,
+  "operator_action_items": [
+    {
+      "action": "operator_review_runtime_mapping_candidate",
+      "decision_options": [
+        "keep_disabled",
+        "approve_future_enforcement_dry_run",
+        "reject_candidate"
+      ],
+      "lexical_token": "민석",
+      "safe_default": "keep_disabled",
+      "target_category_id": "concept_category::lex::민석"
+    }
+  ],
+  "operator_summary": {
+    "explicit_operator_gate_required_before_enforcement": true,
+    "next_recommended_round": "round94_runtime_mapping_enforcement_dry_run",
+    "runtime_mapping_can_be_considered": true,
+    "runtime_mapping_should_be_enabled_now": false,
+    "safe_default": "keep_runtime_mapping_disabled",
+    "split_full_suite_required_before_enforcement": true
+  },
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "eve_specific_vector_is_not_concept": true,
+    "lexical_vector_is_evidence_only": true,
+    "no_auto_category_creation": true,
+    "no_concept_memory_mutation": true,
+    "no_sa_activation_creation": true,
+    "runtime_mapping_proposal_report_only": true,
+    "runtime_mapping_still_disabled": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "proposal_count": 1,
+  "proposal_rows": [
+    {
+      "anchor_source_required": "explicit_category_plus_sa_activation_only",
+      "enforcement_enabled_now": false,
+      "lexical_token": "민석",
+      "may_enable_now": false,
+      "proposal_status": "operator_review_required",
+      "requires_explicit_operator_acceptance": true,
+      "requires_separate_enforcement_round": true,
+      "requires_split_full_suite_before_enforcement": true,
+      "runtime_mapping_enabled_now": false,
+      "target_category_id": "concept_category::lex::민석",
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false,
+      "would_map_if_runtime_mapping_enabled": true
+    }
+  ],
+  "proposal_version": "v3_round93_runtime_mapping_proposal_report",
+  "read_only": true,
+  "read_only_checks": {
+    "agp_verify_called_during_runtime_mapping_proposal": false,
+    "category_created_during_proposal": false,
+    "category_snapshot_unchanged_during_proposal": true,
+    "concept_commit_audit_unchanged_during_proposal": true,
+    "concept_memory_mutation_during_proposal": false,
+    "embedding_lookup_called_during_proposal": false,
+    "eve_specific_vector_commit_called": false,
+    "eve_specific_vector_store_unchanged_during_proposal": true,
+    "frame_hypergraph_mutation_during_proposal": false,
+    "runtime_mapping_applied": false,
+    "sa_activation_created_during_proposal": false,
+    "sa_active_categories_unchanged_during_proposal": true,
+    "wrapper_telemetry_unchanged_during_proposal": true
+  },
+  "round": 93,
+  "runner_read_only_checks": {
+    "concept_commit_not_called_by_round93_runner": true,
+    "enforcement_enabled": false,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled": false,
+    "runtime_mapping_not_enabled_by_runner": true,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "runtime_mapping_enabled": false,
+  "source_checkpoint_version": "v3_round91_concept_commit_replay_export_v0_checkpoint",
+  "source_commit_version": "v3_round89_explicit_concept_commit_smoke",
+  "source_dry_run_version": "v3_round92_runtime_mapping_gate_dry_run",
+  "would_map_tokens": [
+    "민석"
+  ]
+}

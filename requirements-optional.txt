@@ -1,0 +1,4 @@
+# EVE v3 optional runtime dependencies.
+# Round25 only declares the fastText loader boundary. The package is not
+# imported, loaded, or used unless a later explicit round enables it.
+fasttext-wheel>=0.9.2

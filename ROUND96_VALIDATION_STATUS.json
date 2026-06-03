@@ -1,0 +1,35 @@
+{
+  "collect_only": {
+    "status": "passed",
+    "tests_collected": 1217
+  },
+  "commands_run": [
+    "python -m compileall adapters/lex_concept_mapping_adapter.py adapters/runtime_smoke_runner.py adapters/state_debug_adapter.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py",
+    "pytest -q tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py --disable-warnings --maxfail=1",
+    "pytest --collect-only -q",
+    "pytest -q --disable-warnings --maxfail=1 (attempted; interrupted by 60s execution limit in this chat runtime)"
+  ],
+  "compileall": {
+    "files": 6,
+    "note": "The chat runtime printed an unrelated artifact_tool spreadsheet warmup warning on stderr; compileall returned 0.",
+    "status": "passed"
+  },
+  "failures": 0,
+  "focused_and_adjacent_tests": {
+    "count": 7,
+    "files": [
+      "tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py",
+      "tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py",
+      "tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py"
+    ],
+    "status": "passed"
+  },
+  "full_suite": {
+    "reason": "The full pytest command was attempted but the chat execution environment interrupted the run after 60 seconds before a pytest result was available.",
+    "status": "not_completed"
+  },
+  "honest_status": "Round94-Round96 focused/adjacent tests and collect-only passed; full suite still needs to be run in a long-running local/Codex/GitHub environment.",
+  "round": 96,
+  "timeouts_or_interruptions": 1,
+  "validation_version": "v3_round96_validation_status"
+}

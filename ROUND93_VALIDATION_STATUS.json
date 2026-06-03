@@ -1,0 +1,24 @@
+{
+  "agp_verify_called_during_runtime_mapping_proposal": false,
+  "category_created_during_round93": false,
+  "collect_only": "1210 tests collected",
+  "compileall": "passed",
+  "concept_memory_mutation_during_round93": false,
+  "enforcement_enabled": false,
+  "failures": 0,
+  "focused": {
+    "Round93": "2 passed"
+  },
+  "focused_sweeps": {
+    "Round50~93_adjacent_by_split": "199 passed",
+    "Round60~93_by_split": "95 passed",
+    "Round77~93": "78 passed"
+  },
+  "full_split_suite_run": false,
+  "reason_full_split_not_run": "Round93 is read-only proposal/report; no runtime mapping/enforcement/category/concept-memory/SA/AGP mutation.",
+  "round": 93,
+  "runtime_mapping_enabled": false,
+  "sa_activation_created_during_round93": false,
+  "timeouts": 0,
+  "validation_scope": "read_only_proposal_report_focused_adjacent_compile_collect"
+}

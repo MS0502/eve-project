@@ -1,0 +1,94 @@
+{
+  "agp_negative_without_sa_guard_count": 1,
+  "agp_negative_without_sa_guard_tokens": [
+    "민석"
+  ],
+  "agp_replay_pass_count": 1,
+  "agp_replay_pass_tokens": [
+    "민석"
+  ],
+  "category_count": 1,
+  "category_tokens": [
+    "민석"
+  ],
+  "concept_commit_audit_count": 1,
+  "concept_memory_replay_found_count": 1,
+  "concept_memory_replay_found_tokens": [
+    "민석"
+  ],
+  "delta_consistency": {
+    "category_tokens_match_source_created_tokens": true,
+    "source_agp_pass_count_matches_replay": true,
+    "source_concept_memory_delta_matches_replay": true,
+    "source_created_count_matches_category_count": true
+  },
+  "policy": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "lexical_vector_is_evidence_only": true,
+    "replay_is_read_only": true,
+    "runtime_mapping_still_disabled": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "read_only": true,
+  "read_only_checks": {
+    "category_created_during_replay": false,
+    "category_snapshot_unchanged_during_replay": true,
+    "concept_commit_audit_unchanged_during_replay": true,
+    "concept_memory_mutation_during_replay": false,
+    "enforcement_enabled": false,
+    "eve_specific_vector_commit_called": false,
+    "eve_specific_vector_store_unchanged_during_replay": true,
+    "fasttext_seed_mutation": false,
+    "frame_hypergraph_mutation_during_replay": false,
+    "runtime_mapping_enabled": false,
+    "sa_activation_created_during_replay": false,
+    "sa_active_categories_unchanged_during_replay": true,
+    "wrapper_telemetry_unchanged_during_replay": true
+  },
+  "replay_row_count": 1,
+  "report_version": "v3_round90_concept_commit_delta_replay_report",
+  "round": 90,
+  "rows": [
+    {
+      "agp_negative_without_sa_passed": false,
+      "agp_negative_without_sa_reason": "unknown_category",
+      "agp_replay_called": true,
+      "agp_replay_passed": true,
+      "agp_replay_reason": "anchored",
+      "anchor_source": "explicit_category_plus_sa_activation",
+      "category_id": "concept_category::lex::민석",
+      "category_record_present": true,
+      "concept_memory_present": true,
+      "frame_hypergraph_edge_present": true,
+      "frame_slot_count": 3,
+      "lexical_token": "민석",
+      "read_only_replay": true,
+      "sa_activation_present": true,
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false
+    }
+  ],
+  "runner_read_only_checks": {
+    "concept_commit_not_called_by_round90_runner": true,
+    "enforcement_enabled": false,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled": false,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "sa_activation_replay_found_count": 1,
+  "sa_activation_replay_found_tokens": [
+    "민석"
+  ],
+  "source_agp_bridge_pass_count": 1,
+  "source_commit_round": 89,
+  "source_commit_version": "v3_round89_explicit_concept_commit_smoke",
+  "source_concept_memory_delta": 1,
+  "source_created_count": 1,
+  "source_created_tokens": [
+    "민석"
+  ]
+}

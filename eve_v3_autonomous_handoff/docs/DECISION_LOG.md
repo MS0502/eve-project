@@ -1,41 +1,33 @@
 # DECISION_LOG
 
-This file records why each technical choice was made.
+## Round97
 
-## D001 — Why Round96 is a precheck
+Decision: implement controlled runtime mapping enable smoke as ephemeral only.
 
-Choice:
+Rationale:
 
-- Round96 does not activate runtime mapping.
-- Round96 only prepares the gate for the next controlled smoke round.
+- Round96 proved `민석` ready for a separate enable smoke.
+- The smoke must prove the runtime flag can open and close without persistence.
+- Enforcement must remain disabled.
+- Lexical, EveSpecific, and seed vectors remain evidence only, not AGP anchors.
 
-Reason:
+Outcome:
 
-- Activation changes runtime behavior.
-- Behavior-changing work needs checkpoint, rollback notes, tests, and audit files.
-- The chat execution environment did not finish the full test suite because the process was interrupted by a time limit.
+- `민석` mapped only during the smoke.
+- Rollback restored `runtime_mapping_enabled=False`.
+- No hard stop.
 
-Rejected alternatives:
+## Round98
 
-1. Activate immediately: too risky without full validation.
-2. Only write docs: not enough progress.
-3. Stop at Round95: next gate remains unclear.
+Decision: audit persistence readiness but do not persist runtime mapping.
 
-Result:
+Rationale:
 
-- Next step is Round97 controlled runtime mapping enable smoke.
+- Round97 rollback was complete.
+- Medium vectors are absent from the code-only package, so full validation is blocked/partial.
+- Persistence requires operator approval and full validation or explicit partial-validation waiver.
 
-## D002 — Why docs are stored in the repo
+Outcome:
 
-Choice:
-
-- Keep worklog, decisions, technical map, next actions, and operator guide in this repository.
-
-Reason:
-
-- The user is the planner/operator, not the technical implementer.
-- Agents need persistent context to continue without repeated technical instructions.
-
-Result:
-
-- Future Codex sessions should read this directory first.
+- Persistence gate status is ready for operator decision.
+- Persistence remains unapplied.

@@ -1,0 +1,15 @@
+{
+  "collect_only": "1208 tests collected",
+  "compileall": "passed",
+  "failures": 0,
+  "full_split_suite_reason": "Round92 is read-only dry-run/report; policy per user: full split suite only for mutation/enforcement/checkpoint rounds.",
+  "full_split_suite_run": false,
+  "round": 92,
+  "round50_59_adjacent_by_split": "108 passed",
+  "round50_92_adjacent_total_by_split": 220,
+  "round60_69_focused": "36 passed",
+  "round77_92_focused": "76 passed",
+  "round92_focused": "2 passed",
+  "status": "passed_required_scope",
+  "timeouts": 0
+}

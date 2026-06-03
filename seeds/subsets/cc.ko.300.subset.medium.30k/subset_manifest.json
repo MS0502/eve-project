@@ -1,0 +1,21 @@
+{
+  "name": "cc.ko.300.subset.medium.30k",
+  "parent_seed": "cc.ko.300.bin",
+  "parent_checksum": "SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7",
+  "selection_method": "fasttext_frequency_order_top_k",
+  "filter_rule": "remove_words_containing_unicode_replacement_char",
+  "vocab_size": 30000,
+  "vector_dim": 300,
+  "vocab_file": "vocab.txt",
+  "vectors_file": "vectors.npy",
+  "vocab_checksum": "SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308",
+  "vectors_checksum": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+  "extracted_at": "2026-05-12",
+  "extracted_by": "operator (Colab + fasttext-wheel)",
+  "deterministic": true,
+  "raw_vocab_size": 2000000,
+  "clean_vocab_size": 1999987,
+  "filtered_corrupted": 13,
+  "purpose": "production_lexical_seed_expanded",
+  "supersedes_small_5k_for_lexical_coverage": true
+}

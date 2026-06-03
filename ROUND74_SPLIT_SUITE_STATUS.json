@@ -1,0 +1,12 @@
+{
+  "suite_version": "v3_round74_split_suite",
+  "collect_only_tests": 1164,
+  "test_files_total": 123,
+  "chunk_count": 7,
+  "chunks_run": 7,
+  "chunks_passed": 7,
+  "passed_tests_by_chunk_sum": 1164,
+  "failures": [],
+  "timeouts": [],
+  "source_of_truth": "split-by-test-file chunks; single pytest tests may exceed sandbox wall-clock"
+}

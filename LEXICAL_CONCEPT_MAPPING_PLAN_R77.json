@@ -1,0 +1,268 @@
+{
+  "active_self_learning_policy": {
+    "agp_anchor_policy": "explicit_categories_plus_sa_activation_only",
+    "agp_bypass": false,
+    "auto_observe_enabled": true,
+    "auto_promotion_enabled": false,
+    "automatic_rollback_enabled": false,
+    "commit_gate_enabled": true,
+    "context_diversity_gate_enabled": true,
+    "drift_based_runtime_change": false,
+    "fasttext_seed_mutation": false,
+    "memory_quarantine_mutation": false,
+    "min_known_context_words_for_commit": 1,
+    "min_observations_for_commit": 2
+  },
+  "axis": "lexical_to_concept_mapping",
+  "candidate_schema": {
+    "concept_evidence_fields": [
+      "explicit_category_id",
+      "frame_slots",
+      "concept_memory_reference",
+      "hypergraph_relation_reference"
+    ],
+    "default_operator_decision": "undecided",
+    "forbidden_fields": [
+      "auto_created_category",
+      "seed_vector_anchor_pass",
+      "eve_specific_vector_anchor_pass",
+      "implicit_agp_pass_without_sa"
+    ],
+    "lexical_evidence_fields": [
+      "observed_count",
+      "context_diverse",
+      "known_context_words",
+      "eve_specific_vector_present",
+      "wrapper_route"
+    ],
+    "read_only": true,
+    "required_fields": [
+      "lexical_token",
+      "lexical_route",
+      "lexical_evidence",
+      "proposed_concept_category",
+      "concept_evidence",
+      "sa_activation_requirement",
+      "agp_anchor_policy",
+      "operator_decision"
+    ],
+    "schema_version": "v3_round77_lexical_concept_candidate_schema_plan",
+    "status": "schema_only_no_candidates_persisted"
+  },
+  "component_roles": {
+    "AGPAdapter": "anchor_validation_from_explicit_categories_and_sa_activation_only",
+    "ConceptMemoryAdapter": "future_concept_store_candidate_no_round77_mutation",
+    "EmbeddingWrapper": "lexical_lookup_routing_and_telemetry_only",
+    "EveSelfLearningAdapter": "lexical_vector_commit_gate_owner_no_category_creation",
+    "EveSpecificVectorStore": "deterministic_lexical_vector_storage_only",
+    "EveVocabTracker": "lexical_observation_only_no_concept_mapping",
+    "FrameAdapter": "future_frame_slot_candidate_no_round77_mutation",
+    "HypergraphAdapter": "future_relation_candidate_no_round77_mutation",
+    "LexConceptMappingAdapter": "round77_read_only_planning_contract_owner"
+  },
+  "contract_snapshot": {
+    "active_self_learning_policy": {
+      "agp_anchor_policy": "explicit_categories_plus_sa_activation_only",
+      "agp_bypass": false,
+      "auto_observe_enabled": true,
+      "auto_promotion_enabled": false,
+      "automatic_rollback_enabled": false,
+      "commit_gate_enabled": true,
+      "context_diversity_gate_enabled": true,
+      "drift_based_runtime_change": false,
+      "fasttext_seed_mutation": false,
+      "memory_quarantine_mutation": false,
+      "min_known_context_words_for_commit": 1,
+      "min_observations_for_commit": 2
+    },
+    "axis": "lexical_to_concept_mapping",
+    "component_roles": {
+      "AGPAdapter": "anchor_validation_from_explicit_categories_and_sa_activation_only",
+      "ConceptMemoryAdapter": "future_concept_store_candidate_no_round77_mutation",
+      "EmbeddingWrapper": "lexical_lookup_routing_and_telemetry_only",
+      "EveSelfLearningAdapter": "lexical_vector_commit_gate_owner_no_category_creation",
+      "EveSpecificVectorStore": "deterministic_lexical_vector_storage_only",
+      "EveVocabTracker": "lexical_observation_only_no_concept_mapping",
+      "FrameAdapter": "future_frame_slot_candidate_no_round77_mutation",
+      "HypergraphAdapter": "future_relation_candidate_no_round77_mutation",
+      "LexConceptMappingAdapter": "round77_read_only_planning_contract_owner"
+    },
+    "concept_anchor_sources": [
+      {
+        "name": "SAActivation",
+        "required_for_agp_anchor": true,
+        "role": "required_agp_activation_evidence"
+      },
+      {
+        "name": "ExplicitMeaningCategory",
+        "required_for_agp_anchor": true,
+        "role": "candidate_category_name_or_id_provided_by_mapping_layer"
+      },
+      {
+        "name": "Frame/ConceptMemory/Hypergraph",
+        "required_in_round77": false,
+        "role": "future_concept_evidence_after_dry_run_proposal_enforcement"
+      }
+    ],
+    "enforcement_enabled": false,
+    "future_change_rule": {
+      "policy_pattern": "dry_run_then_proposal_then_explicit_enforcement",
+      "round78": "candidate_schema_dry_run_only",
+      "round79": "mapping_dry_run_no_category_mutation",
+      "round80": "operator_proposal_report",
+      "round81_plus": "explicit_enforcement_only_after_tests_and_operator_review"
+    },
+    "hard_boundaries": {
+      "agp_anchor_requires_explicit_category_and_sa_activation": true,
+      "eve_specific_vector_is_not_agp_anchor": true,
+      "lexical_vector_is_not_concept": true,
+      "no_auto_category_creation": true,
+      "no_auto_memory_promotion": true,
+      "no_quarantine_bypass": true,
+      "no_runtime_generation_change": true,
+      "seed_vector_is_not_agp_anchor": true
+    },
+    "lexical_sources": [
+      {
+        "may_create_agp_anchor": false,
+        "may_create_concept_category": false,
+        "name": "fastText",
+        "role": "external_lexical_seed_primary"
+      },
+      {
+        "may_create_agp_anchor": false,
+        "may_create_concept_category": false,
+        "name": "EveSpecificVectorStore",
+        "role": "eve_specific_lexical_vector_evidence"
+      },
+      {
+        "may_create_agp_anchor": false,
+        "may_create_concept_category": false,
+        "name": "PMI+SVD",
+        "role": "local_fallback_lexical_space"
+      }
+    ],
+    "planning_version": "v3_round77_lexical_to_concept_mapping_planning",
+    "read_only": true,
+    "round": 77,
+    "round77_read_only_checks": {
+      "does_not_call_agp_verify": true,
+      "does_not_call_commit_eve_specific_vectors": true,
+      "does_not_call_embedding_lookup": true,
+      "does_not_call_observe_text": true,
+      "does_not_change_context_diversity_gate": true,
+      "does_not_change_thresholds": true,
+      "does_not_write_concept_memory": true,
+      "does_not_write_frame_or_hypergraph": true
+    },
+    "runtime_mapping_enabled": false,
+    "source_baseline": "self_learning_v1_round76",
+    "status": "planning_only_not_enforced",
+    "wrapper_route_policy": {
+      "adapter": "EmbeddingWrapper",
+      "duplicate_fallback_api_call_guarded": true,
+      "fallback_api_called_at_most_once_per_get_embedding_call": true,
+      "fallback_api_final_boundary": true,
+      "get_embedding_route": [
+        "PMI+SVD.local_embeddings_map_precheck",
+        "fastText.get_embedding",
+        "EveSpecificVectorStore.get_vector",
+        "PMI+SVD.get_embedding_final_fallback_once"
+      ],
+      "get_vector_route": [
+        "fastText.get_vector",
+        "EveSpecificVectorStore.get_vector",
+        "PMI+SVD.get_embedding"
+      ],
+      "pmi_svd_local_precheck_calls_fallback_api": false,
+      "pmi_svd_local_precheck_enabled": true,
+      "policy_version": "v3_round72_embedding_lookup_route_snapshot",
+      "read_only": true,
+      "routing_changed_in_round72": false
+    }
+  },
+  "hard_boundaries": {
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "lexical_vector_is_not_concept": true,
+    "no_auto_category_creation": true,
+    "no_auto_memory_promotion": true,
+    "no_quarantine_bypass": true,
+    "no_runtime_generation_change": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "next_round_recommendation": {
+    "allowed_scope": "schema_and_candidate_rows_only_no_mapping_enforcement",
+    "round78": "lexical_concept_candidate_schema_dry_run"
+  },
+  "planning_read_only_checks": {
+    "audit_records_unchanged_during_planning": true,
+    "enforcement_enabled_after_planning": false,
+    "runtime_mapping_enabled_after_planning": false,
+    "self_learning_policy_unchanged_during_planning": true,
+    "telemetry_unchanged_during_planning": true,
+    "vector_store_unchanged_during_planning": true
+  },
+  "planning_version": "v3_round77_lexical_to_concept_mapping_planning",
+  "read_only": true,
+  "readiness_checks": {
+    "agp_anchor_requires_explicit_category_and_sa": true,
+    "auto_promotion_disabled": true,
+    "commit_gate_still_enabled": true,
+    "context_diversity_still_enabled": true,
+    "enforcement_disabled": true,
+    "eve_specific_vector_not_agp_anchor": true,
+    "lexical_vector_not_concept": true,
+    "runtime_mapping_disabled": true,
+    "self_learning_v1_source_baseline": true,
+    "threshold_still_2": true
+  },
+  "round": 77,
+  "round77_policy": {
+    "agp_bypass": false,
+    "auto_promotion_enabled": false,
+    "automatic_rollback_enabled": false,
+    "context_diversity_gate_changed": false,
+    "does_not_call_agp_verify": true,
+    "does_not_call_commit": true,
+    "does_not_call_lookup": true,
+    "does_not_call_observe_text": true,
+    "does_not_create_categories": true,
+    "does_not_mutate_concept_memory": true,
+    "does_not_mutate_frame_or_hypergraph": true,
+    "enforcement_enabled": false,
+    "fasttext_seed_mutation": false,
+    "memory_quarantine_unchanged": true,
+    "planning_only": true,
+    "runtime_mapping_enabled": false,
+    "thresholds_changed": false
+  },
+  "source_baseline": "self_learning_v1_round76",
+  "status": "planning_only_not_enforced",
+  "token_plan": {
+    "candidate_rows": [
+      {
+        "lexical_token": "EVE",
+        "mapping_status": "not_mapped_round77_planning_only",
+        "may_use_lexical_vector_as_agp_anchor": false,
+        "may_use_lexical_vector_as_evidence": true,
+        "operator_decision": "undecided",
+        "requires_explicit_concept_category": true,
+        "requires_sa_activation_for_agp": true
+      },
+      {
+        "lexical_token": "민석",
+        "mapping_status": "not_mapped_round77_planning_only",
+        "may_use_lexical_vector_as_agp_anchor": false,
+        "may_use_lexical_vector_as_evidence": true,
+        "operator_decision": "undecided",
+        "requires_explicit_concept_category": true,
+        "requires_sa_activation_for_agp": true
+      }
+    ],
+    "planning_version": "v3_round77_lexical_to_concept_mapping_planning",
+    "read_only": true,
+    "runtime_mapping_enabled": false,
+    "token_count": 2
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "collect_only": {
+    "collected": 1204
+  },
+  "compileall": "passed",
+  "failures": 0,
+  "full_split_suite_reason": "round90 is read-only replay/report; split full suite reserved for mutation/enforcement/freeze rounds",
+  "full_split_suite_run": false,
+  "round": 90,
+  "round50_90_adjacent_sweep": {
+    "failed": 0,
+    "passed": 193
+  },
+  "round60_90_focused_sweep": {
+    "failed": 0,
+    "passed": 89
+  },
+  "round77_90_focused": {
+    "failed": 0,
+    "passed": 32
+  },
+  "round90_focused": {
+    "failed": 0,
+    "passed": 2
+  },
+  "status": "completed",
+  "timeouts": 0,
+  "validation_scope": "read_only_report_focused_adjacent_collect_compileall"
+}

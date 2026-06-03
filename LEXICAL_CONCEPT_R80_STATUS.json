@@ -1,0 +1,41 @@
+{
+  "agp_anchor_created_count": 0,
+  "blocked_candidate_count": 1,
+  "blocked_tokens": [
+    "EVE"
+  ],
+  "category_created_count": 0,
+  "enforcement_enabled": false,
+  "proposal_count": 1,
+  "read_only_checks": {
+    "agp_verify_called": false,
+    "audit_records_unchanged_during_report": true,
+    "category_created": false,
+    "concept_memory_mutation": false,
+    "enforcement_enabled_after_report": false,
+    "frame_hypergraph_mutation": false,
+    "runtime_mapping_enabled_after_report": false,
+    "sa_activation_created": false,
+    "self_learning_policy_unchanged_during_report": true,
+    "telemetry_unchanged_during_report": true,
+    "vector_commit_called": false,
+    "vector_store_unchanged_during_report": true,
+    "wrapper_lookup_called": false
+  },
+  "ready_tokens": [
+    "민석"
+  ],
+  "report_version": "v3_round80_concept_proposal_report",
+  "round": 80,
+  "runtime_mapping_enabled": false,
+  "status": "completed",
+  "validation": {
+    "collect_only": "1184 tests collected",
+    "compileall": "passed",
+    "full_suite": "not run for read-only proposal round",
+    "round50_80_adjacent_sweep": "181 passed",
+    "round60_80_focused_sweep": "73 passed",
+    "round77_80_focused": "12 passed",
+    "round80_focused": "3 passed"
+  }
+}

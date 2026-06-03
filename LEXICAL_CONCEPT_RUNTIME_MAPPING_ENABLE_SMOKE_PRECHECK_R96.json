@@ -1,0 +1,132 @@
+{
+  "axis": "runtime_lexical_to_concept_mapping_enable_smoke_precheck",
+  "blocked_count": 0,
+  "blocked_rows": [],
+  "blocked_tokens": [],
+  "candidate_count": 1,
+  "enforcement_enabled": false,
+  "operator_recommendation": {
+    "may_attempt_separate_enable_smoke": true,
+    "next_recommended_round": "round97_controlled_runtime_mapping_enable_smoke",
+    "runtime_mapping_should_be_enabled_now": false,
+    "safe_default": "do_not_enable_in_precheck_round"
+  },
+  "policy": {
+    "actual_enable_deferred_to_separate_round": true,
+    "agp_anchor_requires_explicit_category_and_sa_activation": true,
+    "enable_smoke_precheck_only": true,
+    "enforcement_still_disabled": true,
+    "eve_specific_vector_is_not_agp_anchor": true,
+    "eve_specific_vector_is_not_concept": true,
+    "lexical_vector_is_evidence_only": true,
+    "runtime_mapping_still_disabled": true,
+    "seed_vector_is_not_agp_anchor": true
+  },
+  "pre_mutation_gate": {
+    "adjacent_tests_required": true,
+    "collect_only_required": true,
+    "compileall_required": true,
+    "focused_tests_required": true,
+    "operator_approval_required_for_actual_enable": true,
+    "pre_mutation_checkpoint_required": true,
+    "rollback_plan_required": true,
+    "split_full_suite_required_before_persistence": true
+  },
+  "precheck_version": "v3_round96_runtime_mapping_enable_smoke_precheck",
+  "read_only": true,
+  "read_only_checks": {
+    "agp_verify_called_during_enable_smoke_precheck": false,
+    "category_created_during_enable_smoke_precheck": false,
+    "category_snapshot_unchanged_during_enable_smoke_precheck": true,
+    "concept_commit_audit_unchanged_during_enable_smoke_precheck": true,
+    "concept_memory_mutation_during_enable_smoke_precheck": false,
+    "embedding_lookup_called_during_enable_smoke_precheck": false,
+    "enforcement_enabled_now": false,
+    "eve_specific_vector_commit_called": false,
+    "eve_specific_vector_store_unchanged_during_enable_smoke_precheck": true,
+    "frame_hypergraph_mutation_during_enable_smoke_precheck": false,
+    "runtime_mapping_applied": false,
+    "runtime_mapping_enabled_now": false,
+    "sa_activation_created_during_enable_smoke_precheck": false,
+    "sa_active_categories_unchanged_during_enable_smoke_precheck": true,
+    "wrapper_telemetry_unchanged_during_enable_smoke_precheck": true
+  },
+  "ready_count": 1,
+  "ready_rows": [
+    {
+      "agp_verify_called_now": false,
+      "anchor_source_required": "explicit_category_plus_sa_activation_only",
+      "api_path_dry_run": [
+        "RuntimeLexConceptMapper.resolve(token)",
+        "LexConceptMappingAdapter.runtime_mapping_gate",
+        "ConceptCategoryRegistry.lookup(category_id)",
+        "SAActivation.check(category_id)",
+        "return MappingResult(category_id)"
+      ],
+      "blocked_reasons": [],
+      "category_created_now": false,
+      "concept_memory_mutation_now": false,
+      "embedding_lookup_called_now": false,
+      "enforcement_enabled_now": false,
+      "enforcement_status": "would_apply_if_runtime_mapping_enabled",
+      "frame_hypergraph_mutation_now": false,
+      "lexical_token": "민석",
+      "operator_acceptance_fixture": true,
+      "operator_decision_status": "operator_accepted_fixture_not_persisted",
+      "precheck_blocked_reasons": [],
+      "precheck_checks": {
+        "has_simulated_mapping_result": true,
+        "has_target_category_id": true,
+        "operator_accepted": true,
+        "uses_eve_specific_vector_as_anchor": false,
+        "uses_lexical_vector_as_anchor": false,
+        "uses_seed_vector_as_anchor": false,
+        "would_apply_after_fixture": true
+      },
+      "precheck_status": "ready_for_separate_enable_smoke_round",
+      "remaining_blocked_reasons": [],
+      "resolved_reasons": [
+        "operator_acceptance_required"
+      ],
+      "runtime_mapping_applied_now": false,
+      "runtime_mapping_enabled_now": false,
+      "sa_activation_created_now": false,
+      "simulated_mapping_result": {
+        "anchor_source": "explicit_category_plus_sa_activation_only",
+        "category_id": "concept_category::lex::민석",
+        "category_label": "민석",
+        "lexical_token": "민석",
+        "mapping_status": "simulated_runtime_mapping_success"
+      },
+      "target_category_id": "concept_category::lex::민석",
+      "uses_eve_specific_vector_as_anchor": false,
+      "uses_lexical_vector_as_anchor": false,
+      "uses_seed_vector_as_anchor": false,
+      "would_apply_if_runtime_mapping_enabled": true,
+      "would_apply_runtime_mapping_after_fixture": true
+    }
+  ],
+  "ready_tokens": [
+    "민석"
+  ],
+  "rollback_plan": {
+    "disable_enforcement_flag": "enforcement_enabled=False",
+    "disable_runtime_mapping_flag": "runtime_mapping_enabled=False",
+    "discard_unpersisted_runtime_cache": true,
+    "keep_operator_fixture_as_read_only_audit": true,
+    "restore_mapping_table_from_checkpoint": true
+  },
+  "round": 96,
+  "runner_read_only_checks": {
+    "concept_commit_not_called_by_round96_runner": true,
+    "enforcement_enabled": false,
+    "enforcement_not_enabled_by_runner": true,
+    "eve_specific_vector_store_unchanged": true,
+    "runtime_mapping_enabled": false,
+    "runtime_mapping_not_enabled_by_runner": true,
+    "self_learning_audit_unchanged": true,
+    "wrapper_telemetry_unchanged": true
+  },
+  "runtime_mapping_enabled": false,
+  "source_fixture_version": "v3_round95_runtime_mapping_operator_acceptance_fixture"
+}
