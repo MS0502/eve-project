@@ -1,0 +1,201 @@
+{
+  "actual_persistence_enablement": false,
+  "agp_bypass_used": false,
+  "allowed_tokens": [
+    "민석"
+  ],
+  "approval_fixture_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_round109_operator_approval_fixture.json",
+  "audit_order": {
+    "actual_event_order": [
+      "activation_precheck_started",
+      "checkpoint_written",
+      "activation_candidate_applied",
+      "rollback_validation_passed"
+    ],
+    "checkpoint_event_precedes_candidate_mutation": true,
+    "event_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "event_order_verified": true,
+    "expected_event_order": [
+      "activation_precheck_started",
+      "checkpoint_written",
+      "activation_candidate_applied",
+      "rollback_validation_passed"
+    ]
+  },
+  "candidate_mutation_applied": true,
+  "candidate_mutation_scope": "runtime_mapping_persistence_only",
+  "candidate_report": {
+    "activation_status": "activation_candidate_applied_then_rolled_back",
+    "agp_bypass_used": false,
+    "apply_candidate_requested": true,
+    "audit_log_emitted": true,
+    "audit_log_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_audit_log.jsonl",
+    "candidate_mutation_applied": true,
+    "candidate_version": "v3_round108_runtime_mapping_persistence_activation_candidate",
+    "checkpoint_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_checkpoint.json",
+    "checkpoint_written_before_mutation": true,
+    "enforcement_enabled_default": false,
+    "enforcement_enabled_during_candidate": false,
+    "enforcement_enabled_now": false,
+    "guard": {
+      "approval_required": true,
+      "approval_token_required": "ROUND108_OPERATOR_APPROVED_RUNTIME_MAPPING_PERSISTENCE_CANDIDATE",
+      "blocking_reasons": [],
+      "checks": {
+        "operator_approved": true,
+        "operator_token_ok": true,
+        "round106_decision_ready": true,
+        "round106_decision_version_ok": true,
+        "round106_not_applied": true,
+        "round107_dry_run_not_enabled": true,
+        "round107_dry_run_version_ok": true,
+        "round107_no_mutation": true
+      },
+      "guard_passed": true,
+      "guard_version": "v3_round108_runtime_mapping_persistence_activation_candidate.operator_guard.v1",
+      "read_only": true,
+      "source_decision_version": "v3_round106_runtime_mapping_persistence_decision",
+      "source_dry_run_version": "v3_round107_runtime_mapping_persistence_activation_dryrun"
+    },
+    "protected_state_unchanged_after_rollback": true,
+    "read_only": false,
+    "rollback_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_rollback.json",
+    "rollback_verification": {
+      "checks": {
+        "agp_bypass_used": false,
+        "agp_stats_unchanged": true,
+        "concept_categories_unchanged": true,
+        "concept_commit_records_unchanged": true,
+        "concept_memory_stats_unchanged": true,
+        "enforcement_enabled_restored_false": true,
+        "eve_specific_vector_store_unchanged": true,
+        "runtime_mapping_enabled_restored_false": true,
+        "sa_active_categories_unchanged": true,
+        "vectors_npy_committed": false
+      },
+      "rollback_verification_version": "v3_round108_runtime_mapping_persistence_activation_candidate.rollback_verification.v1",
+      "rollback_verified": true,
+      "state_after_rollback": {
+        "agp_stats": {
+          "name": "agp",
+          "read_only": true
+        },
+        "concept_categories": {},
+        "concept_commit_records": [],
+        "concept_memory_stats": {
+          "name": "concept_memory",
+          "read_only": true
+        },
+        "enforcement_enabled": false,
+        "eve_specific_vector_store": {
+          "count": 1,
+          "dimension": 300,
+          "read_only": true
+        },
+        "runtime_mapping_enabled": false,
+        "sa_active_categories": [
+          "concept_category::lex::민석"
+        ],
+        "wrapper_telemetry": {
+          "eve_specific_hits": 0,
+          "fallback_uses": 0,
+          "primary_hits": 0,
+          "total_calls": 0
+        }
+      }
+    },
+    "rollback_verified": true,
+    "round": 108,
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_during_candidate": true,
+    "runtime_mapping_enabled_now": false,
+    "state_debug_after_exported": true,
+    "state_debug_after_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after.json",
+    "state_debug_after_rollback_exported": true,
+    "state_debug_after_rollback_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after_rollback.json",
+    "state_debug_before_exported": true,
+    "state_debug_before_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_before.json",
+    "vectors_npy_committed": false
+  },
+  "checkpoint_created_before_candidate_mutation": true,
+  "drill_status": "approval_fixture_drill_passed",
+  "drill_summary_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_round109_rollback_drill_summary.json",
+  "drill_version": "v3_round109_runtime_mapping_persistence_approval_fixture",
+  "enforcement_enabled_default": false,
+  "enforcement_enabled_now": false,
+  "fixture": {
+    "actual_persistence_enablement": false,
+    "allowed_tokens": [
+      "민석"
+    ],
+    "approval_scope": "runtime_mapping_persistence_only",
+    "approval_status": "fixture_approved_for_test_dry_run_only",
+    "approval_valid": true,
+    "blocking_reasons": [],
+    "candidate_activation_mode": "round108_ephemeral_candidate_apply_then_immediate_rollback",
+    "checks": {
+      "enforcement_enablement_forbidden": true,
+      "operator_token_matches_round108_guard": true,
+      "runtime_mapping_default_enablement_forbidden": true,
+      "scope_is_runtime_mapping_persistence_only": true,
+      "test_dry_run_mode_only": true,
+      "token_allowlist_explicit": true,
+      "token_allowlist_non_empty": true
+    },
+    "enforcement_enabled_default": false,
+    "fixture_version": "v3_round109_runtime_mapping_persistence_approval_fixture",
+    "operator_approval_token": "ROUND108_OPERATOR_APPROVED_RUNTIME_MAPPING_PERSISTENCE_CANDIDATE",
+    "read_only_fixture": true,
+    "requested_tokens": [
+      "민석"
+    ],
+    "round": 109,
+    "runtime_mapping_enabled_default": false,
+    "test_dry_run_mode": "operator_approval_fixture_test_dry_run_only"
+  },
+  "forbidden_artifact_paths": [],
+  "forbidden_pr_diff_paths": [],
+  "protected_surface_checks": {
+    "agp_stats_unchanged": true,
+    "concept_categories_unchanged": true,
+    "concept_commit_records_unchanged": true,
+    "concept_memory_stats_unchanged": true,
+    "eve_specific_vector_store_unchanged": true,
+    "sa_active_categories_unchanged": true
+  },
+  "read_only_fixture": true,
+  "rollback_restored_disabled_flags": {
+    "enforcement_enabled_false": true,
+    "runtime_mapping_enabled_false": true
+  },
+  "round": 109,
+  "runtime_mapping_enabled_default": false,
+  "runtime_mapping_enabled_now": false,
+  "source_decision": {
+    "decision_ready": true,
+    "decision_status": "persistence_ready_but_not_applied",
+    "decision_version": "v3_round106_runtime_mapping_persistence_decision",
+    "mapped_tokens": [
+      "민석"
+    ],
+    "runtime_mapping_persisted_now": false
+  },
+  "source_dry_run_version": "v3_round107_runtime_mapping_persistence_activation_dryrun",
+  "state_debug_exports": {
+    "after_candidate": true,
+    "after_rollback": true,
+    "before": true,
+    "paths": {
+      "after_candidate": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after.json",
+      "after_rollback": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after_rollback.json",
+      "before": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_before.json"
+    }
+  },
+  "test_dry_run_mode": "operator_approval_fixture_test_dry_run_only",
+  "vectors_npy_committed": false
+}

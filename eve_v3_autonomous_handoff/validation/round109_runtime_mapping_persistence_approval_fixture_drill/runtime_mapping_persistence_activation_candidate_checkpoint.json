@@ -1,0 +1,48 @@
+{
+  "audit_log_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_audit_log.jsonl",
+  "checkpoint_created_before_candidate_mutation": true,
+  "checkpoint_version": "v3_round108_runtime_mapping_persistence_activation_candidate.checkpoint.v1",
+  "contains_semantic_memory_dump": false,
+  "contains_vectors_npy": false,
+  "created_by_round": 108,
+  "enforcement_enabled_before": false,
+  "json_only": true,
+  "mapped_tokens": [
+    "민석"
+  ],
+  "rollback_artifact_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_rollback.json",
+  "runtime_mapping_enabled_before": false,
+  "source_decision_version": "v3_round106_runtime_mapping_persistence_decision",
+  "source_dry_run_version": "v3_round107_runtime_mapping_persistence_activation_dryrun",
+  "state_before": {
+    "agp_stats": {
+      "name": "agp",
+      "read_only": true
+    },
+    "concept_categories": {},
+    "concept_commit_records": [],
+    "concept_memory_stats": {
+      "name": "concept_memory",
+      "read_only": true
+    },
+    "enforcement_enabled": false,
+    "eve_specific_vector_store": {
+      "count": 1,
+      "dimension": 300,
+      "read_only": true
+    },
+    "runtime_mapping_enabled": false,
+    "sa_active_categories": [
+      "concept_category::lex::민석"
+    ],
+    "wrapper_telemetry": {
+      "eve_specific_hits": 0,
+      "fallback_uses": 0,
+      "primary_hits": 0,
+      "total_calls": 0
+    }
+  },
+  "state_debug_after_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after.json",
+  "state_debug_after_rollback_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after_rollback.json",
+  "state_debug_before_path": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_before.json"
+}

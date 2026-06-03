@@ -186,3 +186,9 @@ Still forbidden until that explicit patch:
 - The candidate requires Round106 decision readiness, Round107 dry-run no-mutation proof, explicit operator approval, checkpoint creation, audit log emission, before/after state-debug export, and rollback verification.
 - Defaults remain disabled: `runtime_mapping_enabled=False`, `enforcement_enabled=False`.
 - Next round may review whether an operator-approved persistence activation should become a production startup path, but only as a separate explicit patch with full validation.
+
+## After Round109
+
+- Review the Round109 approval fixture and rollback drill artifacts before considering any real persistence enablement.
+- Keep persistence disabled by default and enforcement disabled unless a future explicit round introduces a guarded, checkpointed, audited mutation path.
+- Do not include `vectors.npy` or seed subset artifacts in runtime mapping persistence PR diffs.

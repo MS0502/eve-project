@@ -176,3 +176,9 @@ Decision: add a guarded runtime mapping persistence activation candidate without
 - Emits audit log and before/after state-debug exports.
 - Rolls back and verifies disabled runtime/enforcement flags plus protected state surfaces.
 - Keeps `runtime_mapping_enabled=False` and `enforcement_enabled=False` by default.
+
+## Round109 decision
+
+- Accepted an operator approval fixture only; real runtime mapping persistence remains disabled by default.
+- Approval scope is `runtime_mapping_persistence_only`; explicit token allowlist is `["민석"]`.
+- Rollback drill evidence is required before any later persistence enablement discussion.

@@ -1,0 +1,53 @@
+{
+  "agp_bypass_used": false,
+  "allowed_tokens": [
+    "민석"
+  ],
+  "approval_scope": "runtime_mapping_persistence_only",
+  "audit_event_order": [
+    "activation_precheck_started",
+    "checkpoint_written",
+    "activation_candidate_applied",
+    "rollback_validation_passed"
+  ],
+  "audit_event_order_verified": true,
+  "checkpoint_created_before_candidate_mutation": true,
+  "checks": {
+    "compileall": "passed: python -m compileall -q adapters tests main.py",
+    "forbidden_vectors_or_seed_artifact_diff_check": "passed: no changed path ends with vectors.npy or starts with seeds/subsets/",
+    "round107_adjacent_pytest": "passed: pytest -q tests/test_v3_round107_runtime_mapping_persistence_activation_dryrun.py",
+    "round108_adjacent_pytest": "passed: pytest -q tests/test_v3_round108_runtime_mapping_persistence_activation_candidate.py",
+    "round109_focused_pytest": "passed: pytest -q tests/test_v3_round109_runtime_mapping_persistence_approval_fixture.py"
+  },
+  "enforcement_enabled_now": false,
+  "forbidden_artifact_paths": [],
+  "forbidden_pr_diff_paths": [],
+  "protected_surface_checks": {
+    "agp_stats_unchanged": true,
+    "concept_categories_unchanged": true,
+    "concept_commit_records_unchanged": true,
+    "concept_memory_stats_unchanged": true,
+    "eve_specific_vector_store_unchanged": true,
+    "sa_active_categories_unchanged": true
+  },
+  "rollback_restored_disabled_flags": {
+    "enforcement_enabled_false": true,
+    "runtime_mapping_enabled_false": true
+  },
+  "round": 109,
+  "runtime_mapping_enabled_now": false,
+  "state_debug_exports": {
+    "after_candidate": true,
+    "after_rollback": true,
+    "before": true,
+    "paths": {
+      "after_candidate": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after.json",
+      "after_rollback": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_after_rollback.json",
+      "before": "eve_v3_autonomous_handoff/validation/round109_runtime_mapping_persistence_approval_fixture_drill/runtime_mapping_persistence_activation_candidate_state_debug_before.json"
+    }
+  },
+  "status": "approval_fixture_drill_passed",
+  "test_dry_run_mode": "operator_approval_fixture_test_dry_run_only",
+  "validation_version": "v3_round109_runtime_mapping_persistence_approval_fixture",
+  "vectors_npy_committed": false
+}

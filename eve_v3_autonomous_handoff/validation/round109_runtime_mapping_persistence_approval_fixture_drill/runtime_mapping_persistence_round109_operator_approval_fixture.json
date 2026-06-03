@@ -1,0 +1,30 @@
+{
+  "actual_persistence_enablement": false,
+  "allowed_tokens": [
+    "민석"
+  ],
+  "approval_scope": "runtime_mapping_persistence_only",
+  "approval_status": "fixture_approved_for_test_dry_run_only",
+  "approval_valid": true,
+  "blocking_reasons": [],
+  "candidate_activation_mode": "round108_ephemeral_candidate_apply_then_immediate_rollback",
+  "checks": {
+    "enforcement_enablement_forbidden": true,
+    "operator_token_matches_round108_guard": true,
+    "runtime_mapping_default_enablement_forbidden": true,
+    "scope_is_runtime_mapping_persistence_only": true,
+    "test_dry_run_mode_only": true,
+    "token_allowlist_explicit": true,
+    "token_allowlist_non_empty": true
+  },
+  "enforcement_enabled_default": false,
+  "fixture_version": "v3_round109_runtime_mapping_persistence_approval_fixture",
+  "operator_approval_token": "ROUND108_OPERATOR_APPROVED_RUNTIME_MAPPING_PERSISTENCE_CANDIDATE",
+  "read_only_fixture": true,
+  "requested_tokens": [
+    "민석"
+  ],
+  "round": 109,
+  "runtime_mapping_enabled_default": false,
+  "test_dry_run_mode": "operator_approval_fixture_test_dry_run_only"
+}
