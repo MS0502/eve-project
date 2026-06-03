@@ -1,0 +1,58 @@
+{
+  "agp_bypass_used": false,
+  "artifact_dir": "eve_v3_autonomous_handoff/validation/round116_runtime_mapping_sandbox_replay_regression_guard",
+  "enforcement_enabled_now": false,
+  "forbidden_artifact_paths": [],
+  "production_persistence_enabled": false,
+  "read_only": false,
+  "regression_checks": {
+    "agp_bypass_used": false,
+    "enforcement_enabled_now_false": true,
+    "production_persistence_enabled": false,
+    "round110_passed": false,
+    "round111_cleanup_verified": false,
+    "round112_replay_passed": false,
+    "runtime_mapping_enabled_now_false": true,
+    "sandbox_state_removed": true,
+    "vectors_npy_committed": false
+  },
+  "regression_guard_version": "v3_round116_runtime_mapping_sandbox_replay_regression_guard",
+  "regression_status": "sandbox_replay_regression_guard_failed",
+  "round": 116,
+  "round110_status": "limited_persistence_sandbox_failed",
+  "round111_status": "sandbox_cleanup_failed",
+  "round112_status": "post_sandbox_audit_replay_failed",
+  "runtime_mapping_enabled_now": false,
+  "source_rounds_replayed": [
+    110,
+    111,
+    112
+  ],
+  "validation_commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round113_117_runtime_mapping_validation_loop.py tests/test_v3_round110_112_runtime_mapping_sandbox.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest --collect-only -q tests/test_v3_round113_117_runtime_mapping_validation_loop.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q --collect-only",
+      "status": "blocked_pre_existing: root-level legacy tests import missing spreading_activation"
+    },
+    {
+      "command": "timeout 60 pytest -q tests",
+      "status": "failed_existing_or_broader_baseline: 211 failed, 1050 passed; includes missing seed vectors.npy and older baseline expectation failures"
+    },
+    {
+      "command": "git status --short | awk '{print $2}' | rg '(^|/)vectors\\.npy$|^seeds/subsets/|_operator_artifacts|\\.zip$|\\.part$' || true",
+      "status": "passed: no forbidden changed paths"
+    }
+  ],
+  "vectors_npy_committed": false
+}

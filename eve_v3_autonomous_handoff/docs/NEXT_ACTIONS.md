@@ -210,3 +210,12 @@ Still forbidden until that explicit patch:
   - missing local seed `vectors.npy` fixture artifacts required by historical seed tests;
   - older baseline expectation failures in `pytest -q tests`.
 - Do not report full-suite success until those checks pass in the target environment.
+
+## After Round117
+
+1. Review `validation/ROUND113_STATE_DEBUG_AUDIT_REPLAY_VIEWER_STATUS.json` for the state-debug/audit replay viewer timeline.
+2. Review `validation/ROUND114_LEGACY_ROOT_BLOCKER_ISOLATION_STATUS.json` before interpreting root-level collect-only failures.
+3. Review `validation/ROUND115_BROADER_VALIDATION_TRIAGE_STATUS.json` for focused-vs-broader validation separation.
+4. Review `validation/ROUND116_SANDBOX_REPLAY_REGRESSION_GUARD_STATUS.json` for replay regression guard evidence.
+5. Review `validation/ROUND117_OPERATOR_GO_NO_GO_PACKAGE_STATUS.json` for the no-go package.
+6. Next recommended work: resolve or explicitly quarantine the legacy root `spreading_activation` collection blocker in a separate validation hygiene round before considering real production persistence.

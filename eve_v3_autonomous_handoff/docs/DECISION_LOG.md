@@ -200,3 +200,28 @@ Decision: add a guarded runtime mapping persistence activation candidate without
 - Added read-only audit replay before building any viewer/dashboard surface.
 - Replay validates Round110/111 artifacts and disabled flags without re-applying sandbox mutation.
 - Next recommended round is Round113 state-debug/audit replay viewer; production persistence remains blocked pending explicit operator approval.
+
+## Round113 decision
+
+- Added a read-only state-debug/audit replay viewer before any production persistence decision.
+- Viewer output is evidence only; it does not reapply sandbox mutation.
+
+## Round114 decision
+
+- Isolated the broader root collection blocker as pre-existing legacy imports of missing `spreading_activation`.
+- Decided not to weaken, skip, or rewrite legacy root tests in this runtime mapping PR.
+
+## Round115 decision
+
+- Recorded broader validation as blocked/partial where appropriate while preserving focused pass results.
+- Broader validation blockers do not justify enabling production persistence.
+
+## Round116 decision
+
+- Added a regression guard that replays the sandbox/cleanup/replay chain before any future persistence decision.
+- The guard remains JSON-only and does not create vectors or operator artifacts.
+
+## Round117 decision
+
+- Packaged Round113-116 evidence for operator review.
+- Recommendation is `no_go_for_production_persistence_in_this_pr`; production persistence, runtime mapping default enablement, and enforcement remain disabled.

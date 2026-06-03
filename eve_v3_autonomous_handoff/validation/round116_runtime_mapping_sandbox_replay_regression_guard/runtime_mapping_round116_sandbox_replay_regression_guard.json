@@ -1,0 +1,32 @@
+{
+  "agp_bypass_used": false,
+  "artifact_dir": "eve_v3_autonomous_handoff/validation/round116_runtime_mapping_sandbox_replay_regression_guard",
+  "enforcement_enabled_now": false,
+  "forbidden_artifact_paths": [],
+  "production_persistence_enabled": false,
+  "read_only": false,
+  "regression_checks": {
+    "agp_bypass_used": false,
+    "enforcement_enabled_now_false": true,
+    "production_persistence_enabled": false,
+    "round110_passed": false,
+    "round111_cleanup_verified": false,
+    "round112_replay_passed": false,
+    "runtime_mapping_enabled_now_false": true,
+    "sandbox_state_removed": true,
+    "vectors_npy_committed": false
+  },
+  "regression_guard_version": "v3_round116_runtime_mapping_sandbox_replay_regression_guard",
+  "regression_status": "sandbox_replay_regression_guard_failed",
+  "round": 116,
+  "round110_status": "limited_persistence_sandbox_failed",
+  "round111_status": "sandbox_cleanup_failed",
+  "round112_status": "post_sandbox_audit_replay_failed",
+  "runtime_mapping_enabled_now": false,
+  "source_rounds_replayed": [
+    110,
+    111,
+    112
+  ],
+  "vectors_npy_committed": false
+}

@@ -1,0 +1,83 @@
+{
+  "agp_bypass_used": false,
+  "enforcement_enabled_now": false,
+  "forbidden_artifact_paths": [],
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "replay_checks": {
+    "agp_bypass_used": false,
+    "checkpoint_before_enforcement_enabled_false": true,
+    "checkpoint_before_runtime_mapping_enabled_false": true,
+    "enforcement_enabled_now_false": true,
+    "production_persistence_enabled": false,
+    "round110_event_order_verified": false,
+    "round110_rollback_verified": true,
+    "round111_cleanup_verified": false,
+    "round111_event_order_verified": false,
+    "runtime_mapping_enabled_now_false": true,
+    "sandbox_state_removed": true,
+    "vectors_npy_committed": false
+  },
+  "replay_status": "post_sandbox_audit_replay_failed",
+  "replay_version": "v3_round112_post_sandbox_focused_validation_audit_replay",
+  "round": 112,
+  "round110_event_order": {
+    "actual_event_order": [
+      "sandbox_precheck_started",
+      "sandbox_checkpoint_written",
+      "sandbox_mapping_persisted_json_only",
+      "sandbox_rollback_applied",
+      "sandbox_precheck_started",
+      "sandbox_checkpoint_written",
+      "sandbox_mapping_persisted_json_only",
+      "sandbox_rollback_applied"
+    ],
+    "event_indices": [
+      0,
+      1,
+      2,
+      3,
+      0,
+      1,
+      2,
+      3
+    ],
+    "event_order_verified": false,
+    "expected_event_order": [
+      "sandbox_precheck_started",
+      "sandbox_checkpoint_written",
+      "sandbox_mapping_persisted_json_only",
+      "sandbox_rollback_applied"
+    ]
+  },
+  "round111_event_order": {
+    "actual_event_order": [
+      "cleanup_precheck_started",
+      "sandbox_state_file_removed",
+      "cleanup_verification_passed",
+      "cleanup_precheck_started",
+      "sandbox_state_file_removed",
+      "cleanup_verification_failed"
+    ],
+    "event_indices": [
+      0,
+      1,
+      2,
+      0,
+      1,
+      2
+    ],
+    "event_order_verified": false,
+    "expected_event_order": [
+      "cleanup_precheck_started",
+      "sandbox_state_file_removed",
+      "cleanup_verification_passed"
+    ]
+  },
+  "runtime_mapping_enabled_now": false,
+  "source_rounds": [
+    110,
+    111
+  ],
+  "vectors_npy_committed": false
+}

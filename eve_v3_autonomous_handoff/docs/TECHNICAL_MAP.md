@@ -210,3 +210,25 @@ Boundary:
 - No production persistence is enabled.
 - `runtime_mapping_enabled` and `enforcement_enabled` default to `False`.
 - No `vectors.npy`, seed subset, zip/part/upload, or `_operator_artifacts` file is part of the patch.
+
+## Round113-117 runtime mapping validation loop surfaces
+
+- `adapters/runtime_mapping_limited_persistence_sandbox.py`
+  - `build_round113_state_debug_audit_replay_viewer(...)`: read-only viewer over Round110-112 checkpoint, audit, rollback, cleanup, replay, and state-debug artifacts.
+  - `build_round114_legacy_root_blocker_isolation(...)`: static isolation of root-level legacy collection blockers, currently missing `spreading_activation` imports.
+  - `build_round115_broader_validation_triage_report(...)`: focused-vs-broader validation triage data.
+  - `run_round116_runtime_mapping_sandbox_replay_regression_guard(...)`: JSON-only regression guard that reruns Round110-112 and verifies cleanup.
+  - `build_round117_operator_go_no_go_package(...)`: operator package recommending no-go for production persistence in this PR.
+- `adapters/lex_concept_mapping_adapter.py`
+  - `stats()` now advertises Round113-117 surfaces while keeping `runtime_mapping_enabled=False` and `enforcement_enabled=False` by default.
+- `adapters/state_debug_adapter.py`
+  - State-debug now surfaces Round113-117 availability and metadata under `lex_concept_mapping`.
+- `tests/test_v3_round113_117_runtime_mapping_validation_loop.py`
+  - Focused tests cover viewer read-only behavior, blocker isolation, validation triage, regression guard cleanup, no-go package, state-debug exposure, and JSON export helpers.
+
+Boundary:
+
+- Production persistence remains disabled.
+- `runtime_mapping_enabled` and `enforcement_enabled` default to `False`.
+- No AGP bypass is added.
+- No `vectors.npy`, seed subset, zip/part/upload, or `_operator_artifacts` file is part of the patch.
