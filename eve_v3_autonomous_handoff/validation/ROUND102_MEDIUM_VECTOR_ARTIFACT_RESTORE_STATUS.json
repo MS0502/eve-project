@@ -1,0 +1,173 @@
+{
+  "download_errors": [
+    {
+      "asset": "subset_medium_30k-20260603T024008Z-3-001.zip.part01.upload.zip",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>",
+      "error_type": "URLError",
+      "url": "https://github.com/MS0502/eve-project/releases/download/eve-medium-30k-20260603/subset_medium_30k-20260603T024008Z-3-001.zip.part01.upload.zip"
+    },
+    {
+      "asset": "subset_medium_30k-20260603T024008Z-3-001.zip.part02.upload.zip",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>",
+      "error_type": "URLError",
+      "url": "https://github.com/MS0502/eve-project/releases/download/eve-medium-30k-20260603/subset_medium_30k-20260603T024008Z-3-001.zip.part02.upload.zip"
+    },
+    {
+      "asset": "subset_medium_30k_split_manifest.json",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>",
+      "error_type": "URLError",
+      "url": "https://github.com/MS0502/eve-project/releases/download/eve-medium-30k-20260603/subset_medium_30k_split_manifest.json"
+    }
+  ],
+  "downloads": [],
+  "hard_stop_released": false,
+  "install_result": null,
+  "manual_download_fallback": {
+    "must_not_git_add": [
+      "wrapper zip assets",
+      "raw part files",
+      "restored zip",
+      "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy"
+    ],
+    "reason": "current execution environment cannot download GitHub Release assets because outbound HTTPS CONNECT returned 403",
+    "safe_local_restore_command": "python -m adapters.medium_vector_release_restore --work-dir /tmp/eve_round102_medium_restore --asset-dir /path/to/downloaded/release-assets --no-download --install-to-repo --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json"
+  },
+  "next_step": "manual_download_or_network_enabled_restore_required",
+  "paths": {
+    "asset_dir": "/tmp/eve_round102_medium_restore",
+    "repo_root": ".",
+    "target_vectors_path": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+    "work_dir": "/tmp/eve_round102_medium_restore"
+  },
+  "policy": {
+    "agp_bypass": false,
+    "commit_raw_parts_to_pr": false,
+    "commit_restored_zip_to_pr": false,
+    "commit_vectors_npy_to_pr": false,
+    "commit_wrapper_zip_to_pr": false,
+    "create_dummy_vectors": false,
+    "operator_supplied_artifact": true,
+    "weaken_tests": false
+  },
+  "release": {
+    "assets": [
+      "subset_medium_30k-20260603T024008Z-3-001.zip.part01.upload.zip",
+      "subset_medium_30k-20260603T024008Z-3-001.zip.part02.upload.zip",
+      "subset_medium_30k_split_manifest.json"
+    ],
+    "download_base": "https://github.com/MS0502/eve-project/releases/download/eve-medium-30k-20260603",
+    "owner": "MS0502",
+    "repo": "eve-project",
+    "tag": "eve-medium-30k-20260603"
+  },
+  "restored_zip": {
+    "actual_sha256": null,
+    "concatenated": false,
+    "expected_sha256": "ecfeabea37cf947a09c3d2d11f83f5ac9b7bc29cb026d32b18c4be616970b98f",
+    "missing_parts": [
+      "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip.part01",
+      "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip.part02"
+    ],
+    "restored_zip_path": "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip",
+    "sha256_match": false
+  },
+  "round": 102,
+  "status": "blocked_release_restore_incomplete",
+  "validation_commands": [
+    {
+      "command": "python -m adapters.medium_vector_release_restore --work-dir /tmp/eve_round102_medium_restore --repo-root . --install-to-repo --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json",
+      "details": "GitHub Release asset downloads failed with CONNECT tunnel 403; no wrapper/raw/restored zip or vectors.npy was installed.",
+      "exit_code": 2,
+      "result": "blocked_partial_environment_download"
+    },
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "details": "Focused compile check passed.",
+      "result": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round102_medium_vector_release_restore.py tests/test_v3_round100_medium_vector_restoration.py",
+      "details": "Round102 fail-closed restore helper tests and Round100 restoration tests passed: 7 passed.",
+      "result": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+      "details": "3 prerequisite failures remain because the release assets could not be downloaded/installed, so known fastText context vectors are still unavailable.",
+      "exit_code": 1,
+      "result": "blocked_partial"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+      "details": "14 failures remain at the shared prerequisite EveSpecific vector commit setup for the same missing known-context-vector reason.",
+      "exit_code": 1,
+      "result": "blocked_partial"
+    },
+    {
+      "collected_tests_before_error": 1227,
+      "command": "pytest --collect-only -q",
+      "details": "1227 tests collected before 4 pre-existing legacy root import errors for missing spreading_activation.",
+      "exit_code": 2,
+      "legacy_root_errors": [
+        "test_episodic.py imports missing spreading_activation",
+        "test_eve_main_ab.py imports missing spreading_activation",
+        "test_eve_main_abc.py imports missing spreading_activation",
+        "test_natural_lang_v2.py imports missing spreading_activation"
+      ],
+      "result": "blocked_partial_legacy_root"
+    }
+  ],
+  "vectors_audit": {
+    "acceptable_for_manual_install": false,
+    "candidate_path": "/tmp/eve_round102_medium_restore/subset_medium_30k/vectors.npy",
+    "checksum_actual": null,
+    "checksum_expected": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+    "checksum_match": false,
+    "dtype": null,
+    "exists": false,
+    "expected_shape": [
+      30000,
+      300
+    ],
+    "fake_or_dummy_artifact_allowed": false,
+    "load_error": null,
+    "no_artifact_created": true,
+    "no_copy_performed": true,
+    "operator_action_if_acceptable": null,
+    "read_only": true,
+    "rejection_reasons": [
+      "candidate_vectors_file_missing",
+      "vectors_checksum_mismatch",
+      "vectors_shape_mismatch",
+      "vectors_dtype_mismatch"
+    ],
+    "round": 100,
+    "shape": null,
+    "target_path": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+    "version": "v3_round100_medium_vector_restoration_plan"
+  },
+  "version": "v3_round102_medium_vector_release_restore",
+  "wrapper_extractions": [
+    {
+      "error": "wrapper_missing",
+      "extracted": false,
+      "raw_part_name": "subset_medium_30k-20260603T024008Z-3-001.zip.part01",
+      "raw_part_path": "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip.part01",
+      "wrapper_path": "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip.part01.upload.zip"
+    },
+    {
+      "error": "wrapper_missing",
+      "extracted": false,
+      "raw_part_name": "subset_medium_30k-20260603T024008Z-3-001.zip.part02",
+      "raw_part_path": "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip.part02",
+      "wrapper_path": "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip.part02.upload.zip"
+    }
+  ],
+  "zip_extract": {
+    "error": "restored_zip_sha256_mismatch_or_missing",
+    "extracted_vectors_path": "/tmp/eve_round102_medium_restore/subset_medium_30k/vectors.npy",
+    "internal_vectors_path": "subset_medium_30k/vectors.npy",
+    "restored_zip_path": "/tmp/eve_round102_medium_restore/subset_medium_30k-20260603T024008Z-3-001.zip",
+    "vectors_extracted": false,
+    "zip_integrity_ok": false
+  }
+}

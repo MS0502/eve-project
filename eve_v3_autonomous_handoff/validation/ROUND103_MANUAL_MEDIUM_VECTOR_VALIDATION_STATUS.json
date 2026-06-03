@@ -1,0 +1,161 @@
+{
+  "artifact_boundary": {
+    "boundary_ok": true,
+    "target_vectors_allowed_in_pr_diff": false,
+    "target_vectors_path": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+    "target_vectors_present": false,
+    "target_vectors_tracked_by_git": false,
+    "version": "v3_round103_manual_medium_vector_validation"
+  },
+  "blocked_reason": "medium vectors.npy is absent/invalid or tracked by git; install the verified ignored artifact before validation",
+  "command_results": [],
+  "commands_executed": false,
+  "hard_stop_released": false,
+  "manual_restore_command": "python -m adapters.medium_vector_release_restore --work-dir /tmp/eve_round102_medium_restore --asset-dir /path/to/downloaded/release-assets --no-download --install-to-repo --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json",
+  "policy": {
+    "agp_bypass": false,
+    "commit_vectors_npy_to_pr": false,
+    "create_dummy_vectors": false,
+    "download_release_assets_in_codex": false,
+    "operator_manual_install_path": true,
+    "weaken_tests": false
+  },
+  "read_only": false,
+  "round": 103,
+  "scan": {
+    "medium_validation_status": "blocked_missing_or_invalid_vectors",
+    "medium_vectors_present": false,
+    "no_artifact_created": true,
+    "read_only": true,
+    "repo_root": ".",
+    "round": 100,
+    "small_focused_validation_status": "blocked_missing_or_invalid_vectors",
+    "small_vectors_present": false,
+    "subset_rows": [
+      {
+        "artifact_complete": false,
+        "checksums": {
+          "subset_manifest_actual": "SHA256:28222ff89e1fa0d2c20463eeef79729d731bf0484f0f4f8161863088c2724c3a",
+          "subset_manifest_expected": "SHA256:28222ff89e1fa0d2c20463eeef79729d731bf0484f0f4f8161863088c2724c3a",
+          "subset_manifest_match": true,
+          "vectors_actual": null,
+          "vectors_expected": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+          "vectors_match": false,
+          "vocab_actual": "SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308",
+          "vocab_expected": "SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308",
+          "vocab_match": true
+        },
+        "exists": {
+          "subset_dir": true,
+          "subset_manifest": true,
+          "vectors": false,
+          "vocab": true
+        },
+        "expected_shape": [
+          30000,
+          300
+        ],
+        "paths": {
+          "subset_manifest": "seeds/subsets/cc.ko.300.subset.medium.30k/subset_manifest.json",
+          "vectors": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+          "vocab": "seeds/subsets/cc.ko.300.subset.medium.30k/vocab.txt"
+        },
+        "runtime_role": "default_runtime_primary",
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.medium.30k",
+        "subset_name": "cc.ko.300.subset.medium.30k",
+        "validation_tier": "medium_full_validation",
+        "vectors": {
+          "dtype": null,
+          "load_error": null,
+          "shape": null
+        }
+      },
+      {
+        "artifact_complete": false,
+        "checksums": {
+          "subset_manifest_actual": "SHA256:fddb35096e6acb4b541a5a96f28de4cc0478b56b28d724f8a2718e846bb0a856",
+          "subset_manifest_expected": "SHA256:fddb35096e6acb4b541a5a96f28de4cc0478b56b28d724f8a2718e846bb0a856",
+          "subset_manifest_match": true,
+          "vectors_actual": null,
+          "vectors_expected": "SHA256:6b55eb8eef00a003164b3ae5ce74424673d3539a0007e94f27edf08683bb2309",
+          "vectors_match": false,
+          "vocab_actual": "SHA256:c8d0d5ab119e7da119b7ca14d28a48f13767d2b86f8860ce0edbd51158cb701b",
+          "vocab_expected": "SHA256:c8d0d5ab119e7da119b7ca14d28a48f13767d2b86f8860ce0edbd51158cb701b",
+          "vocab_match": true
+        },
+        "exists": {
+          "subset_dir": true,
+          "subset_manifest": true,
+          "vectors": false,
+          "vocab": true
+        },
+        "expected_shape": [
+          5000,
+          300
+        ],
+        "paths": {
+          "subset_manifest": "seeds/subsets/cc.ko.300.subset.small.5k/subset_manifest.json",
+          "vectors": "seeds/subsets/cc.ko.300.subset.small.5k/vectors.npy",
+          "vocab": "seeds/subsets/cc.ko.300.subset.small.5k/vocab.txt"
+        },
+        "runtime_role": "code_only_focused_fallback_if_vectors_exist",
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.small.5k",
+        "subset_name": "cc.ko.300.subset.small.5k",
+        "validation_tier": "small_focused_validation_only",
+        "vectors": {
+          "dtype": null,
+          "load_error": null,
+          "shape": null
+        }
+      },
+      {
+        "artifact_complete": false,
+        "checksums": {
+          "subset_manifest_actual": "SHA256:137631552e9a0c6efca941c48e0fa4bd35854ba59519d87dcdcdfa29a38b1caa",
+          "subset_manifest_expected": "SHA256:137631552e9a0c6efca941c48e0fa4bd35854ba59519d87dcdcdfa29a38b1caa",
+          "subset_manifest_match": true,
+          "vectors_actual": null,
+          "vectors_expected": "SHA256:ac987683f9ad733cea97ed13ff5b39e73a2ed91ba5d489466f690b2e747d6f2a",
+          "vectors_match": false,
+          "vocab_actual": "SHA256:5e7eb8da5cb96f9c1d207846f8f4ef781f48f74a0f9b3eb4ee112cdc47d53064",
+          "vocab_expected": "SHA256:5e7eb8da5cb96f9c1d207846f8f4ef781f48f74a0f9b3eb4ee112cdc47d53064",
+          "vocab_match": true
+        },
+        "exists": {
+          "subset_dir": true,
+          "subset_manifest": true,
+          "vectors": false,
+          "vocab": true
+        },
+        "expected_shape": [
+          1000,
+          300
+        ],
+        "paths": {
+          "subset_manifest": "seeds/subsets/cc.ko.300.subset.mini.1k/subset_manifest.json",
+          "vectors": "seeds/subsets/cc.ko.300.subset.mini.1k/vectors.npy",
+          "vocab": "seeds/subsets/cc.ko.300.subset.mini.1k/vocab.txt"
+        },
+        "runtime_role": "fixture_artifact_only_not_runtime_fallback",
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.mini.1k",
+        "subset_name": "cc.ko.300.subset.mini.1k",
+        "validation_tier": "fixture_boundary_validation_only",
+        "vectors": {
+          "dtype": null,
+          "load_error": null,
+          "shape": null
+        }
+      }
+    ],
+    "version": "v3_round100_medium_vector_restoration_plan"
+  },
+  "single_validation_command": "python -m adapters.medium_vector_manual_validation --output eve_v3_autonomous_handoff/validation/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_STATUS.json",
+  "status": "blocked_manual_artifact_not_ready",
+  "validation_commands": [
+    "python -m compileall -q adapters tests main.py",
+    "pytest -q tests/test_v3_round100_medium_vector_restoration.py",
+    "pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py",
+    "pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py"
+  ],
+  "version": "v3_round103_manual_medium_vector_validation"
+}

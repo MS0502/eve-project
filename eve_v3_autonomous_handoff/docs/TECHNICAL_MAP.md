@@ -71,3 +71,54 @@ Validation boundary:
 - Small/focused fallback requires the exact small 5k artifact; it cannot be reported as medium/full validation.
 - Mini 1k remains fixture boundary only.
 - The helper does not copy, create, or mutate vector artifacts.
+
+## Round101 autonomous hard-stop map
+
+- `eve_v3_autonomous_handoff/reports/ROUND101_AUTONOMOUS_MULTI_ROUND_HARD_STOP.md`
+  - Records the Issue #5 autonomous multi-round operating policy and the reason this run stops after Round100.
+  - Does not add runtime behavior.
+
+- `eve_v3_autonomous_handoff/validation/ROUND101_AUTONOMOUS_HARD_STOP_STATUS.json`
+  - Structured status for the final integrated PR.
+  - Classifies the blocker as `external_artifact_operator_action_required`.
+  - Records that no dummy vectors, binary vector commits, AGP bypass, nondeterminism, weakened tests, or runtime mapping persistence were introduced.
+
+Boundary:
+
+- Round101 is documentation/reporting only.
+- The next technical implementation round remains blocked until the medium 30k vector artifact is restored or the operator explicitly approves a partial-validation path.
+
+## Round102 Release artifact restore surfaces
+
+- `adapters/medium_vector_release_restore.py`
+  - `restore_medium_vectors_from_release(...)`: downloads or consumes local Release assets in a temporary work directory, unwraps wrapper zips, concatenates raw parts, verifies reconstructed zip SHA-256, verifies zip integrity, extracts the internal `vectors.npy`, and reuses the Round100 vector audit.
+  - `write_round102_release_restore_status(...)`: writes JSON status only.
+  - `--install-to-repo`: copies `vectors.npy` into the ignored seed path only after all gates pass; it does not stage or commit binary artifacts.
+
+- `tests/test_v3_round102_medium_vector_release_restore.py`
+  - Proves the helper fails closed without assets.
+  - Proves status export writes JSON only and does not create binary seed artifacts.
+
+Boundary:
+
+- Release assets are operator-supplied external artifacts.
+- Wrapper zips, raw parts, restored zip, and `vectors.npy` remain forbidden in PR diffs.
+- Runtime mapping validation remains blocked until `hard_stop_released=true` is observed and the ignored local seed vector is installed.
+
+## Round103 manual validation surfaces
+
+- `adapters/medium_vector_manual_validation.py`
+  - `build_round103_manual_validation_plan(...)`: read-only readiness plan over the Round100 subset scan and git artifact-boundary audit.
+  - `artifact_boundary_audit(...)`: confirms the target medium `vectors.npy` is not tracked by git.
+  - `run_round103_manual_validation(...)`: executes compile/focused validation only after the medium artifact is present, valid, and untracked.
+  - `write_round103_manual_validation_status(...)`: writes JSON status only.
+
+- `tests/test_v3_round103_manual_medium_vector_validation.py`
+  - Covers fail-closed behavior without manual vectors.
+  - Confirms the single validation command and JSON-only status export.
+
+Boundary:
+
+- Round103 does not download Release assets.
+- Round103 does not create or install vectors.
+- `vectors.npy` remains forbidden in PR diffs.

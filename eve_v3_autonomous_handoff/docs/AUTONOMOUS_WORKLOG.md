@@ -167,3 +167,121 @@ Validation:
 - `python -m compileall -q adapters tests main.py` passed.
 - `pytest -q tests/test_v3_round100_medium_vector_restoration.py` passed: 5 passed.
 - Round97/98 and Round92~98 focused commands remain blocked/partial for the missing-vector prerequisite.
+
+## Round101 — autonomous multi-round policy hard stop
+
+Goal:
+
+- Start the Issue #5 autonomous multi-round operating policy and decide whether this task can continue beyond Round100 without external action.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/DECISION_LOG.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND101_AUTONOMOUS_MULTI_ROUND_HARD_STOP.md`
+- `eve_v3_autonomous_handoff/validation/ROUND101_AUTONOMOUS_HARD_STOP_STATUS.json`
+
+Commands run:
+
+- `python -m adapters.medium_vector_restoration`
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round100_medium_vector_restoration.py`
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`
+- `pytest --collect-only -q`
+
+Results:
+
+- Confirmed the new operating policy: no intermediate PRs, internal round report/validation JSON per round, final integrated PR only.
+- Confirmed hard stop remains active because the required medium 30k `vectors.npy` artifact is absent and must not be committed or faked.
+- Runtime mapping persistence remains disabled.
+- AGP proof object expansion remains deferred.
+
+Failures / limitations:
+
+- `python -m adapters.medium_vector_restoration` returned exit code `2` by design because no medium/small/mini vector artifact is present.
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py` remains blocked/partial with 3 prerequisite failures from the same missing known-context vectors.
+- `pytest --collect-only -q` remains blocked/partial after 1225 collected tests because of pre-existing legacy root `spreading_activation` import errors.
+- Additional autonomous implementation would require operator artifact restoration or explicit partial-validation approval.
+
+Next recommendation:
+
+- Create the final integrated PR for Round100~Round101, then wait for operator restoration of the medium vector artifact or explicit partial-validation instructions.
+
+## Round102 — medium vector Release artifact restore attempt
+
+Goal:
+
+- Use the operator-supplied GitHub Release assets for the medium 30k vector artifact without committing wrapper zips, raw parts, restored zip, or `vectors.npy` to the PR diff.
+
+Changed files:
+
+- `adapters/medium_vector_release_restore.py`
+- `tests/test_v3_round102_medium_vector_release_restore.py`
+- `eve_v3_autonomous_handoff/reports/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json`
+- handoff docs
+
+Commands run:
+
+- `python -m adapters.medium_vector_release_restore --work-dir /tmp/eve_round102_medium_restore --repo-root . --install-to-repo --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json`
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round102_medium_vector_release_restore.py tests/test_v3_round100_medium_vector_restoration.py`
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`
+- `pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`
+- `pytest --collect-only -q`
+
+Results:
+
+- Added a deterministic Release restore helper that downloads to temp only, unwraps split wrapper zips, verifies reconstructed zip SHA-256, verifies internal `vectors.npy` SHA/shape/dtype, and installs only after all gates pass.
+- Current environment download failed with HTTPS CONNECT 403 for all three Release assets.
+- No wrapper zip, raw part, restored zip, or `vectors.npy` was committed or installed.
+- Round97/98 and Round92~98 focused validation remain blocked because known fastText context vectors are still unavailable.
+- Collect-only remains blocked/partial after 1227 collected tests because of pre-existing legacy root `spreading_activation` import errors.
+
+Failures / limitations:
+
+- Hard stop is not lifted in this execution environment because Release assets could not be downloaded.
+- Manual/local restore remains available with `--asset-dir ... --no-download --install-to-repo` after the assets are downloaded outside the repo.
+
+Next recommendation:
+
+- Run the Round102 helper in a network-enabled environment or with manually downloaded assets, confirm `hard_stop_released=true`, then rerun Round97/98 and Round92~98 focused validation before proceeding to runtime mapping persistence approval or AGP proof expansion.
+
+## Round103 — manual medium vector validation workflow
+
+Goal:
+
+- Stop retrying direct GitHub Release download in Codex and provide the single validation command for an operator/manual medium vector install path.
+
+Changed files:
+
+- `adapters/medium_vector_manual_validation.py`
+- `tests/test_v3_round103_manual_medium_vector_validation.py`
+- `eve_v3_autonomous_handoff/reports/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_WORKFLOW.md`
+- `eve_v3_autonomous_handoff/validation/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_STATUS.json`
+- handoff docs
+
+Commands run:
+
+- `python -m adapters.medium_vector_manual_validation --output eve_v3_autonomous_handoff/validation/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_STATUS.json`
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round103_manual_medium_vector_validation.py tests/test_v3_round102_medium_vector_release_restore.py tests/test_v3_round100_medium_vector_restoration.py`
+- `python -m json.tool eve_v3_autonomous_handoff/validation/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_STATUS.json >/dev/null`
+
+Results:
+
+- Added a fail-closed manual install validation runner.
+- The runner executes Round97/98 validation only after the medium artifact is manifest-valid and untracked by git.
+- Current checkout remains blocked because `vectors.npy` is absent.
+- No binary artifact was created, installed, staged, or committed.
+
+Failures / limitations:
+
+- The Round103 CLI exits 2 in this checkout by design because the operator artifact has not been manually installed here.
+
+Next recommendation:
+
+- After manual Release asset restore in a network-enabled environment, run the Round103 single validation command and proceed only if it reports validation success.

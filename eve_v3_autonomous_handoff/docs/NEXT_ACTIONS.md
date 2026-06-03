@@ -89,3 +89,74 @@ Still deferred:
 - AGP proof object expansion.
 - Runtime mapping persistence approval gate.
 - Any persistence/enforcement mutation.
+
+## Round101 update — final integrated PR hard stop
+
+Current position:
+
+- Issue #5 autonomous multi-round policy is acknowledged for this task.
+- No intermediate PR was created during the round loop.
+- Round100 restoration helper exists, but the required medium 30k `vectors.npy` is still absent.
+- Round101 confirms hard stop because operator artifact action is required.
+
+Immediate next action:
+
+```text
+Create one final integrated PR for Round100~Round101, then wait for operator action.
+```
+
+Operator action required before more autonomous implementation:
+
+1. Restore and audit the medium 30k `vectors.npy` artifact outside the PR diff.
+2. Or explicitly approve a partial-validation path.
+
+Still deferred:
+
+- Runtime mapping persistence approval gate.
+- AGP proof object expansion.
+- Legacy root blocker isolation.
+
+## Round102 update — Release artifact restore blocked by environment download
+
+Current position:
+
+- The operator supplied the medium 30k vector artifact through GitHub Release tag `eve-medium-30k-20260603`.
+- Round102 added a deterministic restore/audit helper for those assets.
+- This execution environment could not download the Release assets due HTTPS CONNECT 403.
+- No binary artifact was committed or installed.
+
+Immediate next action:
+
+```bash
+python -m adapters.medium_vector_release_restore \
+  --work-dir /tmp/eve_round102_medium_restore \
+  --asset-dir /path/to/downloaded/release-assets \
+  --no-download \
+  --install-to-repo \
+  --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json
+```
+
+Proceed only when the status JSON reports `hard_stop_released=true`.
+
+Then rerun Round97/98 and Round92~98 focused validation. Runtime mapping persistence approval gate and AGP proof object expansion remain deferred until those validations are unblocked.
+
+## Round103 update — manual install single validation command
+
+Current position:
+
+- Codex direct Release downloads remain blocked by HTTPS CONNECT 403.
+- Round103 provides the manual/operator validation command to run after local artifact restoration.
+- Current checkout remains blocked because the ignored medium `vectors.npy` is not installed here.
+
+Manual sequence:
+
+1. Restore the Release assets outside the repo or in a temp directory.
+2. Install the verified vector with the Round102 helper using `--asset-dir ... --no-download --install-to-repo`.
+3. Run:
+
+```bash
+python -m adapters.medium_vector_manual_validation \
+  --output eve_v3_autonomous_handoff/validation/ROUND103_MANUAL_MEDIUM_VECTOR_VALIDATION_STATUS.json
+```
+
+Proceed to runtime mapping persistence approval gate only when Round103 reports validation success.
