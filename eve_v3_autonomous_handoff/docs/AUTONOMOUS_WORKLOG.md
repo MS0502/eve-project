@@ -398,3 +398,154 @@ Results:
 - Round124 reran collect-only. The original `spreading_activation` import blocker is recovered, but collect-only remains partial because the same legacy root files now block on missing `working_memory` imports.
 - Round125 records broader validation as blocked/partial rather than green.
 - Round126 keeps the next recommendation at `NO-GO`; production persistence remains disabled, `runtime_mapping_enabled` default remains false, and `enforcement_enabled` default remains false.
+
+## Round127 — legacy working_memory import blocker diagnosis
+
+Goal:
+
+- Diagnose the next collect-only blocker after the Round122-126 `spreading_activation` recovery.
+
+Changed files:
+
+- `adapters/runtime_mapping_import_blocker_recovery.py`
+- `eve_v3_autonomous_handoff/reports/ROUND127_WORKING_MEMORY_IMPORT_BLOCKER_DIAGNOSIS.md`
+- `eve_v3_autonomous_handoff/validation/ROUND127_WORKING_MEMORY_IMPORT_BLOCKER_DIAGNOSIS_STATUS.json`
+
+Commands run:
+
+- `pytest --collect-only -q`
+
+Results:
+
+- Confirmed the next pre-existing root legacy blocker was missing `working_memory` imports.
+- Confirmed retained implementation exists at `legacy/eve_modules/working_memory.py`.
+
+Failures / limitations:
+
+- No production persistence enablement was attempted.
+
+Next recommendation:
+
+- Round128 minimal compatibility shim that re-exports the retained legacy implementation only.
+
+## Round128 — WorkingMemory compatibility shim
+
+Goal:
+
+- Restore the root `working_memory` import path without faking behavior.
+
+Changed files:
+
+- `working_memory.py`
+- `adapters/runtime_mapping_import_blocker_recovery.py`
+- `tests/test_v3_round127_129_working_memory_import_recovery.py`
+- `eve_v3_autonomous_handoff/reports/ROUND128_WORKING_MEMORY_COMPAT_SHIM.md`
+- `eve_v3_autonomous_handoff/validation/ROUND128_WORKING_MEMORY_COMPAT_SHIM_STATUS.json`
+
+Commands run:
+
+- `pytest -q tests/test_v3_round127_129_working_memory_import_recovery.py`
+
+Results:
+
+- Root `WorkingMemory` and `WMSlot` now re-export the retained `legacy.eve_modules.working_memory` symbols.
+- Focused tests verify no dummy behavior, no vector artifacts, no runtime mapping default enablement, no enforcement enablement, and no AGP bypass.
+
+Failures / limitations:
+
+- None for the shim itself.
+
+Next recommendation:
+
+- Round129 collect-only recovery verification.
+
+## Round129 — collect-only after WorkingMemory recovery
+
+Goal:
+
+- Verify collect-only recovery after the Round128 shim.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND129_COLLECT_ONLY_AFTER_WORKING_MEMORY_VERIFICATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND129_COLLECT_ONLY_AFTER_WORKING_MEMORY_VERIFICATION_STATUS.json`
+
+Commands run:
+
+- `pytest --collect-only -q`
+
+Results:
+
+- Remaining `working_memory` import errors: 0.
+- Collect-only progressed to the next blocker family: legacy collection-time `SystemExit` in `test_natural_lang_v2.py`.
+
+Failures / limitations:
+
+- Collect-only is still blocked/partial with return code 3.
+
+Next recommendation:
+
+- Round130 taxonomy refresh and Round131 NO-GO refresh before any further blocker-isolation round.
+
+## Round130 — broader validation taxonomy refresh
+
+Goal:
+
+- Classify validation after WorkingMemory import recovery without weakening legacy tests.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND130_BROADER_VALIDATION_TAXONOMY_REFRESH.md`
+- `eve_v3_autonomous_handoff/validation/ROUND130_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
+
+Commands run:
+
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round127_129_working_memory_import_recovery.py`
+- `pytest --collect-only -q`
+- `pytest -q`
+
+Results:
+
+- Compile check passed.
+- Focused Round127-129 tests passed.
+- Collect-only and broader pytest are blocked/partial by the same legacy collection-time `SystemExit`.
+
+Failures / limitations:
+
+- Broader validation cannot proceed until the legacy collection side effect is isolated or corrected in a separate round.
+
+Next recommendation:
+
+- Round131 recommendation remains NO-GO.
+
+## Round131 — go/no-go refresh after WorkingMemory isolation
+
+Goal:
+
+- Refresh recommendation after Round127-130.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND131_GO_NO_GO_REFRESH_AFTER_WORKING_MEMORY.md`
+- `eve_v3_autonomous_handoff/validation/ROUND131_GO_NO_GO_REFRESH_AFTER_WORKING_MEMORY_STATUS.json`
+
+Commands run:
+
+- `pytest -q`
+
+Results:
+
+- WorkingMemory import blocker improved.
+- Collect-only is not green due to the next legacy side-effect blocker.
+- Production persistence remains NO-GO.
+- `runtime_mapping_enabled` default remains false.
+- `enforcement_enabled` remains false.
+
+Failures / limitations:
+
+- Remaining blocker: `legacy_collection_side_effect_system_exit` in `test_natural_lang_v2.py`.
+
+Next recommendation:
+
+- Keep production persistence NO-GO; next safe round should isolate the legacy collection-time SystemExit without deleting or weakening the legacy test.

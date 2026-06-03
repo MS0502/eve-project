@@ -260,3 +260,228 @@ def write_round_report(path: str | Path, report: dict[str, Any]) -> dict[str, An
 
 
 __all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]
+
+ROUND127_WORKING_MEMORY_IMPORT_BLOCKER_DIAGNOSIS_VERSION = "v3_round127_working_memory_import_blocker_diagnosis"
+ROUND128_WORKING_MEMORY_COMPAT_SHIM_VERSION = "v3_round128_working_memory_import_compatibility_shim"
+ROUND129_COLLECT_ONLY_AFTER_WORKING_MEMORY_VERIFICATION_VERSION = "v3_round129_collect_only_after_working_memory_verification"
+ROUND130_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION = "v3_round130_broader_validation_taxonomy_refresh"
+ROUND131_GO_NO_GO_REFRESH_AFTER_WORKING_MEMORY_VERSION = "v3_round131_go_no_go_refresh_after_working_memory_isolation"
+
+
+def build_round127_working_memory_import_blocker_diagnosis(
+    *,
+    repo_root: str | Path = ".",
+    source_round126_refresh: dict[str, Any] | None = None,
+    module_available: bool | None = None,
+) -> dict[str, Any]:
+    """Diagnose the next legacy root blocker: ``working_memory`` imports."""
+
+    diagnosis = build_round122_legacy_root_import_blocker_diagnosis(
+        repo_root=repo_root,
+        module_name="working_memory",
+        module_available=module_available,
+    )
+    blocker_active = diagnosis["diagnosis_status"] == "legacy_root_import_blocker_active"
+    return {
+        "diagnosis_version": ROUND127_WORKING_MEMORY_IMPORT_BLOCKER_DIAGNOSIS_VERSION,
+        "round": 127,
+        "source_round": (source_round126_refresh or {}).get("round"),
+        "diagnosis_status": "working_memory_import_blocker_active" if blocker_active else "working_memory_import_sites_identified_module_resolvable",
+        "module_name": "working_memory",
+        "module_available_at_root": diagnosis["module_available_at_root"],
+        "root_import_sites": diagnosis["root_import_sites"],
+        "root_import_site_count": diagnosis["root_import_site_count"],
+        "adapter_import_sites": [
+            "adapters/activation_adapter.py",
+            "adapters/memory_adapter.py",
+            "adapters/nl_adapter.py",
+        ],
+        "retained_legacy_candidate": "legacy/eve_modules/working_memory.py",
+        "retained_legacy_class": "WorkingMemory",
+        "primary_blocker": "missing working_memory compatibility import" if blocker_active else None,
+        "recommended_round128_action": "add_minimal_compatibility_shim" if blocker_active else "verify_existing_compatibility_shim",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round128_working_memory_import_compatibility_shim_decision(
+    *,
+    source_round127_diagnosis: dict[str, Any] | None = None,
+    shim_path: str | Path = "working_memory.py",
+    legacy_source_path: str | Path = "legacy/eve_modules/working_memory.py",
+    import_check_passed: bool = False,
+    behavior_source: str = "legacy_reexport_only",
+) -> dict[str, Any]:
+    """Record the working-memory shim decision without faking behavior."""
+
+    shim = Path(shim_path)
+    legacy = Path(legacy_source_path)
+    source = source_round127_diagnosis or {}
+    shim_text = shim.read_text(encoding="utf-8") if shim.exists() else ""
+    forbidden_fake_markers = ["class WorkingMemory", "dummy", "random", "vectors.npy"]
+    fake_markers_present = sorted(marker for marker in forbidden_fake_markers if marker in shim_text)
+    shim_is_minimal_reexport = (
+        shim.exists()
+        and legacy.exists()
+        and "legacy.eve_modules.working_memory" in shim_text
+        and "WorkingMemory" in shim_text
+        and not fake_markers_present
+    )
+    decision = "minimal_compatibility_shim_applied" if shim_is_minimal_reexport and import_check_passed else "isolation_plan_required"
+    return {
+        "compatibility_version": ROUND128_WORKING_MEMORY_COMPAT_SHIM_VERSION,
+        "round": 128,
+        "source_round": source.get("round"),
+        "decision_status": decision,
+        "shim_path": str(shim_path).replace("\\", "/"),
+        "legacy_source_path": str(legacy_source_path).replace("\\", "/"),
+        "shim_exists": shim.exists(),
+        "legacy_source_exists": legacy.exists(),
+        "import_check_passed": bool(import_check_passed),
+        "shim_is_minimal_reexport": shim_is_minimal_reexport,
+        "behavior_source": behavior_source,
+        "reexported_symbols": ["WMSlot", "WorkingMemory"] if shim_is_minimal_reexport else [],
+        "fake_behavior_markers_present": fake_markers_present,
+        "isolation_plan": [] if decision == "minimal_compatibility_shim_applied" else [
+            "keep root collect-only partial",
+            "do not fake WorkingMemory behavior",
+            "plan separate legacy test isolation if retained implementation is unavailable",
+        ],
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round129_collect_only_after_working_memory_verification(
+    *,
+    source_round127_diagnosis: dict[str, Any] | None = None,
+    source_round128_decision: dict[str, Any] | None = None,
+    collect_command: str = "pytest --collect-only -q",
+    return_code: int | None = None,
+    collected_tests: int | None = None,
+    remaining_errors: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Record collect-only after working-memory compatibility recovery."""
+
+    errors = list(remaining_errors or [])
+    working_memory_errors = [err for err in errors if err.get("missing_import") == "working_memory"]
+    system_exit_errors = [err for err in errors if err.get("error_family") == "legacy_collection_side_effect_system_exit"]
+    recovered = return_code == 0
+    if recovered:
+        status = "collect_only_recovered"
+    elif not working_memory_errors and system_exit_errors:
+        status = "collect_only_partial_new_legacy_side_effect_blocker_after_working_memory_recovery"
+    else:
+        status = "collect_only_partial_after_working_memory_recovery"
+    return {
+        "collect_recovery_version": ROUND129_COLLECT_ONLY_AFTER_WORKING_MEMORY_VERIFICATION_VERSION,
+        "round": 129,
+        "source_rounds": [r for r in [(source_round127_diagnosis or {}).get("round"), (source_round128_decision or {}).get("round")] if r is not None],
+        "collect_recovery_status": status,
+        "collect_command": collect_command,
+        "return_code": return_code,
+        "collected_tests": collected_tests,
+        "working_memory_import_errors_remaining": len(working_memory_errors),
+        "remaining_error_count": len(errors),
+        "remaining_errors": errors,
+        "critical_blocker_improved": len(working_memory_errors) == 0,
+        "next_blocker_family": "legacy_collection_side_effect_system_exit" if system_exit_errors else (errors[0].get("error_family") if errors else None),
+        "broader_validation_status": "collect_only_passed" if recovered else "blocked_partial",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round130_broader_validation_taxonomy_refresh(
+    *,
+    source_round129_collect_recovery: dict[str, Any] | None = None,
+    validation_items: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Refresh broader validation taxonomy after working-memory isolation."""
+
+    collect = source_round129_collect_recovery or {}
+    items = list(validation_items or [])
+    categories: dict[str, list[dict[str, Any]]] = {
+        "compile_checks": [],
+        "focused_round127_129_tests": [],
+        "collect_only": [],
+        "broader_validation": [],
+    }
+    for item in items:
+        categories.setdefault(str(item.get("category", "broader_validation")), []).append(item)
+    blocked = [item for item in items if str(item.get("status")) in {"blocked", "partial", "blocked_partial", "fail"}]
+    if collect.get("broader_validation_status") == "blocked_partial":
+        blocked.append({
+            "category": "collect_only",
+            "status": "blocked_partial",
+            "reason": collect.get("next_blocker_family") or "collect-only remains partial",
+        })
+    return {
+        "taxonomy_version": ROUND130_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION,
+        "round": 130,
+        "source_round": collect.get("round"),
+        "taxonomy_status": "broader_validation_partial_or_blocked" if blocked else "broader_validation_green",
+        "validation_categories": categories,
+        "blocked_or_partial_items": blocked,
+        "primary_remaining_blocker_family": collect.get("next_blocker_family") if blocked else None,
+        "working_memory_blocker_recovered": collect.get("working_memory_import_errors_remaining") == 0,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round131_go_no_go_refresh_after_working_memory(
+    *,
+    source_round129_collect_recovery: dict[str, Any] | None = None,
+    source_round130_taxonomy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Refresh recommendation after the working-memory import blocker round set."""
+
+    collect = source_round129_collect_recovery or {}
+    taxonomy = source_round130_taxonomy or {}
+    collect_green = collect.get("collect_recovery_status") == "collect_only_recovered"
+    broader_green = taxonomy.get("taxonomy_status") == "broader_validation_green"
+    critical_improved = collect.get("critical_blocker_improved") is True
+    recommendation = "GO" if collect_green and broader_green and critical_improved else "NO-GO"
+    blockers = []
+    if not collect_green:
+        blockers.append("collect_only_still_partial_or_blocked")
+    if not broader_green:
+        blockers.append("broader_validation_partial_or_blocked")
+    if collect.get("next_blocker_family"):
+        blockers.append(str(collect["next_blocker_family"]))
+    return {
+        "go_no_go_refresh_version": ROUND131_GO_NO_GO_REFRESH_AFTER_WORKING_MEMORY_VERSION,
+        "round": 131,
+        "source_rounds": [r for r in [collect.get("round"), taxonomy.get("round")] if r is not None],
+        "refresh_status": "go_no_go_refreshed_after_working_memory_isolation",
+        "critical_blocker_improved": critical_improved,
+        "final_recommendation": recommendation,
+        "recommendation_reason": "Keep NO-GO unless collect-only and critical blockers improve." if recommendation == "NO-GO" else "Collect-only, focused tests, and broader validation are green.",
+        "remaining_blockers": blockers,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+__all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]

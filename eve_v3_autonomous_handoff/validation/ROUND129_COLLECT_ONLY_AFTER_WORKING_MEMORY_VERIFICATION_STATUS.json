@@ -1,0 +1,31 @@
+{
+  "agp_bypass_used": false,
+  "broader_validation_status": "blocked_partial",
+  "collect_command": "pytest --collect-only -q",
+  "collect_recovery_status": "collect_only_partial_new_legacy_side_effect_blocker_after_working_memory_recovery",
+  "collect_recovery_version": "v3_round129_collect_only_after_working_memory_verification",
+  "collected_tests": null,
+  "critical_blocker_improved": true,
+  "enforcement_enabled_default": false,
+  "next_blocker_family": "legacy_collection_side_effect_system_exit",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "remaining_error_count": 1,
+  "remaining_errors": [
+    {
+      "detail": "module-level v2 NaturalLanguage validation calls sys.exit(1) during pytest collection after working_memory import is recovered",
+      "error_family": "legacy_collection_side_effect_system_exit",
+      "line": 214,
+      "path": "test_natural_lang_v2.py"
+    }
+  ],
+  "return_code": 3,
+  "round": 129,
+  "runtime_mapping_enabled_default": false,
+  "source_rounds": [
+    127,
+    128
+  ],
+  "vectors_npy_committed": false,
+  "working_memory_import_errors_remaining": 0
+}

@@ -250,3 +250,22 @@ Review the Round120 gate and Round121 blockers. Do not activate production persi
 3. Review `validation/ROUND124_COLLECT_ONLY_RECOVERY_VERIFICATION_STATUS.json` for collect-only recovery evidence and the remaining `working_memory` blocker.
 4. Treat broader validation as blocked/partial until the remaining legacy root imports are resolved or explicitly quarantined by a separate validation-hygiene round.
 5. Keep production persistence `NO-GO`; do not enable `runtime_mapping_enabled` by default and do not enable enforcement.
+
+## After Round131
+
+Current position:
+
+- `spreading_activation` root import blocker remains recovered by a minimal retained-implementation shim.
+- `working_memory` root import blocker is now recovered by a minimal retained-implementation shim.
+- `pytest --collect-only -q` has advanced to the next legacy blocker family: module-level validation side effects in `test_natural_lang_v2.py` call `sys.exit(1)` during collection.
+- Production persistence remains NO-GO.
+- `runtime_mapping_enabled` default remains false.
+- `enforcement_enabled` remains false.
+
+Recommended next actions:
+
+1. Start the next round by diagnosing the `test_natural_lang_v2.py` collection-time `SystemExit` without deleting or weakening the test.
+2. Prefer an import-safe isolation plan or test-entrypoint guard only if it preserves the legacy validation behavior when run intentionally.
+3. Re-run `pytest --collect-only -q` after any isolation patch.
+4. Keep broader validation marked blocked/partial until collect-only is green.
+5. Keep production persistence NO-GO.
