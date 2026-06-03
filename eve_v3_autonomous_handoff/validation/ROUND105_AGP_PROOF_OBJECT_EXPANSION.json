@@ -1,0 +1,37 @@
+{
+  "approval_ready": true,
+  "blocked_tokens": [],
+  "policy": {
+    "calls_agp_verify": false,
+    "creates_agp_anchor": false,
+    "eve_specific_vectors_are_evidence_not_agp_anchors": true,
+    "lexical_vectors_are_evidence_not_agp_anchors": true,
+    "proof_object_only": true,
+    "seed_vectors_are_evidence_not_agp_anchors": true
+  },
+  "proof_count": 1,
+  "proof_ready": true,
+  "proof_rows": [
+    {
+      "agp_verify_called_by_expansion": false,
+      "anchor_source": "explicit_category_plus_sa_activation_only",
+      "blocked_reasons": [],
+      "category_id": "concept_category::lex::민석",
+      "eve_specific_vector_used_as_anchor": false,
+      "lexical_token": "민석",
+      "lexical_vector_used_as_anchor": false,
+      "proof_status": "agp_proof_object_ready",
+      "requires_active_category": true,
+      "requires_sa_activation": true,
+      "seed_vector_used_as_anchor": false
+    }
+  ],
+  "proof_status": "ready_for_round106_persistence_decision",
+  "proof_version": "v3_round105_agp_proof_object_expansion",
+  "read_only": true,
+  "round": 105,
+  "runtime_mapping_enabled_now": false,
+  "runtime_mapping_persisted_now": false,
+  "source_approval_version": "v3_round104_runtime_mapping_persistence_approval",
+  "source_gate_audit_version": "v3_round98_runtime_mapping_persistence_gate_audit"
+}

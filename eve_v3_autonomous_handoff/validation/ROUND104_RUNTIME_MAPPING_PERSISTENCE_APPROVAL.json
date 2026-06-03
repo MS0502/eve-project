@@ -1,0 +1,27 @@
+{
+  "approval_ready": true,
+  "approval_status": "approved_for_round106_decision_review",
+  "approval_version": "v3_round104_runtime_mapping_persistence_approval",
+  "blocking_reasons": [],
+  "enforcement_enabled_now": false,
+  "mapped_count": 1,
+  "mapped_tokens": [
+    "민석"
+  ],
+  "operator_approved": true,
+  "policy": {
+    "approval_packet_only": true,
+    "calls_agp_verify": false,
+    "lexical_vectors_are_evidence_not_agp_anchors": true,
+    "mutates_concept_memory": false,
+    "mutates_runtime_mapping": false,
+    "mutates_vectors": false
+  },
+  "read_only": true,
+  "required_followup": "round105_agp_proof_object_expansion",
+  "round": 104,
+  "runtime_mapping_enabled_now": false,
+  "runtime_mapping_persisted_now": false,
+  "source_gate_audit_version": "v3_round98_runtime_mapping_persistence_gate_audit",
+  "source_manual_validation_version": "v3_round103_manual_medium_vector_validation"
+}

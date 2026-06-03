@@ -97,3 +97,55 @@ Outcome:
 - Added `adapters/medium_vector_release_restore.py` for network-enabled or manual local restore.
 - Added focused fail-closed tests for the restore helper.
 - Hard stop remains active until the Release assets are downloaded/available locally and the helper reports `hard_stop_released=true`.
+
+## Round103
+
+Decision: add manual medium-vector validation as a fail-closed checkpoint.
+
+Rationale:
+
+- Runtime mapping persistence must not proceed from an unverified, absent, fake, or checksum-mismatched medium vector artifact.
+
+Outcome:
+
+- Validation remains read-only and writes JSON only.
+- No vector artifact is committed or installed by the validator.
+
+## Round104
+
+Decision: represent runtime mapping persistence approval as an explicit packet, not as an applied state change.
+
+Rationale:
+
+- Persistence requires operator approval after gate and vector validation evidence.
+
+Outcome:
+
+- Approval can become ready for decision review.
+- Runtime mapping remains disabled and unpersisted.
+
+## Round105
+
+Decision: expand AGP proof rows while preserving the AGP anchor boundary.
+
+Rationale:
+
+- Runtime mapping candidates need proof that anchors remain explicit categories with SA activation, not lexical/vector shortcuts.
+
+Outcome:
+
+- Proof rows are read-only data.
+- AGP verification is not called by the proof expansion.
+
+## Round106
+
+Decision: record persistence readiness without applying persistent runtime mapping.
+
+Rationale:
+
+- Applying persistent mapping is a separate state-changing patch and must not be smuggled into the decision packet.
+
+Outcome:
+
+- The decision packet may report `persistence_ready_but_not_applied`.
+- Runtime mapping and enforcement remain disabled.

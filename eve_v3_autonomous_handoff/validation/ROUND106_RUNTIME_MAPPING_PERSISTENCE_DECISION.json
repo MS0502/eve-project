@@ -1,0 +1,30 @@
+{
+  "blocking_reasons": [],
+  "decision_ready": true,
+  "decision_status": "persistence_ready_but_not_applied",
+  "decision_version": "v3_round106_runtime_mapping_persistence_decision",
+  "enforcement_enabled_now": false,
+  "mapped_tokens": [
+    "민석"
+  ],
+  "operator_requested_persist": false,
+  "policy": {
+    "decision_packet_only": true,
+    "does_not_apply_persistence": true,
+    "does_not_bypass_agp": true,
+    "does_not_weaken_tests": true,
+    "requires_separate_apply_patch": true
+  },
+  "proof_count": 1,
+  "read_only": true,
+  "rollback_plan": {
+    "if_future_patch_persists_mapping_restore_runtime_mapping_enabled_false": true,
+    "keep_operator_approval_and_agp_proof_as_audit_artifacts": true,
+    "persistent_state_changed_in_round106": false
+  },
+  "round": 106,
+  "runtime_mapping_enabled_now": false,
+  "runtime_mapping_persisted_now": false,
+  "source_agp_proof_version": "v3_round105_agp_proof_object_expansion",
+  "source_approval_version": "v3_round104_runtime_mapping_persistence_approval"
+}

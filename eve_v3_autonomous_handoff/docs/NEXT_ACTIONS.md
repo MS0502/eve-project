@@ -139,3 +139,18 @@ python -m adapters.medium_vector_release_restore \
 Proceed only when the status JSON reports `hard_stop_released=true`.
 
 Then rerun Round97/98 and Round92~98 focused validation. Runtime mapping persistence approval gate and AGP proof object expansion remain deferred until those validations are unblocked.
+
+## Round103~106 clean replacement PR update
+
+Current position:
+
+- Round103~106 code and documentation have been reapplied on latest main as a clean replacement for conflicted PR #7.
+- No `vectors.npy`, wrapper zips, raw parts, restored zips, `_operator_artifacts`, or upload artifacts are included.
+- Runtime mapping persistence is still not applied.
+
+Immediate next actions:
+
+1. Restore the medium 30k `vectors.npy` outside the PR diff.
+2. Run Round102 restore and Round103 manual validation until the local validation status passes.
+3. Re-run the runtime mapping approval/proof/decision tests.
+4. If persistence should actually be applied, do so in a later explicit mutation patch with rollback and full validation.

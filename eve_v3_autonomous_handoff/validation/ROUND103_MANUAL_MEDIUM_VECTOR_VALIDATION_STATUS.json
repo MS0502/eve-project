@@ -1,0 +1,56 @@
+{
+  "blocking_reasons": [
+    "candidate_vectors_file_missing",
+    "release_restore_not_complete",
+    "vectors_checksum_mismatch",
+    "vectors_dtype_mismatch",
+    "vectors_shape_mismatch"
+  ],
+  "candidate_path": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+  "operator_next_step": "restore_verified_medium_vectors_before_runtime_mapping_persistence",
+  "policy": {
+    "agp_bypass": false,
+    "commit_vectors_npy_to_pr": false,
+    "create_dummy_vectors": false,
+    "read_only": true,
+    "relax_manifest_checksums": false,
+    "weaken_tests": false
+  },
+  "read_only": true,
+  "release_restore_hard_stop_released": false,
+  "release_restore_status": "blocked_release_restore_incomplete",
+  "repo_root": ".",
+  "round": 103,
+  "status": "blocked_manual_medium_vector_validation_incomplete",
+  "validation_passed": false,
+  "validation_version": "v3_round103_manual_medium_vector_validation",
+  "vectors_audit": {
+    "acceptable_for_manual_install": false,
+    "candidate_path": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+    "checksum_actual": null,
+    "checksum_expected": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+    "checksum_match": false,
+    "dtype": null,
+    "exists": false,
+    "expected_shape": [
+      30000,
+      300
+    ],
+    "fake_or_dummy_artifact_allowed": false,
+    "load_error": null,
+    "no_artifact_created": true,
+    "no_copy_performed": true,
+    "operator_action_if_acceptable": null,
+    "read_only": true,
+    "rejection_reasons": [
+      "candidate_vectors_file_missing",
+      "vectors_checksum_mismatch",
+      "vectors_shape_mismatch",
+      "vectors_dtype_mismatch"
+    ],
+    "round": 100,
+    "shape": null,
+    "target_path": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+    "version": "v3_round100_medium_vector_restoration_plan"
+  }
+}
