@@ -1,0 +1,25 @@
+{
+  "agp_bypass_used": false,
+  "diagnosis_status": "legacy_root_import_blocker_active",
+  "diagnosis_version": "v3_round122_legacy_root_import_blocker_diagnosis",
+  "enforcement_enabled_default": false,
+  "module_available_at_root": false,
+  "module_name": "spreading_activation",
+  "primary_blocker": "missing spreading_activation compatibility import",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "recommended_round123_action": "add_minimal_compatibility_shim",
+  "root_import_site_count": 6,
+  "root_import_sites": [
+    "eve_main_ab.py",
+    "eve_main_abc.py",
+    "natural_lang.py",
+    "natural_lang1.py",
+    "test_episodic.py",
+    "test_natural_lang_v2.py"
+  ],
+  "round": 122,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 121,
+  "vectors_npy_committed": false
+}

@@ -207,3 +207,7 @@ Before any real production persistence enablement, the operator must provide all
 5. Confirmation that binary vectors, seed subsets, zip/part files, and `_operator_artifacts` remain outside the PR.
 
 Without those items, Round122 must not activate production persistence.
+
+## Round126 operator note
+
+The `spreading_activation` collection blocker has been isolated and shimmed, but this does not make production persistence ready. Root collect-only remains partial on legacy `working_memory` imports. Keep `runtime_mapping_enabled=False`, `enforcement_enabled=False`, and production persistence disabled until a later explicit approval and validation-green or accepted-partial package exists.

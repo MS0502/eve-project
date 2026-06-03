@@ -390,3 +390,11 @@ Results:
 - Round120 added the final pre-activation gate package with final recommendation `NO-GO` and no activation action.
 - Round121 isolated required blockers after the no-go result.
 - Production persistence remains disabled, `runtime_mapping_enabled` default remains false, and `enforcement_enabled` default remains false.
+
+## Round122-126 update — legacy import blocker recovery loop
+
+- Round122 diagnosed the legacy root collection blocker as root-level imports of missing `spreading_activation` in `test_episodic.py`, `test_eve_main_ab.py`, `test_eve_main_abc.py`, and `test_natural_lang_v2.py`.
+- Round123 added a minimal deterministic root compatibility shim, `spreading_activation.py`, which re-exports the retained implementation from `legacy/eve_modules/spreading_activation.py` without fake behavior, dummy vectors, randomness, or external APIs.
+- Round124 reran collect-only. The original `spreading_activation` import blocker is recovered, but collect-only remains partial because the same legacy root files now block on missing `working_memory` imports.
+- Round125 records broader validation as blocked/partial rather than green.
+- Round126 keeps the next recommendation at `NO-GO`; production persistence remains disabled, `runtime_mapping_enabled` default remains false, and `enforcement_enabled` default remains false.

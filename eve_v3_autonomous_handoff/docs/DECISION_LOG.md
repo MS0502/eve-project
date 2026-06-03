@@ -280,3 +280,14 @@ Outcome:
 
 - Required blockers are listed for operator review.
 - Production persistence remains disabled.
+
+## Round122-126 decision — keep NO-GO after import blocker isolation
+
+Decision: Keep production persistence `NO-GO`.
+
+Rationale:
+
+- The Round123 shim safely recovers the `spreading_activation` import path by re-exporting the retained legacy implementation.
+- Round124 collect-only still fails on the next legacy root import family: `working_memory`.
+- Broader validation is therefore still partial/blocked.
+- Runtime mapping defaults and enforcement defaults remain disabled.
