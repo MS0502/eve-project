@@ -87,3 +87,20 @@ Boundary:
 
 - Round101 is documentation/reporting only.
 - The next technical implementation round remains blocked until the medium 30k vector artifact is restored or the operator explicitly approves a partial-validation path.
+
+## Round102 Release artifact restore surfaces
+
+- `adapters/medium_vector_release_restore.py`
+  - `restore_medium_vectors_from_release(...)`: downloads or consumes local Release assets in a temporary work directory, unwraps wrapper zips, concatenates raw parts, verifies reconstructed zip SHA-256, verifies zip integrity, extracts the internal `vectors.npy`, and reuses the Round100 vector audit.
+  - `write_round102_release_restore_status(...)`: writes JSON status only.
+  - `--install-to-repo`: copies `vectors.npy` into the ignored seed path only after all gates pass; it does not stage or commit binary artifacts.
+
+- `tests/test_v3_round102_medium_vector_release_restore.py`
+  - Proves the helper fails closed without assets.
+  - Proves status export writes JSON only and does not create binary seed artifacts.
+
+Boundary:
+
+- Release assets are operator-supplied external artifacts.
+- Wrapper zips, raw parts, restored zip, and `vectors.npy` remain forbidden in PR diffs.
+- Runtime mapping validation remains blocked until `hard_stop_released=true` is observed and the ignored local seed vector is installed.

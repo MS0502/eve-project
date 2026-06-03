@@ -115,3 +115,27 @@ Still deferred:
 - Runtime mapping persistence approval gate.
 - AGP proof object expansion.
 - Legacy root blocker isolation.
+
+## Round102 update — Release artifact restore blocked by environment download
+
+Current position:
+
+- The operator supplied the medium 30k vector artifact through GitHub Release tag `eve-medium-30k-20260603`.
+- Round102 added a deterministic restore/audit helper for those assets.
+- This execution environment could not download the Release assets due HTTPS CONNECT 403.
+- No binary artifact was committed or installed.
+
+Immediate next action:
+
+```bash
+python -m adapters.medium_vector_release_restore \
+  --work-dir /tmp/eve_round102_medium_restore \
+  --asset-dir /path/to/downloaded/release-assets \
+  --no-download \
+  --install-to-repo \
+  --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json
+```
+
+Proceed only when the status JSON reports `hard_stop_released=true`.
+
+Then rerun Round97/98 and Round92~98 focused validation. Runtime mapping persistence approval gate and AGP proof object expansion remain deferred until those validations are unblocked.

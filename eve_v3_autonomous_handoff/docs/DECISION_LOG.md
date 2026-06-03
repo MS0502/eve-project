@@ -80,3 +80,20 @@ Outcome:
 - Hard stop reason: external artifact/operator action required.
 - Runtime mapping persistence remains disabled.
 - AGP proof object expansion and legacy root blocker isolation remain deferred until validation substrate restoration or explicit operator approval.
+
+## Round102
+
+Decision: attempt the operator-supplied Release artifact restore through a deterministic temp-only helper, but keep the hard stop active in this environment.
+
+Rationale:
+
+- The operator supplied the medium 30k artifact as GitHub Release assets, which is a valid non-PR-diff delivery path.
+- The assets must be used only as external artifacts; wrapper zips, raw parts, restored zip, and `vectors.npy` must never be staged into the PR.
+- The current environment returned HTTPS CONNECT 403 for all Release asset downloads, so checksum/shape/dtype gates could not be reached.
+- Claiming hard-stop release without observing the artifact audits locally would violate validation honesty.
+
+Outcome:
+
+- Added `adapters/medium_vector_release_restore.py` for network-enabled or manual local restore.
+- Added focused fail-closed tests for the restore helper.
+- Hard stop remains active until the Release assets are downloaded/available locally and the helper reports `hard_stop_released=true`.

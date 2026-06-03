@@ -99,3 +99,33 @@ This run stops after Round101 because the next required step is external/operato
 Do not ask the next autonomous task to continue runtime mapping persistence, AGP proof expansion, or legacy blocker isolation until one of those actions is complete. Without the vector artifact, the Round92~Round98 focused validation substrate cannot create the prerequisite Eve-specific vector from known fastText context.
 
 After artifact restoration, rerun the Round100 guide commands before approving persistence or further runtime changes.
+
+## Round102 operator guide — GitHub Release artifact restore
+
+Release assets supplied:
+
+- `subset_medium_30k-20260603T024008Z-3-001.zip.part01.upload.zip`
+- `subset_medium_30k-20260603T024008Z-3-001.zip.part02.upload.zip`
+- `subset_medium_30k_split_manifest.json`
+
+The automated download path was attempted, but this environment returned HTTPS CONNECT 403. To continue safely, download the three Release assets outside the repo and run:
+
+```bash
+python -m adapters.medium_vector_release_restore \
+  --work-dir /tmp/eve_round102_medium_restore \
+  --asset-dir /path/to/downloaded/release-assets \
+  --no-download \
+  --install-to-repo \
+  --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json
+```
+
+The helper verifies the reconstructed zip SHA-256, zip integrity, internal `vectors.npy` SHA-256, shape, and dtype before installing the ignored local seed vector.
+
+Never `git add`:
+
+- wrapper zip files;
+- raw `.part01` / `.part02` files;
+- restored zip;
+- `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy`.
+
+Only proceed to Round97/98 validation when `hard_stop_released=true`.

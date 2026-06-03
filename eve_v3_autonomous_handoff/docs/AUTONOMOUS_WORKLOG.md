@@ -209,3 +209,43 @@ Failures / limitations:
 Next recommendation:
 
 - Create the final integrated PR for Round100~Round101, then wait for operator restoration of the medium vector artifact or explicit partial-validation instructions.
+
+## Round102 — medium vector Release artifact restore attempt
+
+Goal:
+
+- Use the operator-supplied GitHub Release assets for the medium 30k vector artifact without committing wrapper zips, raw parts, restored zip, or `vectors.npy` to the PR diff.
+
+Changed files:
+
+- `adapters/medium_vector_release_restore.py`
+- `tests/test_v3_round102_medium_vector_release_restore.py`
+- `eve_v3_autonomous_handoff/reports/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json`
+- handoff docs
+
+Commands run:
+
+- `python -m adapters.medium_vector_release_restore --work-dir /tmp/eve_round102_medium_restore --repo-root . --install-to-repo --output eve_v3_autonomous_handoff/validation/ROUND102_MEDIUM_VECTOR_ARTIFACT_RESTORE_STATUS.json`
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round102_medium_vector_release_restore.py tests/test_v3_round100_medium_vector_restoration.py`
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`
+- `pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`
+- `pytest --collect-only -q`
+
+Results:
+
+- Added a deterministic Release restore helper that downloads to temp only, unwraps split wrapper zips, verifies reconstructed zip SHA-256, verifies internal `vectors.npy` SHA/shape/dtype, and installs only after all gates pass.
+- Current environment download failed with HTTPS CONNECT 403 for all three Release assets.
+- No wrapper zip, raw part, restored zip, or `vectors.npy` was committed or installed.
+- Round97/98 and Round92~98 focused validation remain blocked because known fastText context vectors are still unavailable.
+- Collect-only remains blocked/partial after 1227 collected tests because of pre-existing legacy root `spreading_activation` import errors.
+
+Failures / limitations:
+
+- Hard stop is not lifted in this execution environment because Release assets could not be downloaded.
+- Manual/local restore remains available with `--asset-dir ... --no-download --install-to-repo` after the assets are downloaded outside the repo.
+
+Next recommendation:
+
+- Run the Round102 helper in a network-enabled environment or with manually downloaded assets, confirm `hard_stop_released=true`, then rerun Round97/98 and Round92~98 focused validation before proceeding to runtime mapping persistence approval or AGP proof expansion.
