@@ -63,3 +63,20 @@ Outcome:
 - Added `adapters/medium_vector_restoration.py` and focused Round100 tests.
 - Runtime mapping persistence remains disabled.
 - AGP proof expansion remains deferred until validation is unblocked or the operator explicitly approves a partial-validation path.
+
+## Round101
+
+Decision: stop the autonomous multi-round run and prepare one final integrated PR.
+
+Rationale:
+
+- Issue #5 requires multiple rounds on one branch when possible, with internal reports/validation JSON and one final PR only.
+- Round100 already completed the only safe code-only step for the current highest-priority blocker: an operator-supplied medium vector audit path.
+- The actual blocker now requires an external medium `vectors.npy` artifact or explicit partial-validation approval.
+- Proceeding would require committing a binary artifact, creating fake vectors, weakening tests, or claiming blocked validation as passed, all of which are forbidden.
+
+Outcome:
+
+- Hard stop reason: external artifact/operator action required.
+- Runtime mapping persistence remains disabled.
+- AGP proof object expansion and legacy root blocker isolation remain deferred until validation substrate restoration or explicit operator approval.

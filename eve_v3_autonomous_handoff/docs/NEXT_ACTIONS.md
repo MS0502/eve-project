@@ -89,3 +89,29 @@ Still deferred:
 - AGP proof object expansion.
 - Runtime mapping persistence approval gate.
 - Any persistence/enforcement mutation.
+
+## Round101 update — final integrated PR hard stop
+
+Current position:
+
+- Issue #5 autonomous multi-round policy is acknowledged for this task.
+- No intermediate PR was created during the round loop.
+- Round100 restoration helper exists, but the required medium 30k `vectors.npy` is still absent.
+- Round101 confirms hard stop because operator artifact action is required.
+
+Immediate next action:
+
+```text
+Create one final integrated PR for Round100~Round101, then wait for operator action.
+```
+
+Operator action required before more autonomous implementation:
+
+1. Restore and audit the medium 30k `vectors.npy` artifact outside the PR diff.
+2. Or explicitly approve a partial-validation path.
+
+Still deferred:
+
+- Runtime mapping persistence approval gate.
+- AGP proof object expansion.
+- Legacy root blocker isolation.

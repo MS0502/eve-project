@@ -71,3 +71,19 @@ Validation boundary:
 - Small/focused fallback requires the exact small 5k artifact; it cannot be reported as medium/full validation.
 - Mini 1k remains fixture boundary only.
 - The helper does not copy, create, or mutate vector artifacts.
+
+## Round101 autonomous hard-stop map
+
+- `eve_v3_autonomous_handoff/reports/ROUND101_AUTONOMOUS_MULTI_ROUND_HARD_STOP.md`
+  - Records the Issue #5 autonomous multi-round operating policy and the reason this run stops after Round100.
+  - Does not add runtime behavior.
+
+- `eve_v3_autonomous_handoff/validation/ROUND101_AUTONOMOUS_HARD_STOP_STATUS.json`
+  - Structured status for the final integrated PR.
+  - Classifies the blocker as `external_artifact_operator_action_required`.
+  - Records that no dummy vectors, binary vector commits, AGP bypass, nondeterminism, weakened tests, or runtime mapping persistence were introduced.
+
+Boundary:
+
+- Round101 is documentation/reporting only.
+- The next technical implementation round remains blocked until the medium 30k vector artifact is restored or the operator explicitly approves a partial-validation path.

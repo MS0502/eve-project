@@ -86,3 +86,16 @@ pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_ro
 ```
 
 Do not treat small/mini fallback results as medium/full validation. Do not persist runtime mapping until validation is honestly passed or a partial-validation path is explicitly approved.
+
+## Round101 operator guide — autonomous hard stop
+
+The Issue #5 autonomous multi-round policy is now the operating model for future tasks: internal round records first, one final integrated PR at the end.
+
+This run stops after Round101 because the next required step is external/operator-controlled:
+
+- restore the original medium 30k `vectors.npy` artifact outside the PR diff; or
+- explicitly approve a partial-validation path.
+
+Do not ask the next autonomous task to continue runtime mapping persistence, AGP proof expansion, or legacy blocker isolation until one of those actions is complete. Without the vector artifact, the Round92~Round98 focused validation substrate cannot create the prerequisite Eve-specific vector from known fastText context.
+
+After artifact restoration, rerun the Round100 guide commands before approving persistence or further runtime changes.

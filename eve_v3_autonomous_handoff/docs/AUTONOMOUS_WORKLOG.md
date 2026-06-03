@@ -167,3 +167,45 @@ Validation:
 - `python -m compileall -q adapters tests main.py` passed.
 - `pytest -q tests/test_v3_round100_medium_vector_restoration.py` passed: 5 passed.
 - Round97/98 and Round92~98 focused commands remain blocked/partial for the missing-vector prerequisite.
+
+## Round101 — autonomous multi-round policy hard stop
+
+Goal:
+
+- Start the Issue #5 autonomous multi-round operating policy and decide whether this task can continue beyond Round100 without external action.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/docs/AUTONOMOUS_WORKLOG.md`
+- `eve_v3_autonomous_handoff/docs/DECISION_LOG.md`
+- `eve_v3_autonomous_handoff/docs/TECHNICAL_MAP.md`
+- `eve_v3_autonomous_handoff/docs/NEXT_ACTIONS.md`
+- `eve_v3_autonomous_handoff/docs/OPERATOR_GUIDE.md`
+- `eve_v3_autonomous_handoff/reports/ROUND101_AUTONOMOUS_MULTI_ROUND_HARD_STOP.md`
+- `eve_v3_autonomous_handoff/validation/ROUND101_AUTONOMOUS_HARD_STOP_STATUS.json`
+
+Commands run:
+
+- `python -m adapters.medium_vector_restoration`
+- `python -m compileall -q adapters tests main.py`
+- `pytest -q tests/test_v3_round100_medium_vector_restoration.py`
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py`
+- `pytest --collect-only -q`
+
+Results:
+
+- Confirmed the new operating policy: no intermediate PRs, internal round report/validation JSON per round, final integrated PR only.
+- Confirmed hard stop remains active because the required medium 30k `vectors.npy` artifact is absent and must not be committed or faked.
+- Runtime mapping persistence remains disabled.
+- AGP proof object expansion remains deferred.
+
+Failures / limitations:
+
+- `python -m adapters.medium_vector_restoration` returned exit code `2` by design because no medium/small/mini vector artifact is present.
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py` remains blocked/partial with 3 prerequisite failures from the same missing known-context vectors.
+- `pytest --collect-only -q` remains blocked/partial after 1225 collected tests because of pre-existing legacy root `spreading_activation` import errors.
+- Additional autonomous implementation would require operator artifact restoration or explicit partial-validation approval.
+
+Next recommendation:
+
+- Create the final integrated PR for Round100~Round101, then wait for operator restoration of the medium vector artifact or explicit partial-validation instructions.
