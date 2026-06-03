@@ -30,3 +30,59 @@ Do not persist runtime mapping unless you approve one of these paths:
 2. Explicitly approve a partial-validation persistence experiment.
 
 In both paths, vectors remain evidence only and must not become AGP anchors.
+
+## Round99 operator note — post-merge validation
+
+Post-merge validation did not produce a full pass. The code surfaces compile, but runtime-mapping validation fixtures cannot complete without a restored subset vector artifact.
+
+What passed:
+
+- `python -m compileall -q adapters tests main.py`
+
+What is blocked/partial:
+
+- `pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py` — blocked because the `민석` prerequisite vector cannot be committed without known fastText context.
+- Round92~Round98 adjacent focused tests — blocked for the same missing-vector reason.
+- `pytest --collect-only -q` — partial due legacy root missing `spreading_activation`.
+- `python -m compileall -q .` — partial due legacy root SyntaxError blockers.
+
+Operator decision needed:
+
+1. Restore the medium 30k subset `vectors.npy` artifact according to the existing manifest/checksum policy, then re-run Round99 validation.
+2. Or explicitly approve a partial-validation path, understanding that runtime mapping persistence must remain disabled unless separately approved.
+
+Recommended next task:
+
+- Round100 should be a medium vector restoration / validation plan, not AGP proof expansion yet.
+
+## Round100 operator guide — restoring medium vectors
+
+Round100 provides a verification path but does not include a binary vector artifact.
+
+To restore medium validation:
+
+```bash
+python -m adapters.medium_vector_restoration --candidate /path/to/vectors.npy
+```
+
+Proceed only when the JSON output reports:
+
+```json
+"acceptable_for_manual_install": true
+```
+
+Then place the verified file at:
+
+```text
+seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy
+```
+
+After restoration, rerun:
+
+```bash
+pytest -q tests/test_v3_round50_subset_medium_30k.py tests/test_v3_round51_wrapper_primary_medium_swap.py
+pytest -q tests/test_v3_round97_98_runtime_mapping_enable_smoke.py
+pytest -q tests/test_v3_round92_runtime_mapping_gate_dry_run.py tests/test_v3_round93_runtime_mapping_proposal_report.py tests/test_v3_round94_runtime_mapping_enforcement_dry_run.py tests/test_v3_round95_runtime_mapping_operator_acceptance_fixture.py tests/test_v3_round96_runtime_mapping_enable_smoke_precheck.py tests/test_v3_round97_98_runtime_mapping_enable_smoke.py
+```
+
+Do not treat small/mini fallback results as medium/full validation. Do not persist runtime mapping until validation is honestly passed or a partial-validation path is explicitly approved.
