@@ -27,3 +27,7 @@
 - AGP 우회 금지.
 - lexical/EveSpecific/seed vector를 AGP anchor로 쓰지 말 것.
 - runtime/category/concept memory/SA/AGP mutation은 checkpoint/rollback/audit/test 없이는 금지.
+
+## Round122-126 status update
+
+Rounds122-126 completed a validation hygiene loop after the Round120/121 `NO-GO` package. The legacy root `spreading_activation` import blocker is diagnosed and recovered with a minimal compatibility shim, but collect-only remains partial due the next legacy root blocker (`working_memory`). Final recommendation remains `NO-GO`; production persistence, runtime mapping defaults, and enforcement defaults remain disabled.

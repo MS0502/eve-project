@@ -1,0 +1,44 @@
+{
+  "agp_bypass_used": false,
+  "broader_validation_status": "blocked_partial",
+  "collect_command": "pytest --collect-only -q",
+  "collect_recovery_status": "collect_only_partial_new_blockers_after_spreading_activation_recovery",
+  "collect_recovery_version": "v3_round124_collect_only_recovery_verification",
+  "collected_tests": 1271,
+  "critical_blocker_improved": true,
+  "enforcement_enabled_default": false,
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "remaining_error_count": 4,
+  "remaining_errors": [
+    {
+      "missing_import": "working_memory",
+      "path": "test_episodic.py",
+      "phase": "pytest_collect_only_after_round123_shim"
+    },
+    {
+      "missing_import": "working_memory",
+      "path": "test_eve_main_ab.py",
+      "phase": "pytest_collect_only_after_round123_shim"
+    },
+    {
+      "missing_import": "working_memory",
+      "path": "test_eve_main_abc.py",
+      "phase": "pytest_collect_only_after_round123_shim"
+    },
+    {
+      "missing_import": "working_memory",
+      "path": "test_natural_lang_v2.py",
+      "phase": "pytest_collect_only_after_round123_shim"
+    }
+  ],
+  "return_code": 2,
+  "round": 124,
+  "runtime_mapping_enabled_default": false,
+  "source_rounds": [
+    122,
+    123
+  ],
+  "spreading_activation_import_errors_remaining": 0,
+  "vectors_npy_committed": false
+}

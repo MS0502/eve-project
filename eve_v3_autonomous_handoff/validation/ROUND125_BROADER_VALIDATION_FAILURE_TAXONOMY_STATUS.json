@@ -1,0 +1,71 @@
+{
+  "agp_bypass_used": false,
+  "blocked_or_partial_items": [
+    {
+      "category": "collect_only",
+      "command": "pytest --collect-only -q",
+      "reason": "spreading_activation import recovered; root legacy imports now block on working_memory after 1271 collected tests",
+      "status": "blocked_partial"
+    },
+    {
+      "category": "broader_validation",
+      "command": "pytest -q",
+      "reason": "not feasible while collect-only has root legacy import errors",
+      "status": "blocked"
+    },
+    {
+      "category": "collect_only",
+      "reason": "root collection still has non-spreading legacy import blockers",
+      "status": "blocked_partial"
+    }
+  ],
+  "enforcement_enabled_default": false,
+  "primary_remaining_blocker_family": "legacy_root_import_compatibility",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "round": 125,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 124,
+  "taxonomy_status": "broader_validation_partial_or_blocked",
+  "taxonomy_version": "v3_round125_broader_validation_failure_taxonomy",
+  "validation_categories": {
+    "broader_validation": [
+      {
+        "category": "broader_validation",
+        "command": "pytest -q",
+        "reason": "not feasible while collect-only has root legacy import errors",
+        "status": "blocked"
+      }
+    ],
+    "collect_only": [
+      {
+        "category": "collect_only",
+        "command": "pytest --collect-only -q",
+        "reason": "spreading_activation import recovered; root legacy imports now block on working_memory after 1271 collected tests",
+        "status": "blocked_partial"
+      }
+    ],
+    "compile_checks": [
+      {
+        "category": "compile_checks",
+        "command": "python -m compileall -q adapters tests main.py",
+        "status": "passed"
+      }
+    ],
+    "focused_round118_121_regression": [
+      {
+        "category": "focused_round118_121_regression",
+        "command": "pytest -q tests/test_v3_round118_121_production_persistence_readiness.py",
+        "status": "passed"
+      }
+    ],
+    "focused_round122_124_tests": [
+      {
+        "category": "focused_round122_124_tests",
+        "command": "pytest -q tests/test_v3_round122_124_import_blocker_recovery.py",
+        "status": "passed"
+      }
+    ]
+  },
+  "vectors_npy_committed": false
+}

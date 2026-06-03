@@ -232,3 +232,9 @@ Boundary:
 - `runtime_mapping_enabled` and `enforcement_enabled` default to `False`.
 - No AGP bypass is added.
 - No `vectors.npy`, seed subset, zip/part/upload, or `_operator_artifacts` file is part of the patch.
+
+## Round122-126 import blocker recovery surfaces
+
+- `spreading_activation.py`: root compatibility shim that re-exports `legacy.eve_modules.spreading_activation.SpreadingActivation`.
+- `adapters/runtime_mapping_import_blocker_recovery.py`: read-only report builders for Round122 diagnosis, Round123 shim decision, Round124 collect-only verification, Round125 validation taxonomy, and Round126 go/no-go refresh.
+- `tests/test_v3_round122_124_import_blocker_recovery.py`: focused tests for the diagnosis, shim identity, collect-only recovery recording, and JSON export safety.

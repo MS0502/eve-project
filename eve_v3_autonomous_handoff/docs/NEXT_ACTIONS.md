@@ -242,3 +242,11 @@ Next safe action:
 ```text
 Review the Round120 gate and Round121 blockers. Do not activate production persistence until explicit operator approval and validation disposition are provided.
 ```
+
+## After Round126
+
+1. Review `validation/ROUND122_LEGACY_ROOT_IMPORT_BLOCKER_DIAGNOSIS_STATUS.json` for the pre-shim root import diagnosis.
+2. Review `validation/ROUND123_SPREADING_ACTIVATION_COMPAT_SHIM_STATUS.json` for the shim decision and legacy re-export proof.
+3. Review `validation/ROUND124_COLLECT_ONLY_RECOVERY_VERIFICATION_STATUS.json` for collect-only recovery evidence and the remaining `working_memory` blocker.
+4. Treat broader validation as blocked/partial until the remaining legacy root imports are resolved or explicitly quarantined by a separate validation-hygiene round.
+5. Keep production persistence `NO-GO`; do not enable `runtime_mapping_enabled` by default and do not enable enforcement.
