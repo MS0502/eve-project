@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "agp_bypass_used": false,
+    "enforcement_enabled_false": true,
+    "production_persistence_enabled": false,
+    "round110_audit_order_verified": true,
+    "round110_checkpoint_exists": true,
+    "round110_rollback_verified": true,
+    "runtime_mapping_enabled_false": true,
+    "sandbox_state_removed": true,
+    "vectors_npy_committed": false
+  },
+  "cleanup_status": "sandbox_cleanup_verified",
+  "cleanup_version": "v3_round111_sandbox_rollback_cleanup_verification",
+  "enforcement_enabled_now": false,
+  "json_only": true,
+  "production_persistence_enabled": false,
+  "round": 111,
+  "runtime_mapping_enabled_now": false,
+  "sandbox_state_existed_before_cleanup": true,
+  "sandbox_state_exists_after_cleanup": false,
+  "source_sandbox_version": "v3_round110_runtime_mapping_limited_persistence_sandbox"
+}

@@ -182,3 +182,21 @@ Decision: add a guarded runtime mapping persistence activation candidate without
 - Accepted an operator approval fixture only; real runtime mapping persistence remains disabled by default.
 - Approval scope is `runtime_mapping_persistence_only`; explicit token allowlist is `["민석"]`.
 - Rollback drill evidence is required before any later persistence enablement discussion.
+
+## Round110 decision
+
+- Proceeded with a limited persistence sandbox rather than production persistence.
+- Allowed mutation: in-memory `runtime_mapping_enabled=True` only between checkpoint and rollback inside the sandbox runner.
+- Forbidden state remains forbidden: enforcement, production persistence, AGP bypass, vector mutation, category mutation, memory mutation, and binary/operator artifacts.
+
+## Round111 decision
+
+- Converted the Round110 sandbox state file into a cleanup target rather than any persistent project state.
+- Cleanup success requires verified Round110 checkpoint/audit/rollback evidence plus disabled runtime flags.
+- The cleanup receipt is JSON-only observability, not production persistence.
+
+## Round112 decision
+
+- Added read-only audit replay before building any viewer/dashboard surface.
+- Replay validates Round110/111 artifacts and disabled flags without re-applying sandbox mutation.
+- Next recommended round is Round113 state-debug/audit replay viewer; production persistence remains blocked pending explicit operator approval.

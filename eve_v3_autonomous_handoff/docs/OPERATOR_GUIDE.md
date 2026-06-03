@@ -167,3 +167,19 @@ Operator-approved candidate runs must provide:
 - `apply_candidate=True`.
 
 The candidate writes checkpoint, rollback, audit JSONL, and before/after state-debug exports, then rolls runtime mapping back to disabled flags. Enforcement remains disabled throughout.
+
+## Round110-112 operator notes
+
+- Round110 sandbox artifacts live under `eve_v3_autonomous_handoff/validation/round110_runtime_mapping_limited_persistence_sandbox/` when the runner is executed.
+- Round110 is JSON-only limited sandbox persistence. It does not enable production persistence.
+- Round111 removes the transient sandbox state JSON and records a cleanup receipt.
+- Round112 replays Round110/111 audits read-only.
+- Review these committed status files:
+  - `eve_v3_autonomous_handoff/validation/ROUND110_RUNTIME_MAPPING_LIMITED_PERSISTENCE_SANDBOX_STATUS.json`
+  - `eve_v3_autonomous_handoff/validation/ROUND111_SANDBOX_ROLLBACK_CLEANUP_STATUS.json`
+  - `eve_v3_autonomous_handoff/validation/ROUND112_POST_SANDBOX_AUDIT_REPLAY_STATUS.json`
+- Safe defaults after all three rounds:
+  - `runtime_mapping_enabled=False`
+  - `enforcement_enabled=False`
+  - `production_persistence_enabled=False`
+- Do not treat sandbox JSON artifacts as production mapping state.

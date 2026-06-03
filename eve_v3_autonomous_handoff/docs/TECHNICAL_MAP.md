@@ -190,3 +190,23 @@ Next:
   - `build_round109_operator_approval_fixture(...)`: builds the limited-scope operator approval fixture for `runtime_mapping_persistence_only` and `["민석"]`.
   - `run_round109_runtime_mapping_persistence_approval_fixture_drill(...)`: runs the Round108 candidate in test/dry-run drill mode, verifies checkpoint-before-mutation, audit ordering, rollback, protected surfaces, and state-debug exports.
   - `write_round109_runtime_mapping_persistence_approval_fixture(...)`: writes JSON only and does not enable runtime mapping or enforcement.
+
+## Round110-112 runtime mapping sandbox surfaces
+
+- `adapters/runtime_mapping_limited_persistence_sandbox.py`
+  - `run_round110_runtime_mapping_limited_persistence_sandbox(...)`: guarded JSON-only sandbox persistence drill. It writes checkpoint/audit/state-debug/sandbox-state/rollback artifacts, briefly enables runtime mapping inside the sandbox, disables it before return, and keeps enforcement and production persistence disabled.
+  - `run_round111_sandbox_rollback_cleanup_verification(...)`: verifies Round110 checkpoint/audit/rollback evidence, removes the transient sandbox state JSON, and writes cleanup audit/receipt JSON.
+  - `run_round112_post_sandbox_focused_validation_audit_replay(...)`: read-only replay of Round110 and Round111 audit evidence.
+  - `write_round110_runtime_mapping_limited_persistence_sandbox(...)`, `write_round111_sandbox_rollback_cleanup_verification(...)`, and `write_round112_post_sandbox_focused_validation_audit_replay(...)`: JSON status writers only.
+- `adapters/lex_concept_mapping_adapter.py`
+  - `stats()` now advertises Round110 sandbox, Round111 cleanup, and Round112 replay surfaces while retaining disabled defaults.
+- `adapters/state_debug_adapter.py`
+  - State-debug now surfaces the Round110-112 sandbox metadata under `lex_concept_mapping`.
+- `tests/test_v3_round110_112_runtime_mapping_sandbox.py`
+  - Focused tests cover guarded sandbox execution, blocked guard behavior, cleanup, replay, state-debug exposure, and JSON export helpers.
+
+Boundary:
+
+- No production persistence is enabled.
+- `runtime_mapping_enabled` and `enforcement_enabled` default to `False`.
+- No `vectors.npy`, seed subset, zip/part/upload, or `_operator_artifacts` file is part of the patch.

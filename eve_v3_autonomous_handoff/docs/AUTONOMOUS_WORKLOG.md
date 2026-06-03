@@ -327,3 +327,31 @@ Results:
 - Added `adapters/runtime_mapping_persistence_approval_fixture.py` for a deterministic operator approval fixture scoped to `runtime_mapping_persistence_only`.
 - The fixture allowlist is `["민석"]` only and candidate activation runs through the Round108 ephemeral apply-then-rollback path in test/dry-run drill mode only.
 - Exported Round109 report/status artifacts and confirmed rollback restores disabled runtime mapping/enforcement flags without AGP/vector/category/memory mutation.
+
+## Round110 — runtime mapping limited persistence sandbox
+
+- Implemented `adapters/runtime_mapping_limited_persistence_sandbox.py` with `run_round110_runtime_mapping_limited_persistence_sandbox(...)`.
+- The sandbox uses Round109's limited approval fixture and writes checkpoint, audit JSONL, state-debug, rollback, and sandbox state JSON artifacts.
+- Runtime mapping is enabled only inside the sandbox window and restored to `False` before return.
+- Enforcement and production persistence remain disabled; AGP/vector/category/memory protected surfaces are checked after rollback.
+- Focused validation passed and status was written to `validation/ROUND110_RUNTIME_MAPPING_LIMITED_PERSISTENCE_SANDBOX_STATUS.json`.
+
+## Round111 — sandbox rollback / cleanup verification
+
+- Added `run_round111_sandbox_rollback_cleanup_verification(...)`.
+- Verified Round110 event order and rollback, removed the transient sandbox state JSON, and wrote cleanup receipt/audit JSON artifacts.
+- Confirmed `runtime_mapping_enabled=False`, `enforcement_enabled=False`, and no forbidden vector/operator artifacts.
+- Focused validation passed and status was written to `validation/ROUND111_SANDBOX_ROLLBACK_CLEANUP_STATUS.json`.
+
+## Round112 — post-sandbox focused validation and audit replay
+
+- Added `run_round112_post_sandbox_focused_validation_audit_replay(...)` as a read-only replay surface.
+- Replayed Round110 and Round111 audit ordering, checkpoint-before-mutation evidence, rollback evidence, cleanup evidence, and disabled runtime flags.
+- Focused validation passed and status was written to `validation/ROUND112_POST_SANDBOX_AUDIT_REPLAY_STATUS.json`.
+- Stopped after three rounds to keep production persistence disabled and leave Round113 viewer work as the next explicit audit/debug surface.
+
+## Validation note for Rounds110-112
+
+- Focused/adjacent validation passed.
+- Full `pytest -q` is blocked at collection by root-level legacy tests importing missing `spreading_activation`.
+- `pytest -q tests` is not green in this environment; failures include missing seed `vectors.npy` fixture artifacts and older baseline expectation failures. No test was weakened and these blocked broader checks are recorded in the Round110-112 status JSON files.

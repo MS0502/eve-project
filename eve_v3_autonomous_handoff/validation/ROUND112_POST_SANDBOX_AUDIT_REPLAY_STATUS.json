@@ -1,0 +1,100 @@
+{
+  "agp_bypass_used": false,
+  "blocked_partial_validation_notes": [
+    "pytest -q collection is blocked by root-level legacy tests importing missing spreading_activation.",
+    "pytest -q tests is not green in this environment; failures include missing forbidden-to-commit seed vectors.npy fixture artifacts and older baseline expectation failures unrelated to Rounds110-112."
+  ],
+  "broader_validation_blocked_or_partial": true,
+  "enforcement_enabled_now": false,
+  "forbidden_artifact_paths": [],
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "replay_checks": {
+    "agp_bypass_used": false,
+    "checkpoint_before_enforcement_enabled_false": true,
+    "checkpoint_before_runtime_mapping_enabled_false": true,
+    "enforcement_enabled_now_false": true,
+    "production_persistence_enabled": false,
+    "round110_event_order_verified": true,
+    "round110_rollback_verified": true,
+    "round111_cleanup_verified": true,
+    "round111_event_order_verified": true,
+    "runtime_mapping_enabled_now_false": true,
+    "sandbox_state_removed": true,
+    "vectors_npy_committed": false
+  },
+  "replay_status": "post_sandbox_audit_replay_passed",
+  "replay_version": "v3_round112_post_sandbox_focused_validation_audit_replay",
+  "round": 112,
+  "round110_event_order": {
+    "actual_event_order": [
+      "sandbox_precheck_started",
+      "sandbox_checkpoint_written",
+      "sandbox_mapping_persisted_json_only",
+      "sandbox_rollback_applied"
+    ],
+    "event_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "event_order_verified": true,
+    "expected_event_order": [
+      "sandbox_precheck_started",
+      "sandbox_checkpoint_written",
+      "sandbox_mapping_persisted_json_only",
+      "sandbox_rollback_applied"
+    ]
+  },
+  "round111_event_order": {
+    "actual_event_order": [
+      "cleanup_precheck_started",
+      "sandbox_state_file_removed",
+      "cleanup_verification_passed"
+    ],
+    "event_indices": [
+      0,
+      1,
+      2
+    ],
+    "event_order_verified": true,
+    "expected_event_order": [
+      "cleanup_precheck_started",
+      "sandbox_state_file_removed",
+      "cleanup_verification_passed"
+    ]
+  },
+  "runtime_mapping_enabled_now": false,
+  "source_rounds": [
+    110,
+    111
+  ],
+  "validation_commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q tests/test_v3_round110_112_runtime_mapping_sandbox.py tests/test_v3_round109_runtime_mapping_persistence_approval_fixture.py tests/test_v3_round108_runtime_mapping_persistence_activation_candidate.py tests/test_v3_round107_runtime_mapping_persistence_activation_dryrun.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest --collect-only -q tests/test_v3_round110_112_runtime_mapping_sandbox.py",
+      "status": "passed"
+    },
+    {
+      "command": "pytest -q",
+      "status": "blocked_existing_environment_or_legacy_collection: root-level legacy tests cannot import spreading_activation"
+    },
+    {
+      "command": "pytest -q tests",
+      "status": "blocked_existing_fixture_artifacts_and_baseline_failures: missing seed vectors.npy and pre-existing older round expectation failures"
+    },
+    {
+      "command": "git status --short | awk '{print $2}' | rg '(^|/)vectors\\.npy$|^seeds/subsets/|_operator_artifacts|\\.zip$|\\.part$' || true",
+      "status": "passed: no forbidden changed paths"
+    }
+  ],
+  "vectors_npy_committed": false
+}
