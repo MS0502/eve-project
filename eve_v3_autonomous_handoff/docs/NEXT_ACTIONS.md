@@ -285,3 +285,12 @@ Recommended next loop:
 - Round138: isolate or add a minimal compatibility shim only if it re-exports retained behavior and does not fake runtime behavior.
 - Round139: rerun collect-only and record the next blocker honestly.
 - Continue to keep NaturalLanguage v2 behavior failures visible as test failures after collection is recovered.
+
+## Next after Round141
+
+1. Round142: diagnose legacy root `digital_somatic` import blockers in `test_eve_main_ab.py` and `test_eve_main_abc.py`.
+2. Round143: add a minimal compatibility shim only if a retained implementation exists, otherwise hard-stop with an isolation plan.
+3. Round144: rerun `python -m pytest --collect-only -q` and record whether collection advances.
+4. Keep production persistence **NO-GO** until collect-only is green and broader validation is no longer blocked/partial.
+
+Guardrails remain unchanged: do not enable production persistence, do not change `runtime_mapping_enabled` default to true, do not enable enforcement, do not bypass AGP, do not weaken legacy tests, and do not commit vector/seed/operator artifacts.

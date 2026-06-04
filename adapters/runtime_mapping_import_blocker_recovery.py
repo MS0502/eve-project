@@ -20,6 +20,12 @@ ROUND124_COLLECT_ONLY_RECOVERY_VERIFICATION_VERSION = "v3_round124_collect_only_
 ROUND125_BROADER_VALIDATION_FAILURE_TAXONOMY_VERSION = "v3_round125_broader_validation_failure_taxonomy"
 ROUND126_NEXT_GO_NO_GO_REFRESH_VERSION = "v3_round126_next_go_no_go_refresh_after_blocker_isolation"
 
+ROUND137_DMN_IMPORT_BLOCKER_DIAGNOSIS_VERSION = "v3_round137_dmn_import_blocker_diagnosis"
+ROUND138_DMN_COMPAT_SHIM_VERSION = "v3_round138_dmn_import_compatibility_shim"
+ROUND139_COLLECT_ONLY_AFTER_DMN_ISOLATION_VERSION = "v3_round139_collect_only_after_dmn_isolation"
+ROUND140_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION = "v3_round140_broader_validation_taxonomy_refresh"
+ROUND141_GO_NO_GO_REFRESH_AFTER_DMN_ISOLATION_VERSION = "v3_round141_go_no_go_refresh_after_dmn_isolation"
+
 
 def _write_json(path: str | Path, payload: dict[str, Any]) -> None:
     out = Path(path)
@@ -259,7 +265,6 @@ def write_round_report(path: str | Path, report: dict[str, Any]) -> dict[str, An
     }
 
 
-__all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]
 
 ROUND127_WORKING_MEMORY_IMPORT_BLOCKER_DIAGNOSIS_VERSION = "v3_round127_working_memory_import_blocker_diagnosis"
 ROUND128_WORKING_MEMORY_COMPAT_SHIM_VERSION = "v3_round128_working_memory_import_compatibility_shim"
@@ -484,7 +489,6 @@ def build_round131_go_no_go_refresh_after_working_memory(
         "read_only": True,
     }
 
-__all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]
 
 ROUND132_NATURAL_LANG_V2_SYSTEM_EXIT_DIAGNOSIS_VERSION = "v3_round132_natural_lang_v2_system_exit_diagnosis"
 ROUND133_COLLECTION_SIDE_EFFECT_ISOLATION_VERSION = "v3_round133_collection_side_effect_isolation"
@@ -739,6 +743,212 @@ def build_round136_go_no_go_refresh_after_system_exit(
         "round": 136,
         "source_rounds": [r for r in [collect.get("round"), taxonomy.get("round")] if r is not None],
         "refresh_status": "go_no_go_refreshed_after_system_exit_isolation",
+        "critical_blocker_improved": collect_improved,
+        "collect_only_green": collect_green,
+        "final_recommendation": recommendation,
+        "recommendation_reason": "Keep NO-GO: production persistence remains disabled unless collect-only and broader validation are green." if recommendation == "NO-GO" else "Collect-only and broader validation are green.",
+        "remaining_blockers": blockers,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+
+def build_round137_dmn_import_blocker_diagnosis(
+    *,
+    repo_root: str | Path = ".",
+    source_round136_refresh: dict[str, Any] | None = None,
+    module_available: bool | None = None,
+) -> dict[str, Any]:
+    """Diagnose legacy root ``dmn`` import blockers without enabling runtime features."""
+
+    root = Path(repo_root)
+    module_name = "dmn"
+    import_sites = [
+        _relative(path, root)
+        for path in _root_python_files(root)
+        if path.name != f"{module_name}.py" and _imports_module(path, module_name)
+    ]
+    available = _module_available(module_name, root) if module_available is None else bool(module_available)
+    legacy_source = root / "legacy" / "eve_modules" / "dmn.py"
+    blocker_active = bool(import_sites) and not available
+    return {
+        "diagnosis_version": ROUND137_DMN_IMPORT_BLOCKER_DIAGNOSIS_VERSION,
+        "round": 137,
+        "source_round": (source_round136_refresh or {}).get("round"),
+        "diagnosis_status": "dmn_import_blocker_active" if blocker_active else "dmn_import_sites_identified_module_resolvable",
+        "module_name": module_name,
+        "module_available_at_root": available,
+        "root_import_sites": import_sites,
+        "root_import_site_count": len(import_sites),
+        "retained_legacy_candidate": "legacy/eve_modules/dmn.py" if legacy_source.exists() else None,
+        "retained_legacy_candidate_exists": legacy_source.exists(),
+        "required_symbol": "DefaultModeNetwork",
+        "primary_blocker": "missing dmn compatibility import" if blocker_active else None,
+        "recommended_round138_action": "add_minimal_compatibility_shim" if blocker_active and legacy_source.exists() else ("hard_stop_isolation_plan_required" if blocker_active else "verify_existing_compatibility_shim"),
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round138_dmn_import_compatibility_shim_decision(
+    *,
+    source_round137_diagnosis: dict[str, Any] | None = None,
+    shim_path: str | Path = "dmn.py",
+    legacy_source_path: str | Path = "legacy/eve_modules/dmn.py",
+    import_check_passed: bool = False,
+    behavior_source: str = "legacy_reexport_only",
+) -> dict[str, Any]:
+    """Record the DMN compatibility shim or hard-stop isolation decision."""
+
+    shim = Path(shim_path)
+    legacy = Path(legacy_source_path)
+    shim_text = shim.read_text(encoding="utf-8") if shim.exists() else ""
+    forbidden_fake_markers = ["class DefaultModeNetwork", "dummy", "random", "vectors.npy"]
+    fake_markers_present = sorted(marker for marker in forbidden_fake_markers if marker in shim_text)
+    shim_is_minimal_reexport = shim.exists() and legacy.exists() and "legacy.eve_modules.dmn" in shim_text and not fake_markers_present
+    status = "minimal_compatibility_shim_applied" if shim_is_minimal_reexport and import_check_passed else "isolation_plan_required"
+    return {
+        "compatibility_version": ROUND138_DMN_COMPAT_SHIM_VERSION,
+        "round": 138,
+        "source_round": (source_round137_diagnosis or {}).get("round"),
+        "decision_status": status,
+        "shim_path": str(shim_path),
+        "legacy_source_path": str(legacy_source_path),
+        "retained_legacy_source_exists": legacy.exists(),
+        "shim_is_minimal_reexport": shim_is_minimal_reexport,
+        "reexported_symbols": ["DefaultModeNetwork"] if shim_is_minimal_reexport else [],
+        "import_check_passed": import_check_passed,
+        "behavior_source": behavior_source if shim_is_minimal_reexport else "no_runtime_behavior_applied",
+        "fake_behavior_markers_present": fake_markers_present,
+        "isolation_plan": None if status == "minimal_compatibility_shim_applied" else "Hard stop: locate retained legacy dmn implementation before restoring root import path.",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round139_collect_only_after_dmn_isolation(
+    *,
+    source_round137_diagnosis: dict[str, Any] | None = None,
+    source_round138_decision: dict[str, Any] | None = None,
+    collect_command: str = "pytest --collect-only -q",
+    return_code: int | None = None,
+    collected_tests: int | None = None,
+    remaining_errors: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Record collect-only recovery after DMN import isolation."""
+
+    errors = list(remaining_errors or [])
+    dmn_errors = [err for err in errors if err.get("missing_import") == "dmn" or err.get("error_family") == "legacy_root_dmn_import_blocker"]
+    recovered = return_code == 0
+    return {
+        "collect_recovery_version": ROUND139_COLLECT_ONLY_AFTER_DMN_ISOLATION_VERSION,
+        "round": 139,
+        "source_rounds": [r for r in [(source_round137_diagnosis or {}).get("round"), (source_round138_decision or {}).get("round")] if r is not None],
+        "collect_recovery_status": "collect_only_recovered_after_dmn_isolation" if recovered else "collect_only_partial_after_dmn_isolation",
+        "collect_command": collect_command,
+        "return_code": return_code,
+        "collected_tests": collected_tests,
+        "dmn_import_errors_remaining": len(dmn_errors),
+        "remaining_error_count": len(errors),
+        "remaining_errors": errors,
+        "critical_blocker_improved": len(dmn_errors) == 0,
+        "broader_validation_status": "collect_only_passed" if recovered else "blocked_partial",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round140_broader_validation_taxonomy_refresh(
+    *,
+    source_round139_collect_recovery: dict[str, Any] | None = None,
+    validation_items: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Refresh broader validation taxonomy after DMN isolation."""
+
+    collect = source_round139_collect_recovery or {}
+    items = list(validation_items or [])
+    categories: dict[str, list[dict[str, Any]]] = {
+        "compile_checks": [],
+        "focused_round137_139_tests": [],
+        "collect_only": [],
+        "legacy_behavior_tests": [],
+        "broader_validation": [],
+    }
+    for item in items:
+        categories.setdefault(str(item.get("category", "broader_validation")), []).append(item)
+    blocked = [item for item in items if str(item.get("status")) in {"blocked", "partial", "blocked_partial", "fail"}]
+    if collect.get("broader_validation_status") == "blocked_partial":
+        blocked.append({"category": "collect_only", "status": "blocked_partial", "reason": "collect-only still blocked"})
+    legacy_failures = [item for item in items if item.get("category") == "legacy_behavior_tests" and item.get("status") == "fail"]
+    primary = None
+    if collect.get("broader_validation_status") == "blocked_partial":
+        primary = "collect_only"
+    elif legacy_failures:
+        primary = "legacy_behavior_failure"
+    elif blocked:
+        primary = "broader_validation_partial_or_blocked"
+    return {
+        "taxonomy_version": ROUND140_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION,
+        "round": 140,
+        "source_round": collect.get("round"),
+        "taxonomy_status": "broader_validation_partial_or_blocked" if blocked else "broader_validation_green",
+        "validation_categories": categories,
+        "blocked_or_partial_items": blocked,
+        "dmn_blocker_recovered": collect.get("dmn_import_errors_remaining") == 0,
+        "collect_only_green": collect.get("collect_recovery_status") == "collect_only_recovered_after_dmn_isolation",
+        "legacy_behavior_failures_preserved": legacy_failures,
+        "primary_remaining_blocker_family": primary,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round141_go_no_go_refresh_after_dmn_isolation(
+    *,
+    source_round139_collect_recovery: dict[str, Any] | None = None,
+    source_round140_taxonomy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Refresh production-persistence recommendation after DMN isolation."""
+
+    collect = source_round139_collect_recovery or {}
+    taxonomy = source_round140_taxonomy or {}
+    collect_green = collect.get("collect_recovery_status") == "collect_only_recovered_after_dmn_isolation"
+    collect_improved = collect.get("critical_blocker_improved") is True
+    broader_green = taxonomy.get("taxonomy_status") == "broader_validation_green"
+    recommendation = "GO" if collect_green and broader_green and collect_improved else "NO-GO"
+    blockers = []
+    if not collect_green:
+        blockers.append("collect_only_still_partial_or_blocked")
+    if not broader_green:
+        blockers.append("broader_validation_partial_or_blocked")
+    if taxonomy.get("primary_remaining_blocker_family"):
+        blockers.append(str(taxonomy["primary_remaining_blocker_family"]))
+    return {
+        "go_no_go_refresh_version": ROUND141_GO_NO_GO_REFRESH_AFTER_DMN_ISOLATION_VERSION,
+        "round": 141,
+        "source_rounds": [r for r in [collect.get("round"), taxonomy.get("round")] if r is not None],
+        "refresh_status": "go_no_go_refreshed_after_dmn_isolation",
         "critical_blocker_improved": collect_improved,
         "collect_only_green": collect_green,
         "final_recommendation": recommendation,

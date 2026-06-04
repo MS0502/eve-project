@@ -377,3 +377,16 @@ Result:
 - SystemExit collection blocker recovered.
 - Collect-only remains partial due to next root `dmn` import blockers.
 - Production persistence remains **NO-GO**; runtime mapping defaults and enforcement remain disabled.
+
+## Rounds137-141 decision — DMN recovered; production persistence remains NO-GO
+
+Decision: keep production persistence **NO-GO**.
+
+Rationale:
+
+- The retained DMN implementation exists at `legacy/eve_modules/dmn.py`.
+- Root `dmn.py` is a minimal compatibility shim and does not fake behavior.
+- Collect-only improved past `dmn` but remains blocked by missing root `digital_somatic` imports.
+- Runtime mapping remains disabled by default and enforcement remains disabled.
+
+Next decision point: diagnose `digital_somatic` using the same retained-implementation re-export rule or hard-stop with an isolation plan if no retained implementation exists.
