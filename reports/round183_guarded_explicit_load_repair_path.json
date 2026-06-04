@@ -1,0 +1,72 @@
+{
+  "adapter_class": null,
+  "agp_bypass_used": false,
+  "artifact_dir": null,
+  "artifacts_included": false,
+  "attach_to_engine_requested": false,
+  "attempt_load_requested": true,
+  "blockers": [
+    "operator_artifact_files_inaccessible_in_codex_cloud"
+  ],
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "forbidden_artifact_patterns": [
+    "_operator_artifacts/**",
+    "seeds/subsets/**",
+    "**/vectors.npy",
+    "**/subset_manifest.json",
+    "**/*.zip",
+    "**/*.part"
+  ],
+  "guard_green": false,
+  "guard_layer": "round164_preflight_before_fasttext_load",
+  "load_error": null,
+  "preflight": {
+    "agp_bypass_used": false,
+    "allowed_when_green": [],
+    "artifacts_included": false,
+    "blocked_when_red": [
+      "load-dependent repair",
+      "wrapper/vector repair that assumes vectors.npy is present",
+      "runtime mapping persistence enablement",
+      "enforcement enablement",
+      "test skips or dummy vector substitution"
+    ],
+    "blockers": [
+      "operator_artifact_files_inaccessible_in_codex_cloud"
+    ],
+    "enforcement_enabled": false,
+    "hard_block": true,
+    "preflight_layer": "load_dependent_repair_hard_block",
+    "production_persistence_enabled": false,
+    "read_only": true,
+    "readiness_gate": {
+      "load_should_be_attempted": false,
+      "readiness_blockers": [
+        "operator_artifact_files_inaccessible_in_codex_cloud"
+      ],
+      "ready": false,
+      "status": "blocked_operator_artifact_required"
+    },
+    "readiness_gate_load_should_be_attempted": false,
+    "readiness_gate_ready": false,
+    "readiness_gate_status": "blocked_operator_artifact_required",
+    "ready": false,
+    "round": 164,
+    "runtime_mapping_enabled_default": false,
+    "status": "hard_block_load_dependent_repair_until_artifacts_ready",
+    "vectors_written": false,
+    "version": "v3_round164_load_dependent_repair_preflight"
+  },
+  "preflight_status": "hard_block_load_dependent_repair_until_artifacts_ready",
+  "production_persistence_enabled": false,
+  "read_only_until_attempt_load": false,
+  "round": 183,
+  "runtime_mapping_enabled_default": false,
+  "selected_cluster_id": "eve_specific_commit_known_context_medium30k_explicit_load_guard",
+  "status": "blocked_preflight_not_green",
+  "subset_name": "cc.ko.300.subset.medium.30k",
+  "vectors_committed": false,
+  "vectors_loaded": false,
+  "version": "v3_round183_guarded_explicit_load_repair_path"
+}
