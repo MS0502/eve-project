@@ -1,0 +1,22 @@
+{
+  "agp_bypass_used": false,
+  "artifacts_included": false,
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "focused_test_command": "python -m pytest -q tests/test_v3_round182_186_explicit_load_guard.py",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "real_vectors_required": false,
+  "required_cases": [
+    "red Round164 preflight blocks adapter construction and load",
+    "green Round164 preflight with attempt_load=False reports ready without loading",
+    "green Round164 preflight with attempt_load=True calls the explicit adapter load path",
+    "load exceptions fail closed and do not attach an adapter to the engine",
+    "round reports preserve no-persistence/no-runtime-mapping/no-enforcement/no-AGP-bypass flags"
+  ],
+  "round": 184,
+  "runtime_mapping_enabled_default": false,
+  "test_layer": "focused_explicit_load_guard_behavior_without_committed_artifacts",
+  "vectors_committed": false,
+  "version": "v3_round184_explicit_load_guard_test_plan"
+}
