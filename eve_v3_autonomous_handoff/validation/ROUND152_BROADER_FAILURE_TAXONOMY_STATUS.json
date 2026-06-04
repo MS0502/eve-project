@@ -1,0 +1,25 @@
+{
+  "round": 152,
+  "status": "broader_failure_taxonomy_recorded",
+  "source_baseline": "current_work_branch_merge_commit_6eeb02b",
+  "full_pytest": {
+    "command": "python -m pytest -q",
+    "exit_code": 1,
+    "failed": 212,
+    "passed": 1082,
+    "duration": "31.21s"
+  },
+  "taxonomy": {
+    "korean_natural_language_v2_behavior": 2,
+    "seed_vector_artifact_fasttext_wrapper_cascade": 127,
+    "eve_specific_vector_self_learning_cascade": 40,
+    "concept_runtime_mapping_cascade": 43
+  },
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "agp_bypass_used": false,
+  "tests_weakened": false,
+  "vectors_npy_committed": false,
+  "korean_examples_preserved": true
+}

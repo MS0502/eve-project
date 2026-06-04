@@ -1,0 +1,21 @@
+{
+  "round": 154,
+  "status": "focused_fix_implemented",
+  "files_changed": [
+    "natural_lang.py"
+  ],
+  "implementation": [
+    "extended_existing_korean_emotion_signal_stems",
+    "added_deterministic_one_token_direct_address_statement_response"
+  ],
+  "scope": "narrow_natural_language_v2_behavior_cluster",
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "agp_bypass_used": false,
+  "tests_weakened": false,
+  "vectors_npy_committed": false,
+  "randomness_added": false,
+  "external_api_calls_added": false,
+  "korean_examples_preserved": true
+}

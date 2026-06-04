@@ -1,0 +1,48 @@
+{
+  "round": 156,
+  "status": "broader_validation_delta_recorded",
+  "checks": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "python -m pytest --collect-only -q",
+      "exit_code": 0,
+      "result": "1294 tests collected in 1.08s"
+    },
+    {
+      "command": "python -m pytest -q test_natural_lang_v2.py tests/test_round2_nl_sd.py::test_nl_intent_overrides_v41_default",
+      "exit_code": 0,
+      "result": "2 passed"
+    },
+    {
+      "command": "python -m pytest -q",
+      "exit_code": 1,
+      "result": "210 failed, 1084 passed in 24.78s"
+    }
+  ],
+  "delta": {
+    "failed_before": 212,
+    "failed_after": 210,
+    "failed_delta": -2,
+    "passed_before": 1082,
+    "passed_after": 1084,
+    "passed_delta": 2,
+    "collected_tests": 1294
+  },
+  "remaining_taxonomy": {
+    "seed_vector_artifact_fasttext_wrapper_cascade": 127,
+    "eve_specific_vector_self_learning_cascade": 40,
+    "concept_runtime_mapping_cascade": 43
+  },
+  "next_recommendation": "seed_vector_artifact_dependency_readiness_or_operator_real_artifact_restoration_without_dummy_vectors",
+  "production_persistence_recommendation": "NO-GO",
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "agp_bypass_used": false,
+  "tests_weakened": false,
+  "vectors_npy_committed": false
+}

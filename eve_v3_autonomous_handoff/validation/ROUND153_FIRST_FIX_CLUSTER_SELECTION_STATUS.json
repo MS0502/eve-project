@@ -1,0 +1,23 @@
+{
+  "round": 153,
+  "status": "first_fix_cluster_selected",
+  "selected_cluster": "korean_natural_language_v2_sentiment_direct_address_behavior",
+  "selected_failure_count": 2,
+  "rationale": [
+    "bounded_two_failures",
+    "no_vector_artifacts_required",
+    "no_runtime_mapping_or_enforcement_required",
+    "korean_first_behavior_preserved"
+  ],
+  "rejected_clusters": {
+    "seed_vector_artifact_fasttext_wrapper_cascade": "blocked_by_absent_real_vectors_no_dummy_vectors_allowed",
+    "eve_specific_vector_self_learning_cascade": "downstream_of_vector_context_prerequisites",
+    "concept_runtime_mapping_cascade": "downstream_of_concept_and_runtime_mapping_prerequisites"
+  },
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "agp_bypass_used": false,
+  "tests_weakened": false,
+  "vectors_npy_committed": false
+}

@@ -79,8 +79,16 @@ class NaturalLanguage:
                      '어디', '누구', '무엇', '얼마', '~지', '~까'],
         'command': ['해', '하라', '해라', '해주', '해줘', '시오',
                     '하세요', '해봐', '~셈', '~세요', '~기를'],
-        'negative_emotion': ['싫', '미워', '짜증', '화', '슬프', '아프', '무서'],
-        'positive_emotion': ['좋', '기뻐', '신나', '행복', '사랑', '재밌'],
+        'negative_emotion': [
+            '싫', '미워', '짜증', '화', '슬프', '아프', '무서',
+            '우울', '외로', '외롭', '걱정', '답답', '지친', '지치', '미안',
+            '후회', '피곤', '힘들',
+        ],
+        'positive_emotion': [
+            '좋', '기뻐', '신나', '행복', '사랑', '재밌',
+            '즐거', '따뜻', '완벽', '신기', '만족', '멋지',
+            '고마', '기대',
+        ],
         'doubt': ['정말', '진짜', '확실', '맞아', '근데', '글쎄', '~인가'],
         'refusal_target': ['하지마', '안돼', '싫어', '거부', '거절'],
     }
@@ -489,6 +497,18 @@ class NaturalLanguage:
             return response_cats[0] if response_cats else "..."
 
         else:  # statement
+            raw = input_understanding.get('raw', '')
+            input_cats = input_understanding.get('categories') or set()
+            direct_address = (
+                len(input_cats) == 1
+                and len(raw.split()) == 1
+                and bool(response_cats)
+                and response_cats[0] in input_cats
+            )
+            if direct_address:
+                ot = self.hs.hormones.get('oxytocin')
+                ot_level = ot.level if ot and 'oxytocin' in self.hs.active_hormones else 0.3
+                return "안녕..." if ot_level >= 0.5 else "응..."
             return ', '.join(response_cats[:3]) if response_cats else "..."
 
     # ============= 7. inner_voice 정식 =============

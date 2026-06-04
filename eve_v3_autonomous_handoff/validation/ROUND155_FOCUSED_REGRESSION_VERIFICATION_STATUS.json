@@ -1,0 +1,30 @@
+{
+  "round": 155,
+  "status": "focused_regression_passed",
+  "checks": [
+    {
+      "command": "python test_natural_lang_v2.py",
+      "exit_code": 0,
+      "result": "passed",
+      "validation_counts": {
+        "passed": 28,
+        "total": 28
+      }
+    },
+    {
+      "command": "python -m pytest -q test_natural_lang_v2.py tests/test_round2_nl_sd.py::test_nl_intent_overrides_v41_default",
+      "exit_code": 0,
+      "result": "2 passed"
+    }
+  ],
+  "fixed_failures": [
+    "test_natural_lang_v2.py::test_natural_language_v2_validation_behavior",
+    "tests/test_round2_nl_sd.py::test_nl_intent_overrides_v41_default"
+  ],
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "agp_bypass_used": false,
+  "tests_weakened": false,
+  "vectors_npy_committed": false
+}
