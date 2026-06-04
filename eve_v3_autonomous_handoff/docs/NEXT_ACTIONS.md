@@ -349,3 +349,15 @@ Constraints for the next round:
 3. Only after real artifact readiness is green, re-run focused fastText wrapper/load tests.
 4. Keep production persistence NO-GO, `runtime_mapping_enabled` default false, and enforcement disabled.
 5. If artifacts remain unavailable, continue with code-only diagnostic/readiness work; do not create dummy vectors or skip tests.
+
+## Next after Round166
+
+1. Restore real registered operator-owned `vectors.npy` artifacts outside the PR boundary:
+   - `seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy`
+   - `seeds/subsets/cc.ko.300.subset.small.5k/vectors.npy`
+   - `seeds/subsets/cc.ko.300.subset.mini.1k/vectors.npy`
+2. Do not commit `vectors.npy`, `seeds/subsets/**`, zip files, part files, upload bundles, or `_operator_artifacts/**`.
+3. Verify SHA256 checksums against `seeds/MANIFEST.yaml`, then verify `vectors.npy` shape `[vocab_size, vector_dim]` and dtype `float32`.
+4. Rerun the Round164 preflight; start load-dependent repair only if it reports green.
+5. Keep production persistence NO-GO, `runtime_mapping_enabled` default false, enforcement disabled, and AGP unbypassed.
+6. If real artifacts remain unavailable, continue with a non-artifact code-only cluster instead of dummy vectors, fake checksums, skips, or xfails.

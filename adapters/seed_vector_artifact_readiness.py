@@ -47,10 +47,10 @@ def _entry_for_subset(manifest: dict[str, Any], subset_name: str) -> dict[str, A
 def _path_for_subset(subset_name: str, entry: dict[str, Any] | None, subset_dirs: dict[str, str | Path] | None) -> str:
     if subset_dirs and subset_name in subset_dirs:
         return str(subset_dirs[subset_name])
-    if subset_name in ROUND159_DEFAULT_SUBSET_PATHS:
-        return str(ROUND159_DEFAULT_SUBSET_PATHS[subset_name])
     if entry and entry.get("file_location"):
         return str(entry["file_location"])
+    if subset_name in ROUND159_DEFAULT_SUBSET_PATHS:
+        return str(ROUND159_DEFAULT_SUBSET_PATHS[subset_name])
     return str(Path("seeds") / "subsets" / subset_name)
 
 

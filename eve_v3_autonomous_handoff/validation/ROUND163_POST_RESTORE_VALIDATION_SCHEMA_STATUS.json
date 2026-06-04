@@ -1,0 +1,246 @@
+{
+  "artifacts_included": false,
+  "checklist": [
+    {
+      "description": "vocab.txt, vectors.npy, and subset_manifest.json exist at registered paths",
+      "id": "path_presence",
+      "required": true
+    },
+    {
+      "description": "registered manifest fields match the restore contract",
+      "id": "manifest_field_match",
+      "required": true
+    },
+    {
+      "description": "all artifact SHA256 values match seeds/MANIFEST.yaml",
+      "id": "sha256_match",
+      "required": true
+    },
+    {
+      "description": "vectors.npy loads read-only with registered shape and float32 dtype",
+      "id": "shape_dtype_match",
+      "required": true
+    },
+    {
+      "description": "seed/vector readiness gate reports ready before load-dependent work",
+      "id": "readiness_gate_green",
+      "required": true
+    },
+    {
+      "description": "git diff/staging excludes vectors.npy, seeds/subsets, zip/part files, and operator artifacts",
+      "id": "no_commit_boundary_clean",
+      "required": true
+    },
+    {
+      "description": "production persistence, runtime mapping default, enforcement, and AGP bypass remain disabled",
+      "id": "policy_flags_unchanged",
+      "required": true
+    }
+  ],
+  "contract_rows": [
+    {
+      "checksum_verification": {
+        "algorithm": "SHA256",
+        "must_match_manifest_exactly": true,
+        "subset_manifest_expected": "SHA256:28222ff89e1fa0d2c20463eeef79729d731bf0484f0f4f8161863088c2724c3a",
+        "vectors_expected": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+        "vocab_expected": "SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308"
+      },
+      "expected_manifest_fields": {
+        "entry_type": "subset",
+        "file_location": "seeds/subsets/cc.ko.300.subset.medium.30k",
+        "filter_rule": "remove_words_containing_unicode_replacement_char",
+        "imported_at_patch": "v3_round50",
+        "imported_at_round": 50,
+        "name": "cc.ko.300.subset.medium.30k",
+        "parent_checksum": "SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7",
+        "parent_seed": "cc.ko.300.bin",
+        "selection_method": "fasttext_frequency_order_top_k",
+        "status": "extracted",
+        "subset_manifest_checksum": "SHA256:28222ff89e1fa0d2c20463eeef79729d731bf0484f0f4f8161863088c2724c3a",
+        "subset_manifest_file": "subset_manifest.json",
+        "vector_dim": 300,
+        "vectors_checksum": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+        "vectors_file": "vectors.npy",
+        "vocab_checksum": "SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308",
+        "vocab_file": "vocab.txt",
+        "vocab_size": 30000
+      },
+      "expected_paths": {
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.medium.30k",
+        "subset_manifest": "seeds/subsets/cc.ko.300.subset.medium.30k/subset_manifest.json",
+        "vectors": "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+        "vocab": "seeds/subsets/cc.ko.300.subset.medium.30k/vocab.txt"
+      },
+      "missing_manifest_fields": [],
+      "operator_restore_steps": [
+        "Obtain the real operator-extracted cc.ko.300.subset.medium.30k/vectors.npy outside the PR diff.",
+        "Place the artifact at seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy without editing seeds/MANIFEST.yaml.",
+        "Verify SHA256 equals SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05.",
+        "Verify numpy shape is (30000, 300) and dtype is float32.",
+        "Rerun the readiness gate and load-dependent preflight before any repair that imports vectors."
+      ],
+      "registered": true,
+      "shape_dtype_verification": {
+        "numpy_mmap_read_only_ok": true,
+        "vectors_expected_dtype": "float32",
+        "vectors_expected_shape": [
+          30000,
+          300
+        ]
+      },
+      "subset_name": "cc.ko.300.subset.medium.30k"
+    },
+    {
+      "checksum_verification": {
+        "algorithm": "SHA256",
+        "must_match_manifest_exactly": true,
+        "subset_manifest_expected": "SHA256:fddb35096e6acb4b541a5a96f28de4cc0478b56b28d724f8a2718e846bb0a856",
+        "vectors_expected": "SHA256:6b55eb8eef00a003164b3ae5ce74424673d3539a0007e94f27edf08683bb2309",
+        "vocab_expected": "SHA256:c8d0d5ab119e7da119b7ca14d28a48f13767d2b86f8860ce0edbd51158cb701b"
+      },
+      "expected_manifest_fields": {
+        "entry_type": "subset",
+        "file_location": "seeds/subsets/cc.ko.300.subset.small.5k",
+        "filter_rule": "remove_words_containing_unicode_replacement_char",
+        "imported_at_patch": "v3_round31",
+        "imported_at_round": 31,
+        "name": "cc.ko.300.subset.small.5k",
+        "parent_checksum": "SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7",
+        "parent_seed": "cc.ko.300.bin",
+        "selection_method": "fasttext_frequency_order_top_k",
+        "status": "extracted",
+        "subset_manifest_checksum": "SHA256:fddb35096e6acb4b541a5a96f28de4cc0478b56b28d724f8a2718e846bb0a856",
+        "subset_manifest_file": "subset_manifest.json",
+        "vector_dim": 300,
+        "vectors_checksum": "SHA256:6b55eb8eef00a003164b3ae5ce74424673d3539a0007e94f27edf08683bb2309",
+        "vectors_file": "vectors.npy",
+        "vocab_checksum": "SHA256:c8d0d5ab119e7da119b7ca14d28a48f13767d2b86f8860ce0edbd51158cb701b",
+        "vocab_file": "vocab.txt",
+        "vocab_size": 5000
+      },
+      "expected_paths": {
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.small.5k",
+        "subset_manifest": "seeds/subsets/cc.ko.300.subset.small.5k/subset_manifest.json",
+        "vectors": "seeds/subsets/cc.ko.300.subset.small.5k/vectors.npy",
+        "vocab": "seeds/subsets/cc.ko.300.subset.small.5k/vocab.txt"
+      },
+      "missing_manifest_fields": [],
+      "operator_restore_steps": [
+        "Obtain the real operator-extracted cc.ko.300.subset.small.5k/vectors.npy outside the PR diff.",
+        "Place the artifact at seeds/subsets/cc.ko.300.subset.small.5k/vectors.npy without editing seeds/MANIFEST.yaml.",
+        "Verify SHA256 equals SHA256:6b55eb8eef00a003164b3ae5ce74424673d3539a0007e94f27edf08683bb2309.",
+        "Verify numpy shape is (5000, 300) and dtype is float32.",
+        "Rerun the readiness gate and load-dependent preflight before any repair that imports vectors."
+      ],
+      "registered": true,
+      "shape_dtype_verification": {
+        "numpy_mmap_read_only_ok": true,
+        "vectors_expected_dtype": "float32",
+        "vectors_expected_shape": [
+          5000,
+          300
+        ]
+      },
+      "subset_name": "cc.ko.300.subset.small.5k"
+    },
+    {
+      "checksum_verification": {
+        "algorithm": "SHA256",
+        "must_match_manifest_exactly": true,
+        "subset_manifest_expected": "SHA256:137631552e9a0c6efca941c48e0fa4bd35854ba59519d87dcdcdfa29a38b1caa",
+        "vectors_expected": "SHA256:ac987683f9ad733cea97ed13ff5b39e73a2ed91ba5d489466f690b2e747d6f2a",
+        "vocab_expected": "SHA256:5e7eb8da5cb96f9c1d207846f8f4ef781f48f74a0f9b3eb4ee112cdc47d53064"
+      },
+      "expected_manifest_fields": {
+        "entry_type": "subset",
+        "file_location": "seeds/subsets/cc.ko.300.subset.mini.1k",
+        "filter_rule": "remove_words_containing_unicode_replacement_char",
+        "imported_at_patch": "v3_round29",
+        "imported_at_round": 29,
+        "name": "cc.ko.300.subset.mini.1k",
+        "parent_checksum": "SHA256:a021ebbd5521ca4b3b33425fc25dacd60e4a795041d6f785997800d32a58acd7",
+        "parent_seed": "cc.ko.300.bin",
+        "selection_method": "fasttext_frequency_order_top_k",
+        "status": "extracted",
+        "subset_manifest_checksum": "SHA256:137631552e9a0c6efca941c48e0fa4bd35854ba59519d87dcdcdfa29a38b1caa",
+        "subset_manifest_file": "subset_manifest.json",
+        "vector_dim": 300,
+        "vectors_checksum": "SHA256:ac987683f9ad733cea97ed13ff5b39e73a2ed91ba5d489466f690b2e747d6f2a",
+        "vectors_file": "vectors.npy",
+        "vocab_checksum": "SHA256:5e7eb8da5cb96f9c1d207846f8f4ef781f48f74a0f9b3eb4ee112cdc47d53064",
+        "vocab_file": "vocab.txt",
+        "vocab_size": 1000
+      },
+      "expected_paths": {
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.mini.1k",
+        "subset_manifest": "seeds/subsets/cc.ko.300.subset.mini.1k/subset_manifest.json",
+        "vectors": "seeds/subsets/cc.ko.300.subset.mini.1k/vectors.npy",
+        "vocab": "seeds/subsets/cc.ko.300.subset.mini.1k/vocab.txt"
+      },
+      "missing_manifest_fields": [],
+      "operator_restore_steps": [
+        "Obtain the real operator-extracted cc.ko.300.subset.mini.1k/vectors.npy outside the PR diff.",
+        "Place the artifact at seeds/subsets/cc.ko.300.subset.mini.1k/vectors.npy without editing seeds/MANIFEST.yaml.",
+        "Verify SHA256 equals SHA256:ac987683f9ad733cea97ed13ff5b39e73a2ed91ba5d489466f690b2e747d6f2a.",
+        "Verify numpy shape is (1000, 300) and dtype is float32.",
+        "Rerun the readiness gate and load-dependent preflight before any repair that imports vectors."
+      ],
+      "registered": true,
+      "shape_dtype_verification": {
+        "numpy_mmap_read_only_ok": true,
+        "vectors_expected_dtype": "float32",
+        "vectors_expected_shape": [
+          1000,
+          300
+        ]
+      },
+      "subset_name": "cc.ko.300.subset.mini.1k"
+    }
+  ],
+  "contract_version": "v3_round162_operator_artifact_restore_contract",
+  "expected_validation_commands": [
+    "python -m compileall -q adapters tests main.py",
+    "python -m pytest --collect-only -q",
+    "python -m pytest -q tests/test_v3_round162_164_restore_contract_preflight.py tests/test_v3_round159_seed_vector_artifact_gate.py"
+  ],
+  "json_schema": {
+    "properties": {
+      "overall_status": {
+        "enum": [
+          "post_restore_validation_ready",
+          "blocked_operator_artifact_required",
+          "blocked_post_restore_validation_failed"
+        ]
+      },
+      "policy_flags": {
+        "type": "object"
+      },
+      "round": {
+        "const": 163
+      },
+      "subset_results": {
+        "items": {
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "version": {
+        "const": "v3_round163_post_restore_validation_schema"
+      }
+    },
+    "required": [
+      "version",
+      "round",
+      "subset_results",
+      "overall_status",
+      "policy_flags"
+    ],
+    "type": "object"
+  },
+  "read_only": true,
+  "round": 163,
+  "schema_layer": "deterministic_post_restore_validation_checklist",
+  "vectors_written": false,
+  "version": "v3_round163_post_restore_validation_schema"
+}

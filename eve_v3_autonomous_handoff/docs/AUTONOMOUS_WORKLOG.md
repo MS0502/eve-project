@@ -647,3 +647,13 @@ Artifacts:
 - Round161 reran broader validation: compileall passed, collect-only passed with 1296 tests, full pytest remains red with 210 failed and 1086 passed.
 
 Next: restore real registered `vectors.npy` artifacts outside the PR, then rerun the artifact readiness gate before load-dependent repair.
+
+## Rounds162-166 — Operator artifact restore contract and load-dependent preflight
+
+- Round162 added an exact restore contract for registered `vectors.npy` artifacts, including expected paths, required manifest fields, checksum verification, shape/dtype verification, and no-commit safety boundaries.
+- Round163 added a deterministic post-restore validation checklist/schema without including artifacts.
+- Round164 added a load-dependent repair preflight that hard-blocks unless the seed/vector readiness gate is green.
+- Round165 focused verification passed: `python -m pytest -q tests/test_v3_round162_164_restore_contract_preflight.py tests/test_v3_round159_seed_vector_artifact_gate.py` (`6 passed`).
+- Round166 broader validation: compileall passed, collect-only passed with 1300 tests, full pytest remains red with 210 failed and 1090 passed.
+
+Next: operator should restore real registered vector artifacts outside the PR and rerun Round164 preflight. If real artifacts remain unavailable, choose a non-artifact code-only failure cluster.
