@@ -565,3 +565,24 @@ Validation artifacts:
 - `validation/ROUND134_COLLECT_ONLY_AFTER_SYSTEM_EXIT_ISOLATION_STATUS.json`
 - `validation/ROUND135_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
 - `validation/ROUND136_GO_NO_GO_REFRESH_AFTER_SYSTEM_EXIT_STATUS.json`
+
+## Rounds137-141 — DMN import isolation loop
+
+- Round137 diagnosed legacy root `dmn` import blockers in `test_eve_main_ab.py` and `test_eve_main_abc.py`.
+- Round138 added a minimal root `dmn.py` shim that re-exports `legacy.eve_modules.dmn.DefaultModeNetwork` only.
+- Round139 verified that the DMN blocker is recovered, but collect-only remains partial: the next root import blocker is `digital_somatic`.
+- Round140 recorded broader validation as blocked/partial: compile and focused DMN tests pass, collect-only is blocked by `digital_somatic`, and `test_natural_lang_v2.py` still preserves a real behavior failure.
+- Round141 keeps production persistence **NO-GO**.
+
+Artifacts:
+
+- `ROUND_V3_R137_REPORT.md`
+- `ROUND_V3_R138_REPORT.md`
+- `ROUND_V3_R139_REPORT.md`
+- `ROUND_V3_R140_REPORT.md`
+- `ROUND_V3_R141_REPORT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND137_DMN_IMPORT_BLOCKER_DIAGNOSIS_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND138_DMN_COMPAT_SHIM_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND139_COLLECT_ONLY_AFTER_DMN_ISOLATION_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND140_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND141_GO_NO_GO_REFRESH_AFTER_DMN_ISOLATION_STATUS.json`

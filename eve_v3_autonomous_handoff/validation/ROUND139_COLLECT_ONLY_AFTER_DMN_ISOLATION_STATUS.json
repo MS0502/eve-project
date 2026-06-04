@@ -1,0 +1,36 @@
+{
+  "agp_bypass_used": false,
+  "broader_validation_status": "blocked_partial",
+  "collect_command": "pytest --collect-only -q",
+  "collect_recovery_status": "collect_only_partial_after_dmn_isolation",
+  "collect_recovery_version": "v3_round139_collect_only_after_dmn_isolation",
+  "collected_tests": 1287,
+  "critical_blocker_improved": true,
+  "dmn_import_errors_remaining": 0,
+  "enforcement_enabled_default": false,
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "remaining_error_count": 2,
+  "remaining_errors": [
+    {
+      "detail": "from eve_main_ab import EVE_TierAB now passes dmn but imports missing root digital_somatic during collection",
+      "error_family": "legacy_root_import_blocker",
+      "missing_import": "digital_somatic",
+      "path": "test_eve_main_ab.py"
+    },
+    {
+      "detail": "from eve_main_abc import EVE_TierAB now passes dmn but imports missing root digital_somatic during collection",
+      "error_family": "legacy_root_import_blocker",
+      "missing_import": "digital_somatic",
+      "path": "test_eve_main_abc.py"
+    }
+  ],
+  "return_code": 2,
+  "round": 139,
+  "runtime_mapping_enabled_default": false,
+  "source_rounds": [
+    137,
+    138
+  ],
+  "vectors_npy_committed": false
+}
