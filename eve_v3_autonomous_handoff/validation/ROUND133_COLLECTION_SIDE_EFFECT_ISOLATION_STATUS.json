@@ -1,0 +1,22 @@
+{
+  "agp_bypass_used": false,
+  "collection_safe_wrapper_present": true,
+  "enforcement_enabled_default": false,
+  "import_check_passed": true,
+  "isolation_status": "collection_side_effect_isolated_test_intent_preserved",
+  "isolation_version": "v3_round133_collection_side_effect_isolation",
+  "legacy_script_exit_preserved": true,
+  "main_guard_present": true,
+  "module_level_sys_exit_lines_remaining": [],
+  "production_persistence_enabled": false,
+  "pytest_behavior_test_present": true,
+  "read_only": true,
+  "round": 133,
+  "runtime_mapping_enabled_default": false,
+  "skip_or_xfail_added": false,
+  "source_round": 132,
+  "test_intent_preserved": true,
+  "test_path": "test_natural_lang_v2.py",
+  "vectors_npy_committed": false,
+  "weakening_action_used": false
+}
