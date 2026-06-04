@@ -657,3 +657,146 @@ Next: restore real registered `vectors.npy` artifacts outside the PR, then rerun
 - Round166 broader validation: compileall passed, collect-only passed with 1300 tests, full pytest remains red with 210 failed and 1090 passed.
 
 Next: operator should restore real registered vector artifacts outside the PR and rerun Round164 preflight. If real artifacts remain unavailable, choose a non-artifact code-only failure cluster.
+
+## Round167 — concept/runtime mapping failure taxonomy
+
+Goal:
+
+- Diagnose the concept/runtime mapping failure cluster without touching vector artifacts.
+
+Changed files:
+
+- `adapters/concept_runtime_mapping_diagnostics.py`
+- `eve_v3_autonomous_handoff/reports/ROUND167_CONCEPT_RUNTIME_MAPPING_FAILURE_TAXONOMY.md`
+- `eve_v3_autonomous_handoff/validation/ROUND167_CONCEPT_RUNTIME_MAPPING_FAILURE_TAXONOMY_STATUS.json`
+
+Commands run:
+
+- `python -m pytest -q --tb=short` from the working tree later in the loop to confirm broader taxonomy.
+
+Results:
+
+- Concept/runtime mapping cluster split into 38 artifact-dependent prerequisite failures and 5 non-artifact state-debug metadata failures.
+- No vector artifacts were written.
+
+Failures / limitations:
+
+- Artifact-dependent fixture failures remain blocked until real registered `vectors.npy` artifacts are restored by the operator.
+
+Next recommendation:
+
+- Select only the non-artifact state-debug metadata subcluster.
+
+## Round168 — non-artifact subcluster selection
+
+Goal:
+
+- Select one deterministic concept/runtime mapping subcluster that can be fixed without artifacts.
+
+Changed files:
+
+- `adapters/concept_runtime_mapping_diagnostics.py`
+- `eve_v3_autonomous_handoff/reports/ROUND168_NON_ARTIFACT_SUBCLUSTER_SELECTION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND168_NON_ARTIFACT_SUBCLUSTER_SELECTION_STATUS.json`
+
+Results:
+
+- Selected `state_debug_baseline_round_metadata`.
+- Rejected artifact-dependent `민석` EveSpecific commit prerequisites as blocked.
+
+Failures / limitations:
+
+- No runtime mapping persistence work was attempted.
+
+Next recommendation:
+
+- Restore the inert LexConceptMappingAdapter state-debug baseline to Round94 while preserving explicit later transitions.
+
+## Round169 — state-debug baseline fix
+
+Goal:
+
+- Repair the selected metadata-only subcluster.
+
+Changed files:
+
+- `adapters/lex_concept_mapping_adapter.py`
+- `tests/test_v3_round167_171_concept_runtime_mapping_loop.py`
+- `eve_v3_autonomous_handoff/reports/ROUND169_STATE_DEBUG_BASELINE_FIX.md`
+- `eve_v3_autonomous_handoff/validation/ROUND169_STATE_DEBUG_BASELINE_FIX_STATUS.json`
+
+Results:
+
+- Fresh inert `LexConceptMappingAdapter` snapshots now report Round94 until explicit Round95/96 surfaces run.
+- Runtime mapping and enforcement remain disabled.
+
+Failures / limitations:
+
+- Artifact-dependent concept/runtime mapping tests remain blocked by missing real vectors.
+
+Next recommendation:
+
+- Run focused verification on the new gate and historical state-debug focused tests.
+
+## Round170 — focused verification
+
+Goal:
+
+- Verify the selected non-artifact concept/runtime mapping subcluster.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND170_FOCUSED_VERIFICATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND170_FOCUSED_VERIFICATION_STATUS.json`
+
+Commands run:
+
+- `python -m pytest -q tests/test_v3_round167_171_concept_runtime_mapping_loop.py`
+- `python -m pytest -q tests/test_v3_round78_79_lexical_concept_candidate_dry_run.py::test_round78_79_state_debug_exposes_read_only_surfaces tests/test_v3_round80_concept_proposal_report.py::test_round80_state_debug_exposes_proposal_surface tests/test_v3_round81_concept_mapping_gate_dry_run.py::test_round81_state_debug_exposes_gate_dry_run_surface`
+- `python -m compileall -q adapters tests main.py`
+- `python -m pytest --collect-only -q`
+
+Results:
+
+- Focused new tests passed.
+- Historical state-debug focused tests passed.
+- Compileall and collect-only passed.
+
+Failures / limitations:
+
+- None for the selected subcluster.
+
+Next recommendation:
+
+- Run broader validation and record the remaining taxonomy honestly.
+
+## Round171 — broader validation delta
+
+Goal:
+
+- Measure broader validation after the selected fix and recommend the next cluster.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND171_BROADER_VALIDATION_DELTA_AND_NEXT_CLUSTER.md`
+- `eve_v3_autonomous_handoff/validation/ROUND171_BROADER_VALIDATION_DELTA_AND_NEXT_CLUSTER_STATUS.json`
+
+Commands run:
+
+- `python -m compileall -q adapters tests main.py`
+- `python -m pytest --collect-only -q`
+- `python -m pytest -q tests/test_v3_round167_171_concept_runtime_mapping_loop.py tests/test_v3_round78_79_lexical_concept_candidate_dry_run.py::test_round78_79_state_debug_exposes_read_only_surfaces tests/test_v3_round80_concept_proposal_report.py::test_round80_state_debug_exposes_proposal_surface tests/test_v3_round81_concept_mapping_gate_dry_run.py::test_round81_state_debug_exposes_gate_dry_run_surface`
+- `python -m pytest -q --tb=short`
+
+Results:
+
+- Broader suite remains red but improved from 210 failures to 205 failures.
+- Remaining taxonomy: 127 seed/vector artifact cascade, 40 EVE-specific vector/self-learning cascade, 38 concept/runtime mapping cascade.
+
+Failures / limitations:
+
+- Broader validation remains blocked by absent real vector artifacts.
+
+Next recommendation:
+
+- Restore real registered vector artifacts outside the PR and rerun Round164 preflight; if artifacts remain unavailable, select only another non-artifact metadata/diagnostic subcluster.

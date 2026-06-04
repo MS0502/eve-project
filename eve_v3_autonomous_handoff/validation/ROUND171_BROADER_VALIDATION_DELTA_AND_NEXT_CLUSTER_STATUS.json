@@ -1,0 +1,47 @@
+{
+  "broader_delta_from_round166": {
+    "collected_tests": 3,
+    "failed_tests": -5,
+    "passed_tests": 8
+  },
+  "broader_validation_expected_status": "still_red_until_operator_artifacts_are_restored",
+  "commands": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "status": "passed"
+    },
+    {
+      "command": "python -m pytest --collect-only -q",
+      "result": "1303 tests collected in 1.29s",
+      "status": "passed"
+    },
+    {
+      "command": "python -m pytest -q tests/test_v3_round167_171_concept_runtime_mapping_loop.py tests/test_v3_round78_79_lexical_concept_candidate_dry_run.py::test_round78_79_state_debug_exposes_read_only_surfaces tests/test_v3_round80_concept_proposal_report.py::test_round80_state_debug_exposes_proposal_surface tests/test_v3_round81_concept_mapping_gate_dry_run.py::test_round81_state_debug_exposes_gate_dry_run_surface",
+      "result": "6 passed in 0.46s",
+      "status": "passed"
+    },
+    {
+      "command": "python -m pytest -q --tb=short",
+      "result": "205 failed, 1098 passed in 25.91s",
+      "status": "failed_expected_existing_broader_red"
+    }
+  ],
+  "enforcement_enabled": false,
+  "expected_delta_from_round166": {
+    "collected_tests": 3,
+    "failed_tests": -5,
+    "passed_tests": 8
+  },
+  "next_recommendation": "restore real registered vector artifacts outside the PR, then rerun Round164 load-dependent repair preflight; if artifacts remain unavailable, choose another non-artifact metadata/diagnostic subcluster only",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "remaining_taxonomy_after_selected_fix": {
+    "concept_runtime_mapping_cascade": 38,
+    "eve_specific_vector_self_learning_cascade": 40,
+    "seed_vector_artifact_cascade": 127
+  },
+  "round": 171,
+  "runtime_mapping_enabled_default": false,
+  "vectors_written": false,
+  "version": "v3_round171_broader_validation_delta_recommendation"
+}

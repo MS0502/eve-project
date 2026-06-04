@@ -430,3 +430,62 @@ Rejected:
 - Enforcement enablement.
 
 Reason: registered fastText subsets are operator artifacts. If absent, EVE must report `blocked_operator_artifact_required` and avoid runtime loading until real artifacts are restored.
+
+## Round167
+
+Decision: classify the concept/runtime mapping failures before implementing any fix.
+
+Rationale:
+
+- The user requested a concept/runtime mapping diagnosis without touching vector artifacts.
+- The current broader red state mixes artifact-dependent fixture prerequisites with a small metadata-only subcluster.
+
+Outcome:
+
+- 38 concept/runtime mapping failures remain artifact-dependent.
+- 5 concept/runtime mapping failures are metadata-only state-debug baseline drift.
+
+## Round168
+
+Decision: select only `state_debug_baseline_round_metadata` for code changes.
+
+Rationale:
+
+- It is deterministic, non-artifact, and does not require runtime mapping persistence.
+- Artifact-dependent `민석` EveSpecific vector fixture failures must remain blocked until real registered vectors are restored.
+
+Outcome:
+
+- No dummy vectors, downloads, checksum fabrication, AGP bypass, persistence enablement, runtime mapping default enablement, or enforcement enablement.
+
+## Round169
+
+Decision: restore the fresh inert LexConceptMappingAdapter state-debug baseline to Round94.
+
+Rationale:
+
+- Round95/96 surfaces should be visible as available, but a fresh adapter should not claim Round96 as the latest invoked surface before any explicit later runtime-mapping method runs.
+
+Outcome:
+
+- Focused state-debug metadata tests pass.
+- Later explicit Round95/96 transitions remain available.
+
+## Round170
+
+Decision: treat focused verification as green only for the selected metadata subcluster.
+
+Outcome:
+
+- New Round167-171 focused tests passed.
+- Historical Round78/80/81 state-debug tests passed.
+- Compileall and collect-only passed.
+
+## Round171
+
+Decision: keep broader validation status red/partial and recommend operator artifact restoration as the next highest-value path.
+
+Outcome:
+
+- Full pytest improved to `205 failed, 1098 passed` but remains red.
+- Production persistence remains NO-GO.

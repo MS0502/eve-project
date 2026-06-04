@@ -361,3 +361,33 @@ Constraints for the next round:
 4. Rerun the Round164 preflight; start load-dependent repair only if it reports green.
 5. Keep production persistence NO-GO, `runtime_mapping_enabled` default false, enforcement disabled, and AGP unbypassed.
 6. If real artifacts remain unavailable, continue with a non-artifact code-only cluster instead of dummy vectors, fake checksums, skips, or xfails.
+
+## Round171 next actions
+
+Current post-PR #24 autonomous loop result:
+
+- Completed Round167 through Round171.
+- Fixed only the non-artifact concept/runtime mapping state-debug metadata subcluster.
+- Broader validation improved from `210 failed, 1090 passed` to `205 failed, 1098 passed`.
+- `pytest --collect-only -q` now reports `1303 tests collected` after adding the focused Round167-171 tests.
+
+Remaining failure taxonomy:
+
+- Seed/vector artifact cascade: 127 failures.
+- EVE-specific vector/self-learning cascade: 40 failures.
+- Concept/runtime mapping cascade: 38 failures, all still artifact-dependent fixture prerequisites.
+
+Hard boundaries still in force:
+
+- Production persistence remains NO-GO.
+- `runtime_mapping_enabled` default remains false.
+- `enforcement_enabled` remains false.
+- No AGP bypass was introduced.
+- No vector artifacts, dummy vectors, fake checksums, zip files, or operator artifacts were committed.
+
+Recommended next cluster:
+
+1. Restore real registered `vectors.npy` artifacts outside the PR.
+2. Rerun the Round164 load-dependent repair preflight.
+3. Only then address true load-dependent concept/runtime mapping repairs.
+4. If artifacts remain unavailable, choose another non-artifact metadata/diagnostic subcluster only.
