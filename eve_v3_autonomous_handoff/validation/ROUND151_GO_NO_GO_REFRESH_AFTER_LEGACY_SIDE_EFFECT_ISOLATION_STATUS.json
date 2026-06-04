@@ -1,0 +1,28 @@
+{
+  "agp_bypass_used": false,
+  "broader_validation_green": false,
+  "collect_only_green": true,
+  "enforcement_enabled_default": false,
+  "final_recommendation": "NO-GO",
+  "korean_behavior_cases_preserved": true,
+  "operator_artifacts_committed": false,
+  "production_persistence_enabled": false,
+  "recommendation_reason": "Keep NO-GO: collect-only improved, but broader validation remains red and production persistence is explicitly out of scope.",
+  "remaining_blockers": [
+    "broader_runtime_validation_failures",
+    "natural_language_korean_behavior_failures",
+    "missing_vector_artifact_dependent_failures",
+    "eve_specific_vector_commit_prerequisite_failures"
+  ],
+  "round": 151,
+  "runtime_mapping_enabled_default": false,
+  "seed_subset_committed": false,
+  "source_rounds": [
+    147,
+    148,
+    149,
+    150
+  ],
+  "status": "go_no_go_refreshed_after_legacy_side_effect_isolation",
+  "vectors_npy_committed": false
+}

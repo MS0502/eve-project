@@ -1,0 +1,28 @@
+{
+  "agp_bypass_used": false,
+  "blockers": [
+    {
+      "failure": "FileNotFoundError: /home/claude/eve/beliefs.json",
+      "module": "test_eve_main_ab.py",
+      "side_effect": "import_time_legacy_validation_execution"
+    },
+    {
+      "failure": "AttributeError: dict object has no attribute is_innate",
+      "module": "test_eve_main_abc.py",
+      "side_effect": "import_time_legacy_validation_execution"
+    }
+  ],
+  "collect_only_green": false,
+  "decision": "move_script_execution_behind_explicit_entrypoints_and_main_guards",
+  "diagnosis_version": "v3_round147_legacy_root_collection_side_effect_diagnosis",
+  "enforcement_enabled_default": false,
+  "final_recommendation": "NO-GO",
+  "korean_behavior_cases_preserved": true,
+  "operator_artifacts_committed": false,
+  "production_persistence_enabled": false,
+  "round": 147,
+  "runtime_mapping_enabled_default": false,
+  "seed_subset_committed": false,
+  "status": "diagnosed",
+  "vectors_npy_committed": false
+}

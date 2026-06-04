@@ -607,3 +607,24 @@ Artifacts:
 - `eve_v3_autonomous_handoff/validation/ROUND144_COLLECT_ONLY_AFTER_DIGITAL_SOMATIC_ISOLATION_STATUS.json`
 - `eve_v3_autonomous_handoff/validation/ROUND145_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
 - `eve_v3_autonomous_handoff/validation/ROUND146_GO_NO_GO_REFRESH_AFTER_DIGITAL_SOMATIC_ISOLATION_STATUS.json`
+
+## Rounds147-151 — Legacy root collection side-effect isolation loop
+
+- Round147 diagnosed the next collect-only blockers as import-time script execution in `test_eve_main_ab.py` and `test_eve_main_abc.py`.
+- Round148 moved the historical validation bodies behind explicit `run_legacy_validation()` entrypoints and `__main__` guards, preserving Korean examples and the legacy script intent while making pytest import/collection safe.
+- Round149 verified collection recovery: `python -m pytest --collect-only -q` completed with `1294 tests collected`.
+- Round150 refreshed broader validation honestly: compile and focused isolation tests pass, collect-only is green, but full pytest remains red (`212 failed, 1082 passed`) due to visible runtime/artifact-dependent failures.
+- Round151 keeps production persistence **NO-GO**. Production persistence remains disabled, `runtime_mapping_enabled` remains false by default, enforcement remains disabled, and AGP was not bypassed.
+
+Artifacts:
+
+- `eve_v3_autonomous_handoff/reports/ROUND147_LEGACY_ROOT_COLLECTION_SIDE_EFFECT_DIAGNOSIS.md`
+- `eve_v3_autonomous_handoff/reports/ROUND148_LEGACY_ROOT_COLLECTION_SIDE_EFFECT_ISOLATION.md`
+- `eve_v3_autonomous_handoff/reports/ROUND149_COLLECT_ONLY_AFTER_LEGACY_SIDE_EFFECT_ISOLATION.md`
+- `eve_v3_autonomous_handoff/reports/ROUND150_BROADER_VALIDATION_TAXONOMY_REFRESH.md`
+- `eve_v3_autonomous_handoff/reports/ROUND151_GO_NO_GO_REFRESH_AFTER_LEGACY_SIDE_EFFECT_ISOLATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND147_LEGACY_ROOT_COLLECTION_SIDE_EFFECT_DIAGNOSIS_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND148_LEGACY_ROOT_COLLECTION_SIDE_EFFECT_ISOLATION_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND149_COLLECT_ONLY_AFTER_LEGACY_SIDE_EFFECT_ISOLATION_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND150_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND151_GO_NO_GO_REFRESH_AFTER_LEGACY_SIDE_EFFECT_ISOLATION_STATUS.json`

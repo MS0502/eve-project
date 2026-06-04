@@ -305,3 +305,15 @@ Guardrails remain unchanged: do not enable production persistence, do not change
    - `test_eve_main_abc.py` import-time `learn_beliefs(beliefs_dict={...})` dict/object mismatch.
 5. Keep broader validation marked blocked/partial until `python -m pytest --collect-only -q` is green.
 6. Keep the `test_natural_lang_v2.py` behavior failure visible until it is fixed honestly.
+
+## Next after Round151
+
+1. Treat the `test_eve_main_ab.py` and `test_eve_main_abc.py` collection-time script side-effect blockers as recovered for pytest collection.
+2. Keep production persistence **NO-GO**; do not attempt production persistence enablement in the next patch unless the operator explicitly requests a separate activation round.
+3. Do not change `runtime_mapping_enabled` default to true, do not enable enforcement, and do not bypass AGP.
+4. Broader validation is still red. Next safe work should address real runtime validation failures honestly, without skips/xfails, dummy vectors, semantic case hardcoding, or translation of Korean behavior fixtures.
+5. Candidate next priorities:
+   - Korean NaturalLanguage behavior failures (`test_natural_lang_v2.py`, `tests/test_round2_nl_sd.py`).
+   - Missing vector artifact policy/disposition without committing `vectors.npy` or seed subset artifacts.
+   - EVE-specific vector commit prerequisite cascade failures.
+6. Continue preserving Korean-first behavior cases, including tokens such as `민석`.

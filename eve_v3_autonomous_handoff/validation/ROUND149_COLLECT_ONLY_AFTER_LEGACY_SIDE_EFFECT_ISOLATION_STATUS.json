@@ -1,0 +1,20 @@
+{
+  "agp_bypass_used": false,
+  "collect_only_collected_tests": 1294,
+  "collect_only_command": "python -m pytest --collect-only -q",
+  "collect_only_exit_code": 0,
+  "collect_only_green": true,
+  "enforcement_enabled_default": false,
+  "final_recommendation": "NO-GO",
+  "focused_command": "python -m pytest -q tests/test_v3_round147_149_legacy_collection_side_effect_isolation.py",
+  "focused_result": "2 passed",
+  "korean_behavior_cases_preserved": true,
+  "legacy_root_side_effect_blockers_recovered": true,
+  "operator_artifacts_committed": false,
+  "production_persistence_enabled": false,
+  "round": 149,
+  "runtime_mapping_enabled_default": false,
+  "seed_subset_committed": false,
+  "status": "collect_only_recovered",
+  "vectors_npy_committed": false
+}
