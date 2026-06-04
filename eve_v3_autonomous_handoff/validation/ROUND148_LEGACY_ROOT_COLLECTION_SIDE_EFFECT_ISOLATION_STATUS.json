@@ -1,0 +1,23 @@
+{
+  "agp_bypass_used": false,
+  "changed_files": [
+    "test_eve_main_ab.py",
+    "test_eve_main_abc.py",
+    "tests/test_v3_round147_149_legacy_collection_side_effect_isolation.py"
+  ],
+  "collect_only_green": null,
+  "enforcement_enabled_default": false,
+  "final_recommendation": "NO-GO",
+  "isolation_version": "v3_round148_legacy_root_collection_side_effect_isolation",
+  "korean_behavior_cases_preserved": true,
+  "legacy_entrypoints_preserved": true,
+  "operator_artifacts_committed": false,
+  "production_persistence_enabled": false,
+  "pytest_import_side_effects_removed": true,
+  "round": 148,
+  "runtime_mapping_enabled_default": false,
+  "seed_subset_committed": false,
+  "status": "isolated",
+  "tests_weakened_or_skipped": false,
+  "vectors_npy_committed": false
+}
