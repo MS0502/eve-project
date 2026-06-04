@@ -1,0 +1,48 @@
+{
+  "round": 161,
+  "status": "broader_validation_delta_recorded_partial_red",
+  "checks": [
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "python -m pytest --collect-only -q",
+      "exit_code": 0,
+      "result": "1296 tests collected in 4.95s"
+    },
+    {
+      "command": "python -m pytest -q tests/test_v3_round159_seed_vector_artifact_gate.py",
+      "exit_code": 0,
+      "result": "2 passed in 0.31s"
+    },
+    {
+      "command": "python -m pytest -q",
+      "exit_code": 1,
+      "result": "210 failed, 1086 passed in 24.49s"
+    }
+  ],
+  "delta_vs_round156": {
+    "failed_before": 210,
+    "failed_after": 210,
+    "failed_delta": 0,
+    "passed_before": 1084,
+    "passed_after": 1086,
+    "passed_delta": 2,
+    "collected_before": 1294,
+    "collected_after": 1296,
+    "collected_delta": 2
+  },
+  "remaining_taxonomy": {
+    "seed_vector_artifact_fasttext_wrapper_cascade": 127,
+    "eve_specific_vector_self_learning_cascade": 40,
+    "concept_runtime_mapping_cascade": 43
+  },
+  "next_recommendation": "operator should restore real registered vectors.npy artifacts outside the PR, then rerun artifact readiness gate before any load-dependent repair; if artifacts remain unavailable, next code-only cluster should be another diagnostic/readiness surface, not fake data.",
+  "production_persistence_recommendation": "NO-GO",
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "vectors_npy_committed": false
+}
