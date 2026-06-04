@@ -1,0 +1,23 @@
+{
+  "agp_bypass_used": false,
+  "behavior_source": "legacy_reexport_only",
+  "compatibility_version": "v3_round143_digital_somatic_import_compatibility_shim",
+  "decision_status": "minimal_compatibility_shim_applied",
+  "enforcement_enabled_default": false,
+  "fake_behavior_markers_present": [],
+  "import_check_passed": true,
+  "isolation_plan": null,
+  "legacy_source_path": "legacy/eve_modules/digital_somatic.py",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "reexported_symbols": [
+    "DigitalSomatic"
+  ],
+  "retained_legacy_source_exists": true,
+  "round": 143,
+  "runtime_mapping_enabled_default": false,
+  "shim_is_minimal_reexport": true,
+  "shim_path": "digital_somatic.py",
+  "source_round": 142,
+  "vectors_npy_committed": false
+}

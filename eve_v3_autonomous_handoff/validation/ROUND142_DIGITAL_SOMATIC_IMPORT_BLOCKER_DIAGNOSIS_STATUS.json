@@ -1,0 +1,27 @@
+{
+  "adapter_import_sites": [
+    "adapters/digital_somatic_adapter.py"
+  ],
+  "agp_bypass_used": false,
+  "diagnosis_status": "digital_somatic_import_blocker_active",
+  "diagnosis_version": "v3_round142_digital_somatic_import_blocker_diagnosis",
+  "enforcement_enabled_default": false,
+  "module_available_at_root": false,
+  "module_name": "digital_somatic",
+  "primary_blocker": "missing digital_somatic compatibility import",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "recommended_round143_action": "add_minimal_compatibility_shim",
+  "required_symbol": "DigitalSomatic",
+  "retained_legacy_candidate": "legacy/eve_modules/digital_somatic.py",
+  "retained_legacy_candidate_exists": true,
+  "root_import_site_count": 2,
+  "root_import_sites": [
+    "eve_main_ab.py",
+    "eve_main_abc.py"
+  ],
+  "round": 142,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 141,
+  "vectors_npy_committed": false
+}

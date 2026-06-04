@@ -390,3 +390,16 @@ Rationale:
 - Runtime mapping remains disabled by default and enforcement remains disabled.
 
 Next decision point: diagnose `digital_somatic` using the same retained-implementation re-export rule or hard-stop with an isolation plan if no retained implementation exists.
+
+## Rounds142-146 decision — DigitalSomatic recovered; production persistence remains NO-GO
+
+Decision: keep production persistence **NO-GO**.
+
+Rationale:
+
+- The retained DigitalSomatic implementation exists at `legacy/eve_modules/digital_somatic.py`.
+- Root `digital_somatic.py` is a minimal compatibility shim and does not fake behavior or add vectors.
+- Collect-only improved past missing `digital_somatic` imports but remains interrupted by two legacy root collection side effects.
+- Runtime mapping remains disabled by default and enforcement remains disabled.
+
+Next decision point: isolate the legacy root collection side effects in `test_eve_main_ab.py` and `test_eve_main_abc.py` without hiding real behavior failures.

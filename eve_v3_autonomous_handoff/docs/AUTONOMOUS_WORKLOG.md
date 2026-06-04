@@ -586,3 +586,24 @@ Artifacts:
 - `eve_v3_autonomous_handoff/validation/ROUND139_COLLECT_ONLY_AFTER_DMN_ISOLATION_STATUS.json`
 - `eve_v3_autonomous_handoff/validation/ROUND140_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
 - `eve_v3_autonomous_handoff/validation/ROUND141_GO_NO_GO_REFRESH_AFTER_DMN_ISOLATION_STATUS.json`
+
+## Rounds142-146 — DigitalSomatic import isolation loop
+
+- Round142 diagnosed legacy root `digital_somatic` import blockers in `eve_main_ab.py`, `eve_main_abc.py`, and their root legacy tests. The retained implementation exists at `legacy/eve_modules/digital_somatic.py`.
+- Round143 added a minimal root `digital_somatic.py` shim that re-exports `legacy.eve_modules.digital_somatic.DigitalSomatic` only. No dummy behavior, dummy vectors, seed artifacts, production persistence, runtime mapping enablement, enforcement enablement, or AGP bypass was added.
+- Round144 reran collect-only. The `digital_somatic` missing-import blocker is recovered, but collection remains partial: `test_eve_main_ab.py` now fails during import-time execution on missing `/home/claude/eve/beliefs.json`, and `test_eve_main_abc.py` fails during import-time execution on dict entries lacking `is_innate`.
+- Round145 recorded broader validation as blocked/partial: compile and focused Round142-144 tests pass, collect-only is improved but not green, the NaturalLanguage v2 behavior failure remains preserved, and full-suite execution is not feasible while collection is interrupted.
+- Round146 keeps production persistence **NO-GO**.
+
+Artifacts:
+
+- `eve_v3_autonomous_handoff/reports/ROUND142_DIGITAL_SOMATIC_IMPORT_BLOCKER_DIAGNOSIS.md`
+- `eve_v3_autonomous_handoff/reports/ROUND143_DIGITAL_SOMATIC_COMPAT_SHIM.md`
+- `eve_v3_autonomous_handoff/reports/ROUND144_COLLECT_ONLY_AFTER_DIGITAL_SOMATIC_ISOLATION.md`
+- `eve_v3_autonomous_handoff/reports/ROUND145_BROADER_VALIDATION_TAXONOMY_REFRESH.md`
+- `eve_v3_autonomous_handoff/reports/ROUND146_GO_NO_GO_REFRESH_AFTER_DIGITAL_SOMATIC_ISOLATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND142_DIGITAL_SOMATIC_IMPORT_BLOCKER_DIAGNOSIS_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND143_DIGITAL_SOMATIC_COMPAT_SHIM_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND144_COLLECT_ONLY_AFTER_DIGITAL_SOMATIC_ISOLATION_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND145_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
+- `eve_v3_autonomous_handoff/validation/ROUND146_GO_NO_GO_REFRESH_AFTER_DIGITAL_SOMATIC_ISOLATION_STATUS.json`

@@ -1,0 +1,24 @@
+{
+  "agp_bypass_used": false,
+  "collect_only_green": false,
+  "critical_blocker_improved": true,
+  "enforcement_enabled_default": false,
+  "final_recommendation": "NO-GO",
+  "go_no_go_refresh_version": "v3_round146_go_no_go_refresh_after_digital_somatic_isolation",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "recommendation_reason": "Keep NO-GO: production persistence remains disabled unless collect-only and broader validation are green.",
+  "refresh_status": "go_no_go_refreshed_after_digital_somatic_isolation",
+  "remaining_blockers": [
+    "collect_only_still_partial_or_blocked",
+    "broader_validation_partial_or_blocked",
+    "collect_only"
+  ],
+  "round": 146,
+  "runtime_mapping_enabled_default": false,
+  "source_rounds": [
+    144,
+    145
+  ],
+  "vectors_npy_committed": false
+}
