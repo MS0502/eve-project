@@ -419,3 +419,12 @@ Hard boundaries still in force:
 - `enforcement_enabled` remains false.
 - AGP must not be bypassed.
 - Do not commit `_operator_artifacts`, `vectors.npy`, `vocab.txt`, `subset_manifest.json`, `seeds/subsets`, zip files, or part files.
+
+## After Round181
+
+1. Keep production persistence NO-GO.
+2. Keep `runtime_mapping_enabled` default false and enforcement disabled.
+3. Do not commit `_operator_artifacts`, `vectors.npy`, `vocab.txt`, `subset_manifest.json`, seed subset trees, zip files, or part files.
+4. If the operator artifact directory is present locally, rerun the existing seed/vector readiness gate against `_operator_artifacts/subset_medium_30k`.
+5. Only after that readiness gate is green, prepare a separate focused `FasttextEmbeddingAdapter.load()` repair for the medium 30k explicit-load path.
+6. If the directory is absent, preserve the Round179 hard block and do not create dummy vectors or download artifacts.

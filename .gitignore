@@ -27,3 +27,6 @@ Thumbs.db
 
 # Code-only handoff binary vector artifacts stay out of PR diffs
 seeds/subsets/*/vectors.npy
+
+# Operator-local vector artifacts (never commit)
+_operator_artifacts/

@@ -1,0 +1,51 @@
+{
+  "accepted_for_planning": true,
+  "accepted_for_runtime_load": false,
+  "agp_bypass_used": false,
+  "artifact_files_included": false,
+  "artifacts_written": false,
+  "blockers": [],
+  "checks": {
+    "dtype_matches_expected": true,
+    "manifest_checksum_matches_vectors": true,
+    "manifest_dim_matches_expected": true,
+    "manifest_size_matches_expected": true,
+    "operator_artifacts_git_status_clean": true,
+    "required_files_reported_present": true,
+    "shape_matches_expected": true,
+    "vectors_checksum_matches_expected": true
+  },
+  "enforcement_enabled": false,
+  "evidence_layer": "operator_verified_metadata_only",
+  "expected_vector_dtype": "float32",
+  "expected_vector_shape": [
+    30000,
+    300
+  ],
+  "expected_vectors_sha256": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+  "files_exist": {
+    "subset_manifest.json": true,
+    "vectors.npy": true,
+    "vocab.txt": true
+  },
+  "git_status_clean": true,
+  "local_path": "_operator_artifacts/subset_medium_30k/",
+  "manifest_vector_dim": 300,
+  "manifest_vectors_checksum": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+  "manifest_vocab_size": 30000,
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "round": 177,
+  "runtime_mapping_enabled_default": false,
+  "status": "operator_verified_artifact_evidence_recorded",
+  "subset_name": "cc.ko.300.subset.medium.30k",
+  "vector_dtype": "float32",
+  "vector_shape": [
+    30000,
+    300
+  ],
+  "vectors_committed": false,
+  "vectors_loaded": false,
+  "vectors_sha256": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+  "version": "v3_round177_operator_verified_artifact_evidence"
+}

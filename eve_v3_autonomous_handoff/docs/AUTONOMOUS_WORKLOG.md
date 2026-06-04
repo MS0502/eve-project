@@ -939,3 +939,75 @@ Failures / limitations:
 Next recommendation:
 
 - Restore real medium 30k artifacts outside git, rerun Round172/Round173, then select one narrow load-dependent vector/self-learning cluster if green.
+
+## Round177 — operator-verified artifact evidence
+
+Goal:
+
+- Record the operator-side Codespaces verification result for the medium 30k artifact as metadata evidence only.
+
+Changed files:
+
+- `adapters/operator_verified_artifact_evidence.py`
+- `eve_v3_autonomous_handoff/reports/ROUND177_OPERATOR_VERIFIED_ARTIFACT_EVIDENCE.md`
+- `eve_v3_autonomous_handoff/validation/ROUND177_OPERATOR_VERIFIED_ARTIFACT_EVIDENCE_STATUS.json`
+
+Results:
+
+- Operator evidence accepted for planning.
+- Runtime load authorization remains false because artifact files are not included in this PR.
+
+## Round178 — metadata-only cluster selection
+
+Goal:
+
+- Select exactly one load-dependent cluster that can be prepared from metadata without embedding vectors.
+
+Changed files:
+
+- `adapters/operator_verified_artifact_evidence.py`
+- `eve_v3_autonomous_handoff/reports/ROUND178_LOAD_DEPENDENT_CLUSTER_SELECTION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND178_LOAD_DEPENDENT_CLUSTER_SELECTION_STATUS.json`
+
+Results:
+
+- Selected `fasttext_medium_30k_explicit_load_access_preflight`.
+- Selection remains metadata-only and does not allow actual load.
+
+## Round179 — metadata-only load preflight
+
+Goal:
+
+- Add a fail-closed preflight that hard-blocks actual load if local operator artifacts are inaccessible.
+
+Changed files:
+
+- `adapters/operator_verified_artifact_evidence.py`
+- `eve_v3_autonomous_handoff/reports/ROUND179_METADATA_ONLY_LOAD_PREFLIGHT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND179_METADATA_ONLY_LOAD_PREFLIGHT_STATUS.json`
+
+Results:
+
+- Actual load remains hard-blocked in environments without `_operator_artifacts/subset_medium_30k`.
+- The helper does not checksum, mmap, `numpy.load`, or call `FasttextEmbeddingAdapter.load()`.
+
+## Round180 — focused metadata/preflight verification
+
+Commands run:
+
+- `python -m pytest -q tests/test_v3_round177_181_operator_verified_metadata_preflight.py`
+
+Results:
+
+- 4 focused tests passed.
+
+## Round181 — broader validation delta and recommendation
+
+Results:
+
+- Focused metadata/preflight behavior is green.
+- Broader validation is still expected to remain red until real operator artifacts are accessible to the execution environment.
+
+Next recommendation:
+
+- If `_operator_artifacts/subset_medium_30k` is locally accessible, run the existing readiness gate and then a separate explicit load repair. If not, keep actual load blocked.

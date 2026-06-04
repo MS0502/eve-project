@@ -1,0 +1,28 @@
+{
+  "agp_bypass_used": false,
+  "artifacts_included": false,
+  "enforcement_enabled": false,
+  "hard_block_reason": null,
+  "operator_evidence_status": "operator_verified_artifact_evidence_recorded",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "requires_local_artifact_access_before_load": true,
+  "round": 178,
+  "runtime_mapping_enabled_default": false,
+  "selected_cluster": {
+    "actual_load_allowed_by_selection": false,
+    "id": "fasttext_medium_30k_explicit_load_access_preflight",
+    "load_dependent_behavior_prepared": true,
+    "name": "FasttextEmbeddingAdapter medium 30k explicit-load accessibility preflight",
+    "repair_scope": [
+      "verify operator evidence can drive planning without embedding vector files",
+      "check local artifact accessibility before any explicit load attempt",
+      "fail closed when _operator_artifacts/subset_medium_30k is unavailable in Codex Cloud"
+    ],
+    "selected": true
+  },
+  "selection_layer": "metadata_only_load_dependent_cluster_selection",
+  "status": "load_dependent_cluster_selected_metadata_only",
+  "vectors_loaded": false,
+  "version": "v3_round178_load_dependent_cluster_selection"
+}
