@@ -1,0 +1,76 @@
+{
+  "agp_bypass_used": false,
+  "artifacts_written": false,
+  "blockers": [
+    "operator_artifact_files_missing",
+    "operator_artifact_manifest_inconsistent",
+    "operator_artifact_vector_dtype_invalid",
+    "operator_artifact_vector_shape_invalid"
+  ],
+  "directory_exists": false,
+  "enforcement_enabled": false,
+  "files": {
+    "subset_manifest": {
+      "exists": false,
+      "expected_sha256": "SHA256:28222ff89e1fa0d2c20463eeef79729d731bf0484f0f4f8161863088c2724c3a",
+      "path": "_operator_artifacts/subset_medium_30k/subset_manifest.json",
+      "sha256": null,
+      "sha256_match": false
+    },
+    "vectors": {
+      "exists": false,
+      "expected_sha256": "SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05",
+      "path": "_operator_artifacts/subset_medium_30k/vectors.npy",
+      "sha256": null,
+      "sha256_match": false
+    },
+    "vocab": {
+      "exists": false,
+      "expected_sha256": "SHA256:dc0e6985e767003f13d74bf1a16c257be29e3a125dabb16a320cd13082aef308",
+      "path": "_operator_artifacts/subset_medium_30k/vocab.txt",
+      "sha256": null,
+      "sha256_match": false
+    }
+  },
+  "git_status_safety": {
+    "command": "git status --short -- _operator_artifacts/subset_medium_30k seeds/subsets",
+    "forbidden_artifact_lines": [],
+    "lines": [],
+    "returncode": 0,
+    "safe": true
+  },
+  "load_should_be_attempted": false,
+  "manifest_consistency": {
+    "audit_errors": [
+      "missing_vocab_file",
+      "missing_vectors_file",
+      "missing_subset_manifest_file"
+    ],
+    "audit_valid": false,
+    "consistent": false
+  },
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "ready": false,
+  "registered": true,
+  "round": 172,
+  "runtime_mapping_enabled_default": false,
+  "status": "blocked_operator_artifact_required",
+  "subset_dir": "_operator_artifacts/subset_medium_30k",
+  "subset_name": "cc.ko.300.subset.medium.30k",
+  "vectors": {
+    "dtype": null,
+    "dtype_match": false,
+    "expected_dtype": "float32",
+    "expected_shape": [
+      30000,
+      300
+    ],
+    "load_error": null,
+    "path": "_operator_artifacts/subset_medium_30k/vectors.npy",
+    "shape": null,
+    "shape_match": false
+  },
+  "vectors_committed": false,
+  "version": "v3_round172_operator_artifact_verification"
+}
