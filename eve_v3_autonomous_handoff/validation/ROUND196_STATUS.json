@@ -1,0 +1,60 @@
+{
+  "agp_bypass_used": false,
+  "artifacts_included": false,
+  "artifacts_written": false,
+  "broader_failure_count": 206,
+  "broader_failure_taxonomy": {
+    "additional_current_branch_or_latest_main_delta": 1,
+    "concept_runtime_mapping_cascade": 38,
+    "eve_specific_vector_self_learning_cascade": 40,
+    "seed_vector_artifact_cascade": 127
+  },
+  "broader_pass_count": 1122,
+  "broader_pytest_status": "red_codex_cloud_missing_artifacts",
+  "collect_only_status": "passed_1328_collected",
+  "compileall_status": "passed",
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "focused_tests_status": "passed_18_guarded_operator_related",
+  "operator_local_validation_command": "python scripts/operator_validate_medium30k.py --attempt-load",
+  "operator_local_validation_evidence": {
+    "command": "python scripts/operator_validate_medium30k.py --attempt-load",
+    "dtype": "float32",
+    "enforcement_enabled": false,
+    "exit_code": 0,
+    "git_status_safety_check_clean": true,
+    "git_status_safety_clean": true,
+    "load_should_be_attempted": true,
+    "manifest_consistent": true,
+    "production_persistence_enabled": false,
+    "read_only": true,
+    "ready": true,
+    "runtime_mapping_enabled_default": false,
+    "sha256_match": true,
+    "shape": [
+      30000,
+      300
+    ],
+    "status": "operator_artifact_verified_green",
+    "subset_manifest_exists": true,
+    "vectors_committed": false,
+    "vectors_exists": true,
+    "vocab_exists": true
+  },
+  "production_persistence_enabled": false,
+  "production_persistence_no_go_respected": true,
+  "recommendation": "operator_run_build_full_engine_with_green_validation_and_explicit_load_authorization_then_remeasure_seed_vector_and_eve_specific_cascades",
+  "round": 196,
+  "rounds_completed": [
+    192,
+    193,
+    194,
+    195,
+    196
+  ],
+  "runtime_mapping_enabled_default": false,
+  "selected_entrypoint": "build_full_engine_fasttext_embedding_for_eve_specific_known_context",
+  "validation_layer": "broader_validation_delta_and_next_recommendation",
+  "vectors_committed": false,
+  "version": "v3_round196_broader_validation_delta_recommendation"
+}
