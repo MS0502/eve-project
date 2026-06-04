@@ -1,0 +1,15 @@
+{
+  "agp_bypass_used": false,
+  "enforcement_enabled": false,
+  "implementation": "LexConceptMappingAdapter fresh inert _latest_runtime_mapping_round default restored to 94",
+  "production_persistence_enabled": false,
+  "read_only_gate_helper": "adapters.concept_runtime_mapping_diagnostics.round169_state_debug_baseline_gate",
+  "round": 169,
+  "runtime_mapping_enabled_default": false,
+  "selected_subcluster": "state_debug_baseline_round_metadata",
+  "tests_added": [
+    "tests/test_v3_round167_171_concept_runtime_mapping_loop.py"
+  ],
+  "vectors_written": false,
+  "version": "v3_round169_state_debug_baseline_round_gate"
+}

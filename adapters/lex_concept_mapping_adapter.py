@@ -35,7 +35,7 @@ class LexConceptMappingAdapter:
         # from lexical or EveSpecific vectors.
         self._concept_categories: dict[str, dict[str, Any]] = {}
         self._concept_commit_audit: list[dict[str, Any]] = []
-        self._latest_runtime_mapping_round = 96
+        self._latest_runtime_mapping_round = 94
 
     def _active_self_learning_policy(self) -> dict[str, Any]:
         learner = getattr(self.engine, "eve_self_learning", None)

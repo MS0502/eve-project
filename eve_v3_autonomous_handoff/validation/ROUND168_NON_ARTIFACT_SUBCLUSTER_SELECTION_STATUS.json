@@ -1,0 +1,28 @@
+{
+  "rationale": [
+    "It is deterministic metadata only and does not require fastText or EveSpecific vector artifacts.",
+    "It does not enable production persistence, runtime mapping by default, enforcement, or AGP bypass.",
+    "It removes a stale state-debug mismatch while leaving artifact-dependent behavior honestly blocked."
+  ],
+  "read_only": true,
+  "rejected_subclusters": [
+    {
+      "artifact_dependent": true,
+      "blocker": "missing registered vectors.npy artifacts keep fastText context unavailable, so 민석 EveSpecific vector commit fixtures fail closed with insufficient_known_context",
+      "count": 38,
+      "id": "artifact_dependent_eve_specific_commit_prerequisite",
+      "policy": "hard_block_until_operator_restores_real_artifacts; do_not_create_dummy_vectors_or_fake_checksums",
+      "selected_for_fix": false
+    }
+  ],
+  "round": 168,
+  "selected_subcluster": {
+    "artifact_dependent": false,
+    "blocker": "fresh LexConceptMappingAdapter state-debug reported Round96 before any Round95/96 runtime-mapping operator/precheck surface was invoked",
+    "count": 5,
+    "id": "state_debug_baseline_round_metadata",
+    "policy": "restore the inert baseline to Round94 while preserving explicit Round95/96 transitions and disabled flags",
+    "selected_for_fix": true
+  },
+  "version": "v3_round168_non_artifact_subcluster_selection"
+}
