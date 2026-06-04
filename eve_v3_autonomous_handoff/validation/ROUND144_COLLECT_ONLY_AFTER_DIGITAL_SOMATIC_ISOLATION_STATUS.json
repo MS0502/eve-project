@@ -1,0 +1,38 @@
+{
+  "agp_bypass_used": false,
+  "broader_validation_status": "blocked_partial",
+  "collect_command": "python -m pytest --collect-only -q",
+  "collect_recovery_status": "collect_only_partial_after_digital_somatic_isolation",
+  "collect_recovery_version": "v3_round144_collect_only_after_digital_somatic_isolation",
+  "collected_tests": 1292,
+  "critical_blocker_improved": true,
+  "digital_somatic_import_errors_remaining": 0,
+  "enforcement_enabled_default": false,
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "remaining_error_count": 2,
+  "remaining_errors": [
+    {
+      "detail": "collection now reaches eve_main_ab.learn_beliefs(path='/home/claude/eve/beliefs.json') and fails with FileNotFoundError",
+      "digital_somatic_recovered": true,
+      "error_family": "legacy_root_collection_side_effect_file_dependency",
+      "missing_import": null,
+      "test_module": "test_eve_main_ab.py"
+    },
+    {
+      "detail": "collection now reaches eve_main_abc.learn_beliefs(beliefs_dict={...}) and fails because dict entries lack is_innate attributes",
+      "digital_somatic_recovered": true,
+      "error_family": "legacy_root_collection_side_effect_behavior_error",
+      "missing_import": null,
+      "test_module": "test_eve_main_abc.py"
+    }
+  ],
+  "return_code": 2,
+  "round": 144,
+  "runtime_mapping_enabled_default": false,
+  "source_rounds": [
+    142,
+    143
+  ],
+  "vectors_npy_committed": false
+}

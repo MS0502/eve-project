@@ -964,3 +964,226 @@ def build_round141_go_no_go_refresh_after_dmn_isolation(
 
 
 __all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]
+
+
+ROUND142_DIGITAL_SOMATIC_IMPORT_BLOCKER_DIAGNOSIS_VERSION = "v3_round142_digital_somatic_import_blocker_diagnosis"
+ROUND143_DIGITAL_SOMATIC_COMPAT_SHIM_VERSION = "v3_round143_digital_somatic_import_compatibility_shim"
+ROUND144_COLLECT_ONLY_AFTER_DIGITAL_SOMATIC_ISOLATION_VERSION = "v3_round144_collect_only_after_digital_somatic_isolation"
+ROUND145_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION = "v3_round145_broader_validation_taxonomy_refresh"
+ROUND146_GO_NO_GO_REFRESH_AFTER_DIGITAL_SOMATIC_ISOLATION_VERSION = "v3_round146_go_no_go_refresh_after_digital_somatic_isolation"
+
+
+def build_round142_digital_somatic_import_blocker_diagnosis(
+    *,
+    repo_root: str | Path = ".",
+    source_round141_refresh: dict[str, Any] | None = None,
+    module_available: bool | None = None,
+) -> dict[str, Any]:
+    """Diagnose legacy root ``digital_somatic`` import blockers."""
+
+    root = Path(repo_root)
+    module_name = "digital_somatic"
+    import_sites = [
+        _relative(path, root)
+        for path in _root_python_files(root)
+        if path.name != f"{module_name}.py" and _imports_module(path, module_name)
+    ]
+    adapter_import_sites = [
+        _relative(path, root)
+        for path in sorted((root / "adapters").glob("*.py"))
+        if path.is_file() and _imports_module(path, module_name)
+    ] if (root / "adapters").exists() else []
+    available = _module_available(module_name, root) if module_available is None else bool(module_available)
+    legacy_source = root / "legacy" / "eve_modules" / "digital_somatic.py"
+    blocker_active = bool(import_sites) and not available
+    return {
+        "diagnosis_version": ROUND142_DIGITAL_SOMATIC_IMPORT_BLOCKER_DIAGNOSIS_VERSION,
+        "round": 142,
+        "source_round": (source_round141_refresh or {}).get("round"),
+        "diagnosis_status": "digital_somatic_import_blocker_active" if blocker_active else "digital_somatic_import_sites_identified_module_resolvable",
+        "module_name": module_name,
+        "module_available_at_root": available,
+        "root_import_sites": import_sites,
+        "root_import_site_count": len(import_sites),
+        "adapter_import_sites": adapter_import_sites,
+        "retained_legacy_candidate": "legacy/eve_modules/digital_somatic.py" if legacy_source.exists() else None,
+        "retained_legacy_candidate_exists": legacy_source.exists(),
+        "required_symbol": "DigitalSomatic",
+        "primary_blocker": "missing digital_somatic compatibility import" if blocker_active else None,
+        "recommended_round143_action": "add_minimal_compatibility_shim" if blocker_active and legacy_source.exists() else ("hard_stop_isolation_plan_required" if blocker_active else "verify_existing_compatibility_shim"),
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round143_digital_somatic_import_compatibility_shim_decision(
+    *,
+    source_round142_diagnosis: dict[str, Any] | None = None,
+    shim_path: str | Path = "digital_somatic.py",
+    legacy_source_path: str | Path = "legacy/eve_modules/digital_somatic.py",
+    import_check_passed: bool = False,
+    behavior_source: str = "legacy_reexport_only",
+) -> dict[str, Any]:
+    """Record the DigitalSomatic compatibility-shim or isolation decision."""
+
+    shim = Path(shim_path)
+    legacy = Path(legacy_source_path)
+    shim_text = shim.read_text(encoding="utf-8") if shim.exists() else ""
+    forbidden_fake_markers = ["class DigitalSomatic", "dummy", "random", "vectors.npy"]
+    fake_markers_present = sorted(marker for marker in forbidden_fake_markers if marker in shim_text)
+    shim_is_minimal_reexport = shim.exists() and legacy.exists() and "legacy.eve_modules.digital_somatic" in shim_text and not fake_markers_present
+    decision = "minimal_compatibility_shim_applied" if shim_is_minimal_reexport and import_check_passed else "isolation_plan_required"
+    return {
+        "compatibility_version": ROUND143_DIGITAL_SOMATIC_COMPAT_SHIM_VERSION,
+        "round": 143,
+        "source_round": (source_round142_diagnosis or {}).get("round"),
+        "decision_status": decision,
+        "shim_path": str(shim_path),
+        "legacy_source_path": str(legacy_source_path),
+        "retained_legacy_source_exists": legacy.exists(),
+        "reexported_symbols": ["DigitalSomatic"] if shim_is_minimal_reexport else [],
+        "shim_is_minimal_reexport": shim_is_minimal_reexport,
+        "behavior_source": behavior_source if shim_is_minimal_reexport else "none",
+        "fake_behavior_markers_present": fake_markers_present,
+        "import_check_passed": import_check_passed,
+        "isolation_plan": None if decision == "minimal_compatibility_shim_applied" else {
+            "required_action": "restore retained legacy/eve_modules/digital_somatic.py before adding root compatibility import",
+            "hard_stop_reason": "DigitalSomatic behavior must not be faked or replaced with dummy vectors",
+        },
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round144_collect_only_after_digital_somatic_isolation(
+    *,
+    source_round142_diagnosis: dict[str, Any] | None = None,
+    source_round143_decision: dict[str, Any] | None = None,
+    collect_command: str = "python -m pytest --collect-only -q",
+    return_code: int = 1,
+    collected_tests: int | None = None,
+    remaining_errors: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Record collect-only recovery after DigitalSomatic import isolation."""
+
+    errors = list(remaining_errors or [])
+    ds_errors = [err for err in errors if err.get("missing_import") == "digital_somatic" or err.get("error_family") == "legacy_root_digital_somatic_import_blocker"]
+    recovered = return_code == 0
+    return {
+        "collect_recovery_version": ROUND144_COLLECT_ONLY_AFTER_DIGITAL_SOMATIC_ISOLATION_VERSION,
+        "round": 144,
+        "source_rounds": [r for r in [(source_round142_diagnosis or {}).get("round"), (source_round143_decision or {}).get("round")] if r is not None],
+        "collect_recovery_status": "collect_only_recovered_after_digital_somatic_isolation" if recovered else "collect_only_partial_after_digital_somatic_isolation",
+        "collect_command": collect_command,
+        "return_code": return_code,
+        "collected_tests": collected_tests,
+        "digital_somatic_import_errors_remaining": len(ds_errors),
+        "remaining_error_count": len(errors),
+        "remaining_errors": errors,
+        "critical_blocker_improved": len(ds_errors) == 0,
+        "broader_validation_status": "collect_only_passed" if recovered else "blocked_partial",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round145_broader_validation_taxonomy_refresh(
+    *,
+    source_round144_collect_recovery: dict[str, Any] | None = None,
+    validation_items: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Refresh broader validation taxonomy after DigitalSomatic isolation."""
+
+    collect = source_round144_collect_recovery or {}
+    items = list(validation_items or [])
+    categories: dict[str, list[dict[str, Any]]] = {
+        "compile_checks": [],
+        "focused_round142_144_tests": [],
+        "collect_only": [],
+        "legacy_behavior_tests": [],
+        "broader_validation": [],
+    }
+    for item in items:
+        categories.setdefault(str(item.get("category", "broader_validation")), []).append(item)
+    blocked = [item for item in items if str(item.get("status")) in {"blocked", "partial", "blocked_partial", "fail"}]
+    if collect.get("broader_validation_status") == "blocked_partial":
+        blocked.append({"category": "collect_only", "status": "blocked_partial", "reason": "collect-only still blocked"})
+    legacy_failures = [item for item in items if item.get("category") == "legacy_behavior_tests" and item.get("status") == "fail"]
+    primary = None
+    if collect.get("broader_validation_status") == "blocked_partial":
+        primary = "collect_only"
+    elif legacy_failures:
+        primary = "legacy_behavior_failure"
+    elif blocked:
+        primary = "broader_validation_partial_or_blocked"
+    return {
+        "taxonomy_version": ROUND145_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION,
+        "round": 145,
+        "source_round": collect.get("round"),
+        "taxonomy_status": "broader_validation_partial_or_blocked" if blocked else "broader_validation_green",
+        "validation_categories": categories,
+        "blocked_or_partial_items": blocked,
+        "digital_somatic_blocker_recovered": collect.get("digital_somatic_import_errors_remaining") == 0,
+        "collect_only_green": collect.get("collect_recovery_status") == "collect_only_recovered_after_digital_somatic_isolation",
+        "legacy_behavior_failures_preserved": legacy_failures,
+        "primary_remaining_blocker_family": primary,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round146_go_no_go_refresh_after_digital_somatic_isolation(
+    *,
+    source_round144_collect_recovery: dict[str, Any] | None = None,
+    source_round145_taxonomy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Refresh production-persistence recommendation after DigitalSomatic isolation."""
+
+    collect = source_round144_collect_recovery or {}
+    taxonomy = source_round145_taxonomy or {}
+    collect_green = collect.get("collect_recovery_status") == "collect_only_recovered_after_digital_somatic_isolation"
+    collect_improved = collect.get("critical_blocker_improved") is True
+    broader_green = taxonomy.get("taxonomy_status") == "broader_validation_green"
+    recommendation = "GO" if collect_green and broader_green and collect_improved else "NO-GO"
+    blockers = []
+    if not collect_green:
+        blockers.append("collect_only_still_partial_or_blocked")
+    if not broader_green:
+        blockers.append("broader_validation_partial_or_blocked")
+    if taxonomy.get("primary_remaining_blocker_family"):
+        blockers.append(str(taxonomy["primary_remaining_blocker_family"]))
+    return {
+        "go_no_go_refresh_version": ROUND146_GO_NO_GO_REFRESH_AFTER_DIGITAL_SOMATIC_ISOLATION_VERSION,
+        "round": 146,
+        "source_rounds": [r for r in [collect.get("round"), taxonomy.get("round")] if r is not None],
+        "refresh_status": "go_no_go_refreshed_after_digital_somatic_isolation",
+        "critical_blocker_improved": collect_improved,
+        "collect_only_green": collect_green,
+        "final_recommendation": recommendation,
+        "recommendation_reason": "Keep NO-GO: production persistence remains disabled unless collect-only and broader validation are green." if recommendation == "NO-GO" else "Collect-only and broader validation are green.",
+        "remaining_blockers": blockers,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+__all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]

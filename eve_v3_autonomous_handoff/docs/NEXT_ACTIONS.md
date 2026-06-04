@@ -294,3 +294,14 @@ Recommended next loop:
 4. Keep production persistence **NO-GO** until collect-only is green and broader validation is no longer blocked/partial.
 
 Guardrails remain unchanged: do not enable production persistence, do not change `runtime_mapping_enabled` default to true, do not enable enforcement, do not bypass AGP, do not weaken legacy tests, and do not commit vector/seed/operator artifacts.
+
+## Next after Round146
+
+1. Treat the root `digital_somatic` missing-import blocker as recovered by a retained-implementation re-export shim.
+2. Do **not** enable production persistence: production persistence remains **NO-GO**.
+3. Do not change `runtime_mapping_enabled` default to true, do not enable enforcement, and do not bypass AGP.
+4. Next safe loop should diagnose and isolate the two remaining legacy root collection side effects without weakening, deleting, skipping, or xfail-marking the tests:
+   - `test_eve_main_ab.py` import-time `learn_beliefs(path='/home/claude/eve/beliefs.json')` file dependency.
+   - `test_eve_main_abc.py` import-time `learn_beliefs(beliefs_dict={...})` dict/object mismatch.
+5. Keep broader validation marked blocked/partial until `python -m pytest --collect-only -q` is green.
+6. Keep the `test_natural_lang_v2.py` behavior failure visible until it is fixed honestly.
