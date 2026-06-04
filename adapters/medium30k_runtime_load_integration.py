@@ -1,4 +1,4 @@
-"""Rounds192-196 guarded medium30k runtime-load integration.
+"""Rounds192-197 guarded medium30k runtime-load integration.
 
 This module consumes operator-local validation evidence for the registered
 ``cc.ko.300.subset.medium.30k`` artifact and provides one narrow integration
@@ -26,6 +26,7 @@ ROUND193_GUARDED_RUNTIME_PATH_SELECTION_VERSION = "v3_round193_guarded_runtime_p
 ROUND194_GUARDED_RUNTIME_LOAD_INTEGRATION_VERSION = "v3_round194_guarded_runtime_load_integration"
 ROUND195_FOCUSED_INTEGRATION_TEST_PLAN_VERSION = "v3_round195_guarded_integration_focused_tests"
 ROUND196_VALIDATION_DELTA_RECOMMENDATION_VERSION = "v3_round196_broader_validation_delta_recommendation"
+ROUND197_OPERATOR_GUARDED_INTEGRATION_RESULT_VERSION = "v3_round197_operator_guarded_integration_result"
 
 SELECTED_SEED_VECTOR_CASCADE_ENTRYPOINT = "build_full_engine_fasttext_embedding_for_eve_specific_known_context"
 
@@ -304,16 +305,93 @@ def build_round196_validation_delta_recommendation(
     }
 
 
+def build_round197_operator_guarded_integration_result(
+    *,
+    operator_validation: dict[str, Any],
+    runtime_load_report: dict[str, Any],
+    engine_surface: dict[str, bool] | None = None,
+) -> dict[str, Any]:
+    """Record the operator-local guarded integration result after Codespaces validation.
+
+    This is an evidence consolidation surface only. It accepts the operator's
+    already-produced validation JSON and runtime load report, verifies the
+    expected safety invariants, and points the next step at remeasuring the
+    load-dependent EVE-specific vector/self-learning cascade.
+    """
+
+    green, validation_blockers = _operator_validation_green(operator_validation)
+    report = runtime_load_report if isinstance(runtime_load_report, dict) else {}
+    surface = engine_surface or {}
+
+    blockers: list[str] = list(validation_blockers)
+    if not green:
+        blockers.append("operator_validation_not_green")
+    if report.get("status") != "guarded_runtime_load_attached":
+        blockers.append("runtime_load_status_not_attached")
+    if report.get("attached_to_engine") is not True:
+        blockers.append("runtime_load_not_attached_to_engine")
+    if report.get("guard_called") is not True:
+        blockers.append("runtime_load_guard_not_called")
+    if report.get("blockers") not in ([], None):
+        blockers.append("runtime_load_report_has_blockers")
+    if surface and surface.get("self_embedding_present") is not True:
+        blockers.append("self_embedding_missing")
+    if surface and surface.get("self_embedding_backup_present") is not True:
+        blockers.append("self_embedding_backup_missing")
+
+    policy = _policy_flags()
+    for key, expected in policy.items():
+        validation_value = operator_validation.get(key) if isinstance(operator_validation, dict) else None
+        report_value = report.get(key)
+        if validation_value is not None and validation_value is not expected:
+            blockers.append(f"operator_validation_policy_flag_{key}_mismatch")
+        if report_value is not None and report_value is not expected:
+            blockers.append(f"runtime_load_policy_flag_{key}_mismatch")
+
+    unique_blockers = sorted(set(blockers))
+    accepted = not unique_blockers
+
+    return {
+        "version": ROUND197_OPERATOR_GUARDED_INTEGRATION_RESULT_VERSION,
+        "round": 197,
+        "result_layer": "operator_local_guarded_medium30k_integration_result",
+        "operator_validation_green": green,
+        "operator_validation_command": "python scripts/operator_validate_medium30k.py --attempt-load",
+        "build_full_engine_operator_authorized_path_succeeded": accepted,
+        "medium30k_runtime_attached_to_engine": report.get("attached_to_engine") is True,
+        "medium30k_runtime_load_status": report.get("status"),
+        "medium30k_runtime_guard_called": report.get("guard_called") is True,
+        "engine_surface": {
+            "self_embedding_present": bool(surface.get("self_embedding_present")),
+            "self_embedding_backup_present": bool(surface.get("self_embedding_backup_present")),
+        },
+        "blockers": unique_blockers,
+        "accepted_as_guarded_integration_evidence": accepted,
+        "next_recommendation": "remeasure_focused_eve_specific_vector_self_learning_cascade_before_broader_repairs",
+        "must_not_change_next": [
+            "production_persistence_enabled",
+            "runtime_mapping_enabled_default",
+            "enforcement_enabled",
+            "agp_bypass",
+            "fasttext_seed_vectors",
+            "semantic_memory_or_quarantine",
+        ],
+        **policy,
+    }
+
+
 __all__ = [
     "ROUND192_SEED_VECTOR_CASCADE_DIAGNOSIS_VERSION",
     "ROUND193_GUARDED_RUNTIME_PATH_SELECTION_VERSION",
     "ROUND194_GUARDED_RUNTIME_LOAD_INTEGRATION_VERSION",
     "ROUND195_FOCUSED_INTEGRATION_TEST_PLAN_VERSION",
     "ROUND196_VALIDATION_DELTA_RECOMMENDATION_VERSION",
+    "ROUND197_OPERATOR_GUARDED_INTEGRATION_RESULT_VERSION",
     "SELECTED_SEED_VECTOR_CASCADE_ENTRYPOINT",
     "apply_round194_guarded_medium30k_runtime_load",
     "build_round195_focused_integration_test_plan",
     "build_round196_validation_delta_recommendation",
+    "build_round197_operator_guarded_integration_result",
     "diagnose_round192_seed_vector_cascade_entrypoints",
     "select_round193_guarded_runtime_path",
 ]

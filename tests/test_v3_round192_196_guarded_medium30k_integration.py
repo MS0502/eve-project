@@ -232,3 +232,51 @@ def test_main_build_full_engine_forwards_only_explicit_operator_authorization(mo
     assert calls[-1]["load_authorized"] is True
     assert calls[-1]["artifact_dir"] == "/operator/local/subset_medium_30k"
     assert authorized_engine.medium30k_runtime_load_report["guard_called"] is True
+
+
+def test_round197_accepts_operator_codespaces_guarded_integration_result() -> None:
+    runtime_load_report = {
+        "status": "guarded_runtime_load_attached",
+        "attached_to_engine": True,
+        "guard_called": True,
+        "blockers": [],
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled": False,
+        "agp_bypass_used": False,
+        "vectors_committed": False,
+        "dummy_vectors_created": False,
+    }
+
+    result = integration.build_round197_operator_guarded_integration_result(
+        operator_validation=_green_validation(),
+        runtime_load_report=runtime_load_report,
+        engine_surface={"self_embedding_present": True, "self_embedding_backup_present": True},
+    )
+
+    assert result["version"] == integration.ROUND197_OPERATOR_GUARDED_INTEGRATION_RESULT_VERSION
+    assert result["round"] == 197
+    assert result["operator_validation_green"] is True
+    assert result["build_full_engine_operator_authorized_path_succeeded"] is True
+    assert result["medium30k_runtime_attached_to_engine"] is True
+    assert result["blockers"] == []
+    assert result["vectors_committed"] is False
+    assert result["dummy_vectors_created"] is False
+    assert result["production_persistence_enabled"] is False
+    assert result["runtime_mapping_enabled_default"] is False
+    assert result["enforcement_enabled"] is False
+    assert result["agp_bypass_used"] is False
+    assert result["next_recommendation"] == "remeasure_focused_eve_specific_vector_self_learning_cascade_before_broader_repairs"
+
+
+def test_round197_blocks_if_runtime_load_report_is_not_attached() -> None:
+    result = integration.build_round197_operator_guarded_integration_result(
+        operator_validation=_green_validation(),
+        runtime_load_report={"status": "default_no_load_explicit_authorization_required", "attached_to_engine": False, "guard_called": False},
+        engine_surface={"self_embedding_present": True, "self_embedding_backup_present": True},
+    )
+
+    assert result["accepted_as_guarded_integration_evidence"] is False
+    assert "runtime_load_status_not_attached" in result["blockers"]
+    assert "runtime_load_not_attached_to_engine" in result["blockers"]
+    assert "runtime_load_guard_not_called" in result["blockers"]
