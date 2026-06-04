@@ -637,3 +637,13 @@ Artifacts:
 - Round155 focused verification passed: `python test_natural_lang_v2.py` improved to `28 / 28`, and the focused pytest command passed (`2 passed`).
 - Round156 broader validation delta: `python -m pytest -q` remains red but improved to `210 failed, 1084 passed`; no new failures were introduced.
 - Production persistence remains NO-GO; `runtime_mapping_enabled` remains false; `enforcement_enabled` remains false.
+
+## Rounds157-161 — Seed/vector artifact readiness gate
+
+- Round157 diagnosed the remaining seed/vector artifact cluster as absent operator-owned `vectors.npy` files rather than a Korean behavior, AGP, persistence, runtime-mapping, or enforcement issue.
+- Round158 selected a safe handling strategy: read-only readiness gating with honest blocked status. Dummy vectors, fake checksums, test skips/xfails, production persistence, runtime mapping enablement, and enforcement enablement remain rejected.
+- Round159 implemented `adapters/seed_vector_artifact_readiness.py` and `FasttextEmbeddingAdapter.artifact_readiness()`.
+- Round160 verified the focused readiness behavior with `python -m pytest -q tests/test_v3_round159_seed_vector_artifact_gate.py` (`2 passed`).
+- Round161 reran broader validation: compileall passed, collect-only passed with 1296 tests, full pytest remains red with 210 failed and 1086 passed.
+
+Next: restore real registered `vectors.npy` artifacts outside the PR, then rerun the artifact readiness gate before load-dependent repair.

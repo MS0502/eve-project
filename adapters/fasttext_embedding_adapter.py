@@ -260,6 +260,20 @@ class FasttextEmbeddingAdapter:
         vec_b = self.text_embedding(text_b)
         return self._cosine(vec_a, vec_b)
 
+
+    def artifact_readiness(self) -> dict[str, Any]:
+        """Return read-only operator-artifact readiness for this subset.
+
+        This does not call ``load()``, does not create missing vectors, and does
+        not mutate the manifest or runtime state.
+        """
+        from adapters.seed_vector_artifact_readiness import build_seed_vector_artifact_readiness_gate
+
+        return build_seed_vector_artifact_readiness_gate(
+            subset_names=(self.subset_name,),
+            subset_dirs={self.subset_name: self.subset_dir},
+        )
+
     def is_loaded(self) -> bool:
         return bool(self._loaded)
 

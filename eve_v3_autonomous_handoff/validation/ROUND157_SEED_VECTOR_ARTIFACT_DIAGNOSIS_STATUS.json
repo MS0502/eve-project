@@ -1,0 +1,107 @@
+{
+  "round": 157,
+  "status": "seed_vector_artifact_dependency_cluster_diagnosed",
+  "diagnosis": {
+    "version": "v3_round159_seed_vector_artifact_readiness_gate",
+    "rounds": [
+      157,
+      158,
+      159
+    ],
+    "gate_layer": "seed_vector_operator_artifact_readiness",
+    "status": "blocked_operator_artifact_required",
+    "ready": false,
+    "load_should_be_attempted": false,
+    "selected_subsets": [
+      {
+        "subset_name": "cc.ko.300.subset.mini.1k",
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.mini.1k",
+        "registered": true,
+        "audit_valid": false,
+        "readiness": "blocked",
+        "blockers": [
+          "operator_artifact_files_missing"
+        ],
+        "audit_errors": [
+          "missing_vectors_file"
+        ],
+        "missing_files": [
+          "seeds/subsets/cc.ko.300.subset.mini.1k/vectors.npy"
+        ],
+        "vectors_file_present": false,
+        "vocab_file_present": true,
+        "subset_manifest_file_present": true,
+        "load_should_be_attempted": false
+      },
+      {
+        "subset_name": "cc.ko.300.subset.small.5k",
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.small.5k",
+        "registered": true,
+        "audit_valid": false,
+        "readiness": "blocked",
+        "blockers": [
+          "operator_artifact_files_missing"
+        ],
+        "audit_errors": [
+          "missing_vectors_file"
+        ],
+        "missing_files": [
+          "seeds/subsets/cc.ko.300.subset.small.5k/vectors.npy"
+        ],
+        "vectors_file_present": false,
+        "vocab_file_present": true,
+        "subset_manifest_file_present": true,
+        "load_should_be_attempted": false
+      },
+      {
+        "subset_name": "cc.ko.300.subset.medium.30k",
+        "subset_dir": "seeds/subsets/cc.ko.300.subset.medium.30k",
+        "registered": true,
+        "audit_valid": false,
+        "readiness": "blocked",
+        "blockers": [
+          "operator_artifact_files_missing"
+        ],
+        "audit_errors": [
+          "missing_vectors_file"
+        ],
+        "missing_files": [
+          "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy"
+        ],
+        "vectors_file_present": false,
+        "vocab_file_present": true,
+        "subset_manifest_file_present": true,
+        "load_should_be_attempted": false
+      }
+    ],
+    "readiness_blockers": [
+      "operator_artifact_files_missing"
+    ],
+    "missing_files": [
+      "seeds/subsets/cc.ko.300.subset.medium.30k/vectors.npy",
+      "seeds/subsets/cc.ko.300.subset.mini.1k/vectors.npy",
+      "seeds/subsets/cc.ko.300.subset.small.5k/vectors.npy"
+    ],
+    "safe_handling_decision": "require_real_operator_artifacts_or_keep_load_blocked",
+    "forbidden_synthetic_actions": [
+      "create_dummy_vectors",
+      "fabricate_vector_checksums",
+      "commit_vectors_npy",
+      "skip_or_xfail_artifact_tests"
+    ],
+    "dummy_vectors_created": false,
+    "vectors_npy_written": false,
+    "manifest_mutated": false,
+    "fasttext_runtime_imported": false,
+    "runtime_mapping_enabled_default": false,
+    "enforcement_enabled_default": false,
+    "production_persistence_enabled": false,
+    "skip_or_xfail_used": false
+  },
+  "cluster_rationale": "The first broad failures start at registered fastText subset tests and load paths because operator-owned vectors.npy files are absent while vocab.txt and subset_manifest.json remain present.",
+  "production_persistence_enabled": false,
+  "runtime_mapping_enabled_default": false,
+  "enforcement_enabled_default": false,
+  "dummy_vectors_created": false,
+  "vectors_npy_committed": false
+}

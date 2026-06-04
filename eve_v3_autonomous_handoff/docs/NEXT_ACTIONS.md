@@ -341,3 +341,11 @@ Constraints for the next round:
 - Do not enable enforcement.
 - Do not bypass AGP.
 - If real artifacts are not restored by the operator, keep next work diagnostic/read-only and improve failure/readiness reporting honestly.
+
+## Next after Round161
+
+1. Operator should restore real registered fastText subset `vectors.npy` artifacts outside the PR boundary.
+2. Rerun `python -m pytest -q tests/test_v3_round159_seed_vector_artifact_gate.py` to confirm readiness status changes from blocked to ready.
+3. Only after real artifact readiness is green, re-run focused fastText wrapper/load tests.
+4. Keep production persistence NO-GO, `runtime_mapping_enabled` default false, and enforcement disabled.
+5. If artifacts remain unavailable, continue with code-only diagnostic/readiness work; do not create dummy vectors or skip tests.

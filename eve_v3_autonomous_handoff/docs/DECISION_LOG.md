@@ -415,3 +415,18 @@ Reasoning:
 - Runtime mapping, enforcement, production persistence, AGP thresholds, semantic memory, and quarantine were not changed.
 
 Outcome after Round156: focused cluster passed; full pytest improved from `212 failed, 1082 passed` to `210 failed, 1084 passed` and remains red due the vector/artifact and downstream mapping cascades.
+
+## Rounds157-161 decision — missing vectors require honest operator-artifact gate
+
+Decision: add a deterministic, read-only artifact readiness gate rather than creating or committing vector data.
+
+Rejected:
+
+- Dummy `vectors.npy` files.
+- Fake checksums or manifest edits.
+- Test skips/xfails or weakened assertions.
+- Production persistence enablement.
+- Runtime mapping default enablement.
+- Enforcement enablement.
+
+Reason: registered fastText subsets are operator artifacts. If absent, EVE must report `blocked_operator_artifact_required` and avoid runtime loading until real artifacts are restored.
