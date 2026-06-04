@@ -1,0 +1,23 @@
+{
+  "agp_bypass_used": false,
+  "artifacts_included": false,
+  "commands": [
+    {
+      "command": "python -m pytest -q tests/test_v3_round162_164_restore_contract_preflight.py tests/test_v3_round159_seed_vector_artifact_gate.py",
+      "result": "6 passed in 0.33s",
+      "status": "passed"
+    }
+  ],
+  "enforcement_enabled": false,
+  "production_persistence_enabled": false,
+  "round": 165,
+  "runtime_mapping_enabled_default": false,
+  "vectors_written": false,
+  "verified": [
+    "restore_contract_exact_paths",
+    "post_restore_schema_artifact_free",
+    "preflight_hard_blocks_when_red",
+    "preflight_green_only_after_readiness_gate_green"
+  ],
+  "version": "v3_round165_restore_preflight_focused_verification"
+}
