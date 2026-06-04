@@ -17,7 +17,13 @@ import sys
 from language.streaming import StreamingEngine
 
 
-def build_full_engine(delays: dict | None = None) -> StreamingEngine:
+def build_full_engine(
+    delays: dict | None = None,
+    *,
+    operator_medium30k_validation: dict | None = None,
+    operator_medium30k_load_authorized: bool = False,
+    operator_medium30k_artifact_dir: str | None = None,
+) -> StreamingEngine:
     """v40 24모듈 어댑터 다 끼운 풀스택.
 
     기본값은 테스트/모바일 실행용 무지연이다. 사람이 보는 REPL만
@@ -259,42 +265,17 @@ def build_full_engine(delays: dict | None = None) -> StreamingEngine:
     from adapters.embedding_wrapper import EmbeddingWrapper
     engine.self_embedding_backup = engine.self_embedding
     engine.fasttext_embedding = FasttextEmbeddingAdapter(engine=engine)
-    try:
-        engine.fasttext_embedding.load()
-    except ValueError as exc:
-        # Code-only handoff packages intentionally omit the medium 30k
-        # vectors.npy artifact. If a restored small 5k subset is available in
-        # the local checkout, focused runtime-mapping validation may use it;
-        # otherwise the wrapper remains fail-open to PMI+SVD and medium/full
-        # validation is reported as blocked rather than overstated.
-        blocked_markers = (
-            "missing_vectors_file",
-            "missing_subset_dir",
-            "subset_not_registered",
-            "subset_audit_failed",
-        )
-        if not any(marker in str(exc) for marker in blocked_markers):
-            raise
-        from pathlib import Path
-        from adapters.external_seed_manifest import (
-            FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME,
-            FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH,
-        )
-        small_vectors = Path(FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH) / "vectors.npy"
-        if small_vectors.exists():
-            engine.fasttext_embedding = FasttextEmbeddingAdapter(
-                engine=engine,
-                subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME,
-                subset_dir=FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH,
-            )
-            engine.fasttext_embedding.load()
-        else:
-            engine.fasttext_embedding_code_only_blocked = {
-                "reason": str(exc),
-                "medium_vectors_present": False,
-                "small_vectors_present": False,
-                "focused_validation_uses_fail_open_fallback": True,
-            }
+    # Rounds192-196: default runtime remains no-load. Operator-local real
+    # medium30k loading is available only through an explicit green validation
+    # report plus explicit load authorization, and still routes through the
+    # guarded explicit-load helper before engine attachment.
+    from adapters.medium30k_runtime_load_integration import apply_round194_guarded_medium30k_runtime_load
+    engine.medium30k_runtime_load_report = apply_round194_guarded_medium30k_runtime_load(
+        engine,
+        operator_validation=operator_medium30k_validation,
+        load_authorized=operator_medium30k_load_authorized,
+        artifact_dir=operator_medium30k_artifact_dir,
+    )
     # Round56: Initialize the Eve-specific vector store and insert it between
     # the fastText primary and the PMI+SVD fallback in the embedding wrapper.
     from adapters.eve_vocab_tracker import EveVocabTracker
