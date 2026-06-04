@@ -211,3 +211,23 @@ Without those items, Round122 must not activate production persistence.
 ## Round126 operator note
 
 The `spreading_activation` collection blocker has been isolated and shimmed, but this does not make production persistence ready. Root collect-only remains partial on legacy `working_memory` imports. Keep `runtime_mapping_enabled=False`, `enforcement_enabled=False`, and production persistence disabled until a later explicit approval and validation-green or accepted-partial package exists.
+
+## Round177-181 operator artifact handoff
+
+The medium 30k artifact evidence has been recorded as metadata only. To proceed
+with actual load-dependent repair in a local environment, keep the verified files
+outside git at:
+
+```text
+_operator_artifacts/subset_medium_30k/
+```
+
+Required files:
+
+- `vocab.txt`
+- `vectors.npy`
+- `subset_manifest.json`
+
+Do not commit these files. After placing them locally, rerun the readiness gate
+and Round179-style preflight. If they are inaccessible, actual load must remain
+blocked.

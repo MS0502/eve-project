@@ -545,3 +545,10 @@ Outcome:
 
 - Full pytest remains red with 205 failures.
 - The failure count did not regress; three new focused tests passed.
+
+## Round177-181 decision — metadata evidence can guide planning, not runtime load
+
+- Operator-side verification evidence for `_operator_artifacts/subset_medium_30k` is accepted as a planning input.
+- The selected load-dependent cluster is `fasttext_medium_30k_explicit_load_access_preflight`.
+- Actual vector load remains blocked unless real artifacts are locally accessible and the existing readiness gate passes in that environment.
+- Production persistence remains NO-GO; runtime mapping default remains false; enforcement remains disabled.

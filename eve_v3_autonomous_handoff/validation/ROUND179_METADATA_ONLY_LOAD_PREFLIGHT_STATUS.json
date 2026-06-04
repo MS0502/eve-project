@@ -1,0 +1,29 @@
+{
+  "actual_load_allowed": false,
+  "agp_bypass_used": false,
+  "artifact_dir": "_operator_artifacts/subset_medium_30k",
+  "artifacts_included": false,
+  "artifacts_written": false,
+  "blockers": [
+    "operator_artifact_files_inaccessible_in_this_environment"
+  ],
+  "enforcement_enabled": false,
+  "local_artifacts_accessible": false,
+  "local_file_access": {
+    "subset_manifest.json": false,
+    "vectors.npy": false,
+    "vocab.txt": false
+  },
+  "next_allowed_step_if_green": "run existing seed_vector_artifact_readiness gate, then explicit load in a separate focused repair",
+  "planning_ready_from_operator_evidence": true,
+  "preflight_layer": "metadata_only_actual_load_access_guard",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "round": 179,
+  "runtime_mapping_enabled_default": false,
+  "selected_cluster_id": "fasttext_medium_30k_explicit_load_access_preflight",
+  "status": "hard_block_actual_load_artifacts_inaccessible",
+  "vectors_committed": false,
+  "vectors_loaded": false,
+  "version": "v3_round179_metadata_only_load_preflight"
+}
