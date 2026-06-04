@@ -317,3 +317,27 @@ Guardrails remain unchanged: do not enable production persistence, do not change
    - Missing vector artifact policy/disposition without committing `vectors.npy` or seed subset artifacts.
    - EVE-specific vector commit prerequisite cascade failures.
 6. Continue preserving Korean-first behavior cases, including tokens such as `민석`.
+
+## Round152~156 update — next recommended cluster after NaturalLanguage fix
+
+Current position:
+
+- Round152~156 completed in one integrated loop.
+- Korean NaturalLanguage v2 focused failures are fixed and verified.
+- `python -m pytest --collect-only -q` remains green (`1294 tests collected`).
+- Full pytest remains red: `210 failed, 1084 passed` after improving by two tests.
+
+Next recommended cluster:
+
+```text
+Seed/vector artifact dependency readiness or operator real-artifact restoration
+```
+
+Constraints for the next round:
+
+- Do not fabricate or commit `vectors.npy`, seed subsets, zips, part files, or `_operator_artifacts`.
+- Do not enable production persistence.
+- Do not change `runtime_mapping_enabled` default to true.
+- Do not enable enforcement.
+- Do not bypass AGP.
+- If real artifacts are not restored by the operator, keep next work diagnostic/read-only and improve failure/readiness reporting honestly.

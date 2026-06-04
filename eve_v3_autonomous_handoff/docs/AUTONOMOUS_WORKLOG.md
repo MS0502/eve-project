@@ -628,3 +628,12 @@ Artifacts:
 - `eve_v3_autonomous_handoff/validation/ROUND149_COLLECT_ONLY_AFTER_LEGACY_SIDE_EFFECT_ISOLATION_STATUS.json`
 - `eve_v3_autonomous_handoff/validation/ROUND150_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
 - `eve_v3_autonomous_handoff/validation/ROUND151_GO_NO_GO_REFRESH_AFTER_LEGACY_SIDE_EFFECT_ISOLATION_STATUS.json`
+
+## Round152~156 update — NaturalLanguage v2 failure cluster fixed
+
+- Round152 refreshed full pytest taxonomy: `212 failed, 1082 passed`; collection was already green.
+- Round153 selected the safest first fix cluster: Korean NaturalLanguage v2 sentiment/direct-address behavior (`2` direct failures), because it required no vectors, no persistence, no runtime mapping enablement, no enforcement, and no AGP bypass.
+- Round154 changed only `natural_lang.py` to expand existing Korean emotion signal stems and add deterministic one-token direct-address statement responses.
+- Round155 focused verification passed: `python test_natural_lang_v2.py` improved to `28 / 28`, and the focused pytest command passed (`2 passed`).
+- Round156 broader validation delta: `python -m pytest -q` remains red but improved to `210 failed, 1084 passed`; no new failures were introduced.
+- Production persistence remains NO-GO; `runtime_mapping_enabled` remains false; `enforcement_enabled` remains false.

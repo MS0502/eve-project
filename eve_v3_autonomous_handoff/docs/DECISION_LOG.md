@@ -403,3 +403,15 @@ Rationale:
 - Runtime mapping remains disabled by default and enforcement remains disabled.
 
 Next decision point: isolate the legacy root collection side effects in `test_eve_main_ab.py` and `test_eve_main_abc.py` without hiding real behavior failures.
+
+## Round153 decision — Fix Korean NaturalLanguage before vector cascades
+
+Decision: Select the Korean NaturalLanguage v2 behavior cluster as the first Round154 fix target.
+
+Reasoning:
+
+- The cluster was bounded to two failures and could be fixed deterministically in `natural_lang.py`.
+- The larger vector-backed clusters remain blocked by absent real vector artifacts; dummy vectors and committed `vectors.npy` remain forbidden.
+- Runtime mapping, enforcement, production persistence, AGP thresholds, semantic memory, and quarantine were not changed.
+
+Outcome after Round156: focused cluster passed; full pytest improved from `212 failed, 1082 passed` to `210 failed, 1084 passed` and remains red due the vector/artifact and downstream mapping cascades.
