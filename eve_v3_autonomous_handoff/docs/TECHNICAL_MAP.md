@@ -238,3 +238,17 @@ Boundary:
 - `spreading_activation.py`: root compatibility shim that re-exports `legacy.eve_modules.spreading_activation.SpreadingActivation`.
 - `adapters/runtime_mapping_import_blocker_recovery.py`: read-only report builders for Round122 diagnosis, Round123 shim decision, Round124 collect-only verification, Round125 validation taxonomy, and Round126 go/no-go refresh.
 - `tests/test_v3_round122_124_import_blocker_recovery.py`: focused tests for the diagnosis, shim identity, collect-only recovery recording, and JSON export safety.
+
+## Round132-136 NaturalLanguage v2 SystemExit isolation surfaces
+
+- `test_natural_lang_v2.py`
+  - `run_natural_language_v2_validation(verbose=True)`: deterministic wrapper around the legacy NaturalLanguage v2 validation body.
+  - `test_natural_language_v2_validation_behavior()`: pytest-visible behavior assertion preserving the original validation intent at test runtime instead of collection time.
+  - `if __name__ == "__main__"`: preserves script-mode non-zero exit when the legacy validation fails.
+- `adapters/runtime_mapping_import_blocker_recovery.py`
+  - `build_round132_natural_lang_v2_system_exit_diagnosis(...)`: records the observed collection-time `SystemExit` blocker.
+  - `build_round133_collection_side_effect_isolation_decision(...)`: records the main-guard/wrapper isolation decision and no-skip/no-xfail preservation.
+  - `build_round134_collect_only_after_system_exit_isolation(...)`: records collect-only status after SystemExit isolation.
+  - `build_round135_broader_validation_taxonomy_refresh(...)`: records compile/focused/collect-only/legacy behavior/broader validation taxonomy.
+  - `build_round136_go_no_go_refresh_after_system_exit(...)`: keeps the production-persistence recommendation NO-GO unless collect-only and broader validation are green.
+- `tests/test_v3_round132_136_system_exit_isolation.py`: focused tests for diagnosis, import safety, test-intent preservation, collect-only status recording, taxonomy, go/no-go, and JSON export safety.

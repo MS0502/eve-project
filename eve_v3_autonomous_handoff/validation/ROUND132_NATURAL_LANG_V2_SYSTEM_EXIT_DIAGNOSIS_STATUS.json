@@ -1,0 +1,20 @@
+{
+  "agp_bypass_used": false,
+  "diagnosis_status": "collection_time_system_exit_active",
+  "diagnosis_version": "v3_round132_natural_lang_v2_system_exit_diagnosis",
+  "enforcement_enabled_default": false,
+  "main_guard_present": true,
+  "module_level_sys_exit_lines": [],
+  "observed_collect_return_code": 3,
+  "observed_system_exit_line": 214,
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "recommended_round133_action": "move execution behind main guard and expose pytest-safe validation wrapper",
+  "root_cause": "module-level validation body calls sys.exit during pytest import",
+  "round": 132,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 129,
+  "test_file_exists": true,
+  "test_path": "test_natural_lang_v2.py",
+  "vectors_npy_committed": false
+}

@@ -485,3 +485,272 @@ def build_round131_go_no_go_refresh_after_working_memory(
     }
 
 __all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]
+
+ROUND132_NATURAL_LANG_V2_SYSTEM_EXIT_DIAGNOSIS_VERSION = "v3_round132_natural_lang_v2_system_exit_diagnosis"
+ROUND133_COLLECTION_SIDE_EFFECT_ISOLATION_VERSION = "v3_round133_collection_side_effect_isolation"
+ROUND134_COLLECT_ONLY_AFTER_SYSTEM_EXIT_ISOLATION_VERSION = "v3_round134_collect_only_after_system_exit_isolation"
+ROUND135_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION = "v3_round135_broader_validation_taxonomy_refresh"
+ROUND136_GO_NO_GO_REFRESH_AFTER_SYSTEM_EXIT_VERSION = "v3_round136_go_no_go_refresh_after_system_exit_isolation"
+
+
+def _is_main_guard_node(node: ast.AST) -> bool:
+    if not isinstance(node, ast.If):
+        return False
+    test = node.test
+    return (
+        isinstance(test, ast.Compare)
+        and isinstance(test.left, ast.Name)
+        and test.left.id == "__name__"
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], ast.Eq)
+        and len(test.comparators) == 1
+        and isinstance(test.comparators[0], ast.Constant)
+        and test.comparators[0].value == "__main__"
+    )
+
+
+def _module_level_call_lines(path: Path, call_name: str) -> list[int]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except SyntaxError:
+        return []
+    lines: list[int] = []
+
+    def visit_module_statement(node: ast.AST) -> None:
+        if _is_main_guard_node(node):
+            return
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            return
+        target = node.value if isinstance(node, ast.Expr) else node
+        if isinstance(target, ast.Call):
+            func = target.func
+            if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+                dotted = f"{func.value.id}.{func.attr}"
+                if dotted == call_name:
+                    lines.append(node.lineno)
+            elif isinstance(func, ast.Name) and func.id == call_name:
+                lines.append(node.lineno)
+        for child in ast.iter_child_nodes(node):
+            visit_module_statement(child)
+
+    for node in tree.body:
+        visit_module_statement(node)
+    return sorted(set(lines))
+
+
+def _has_main_guard(path: Path) -> bool:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except SyntaxError:
+        return False
+    for node in tree.body:
+        if not isinstance(node, ast.If):
+            continue
+        test = node.test
+        if (
+            isinstance(test, ast.Compare)
+            and isinstance(test.left, ast.Name)
+            and test.left.id == "__name__"
+            and len(test.ops) == 1
+            and isinstance(test.ops[0], ast.Eq)
+            and len(test.comparators) == 1
+            and isinstance(test.comparators[0], ast.Constant)
+            and test.comparators[0].value == "__main__"
+        ):
+            return True
+    return False
+
+
+def build_round132_natural_lang_v2_system_exit_diagnosis(
+    *,
+    test_path: str | Path = "test_natural_lang_v2.py",
+    source_round129_collect_recovery: dict[str, Any] | None = None,
+    collect_return_code: int | None = None,
+    observed_system_exit_line: int | None = None,
+) -> dict[str, Any]:
+    """Diagnose legacy collection-time ``SystemExit`` without mutating runtime state."""
+
+    path = Path(test_path)
+    sys_exit_lines = _module_level_call_lines(path, "sys.exit") if path.exists() else []
+    has_main_guard = _has_main_guard(path) if path.exists() else False
+    blocker_active = (bool(sys_exit_lines) and not has_main_guard) or observed_system_exit_line is not None
+    return {
+        "diagnosis_version": ROUND132_NATURAL_LANG_V2_SYSTEM_EXIT_DIAGNOSIS_VERSION,
+        "round": 132,
+        "source_round": (source_round129_collect_recovery or {}).get("round"),
+        "diagnosis_status": "collection_time_system_exit_active" if blocker_active else "collection_time_system_exit_isolated_or_absent",
+        "test_path": str(test_path).replace("\\", "/"),
+        "test_file_exists": path.exists(),
+        "observed_collect_return_code": collect_return_code,
+        "observed_system_exit_line": observed_system_exit_line,
+        "module_level_sys_exit_lines": sys_exit_lines,
+        "main_guard_present": has_main_guard,
+        "root_cause": "module-level validation body calls sys.exit during pytest import" if blocker_active else "legacy validation execution is isolated from pytest import",
+        "recommended_round133_action": "move execution behind main guard and expose pytest-safe validation wrapper" if blocker_active else "verify collection-safe wrapper",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round133_collection_side_effect_isolation_decision(
+    *,
+    test_path: str | Path = "test_natural_lang_v2.py",
+    source_round132_diagnosis: dict[str, Any] | None = None,
+    import_check_passed: bool = False,
+    legacy_script_exit_preserved: bool = False,
+    pytest_behavior_test_present: bool = False,
+) -> dict[str, Any]:
+    """Record the collection-safe isolation decision while preserving test intent."""
+
+    path = Path(test_path)
+    sys_exit_lines = _module_level_call_lines(path, "sys.exit") if path.exists() else []
+    has_main_guard = _has_main_guard(path) if path.exists() else False
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    wrapper_present = "def run_natural_language_v2_validation" in text
+    pytest_test_present = pytest_behavior_test_present or "def test_natural_language_v2_validation_behavior" in text
+    isolated = path.exists() and has_main_guard and wrapper_present and pytest_test_present and not sys_exit_lines and import_check_passed
+    return {
+        "isolation_version": ROUND133_COLLECTION_SIDE_EFFECT_ISOLATION_VERSION,
+        "round": 133,
+        "source_round": (source_round132_diagnosis or {}).get("round"),
+        "isolation_status": "collection_side_effect_isolated_test_intent_preserved" if isolated else "collection_side_effect_isolation_incomplete",
+        "test_path": str(test_path).replace("\\", "/"),
+        "import_check_passed": bool(import_check_passed),
+        "legacy_script_exit_preserved": bool(legacy_script_exit_preserved),
+        "main_guard_present": has_main_guard,
+        "module_level_sys_exit_lines_remaining": sys_exit_lines,
+        "collection_safe_wrapper_present": wrapper_present,
+        "pytest_behavior_test_present": pytest_test_present,
+        "test_intent_preserved": pytest_test_present and legacy_script_exit_preserved,
+        "weakening_action_used": False,
+        "skip_or_xfail_added": False,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round134_collect_only_after_system_exit_isolation(
+    *,
+    source_round132_diagnosis: dict[str, Any] | None = None,
+    source_round133_isolation: dict[str, Any] | None = None,
+    collect_command: str = "pytest --collect-only -q",
+    return_code: int | None = None,
+    collected_tests: int | None = None,
+    remaining_errors: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Record collect-only recovery after isolating the legacy SystemExit."""
+
+    errors = list(remaining_errors or [])
+    system_exit_errors = [err for err in errors if err.get("error_family") == "legacy_collection_side_effect_system_exit"]
+    recovered = return_code == 0
+    return {
+        "collect_recovery_version": ROUND134_COLLECT_ONLY_AFTER_SYSTEM_EXIT_ISOLATION_VERSION,
+        "round": 134,
+        "source_rounds": [r for r in [(source_round132_diagnosis or {}).get("round"), (source_round133_isolation or {}).get("round")] if r is not None],
+        "collect_recovery_status": "collect_only_recovered_after_system_exit_isolation" if recovered else "collect_only_partial_after_system_exit_isolation",
+        "collect_command": collect_command,
+        "return_code": return_code,
+        "collected_tests": collected_tests,
+        "system_exit_errors_remaining": len(system_exit_errors),
+        "remaining_error_count": len(errors),
+        "remaining_errors": errors,
+        "critical_blocker_improved": len(system_exit_errors) == 0,
+        "broader_validation_status": "collect_only_passed" if recovered else "blocked_partial",
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round135_broader_validation_taxonomy_refresh(
+    *,
+    source_round134_collect_recovery: dict[str, Any] | None = None,
+    validation_items: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Refresh validation taxonomy after collection-time side-effect isolation."""
+
+    collect = source_round134_collect_recovery or {}
+    items = list(validation_items or [])
+    categories: dict[str, list[dict[str, Any]]] = {
+        "compile_checks": [],
+        "focused_round132_134_tests": [],
+        "collect_only": [],
+        "legacy_behavior_tests": [],
+        "broader_validation": [],
+    }
+    for item in items:
+        categories.setdefault(str(item.get("category", "broader_validation")), []).append(item)
+    blocked = [item for item in items if str(item.get("status")) in {"blocked", "partial", "blocked_partial", "fail"}]
+    if collect.get("broader_validation_status") == "blocked_partial":
+        blocked.append({"category": "collect_only", "status": "blocked_partial", "reason": "collect-only still blocked"})
+    legacy_failures = [item for item in items if item.get("category") == "legacy_behavior_tests" and item.get("status") == "fail"]
+    return {
+        "taxonomy_version": ROUND135_BROADER_VALIDATION_TAXONOMY_REFRESH_VERSION,
+        "round": 135,
+        "source_round": collect.get("round"),
+        "taxonomy_status": "broader_validation_partial_or_blocked" if blocked else "broader_validation_green",
+        "validation_categories": categories,
+        "blocked_or_partial_items": blocked,
+        "system_exit_blocker_recovered": collect.get("system_exit_errors_remaining") == 0,
+        "legacy_behavior_failures_preserved": legacy_failures,
+        "primary_remaining_blocker_family": "legacy_behavior_failure" if legacy_failures else ("collect_only" if collect.get("broader_validation_status") == "blocked_partial" else None),
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+def build_round136_go_no_go_refresh_after_system_exit(
+    *,
+    source_round134_collect_recovery: dict[str, Any] | None = None,
+    source_round135_taxonomy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Refresh production-persistence recommendation after collect-only recovery."""
+
+    collect = source_round134_collect_recovery or {}
+    taxonomy = source_round135_taxonomy or {}
+    collect_improved = collect.get("critical_blocker_improved") is True
+    collect_green = collect.get("collect_recovery_status") == "collect_only_recovered_after_system_exit_isolation"
+    broader_green = taxonomy.get("taxonomy_status") == "broader_validation_green"
+    recommendation = "GO" if collect_green and broader_green and collect_improved else "NO-GO"
+    blockers = []
+    if not collect_green:
+        blockers.append("collect_only_still_partial_or_blocked")
+    if not broader_green:
+        blockers.append("broader_validation_partial_or_blocked")
+    if taxonomy.get("primary_remaining_blocker_family"):
+        blockers.append(str(taxonomy["primary_remaining_blocker_family"]))
+    return {
+        "go_no_go_refresh_version": ROUND136_GO_NO_GO_REFRESH_AFTER_SYSTEM_EXIT_VERSION,
+        "round": 136,
+        "source_rounds": [r for r in [collect.get("round"), taxonomy.get("round")] if r is not None],
+        "refresh_status": "go_no_go_refreshed_after_system_exit_isolation",
+        "critical_blocker_improved": collect_improved,
+        "collect_only_green": collect_green,
+        "final_recommendation": recommendation,
+        "recommendation_reason": "Keep NO-GO: production persistence remains disabled unless collect-only and broader validation are green." if recommendation == "NO-GO" else "Collect-only and broader validation are green.",
+        "remaining_blockers": blockers,
+        "production_persistence_enabled": False,
+        "runtime_mapping_enabled_default": False,
+        "enforcement_enabled_default": False,
+        "agp_bypass_used": False,
+        "vectors_npy_committed": False,
+        "read_only": True,
+    }
+
+
+__all__ = [name for name in globals() if name.startswith("ROUND") or name.startswith("build_") or name == "write_round_report"]

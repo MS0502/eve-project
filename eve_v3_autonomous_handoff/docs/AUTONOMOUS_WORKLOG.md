@@ -549,3 +549,19 @@ Failures / limitations:
 Next recommendation:
 
 - Keep production persistence NO-GO; next safe round should isolate the legacy collection-time SystemExit without deleting or weakening the legacy test.
+
+## Round132-136 NaturalLanguage v2 collection-time SystemExit isolation
+
+- Round132 diagnosed the next collect-only blocker as a legacy collection-time side effect in `test_natural_lang_v2.py`: the historical script validation executed during pytest import and called `sys.exit(1)` after its NaturalLanguage v2 checks reported 8/28 passing.
+- Round133 isolated that side effect without weakening the legacy validation: the validation body now lives in `run_natural_language_v2_validation(...)`, pytest imports the module safely, a pytest behavior test still asserts the same legacy checks, and the script path still exits non-zero when the legacy validation fails.
+- Round134 reran collect-only. The `test_natural_lang_v2.py` SystemExit blocker is gone, but collect-only remains partial with two next blockers: root `dmn` imports through `test_eve_main_ab.py` and `test_eve_main_abc.py`.
+- Round135 refreshed broader validation taxonomy honestly: compile/focused checks pass, NaturalLanguage v2 behavior remains a runtime test failure, collect-only is still blocked by root `dmn`, and broader full-suite validation is therefore recorded as blocked/partial rather than hidden.
+- Round136 keeps production persistence **NO-GO**. Production persistence remains disabled, `runtime_mapping_enabled` remains false by default, enforcement remains disabled, AGP is not bypassed, and no vectors or seed artifacts were added.
+
+Validation artifacts:
+
+- `validation/ROUND132_NATURAL_LANG_V2_SYSTEM_EXIT_DIAGNOSIS_STATUS.json`
+- `validation/ROUND133_COLLECTION_SIDE_EFFECT_ISOLATION_STATUS.json`
+- `validation/ROUND134_COLLECT_ONLY_AFTER_SYSTEM_EXIT_ISOLATION_STATUS.json`
+- `validation/ROUND135_BROADER_VALIDATION_TAXONOMY_REFRESH_STATUS.json`
+- `validation/ROUND136_GO_NO_GO_REFRESH_AFTER_SYSTEM_EXIT_STATUS.json`

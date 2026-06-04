@@ -1,0 +1,95 @@
+{
+  "agp_bypass_used": false,
+  "blocked_or_partial_items": [
+    {
+      "category": "collect_only",
+      "collected_tests": 1282,
+      "command": "pytest --collect-only -q",
+      "reason": "SystemExit isolated; remaining root dmn import blockers in test_eve_main_ab.py and test_eve_main_abc.py",
+      "return_code": 2,
+      "status": "blocked_partial"
+    },
+    {
+      "category": "legacy_behavior_tests",
+      "command": "pytest -q test_natural_lang_v2.py",
+      "reason": "NaturalLanguage v2 validation now fails at test runtime, not collection time; 8/28 checks pass and 20 fail",
+      "return_code": 1,
+      "status": "fail"
+    },
+    {
+      "category": "broader_validation",
+      "command": "pytest -q",
+      "reason": "Not run after collect-only remained blocked by root dmn import errors",
+      "status": "blocked_partial"
+    },
+    {
+      "category": "collect_only",
+      "reason": "collect-only still blocked",
+      "status": "blocked_partial"
+    }
+  ],
+  "enforcement_enabled_default": false,
+  "legacy_behavior_failures_preserved": [
+    {
+      "category": "legacy_behavior_tests",
+      "command": "pytest -q test_natural_lang_v2.py",
+      "reason": "NaturalLanguage v2 validation now fails at test runtime, not collection time; 8/28 checks pass and 20 fail",
+      "return_code": 1,
+      "status": "fail"
+    }
+  ],
+  "primary_remaining_blocker_family": "legacy_behavior_failure",
+  "production_persistence_enabled": false,
+  "read_only": true,
+  "round": 135,
+  "runtime_mapping_enabled_default": false,
+  "source_round": 134,
+  "system_exit_blocker_recovered": true,
+  "taxonomy_status": "broader_validation_partial_or_blocked",
+  "taxonomy_version": "v3_round135_broader_validation_taxonomy_refresh",
+  "validation_categories": {
+    "broader_validation": [
+      {
+        "category": "broader_validation",
+        "command": "pytest -q",
+        "reason": "Not run after collect-only remained blocked by root dmn import errors",
+        "status": "blocked_partial"
+      }
+    ],
+    "collect_only": [
+      {
+        "category": "collect_only",
+        "collected_tests": 1282,
+        "command": "pytest --collect-only -q",
+        "reason": "SystemExit isolated; remaining root dmn import blockers in test_eve_main_ab.py and test_eve_main_abc.py",
+        "return_code": 2,
+        "status": "blocked_partial"
+      }
+    ],
+    "compile_checks": [
+      {
+        "category": "compile_checks",
+        "command": "python -m compileall -q adapters tests main.py",
+        "status": "pass"
+      }
+    ],
+    "focused_round132_134_tests": [
+      {
+        "category": "focused_round132_134_tests",
+        "command": "pytest -q tests/test_v3_round132_136_system_exit_isolation.py",
+        "passed": 5,
+        "status": "pass"
+      }
+    ],
+    "legacy_behavior_tests": [
+      {
+        "category": "legacy_behavior_tests",
+        "command": "pytest -q test_natural_lang_v2.py",
+        "reason": "NaturalLanguage v2 validation now fails at test runtime, not collection time; 8/28 checks pass and 20 fail",
+        "return_code": 1,
+        "status": "fail"
+      }
+    ]
+  },
+  "vectors_npy_committed": false
+}

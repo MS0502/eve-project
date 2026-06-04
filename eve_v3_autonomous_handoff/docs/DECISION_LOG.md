@@ -361,3 +361,19 @@ Rationale:
 Outcome:
 
 - Final recommendation remains NO-GO until collect-only and critical blockers improve further.
+
+## Round132-136 decision — isolate collection side effect, keep NO-GO
+
+Decision: isolate `test_natural_lang_v2.py` collection-time `SystemExit` by moving execution behind a main guard and exposing a deterministic validation wrapper plus pytest behavior test.
+
+Rationale:
+
+- Pytest collection must not execute legacy script validation bodies or call `sys.exit` at import time.
+- The validation intent is preserved: the pytest test still fails if the same NaturalLanguage v2 checks fail, and direct script execution still returns non-zero on failure.
+- This is validation hygiene only, not a behavior fix for NaturalLanguage sentiment/respond semantics.
+
+Result:
+
+- SystemExit collection blocker recovered.
+- Collect-only remains partial due to next root `dmn` import blockers.
+- Production persistence remains **NO-GO**; runtime mapping defaults and enforcement remain disabled.

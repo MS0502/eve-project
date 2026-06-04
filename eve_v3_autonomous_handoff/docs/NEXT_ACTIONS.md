@@ -269,3 +269,19 @@ Recommended next actions:
 3. Re-run `pytest --collect-only -q` after any isolation patch.
 4. Keep broader validation marked blocked/partial until collect-only is green.
 5. Keep production persistence NO-GO.
+
+## Round136 next action update — post-SystemExit isolation
+
+Current status after Round132-136:
+
+1. `test_natural_lang_v2.py` no longer aborts pytest collection with `SystemExit`.
+2. The NaturalLanguage v2 legacy validation is still preserved and now fails at test runtime (`pytest -q test_natural_lang_v2.py`) with 8/28 checks passing. Do not mark it skipped/xfail or weaken its assertions.
+3. `pytest --collect-only -q` now reaches the next blockers: missing root `dmn` compatibility imports through `test_eve_main_ab.py` and `test_eve_main_abc.py`.
+4. Production persistence remains **NO-GO**. Do not enable production persistence, runtime mapping defaults, or enforcement.
+
+Recommended next loop:
+
+- Round137: diagnose root `dmn` import blocker provenance and retained legacy source, if any.
+- Round138: isolate or add a minimal compatibility shim only if it re-exports retained behavior and does not fake runtime behavior.
+- Round139: rerun collect-only and record the next blocker honestly.
+- Continue to keep NaturalLanguage v2 behavior failures visible as test failures after collection is recovered.
