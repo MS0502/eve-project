@@ -1,0 +1,27 @@
+{
+  "agp_bypass_used": false,
+  "artifacts_written": false,
+  "blocked_cluster_candidates": [
+    "FasttextEmbeddingAdapter explicit medium 30k load smoke",
+    "EveSpecificVectorStore deterministic context averaging with loaded medium vectors",
+    "EveSelfLearningAdapter commit gate with real known fastText context"
+  ],
+  "enforcement_enabled": false,
+  "hard_block_reason": [
+    "operator_artifact_files_missing"
+  ],
+  "operator_artifact_verification_status": "blocked_operator_artifact_required",
+  "production_persistence_enabled": false,
+  "readiness_green": false,
+  "readiness_preflight_status": "hard_block_load_dependent_repair_until_artifacts_ready",
+  "recommendation": "Restore real local operator artifacts at _operator_artifacts/subset_medium_30k or provide them in the environment outside git before load-dependent repair.",
+  "round": 174,
+  "runtime_mapping_enabled_default": false,
+  "selected_load_dependent_cluster": null,
+  "source_rounds": [
+    172,
+    173
+  ],
+  "status": "hard_block_no_load_dependent_cluster_selected",
+  "version": "v3_round174_load_dependent_cluster_selection"
+}

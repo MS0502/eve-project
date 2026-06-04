@@ -1,0 +1,38 @@
+{
+  "agp_bypass_used": false,
+  "artifact_path": "_operator_artifacts/subset_medium_30k",
+  "artifact_status": "blocked_operator_artifact_required",
+  "artifacts_written": false,
+  "commands": [
+    {
+      "command": "git status --short -- _operator_artifacts seeds/subsets",
+      "result": "pass",
+      "returncode": 0,
+      "summary": "No _operator_artifacts or seeds/subsets paths were staged or tracked in command output."
+    },
+    {
+      "command": "python -m compileall -q adapters tests main.py",
+      "result": "pass",
+      "returncode": 0
+    },
+    {
+      "collected_tests": 1306,
+      "command": "python -m pytest --collect-only -q",
+      "result": "pass",
+      "returncode": 0
+    },
+    {
+      "command": "python -m pytest -q tests/test_v3_round159_seed_vector_artifact_gate.py tests/test_v3_round162_164_restore_contract_preflight.py tests/test_v3_round172_176_operator_artifact_loop.py",
+      "result": "pass",
+      "returncode": 0,
+      "summary": "9 passed in 0.57s"
+    }
+  ],
+  "enforcement_enabled": false,
+  "production_persistence_enabled": false,
+  "readiness_preflight_status": "hard_block_load_dependent_repair_until_artifacts_ready",
+  "round": 175,
+  "runtime_mapping_enabled_default": false,
+  "status": "focused_verification_passed_with_artifact_hard_block_preserved",
+  "version": "v3_round175_focused_artifact_readiness_preflight_verification"
+}

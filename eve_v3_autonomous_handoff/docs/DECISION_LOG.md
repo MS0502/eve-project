@@ -489,3 +489,59 @@ Outcome:
 
 - Full pytest improved to `205 failed, 1098 passed` but remains red.
 - Production persistence remains NO-GO.
+
+## Round172
+
+Decision: add a read-only local operator artifact verification helper and run it against `_operator_artifacts/subset_medium_30k`.
+
+Rationale:
+
+- The user requested verification of locally uploaded real medium 30k artifacts before any load-dependent repair.
+- The verifier reports existence, SHA256, shape, dtype, manifest consistency, and git-status safety without copying or loading artifacts into runtime generation.
+
+Outcome:
+
+- Hard block: the local operator artifact directory was absent in this environment.
+- No artifacts were written, copied, staged, or loaded.
+
+## Round173
+
+Decision: preserve the load-dependent repair hard block because readiness/preflight stayed red.
+
+Rationale:
+
+- Missing real operator artifacts make checksum, shape, dtype, and manifest consistency impossible to verify.
+- EVE policy forbids dummy vectors, fabricated checksums, and skips/xfails.
+
+Outcome:
+
+- No explicit FasttextEmbeddingAdapter load was attempted.
+
+## Round174
+
+Decision: select no load-dependent vector/self-learning repair cluster.
+
+Rationale:
+
+- Round174 cluster selection is allowed only if Round172 verification and Round173 preflight are green.
+
+Outcome:
+
+- Candidate clusters remain blocked until real local artifacts are restored.
+
+## Round175
+
+Decision: verify the artifact/readiness code paths with focused tests that do not require committed artifacts.
+
+Outcome:
+
+- Focused tests passed and confirmed fail-closed missing-artifact behavior plus green behavior with temporary test fixtures.
+
+## Round176
+
+Decision: keep broader validation red/partial and recommend operator-side artifact restoration as the next action.
+
+Outcome:
+
+- Full pytest remains red with 205 failures.
+- The failure count did not regress; three new focused tests passed.

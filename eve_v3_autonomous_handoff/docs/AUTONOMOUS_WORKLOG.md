@@ -800,3 +800,142 @@ Failures / limitations:
 Next recommendation:
 
 - Restore real registered vector artifacts outside the PR and rerun Round164 preflight; if artifacts remain unavailable, select only another non-artifact metadata/diagnostic subcluster.
+
+## Round172 — local operator artifact verification
+
+Goal:
+
+- Verify `_operator_artifacts/subset_medium_30k` read-only before any load-dependent repair.
+
+Changed files:
+
+- `adapters/operator_artifact_verification.py`
+- `tests/test_v3_round172_176_operator_artifact_loop.py`
+- `eve_v3_autonomous_handoff/reports/ROUND172_OPERATOR_ARTIFACT_VERIFICATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND172_OPERATOR_ARTIFACT_VERIFICATION_STATUS.json`
+
+Results:
+
+- The expected local operator artifact directory was absent in this execution environment.
+- `vocab.txt`, `vectors.npy`, and `subset_manifest.json` were all missing.
+- Expected vector shape `[30000, 300]`, dtype `float32`, and SHA256 `SHA256:f228cbca9816d539ce9532e63fbb1ea95e4c66a7c3df286c788f817e2055bd05` could not be confirmed.
+- Focused git status safety for `_operator_artifacts` and `seeds/subsets` was clean.
+
+Failures / limitations:
+
+- Hard block: operator artifacts were unavailable locally.
+
+Next recommendation:
+
+- Run readiness/preflight against the same local path and preserve the hard block if still red.
+
+## Round173 — readiness gate and preflight with local operator path
+
+Goal:
+
+- Run artifact readiness and load-dependent repair preflight using `_operator_artifacts/subset_medium_30k`.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND173_REAL_LOCAL_ARTIFACT_READINESS_PREFLIGHT.md`
+- `eve_v3_autonomous_handoff/validation/ROUND173_REAL_LOCAL_ARTIFACT_READINESS_PREFLIGHT_STATUS.json`
+
+Results:
+
+- Readiness remained `blocked_operator_artifact_required`.
+- Load-dependent repair preflight remained `hard_block_load_dependent_repair_until_artifacts_ready`.
+- No load attempt was made.
+
+Failures / limitations:
+
+- Missing local operator artifact files block all load-dependent repair.
+
+Next recommendation:
+
+- Select no load-dependent cluster unless Round172/Round173 are green.
+
+## Round174 — load-dependent cluster selection
+
+Goal:
+
+- Select one narrow load-dependent vector/self-learning cluster if readiness is green.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND174_LOAD_DEPENDENT_CLUSTER_SELECTION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND174_LOAD_DEPENDENT_CLUSTER_SELECTION_STATUS.json`
+
+Results:
+
+- No cluster was selected because preflight was red.
+- Blocked candidate clusters remain explicit FasttextEmbeddingAdapter load smoke, EveSpecificVectorStore context averaging, and EveSelfLearningAdapter commit gate with real known fastText context.
+
+Failures / limitations:
+
+- Hard block from missing operator artifacts.
+
+Next recommendation:
+
+- Restore real local operator artifacts outside git before load-dependent repair.
+
+## Round175 — focused artifact/readiness verification
+
+Goal:
+
+- Verify the new local operator artifact checker and existing readiness/preflight gates without committed artifacts.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND175_FOCUSED_ARTIFACT_READINESS_PREFLIGHT_VERIFICATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND175_FOCUSED_ARTIFACT_READINESS_PREFLIGHT_VERIFICATION_STATUS.json`
+
+Commands run:
+
+- `git status --short -- _operator_artifacts seeds/subsets`
+- `python -m compileall -q adapters tests main.py`
+- `python -m pytest --collect-only -q`
+- `python -m pytest -q tests/test_v3_round159_seed_vector_artifact_gate.py tests/test_v3_round162_164_restore_contract_preflight.py tests/test_v3_round172_176_operator_artifact_loop.py`
+
+Results:
+
+- Artifact git-status safety check passed with empty output.
+- Compileall passed.
+- Collect-only passed with 1306 tests collected.
+- Focused tests passed: 9 passed.
+
+Failures / limitations:
+
+- Focused verification intentionally preserves the missing-artifact hard block.
+
+Next recommendation:
+
+- Run broader validation delta and keep the taxonomy honest.
+
+## Round176 — broader validation delta and next recommendation
+
+Goal:
+
+- Measure the broader suite after the hard-blocked artifact/readiness loop.
+
+Changed files:
+
+- `eve_v3_autonomous_handoff/reports/ROUND176_BROADER_VALIDATION_DELTA_NEXT_RECOMMENDATION.md`
+- `eve_v3_autonomous_handoff/validation/ROUND176_BROADER_VALIDATION_DELTA_NEXT_RECOMMENDATION_STATUS.json`
+
+Commands run:
+
+- `python -m pytest -q --tb=short`
+
+Results:
+
+- Broader suite remains red: 205 failed, 1101 passed.
+- Failure count is unchanged from the user-provided baseline of 205 failures.
+- Pass count increased by 3 due to the new focused Round172-176 tests.
+
+Failures / limitations:
+
+- Remaining failures are still artifact/load-dependent cascades.
+
+Next recommendation:
+
+- Restore real medium 30k artifacts outside git, rerun Round172/Round173, then select one narrow load-dependent vector/self-learning cluster if green.
