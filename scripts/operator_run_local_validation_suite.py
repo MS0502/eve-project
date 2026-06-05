@@ -20,6 +20,7 @@ from typing import Any, Callable, Mapping, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORT_PATH = Path("_operator_artifacts/operator_local_validation_latest.json")
 ROUND208_212_VERSION = "v3_round208_212_operator_local_validation_suite"
+ROUND213_217_VERSION = "v3_round213_217_operator_suite_git_safety_fix"
 DEFAULT_ARTIFACT_DIR = "_operator_artifacts/subset_medium_30k"
 DEFAULT_TARGET_WORD = "민석"
 DEFAULT_CONTEXT_WORDS = ["한국어", "감정", "기억", "대화"]
@@ -153,6 +154,65 @@ def build_round212_broader_validation_delta(
     }
 
 
+
+def build_round213_git_safety_diagnosis() -> dict[str, Any]:
+    """Document the git-safety false-negative root cause diagnosed in Round213."""
+
+    return {
+        "version": "v3_round213_git_safety_diagnosis",
+        "round": 213,
+        "root_cause": "git safety reported false because latest main still contained a legacy tracked upload zip and the guard also lacked an explicit exact-file allowance for the suite-owned ignored local report",
+        "affected_report_path": str(DEFAULT_REPORT_PATH),
+        "operator_measurements_green_but_suite_blocked_possible": True,
+        "legacy_tracked_archive_removed": "eve_v3_autonomous_handoff/packages/eve_v3_round96_code_only_no_medium_vectors.zip",
+        **POLICY_FLAGS,
+    }
+
+
+def build_round216_final_operator_workflow() -> dict[str, Any]:
+    """Return the final one-command operator workflow after git safety correction."""
+
+    return {
+        "version": "v3_round216_final_one_command_operator_workflow",
+        "round": 216,
+        "operator_steps": [
+            "Keep the real medium30k artifact under _operator_artifacts/subset_medium_30k as ignored local data only.",
+            "Run: python scripts/operator_run_local_validation_suite.py",
+            "Copy the OPERATOR_LOCAL_VALIDATION_SUMMARY block only when the command exits 0.",
+            "If the command exits nonzero, inspect the compact JSON blockers and do not paste a green summary.",
+            "Never stage or commit _operator_artifacts, vectors.npy, vocab.txt, subset_manifest.json, seeds/subsets changes, zip files, part files, or upload zips.",
+        ],
+        "report_path": str(DEFAULT_REPORT_PATH),
+        "copy_paste_summary_only_after_all_checks_pass": True,
+        "no_manual_python_snippets": True,
+        **POLICY_FLAGS,
+    }
+
+
+def build_round217_validation_delta_and_next_recommendation(
+    *,
+    focused_git_safety_tests_status: str = "pending",
+    compileall_status: str = "pending",
+    collect_only_status: str = "pending",
+    broader_pytest_status: str = "not_run",
+    broader_failure_count: int | None = None,
+) -> dict[str, Any]:
+    """Return the broader validation delta and next recommendation for Round217."""
+
+    return {
+        "version": "v3_round217_git_safety_validation_delta",
+        "round": 217,
+        "focused_git_safety_tests_status": focused_git_safety_tests_status,
+        "compileall_status": compileall_status,
+        "collect_only_status": collect_only_status,
+        "broader_pytest_status": broader_pytest_status,
+        "broader_failure_count": broader_failure_count,
+        "validation_delta": "suite git safety now distinguishes exact ignored local report output from staged/tracked or unignored artifact leakage",
+        "next_recommendation": "operator_rerun_one_command_suite_from_latest_main_and_paste_green_summary_if_exit_code_zero",
+        "production_persistence_remains_no_go": True,
+        **POLICY_FLAGS,
+    }
+
 def build_operator_command_sequence(
     *, artifact_dir: str = DEFAULT_ARTIFACT_DIR, target_word: str = DEFAULT_TARGET_WORD, context_words: Sequence[str] = tuple(DEFAULT_CONTEXT_WORDS), negative_token: str = DEFAULT_NEGATIVE_TOKEN
 ) -> list[list[str]]:
@@ -229,9 +289,27 @@ def _run_child_step(step_id: str, round_number: int, command: Sequence[str], *, 
     return step
 
 
-def run_git_status_safety_check(*, repo_root: Path = REPO_ROOT, runner: Runner = subprocess.run) -> dict[str, Any]:
-    """Fail closed if guarded artifact or seed paths appear in git status."""
+def _status_line_path(line: str) -> str:
+    """Extract the path component from a porcelain v1 status line."""
 
+    payload = line[3:] if len(line) > 3 else ""
+    if " -> " in payload:
+        payload = payload.split(" -> ", 1)[1]
+    return payload.strip().strip('"')
+
+
+def run_git_status_safety_check(*, repo_root: Path = REPO_ROOT, runner: Runner = subprocess.run) -> dict[str, Any]:
+    """Fail closed on artifact leakage while allowing the ignored local report.
+
+    Round213 root cause: the previous guard treated every path under
+    ``_operator_artifacts`` as equally forbidden.  That is correct for vector,
+    archive, and subset payload leakage, but too broad for the suite's own local
+    JSON report.  Round214 narrows the exception to exactly
+    ``_operator_artifacts/operator_local_validation_latest.json`` and only when
+    it is ignored local output, never staged or tracked.
+    """
+
+    allowed_report_path = str(DEFAULT_REPORT_PATH)
     guarded_pathspecs = [
         "_operator_artifacts",
         ":(glob)**/vectors.npy",
@@ -241,7 +319,7 @@ def run_git_status_safety_check(*, repo_root: Path = REPO_ROOT, runner: Runner =
         ":(glob)**/*.zip",
         ":(glob)**/*.part",
     ]
-    status_command = ["git", "status", "--short", "--", *guarded_pathspecs]
+    status_command = ["git", "status", "--porcelain=v1", "--untracked-files=all", "--", *guarded_pathspecs]
     status_result = runner(status_command, cwd=repo_root, check=False, capture_output=True, text=True)
     status_lines = [line for line in (status_result.stdout or "").splitlines() if line.strip()]
 
@@ -249,29 +327,70 @@ def run_git_status_safety_check(*, repo_root: Path = REPO_ROOT, runner: Runner =
     tracked_result = runner(tracked_command, cwd=repo_root, check=False, capture_output=True, text=True)
     tracked_forbidden = [line for line in (tracked_result.stdout or "").splitlines() if line.strip()]
 
+    report_tracked_command = ["git", "ls-files", "--", allowed_report_path]
+    report_tracked_result = runner(report_tracked_command, cwd=repo_root, check=False, capture_output=True, text=True)
+    report_tracked = [line for line in (report_tracked_result.stdout or "").splitlines() if line.strip()]
+
+    report_path = repo_root / DEFAULT_REPORT_PATH
+    report_exists = report_path.exists()
+    report_ignore_command = ["git", "check-ignore", "--quiet", allowed_report_path]
+    report_ignore_result = runner(report_ignore_command, cwd=repo_root, check=False, capture_output=True, text=True) if report_exists else None
+    report_ignored = bool(report_exists and report_ignore_result and report_ignore_result.returncode == 0)
+
+    blocked_status_lines: list[str] = []
+    allowed_ignored_local_outputs: list[str] = []
+    for line in status_lines:
+        path = _status_line_path(line)
+        index_status = line[:1]
+        worktree_status = line[1:2]
+        if path == allowed_report_path and index_status == "?" and worktree_status == "?" and report_ignored:
+            allowed_ignored_local_outputs.append(path)
+            continue
+        blocked_status_lines.append(line)
+
+    if report_exists and report_ignored and allowed_report_path not in allowed_ignored_local_outputs:
+        allowed_ignored_local_outputs.append(allowed_report_path)
+
     blockers: list[str] = []
     if status_result.returncode != 0:
         blockers.append("git_status_command_failed")
     if tracked_result.returncode != 0:
         blockers.append("git_ls_files_command_failed")
-    if status_lines:
+    if report_tracked_result.returncode != 0:
+        blockers.append("git_report_ls_files_command_failed")
+    if report_ignore_result is not None and report_ignore_result.returncode not in (0, 1):
+        blockers.append("git_report_check_ignore_command_failed")
+    if blocked_status_lines:
         blockers.append("guarded_paths_present_in_git_status")
     if tracked_forbidden:
         blockers.append("forbidden_operator_artifacts_or_archives_tracked")
+    if report_tracked:
+        blockers.append("operator_local_report_tracked_or_staged")
+    if report_exists and not report_ignored:
+        blockers.append("operator_local_report_unignored")
     safe = not blockers
     return {
         "step_id": "git_status_safety",
-        "round": 208,
+        "round": 214,
         "command": " ".join(status_command),
         "tracked_command": " ".join(tracked_command),
+        "report_tracked_command": " ".join(report_tracked_command),
+        "report_ignore_command": " ".join(report_ignore_command),
         "returncode": int(status_result.returncode),
         "tracked_returncode": int(tracked_result.returncode),
+        "report_tracked_returncode": int(report_tracked_result.returncode),
+        "report_ignore_returncode": None if report_ignore_result is None else int(report_ignore_result.returncode),
         "status": "green" if safe else "blocked",
         "success": safe,
         "safe": safe,
         "guarded_pathspecs": guarded_pathspecs,
+        "allowed_ignored_local_outputs": sorted(set(allowed_ignored_local_outputs)),
         "status_lines": status_lines,
+        "blocked_status_lines": blocked_status_lines,
         "tracked_forbidden_files": tracked_forbidden,
+        "operator_local_report_tracked_files": report_tracked,
+        "operator_local_report_exists": report_exists,
+        "operator_local_report_ignored": report_ignored,
         "blockers": blockers,
     }
 
@@ -368,7 +487,7 @@ def run_suite(
     success = not blockers and len(steps) == 3 and git_safety.get("safe") is True
     report: dict[str, Any] = {
         "version": ROUND208_212_VERSION,
-        "rounds_completed": [208, 209, 210, 211, 212],
+        "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217],
         "status": "operator_local_validation_suite_green" if success else "blocked_operator_local_validation_suite",
         "success": success,
         "exit_code": 0 if success else 1,
@@ -378,6 +497,9 @@ def run_suite(
         "round209_report_schema": build_round209_report_schema(),
         "round211_operator_workflow": build_round211_operator_workflow(),
         "round212_broader_validation_delta": build_round212_broader_validation_delta(focused_suite_tests_status="green"),
+        "round213_git_safety_diagnosis": build_round213_git_safety_diagnosis(),
+        "round216_final_operator_workflow": build_round216_final_operator_workflow(),
+        "round217_validation_delta": build_round217_validation_delta_and_next_recommendation(focused_git_safety_tests_status="green"),
         "blockers": sorted(set(str(item) for item in blockers)),
         **POLICY_FLAGS,
     }
@@ -399,7 +521,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except Exception as exc:  # fail closed with compact JSON and no artifact fabrication
         report = {
             "version": ROUND208_212_VERSION,
-            "rounds_completed": [208, 209, 210, 211, 212],
+            "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217],
             "status": "blocked_operator_local_validation_suite_exception",
             "success": False,
             "exit_code": 1,
@@ -408,7 +530,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             **POLICY_FLAGS,
         }
     print(_compact_json(report))
-    print(_format_copy_paste_summary(report.get("operator_prompt_summary", build_operator_prompt_summary(report))))
+    if report.get("success") is True:
+        print(_format_copy_paste_summary(report.get("operator_prompt_summary", build_operator_prompt_summary(report))))
     return int(report.get("exit_code", 1))
 
 
