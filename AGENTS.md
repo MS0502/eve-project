@@ -1174,3 +1174,30 @@ Rules:
 Next:
 - Run split full-suite validation and staged JSON-only rehearsal/audit locally
   before any separate persistence decision round.
+
+## v3 round291-305 policy — split validation and guarded artifact staging
+
+Rounds291-305 continue from the green Round276-290 rollback/no-persistence audit.
+
+Allowed:
+- Consolidate rollback audit green evidence from the operator-local Round276-290 packet.
+- Plan split full-suite validation that separates artifact-free checks from operator-local artifact-dependent checks.
+- Record a guarded artifact-staged rehearsal manifest under ignored `_operator_artifacts/` paths.
+- Fail closed when required local artifacts are missing or unsafe to reference.
+- Summarize focused validation, broader validation delta, remaining taxonomy, and next recommendation.
+
+Forbidden:
+- Enabling production persistence.
+- Changing `runtime_mapping_enabled` default to true.
+- Enabling enforcement by default.
+- Bypassing AGP.
+- Weakening, deleting, skipping, or xfail-ing tests.
+- Creating, fabricating, or mutating vectors.
+- Reading vector contents as part of the staged manifest.
+- Committing `_operator_artifacts`, `vectors.npy`, `vocab.txt`, `subset_manifest.json`, `seeds/subsets`, zip files, or part files.
+- Mutating semantic memory or quarantine.
+
+Boundary remains:
+- Artifact-staged paths must be explicit, local-only, git-ignored, and untracked.
+- Missing artifacts are a fail-closed operator-local readiness blocker, not a reason to create placeholders.
+- Production persistence remains NO-GO after Round305.
