@@ -147,10 +147,13 @@ def test_round210_green_suite_writes_report_and_extracts_prompt_summary(tmp_path
     assert report["operator_prompt_summary"]["runtime_mapping_enabled_default"] is False
     assert report_path.exists()
     written = json.loads(report_path.read_text(encoding="utf-8"))
-    assert written["rounds_completed"] == [208, 209, 210, 211, 212, 213, 214, 215, 216, 217]
+    assert written["rounds_completed"] == [208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220]
     assert written["round213_git_safety_diagnosis"]["affected_report_path"] == "_operator_artifacts/operator_local_validation_latest.json"
     assert written["round216_final_operator_workflow"]["copy_paste_summary_only_after_all_checks_pass"] is True
     assert written["round217_validation_delta"]["production_persistence_enabled"] is False
+    assert written["round218_summary_exit_code_fix"]["green_suite_summary_must_print_exit_code"] == 0
+    assert written["round219_summary_exit_code_test_plan"]["proves_green_summary_exit_code_zero"] is True
+    assert written["round220_next_cluster_selection"]["selected_next_cluster_id"] == "runtime_mapping_acceptance_delta_measurement_no_enablement"
     assert calls[0].endswith("scripts/operator_validate_medium30k.py --attempt-load")
 
 
@@ -278,7 +281,82 @@ def test_main_prints_copy_paste_summary_only_after_success(monkeypatch, capsys) 
     assert exit_code == 0
     assert json.loads(output[0])["status"] == "operator_local_validation_suite_green"
     assert output[1] == "OPERATOR_LOCAL_VALIDATION_SUMMARY:"
+    assert any("- exit code: 0" == line for line in output)
     assert any("target_word: 민석" in line for line in output)
+
+
+def test_round218_green_prompt_summary_preserves_zero_exit_code() -> None:
+    report = {
+        "status": "operator_local_validation_suite_green",
+        "success": True,
+        "exit_code": 0,
+        "steps": [],
+        "git_status_safety": {"safe": True},
+        **suite.POLICY_FLAGS,
+    }
+
+    summary = suite.build_operator_prompt_summary(report)
+    formatted = suite._format_copy_paste_summary(summary)
+
+    assert summary["exit_code"] == 0
+    assert "- exit code: 0" in formatted.splitlines()
+
+
+def test_round219_failed_suite_json_records_nonzero_without_summary(monkeypatch, capsys) -> None:
+    payload = {
+        "version": suite.ROUND208_212_VERSION,
+        "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220],
+        "status": "blocked_operator_local_validation_suite",
+        "success": False,
+        "exit_code": 1,
+        "steps": [],
+        "git_status_safety": {"safe": False},
+        "blockers": ["focused_failure"],
+        **suite.POLICY_FLAGS,
+    }
+    payload["operator_prompt_summary"] = suite.build_operator_prompt_summary(payload)
+    monkeypatch.setattr(suite, "run_suite", lambda: dict(payload))
+
+    exit_code = suite.main([])
+    output = capsys.readouterr().out.splitlines()
+
+    assert exit_code == 1
+    compact = json.loads(output[0])
+    assert compact["exit_code"] == 1
+    assert compact["operator_prompt_summary"]["exit_code"] == 1
+    assert all("OPERATOR_LOCAL_VALIDATION_SUMMARY" not in line for line in output)
+
+
+def test_round220_selects_measurement_cluster_from_operator_green_evidence() -> None:
+    report = {
+        "status": "operator_local_validation_suite_green",
+        "success": True,
+        "exit_code": 0,
+        "steps": [
+            {},
+            {"parsed_json": {"selected_cluster_id": "eve_specific_vector_self_learning_cascade"}},
+            {
+                "parsed_json": {
+                    "selected_cluster_id": "concept_runtime_mapping_after_eve_self_learning_guarded_medium30k",
+                    "self_learning_measurement": {
+                        "vector_lookup_after_commit": True,
+                        "wrapper_primary_loaded": True,
+                    },
+                }
+            },
+        ],
+        "git_status_safety": {"safe": True},
+        **suite.POLICY_FLAGS,
+    }
+    report["operator_prompt_summary"] = suite.build_operator_prompt_summary(report)
+
+    selection = suite.build_round220_next_cluster_selection(report)
+
+    assert selection["ready_for_next_measurement_cluster"] is True
+    assert selection["selected_next_cluster_id"] == "runtime_mapping_acceptance_delta_measurement_no_enablement"
+    assert selection["production_persistence_enabled"] is False
+    assert selection["runtime_mapping_enabled_default"] is False
+    assert selection["enforcement_enabled"] is False
 
 
 def test_round211_to_round217_reports_preserve_no_go_policy() -> None:
@@ -299,3 +377,8 @@ def test_round211_to_round217_reports_preserve_no_go_policy() -> None:
     assert validation_delta["focused_git_safety_tests_status"] == "green"
     assert validation_delta["production_persistence_enabled"] is False
     assert validation_delta["next_recommendation"].startswith("operator_rerun_one_command_suite")
+    assert suite.build_round218_summary_exit_code_fix()["root_cause"].startswith("operator_prompt_summary")
+    assert suite.build_round219_summary_exit_code_test_plan(
+        focused_summary_tests_status="green",
+        failed_json_summary_status="green",
+    )["proves_failed_suite_json_exit_code_nonzero"] is True
