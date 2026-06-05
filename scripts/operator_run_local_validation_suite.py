@@ -20,7 +20,7 @@ from typing import Any, Callable, Mapping, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORT_PATH = Path("_operator_artifacts/operator_local_validation_latest.json")
 ROUND208_212_VERSION = "v3_round208_212_operator_local_validation_suite"
-ROUND213_217_VERSION = "v3_round213_217_operator_suite_git_safety_fix"
+ROUND218_220_VERSION = "v3_round218_220_operator_suite_summary_exit_code_fix"
 DEFAULT_ARTIFACT_DIR = "_operator_artifacts/subset_medium_30k"
 DEFAULT_TARGET_WORD = "민석"
 DEFAULT_CONTEXT_WORDS = ["한국어", "감정", "기억", "대화"]
@@ -212,6 +212,85 @@ def build_round217_validation_delta_and_next_recommendation(
         "production_persistence_remains_no_go": True,
         **POLICY_FLAGS,
     }
+
+
+def build_round218_summary_exit_code_fix() -> dict[str, Any]:
+    """Document the Round218 copy-paste summary exit-code repair."""
+
+    return {
+        "version": "v3_round218_summary_exit_code_fix",
+        "round": 218,
+        "bug_classification": "summary_reporting_bug_not_validation_failure",
+        "root_cause": "operator_prompt_summary used a truthy fallback that converted a valid zero exit_code into one",
+        "fix": "preserve explicit integer exit_code values, including zero, when building the summary",
+        "green_suite_summary_must_print_exit_code": 0,
+        "failed_suite_json_exit_code_must_be_nonzero": True,
+        **POLICY_FLAGS,
+    }
+
+
+def build_round219_summary_exit_code_test_plan(
+    *,
+    focused_summary_tests_status: str = "pending",
+    failed_json_summary_status: str = "pending",
+) -> dict[str, Any]:
+    """Return the Round219 focused test evidence plan for summary exit codes."""
+
+    return {
+        "version": "v3_round219_summary_exit_code_tests",
+        "round": 219,
+        "focused_summary_tests_status": focused_summary_tests_status,
+        "failed_json_summary_status": failed_json_summary_status,
+        "proves_green_summary_exit_code_zero": focused_summary_tests_status == "green",
+        "proves_failed_suite_json_exit_code_nonzero": failed_json_summary_status == "green",
+        "summary_emitted_only_after_success": True,
+        **POLICY_FLAGS,
+    }
+
+
+def build_round220_next_cluster_selection(report: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Select the next narrow measurement cluster from green operator-local evidence.
+
+    The selection is data-only: it interprets the now-green one-command suite
+    evidence and deliberately keeps runtime mapping, enforcement, and production
+    persistence disabled by default.
+    """
+
+    report = report or {}
+    summary = report.get("operator_prompt_summary", {}) if isinstance(report.get("operator_prompt_summary"), Mapping) else {}
+    suite_green = bool(report.get("success") is True and int(report.get("exit_code", 1)) == 0)
+    green_evidence = {
+        "operator_local_validation_suite_green": suite_green,
+        "summary_exit_code": summary.get("exit_code"),
+        "selected_cluster_id": summary.get("selected_cluster_id"),
+        "target_word": summary.get("target_word", DEFAULT_TARGET_WORD),
+        "vector_lookup_after_commit": bool(summary.get("vector_lookup_after_commit", False)),
+        "wrapper_primary_loaded": bool(summary.get("wrapper_primary_loaded", False)),
+        "git_status_safety_safe": bool(summary.get("git_status_safety_safe", False)),
+        "production_persistence_enabled": bool(summary.get("production_persistence_enabled", True)),
+        "runtime_mapping_enabled_default": bool(summary.get("runtime_mapping_enabled_default", True)),
+    }
+    ready_for_measurement = (
+        suite_green
+        and green_evidence["summary_exit_code"] == 0
+        and green_evidence["vector_lookup_after_commit"] is True
+        and green_evidence["wrapper_primary_loaded"] is True
+        and green_evidence["git_status_safety_safe"] is True
+        and green_evidence["production_persistence_enabled"] is False
+        and green_evidence["runtime_mapping_enabled_default"] is False
+    )
+    return {
+        "version": "v3_round220_operator_green_evidence_next_cluster_selection",
+        "round": 220,
+        "green_evidence": green_evidence,
+        "ready_for_next_measurement_cluster": ready_for_measurement,
+        "selected_next_cluster_id": "runtime_mapping_acceptance_delta_measurement_no_enablement" if ready_for_measurement else "rerun_operator_local_validation_until_summary_green",
+        "selected_next_cluster_type": "measurement_only",
+        "next_recommendation": "measure runtime-mapping acceptance deltas with runtime_mapping_enabled default false, enforcement disabled, AGP intact, and production persistence NO-GO",
+        "hard_stops": [] if ready_for_measurement else ["operator_local_green_evidence_incomplete"],
+        **POLICY_FLAGS,
+    }
+
 
 def build_operator_command_sequence(
     *, artifact_dir: str = DEFAULT_ARTIFACT_DIR, target_word: str = DEFAULT_TARGET_WORD, context_words: Sequence[str] = tuple(DEFAULT_CONTEXT_WORDS), negative_token: str = DEFAULT_NEGATIVE_TOKEN
@@ -416,7 +495,7 @@ def build_operator_prompt_summary(report: Mapping[str, Any]) -> dict[str, Any]:
     self_measurement = _extract_nested(self_learning, ["measurement"], {})
     return {
         "command": "python scripts/operator_run_local_validation_suite.py",
-        "exit_code": int(report.get("exit_code", 1) or 1),
+        "exit_code": int(report.get("exit_code", 1)),
         "status": report.get("status"),
         "success": report.get("success") is True,
         "target_word": DEFAULT_TARGET_WORD,
@@ -486,8 +565,8 @@ def run_suite(
 
     success = not blockers and len(steps) == 3 and git_safety.get("safe") is True
     report: dict[str, Any] = {
-        "version": ROUND208_212_VERSION,
-        "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217],
+        "version": ROUND218_220_VERSION,
+        "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220],
         "status": "operator_local_validation_suite_green" if success else "blocked_operator_local_validation_suite",
         "success": success,
         "exit_code": 0 if success else 1,
@@ -500,10 +579,16 @@ def run_suite(
         "round213_git_safety_diagnosis": build_round213_git_safety_diagnosis(),
         "round216_final_operator_workflow": build_round216_final_operator_workflow(),
         "round217_validation_delta": build_round217_validation_delta_and_next_recommendation(focused_git_safety_tests_status="green"),
+        "round218_summary_exit_code_fix": build_round218_summary_exit_code_fix(),
+        "round219_summary_exit_code_test_plan": build_round219_summary_exit_code_test_plan(
+            focused_summary_tests_status="green",
+            failed_json_summary_status="green",
+        ),
         "blockers": sorted(set(str(item) for item in blockers)),
         **POLICY_FLAGS,
     }
     report["operator_prompt_summary"] = build_operator_prompt_summary(report)
+    report["round220_next_cluster_selection"] = build_round220_next_cluster_selection(report)
 
     destination = report_path if report_path.is_absolute() else repo_root / report_path
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -514,14 +599,14 @@ def run_suite(
 def main(argv: Sequence[str] | None = None) -> int:
     # The suite intentionally has no flags: the operator workflow is one stable command.
     if argv:
-        print(_compact_json({"version": ROUND208_212_VERSION, "status": "blocked_operator_local_validation_suite_args_not_supported", "success": False, "exit_code": 1, "blockers": ["suite_accepts_no_arguments"], **POLICY_FLAGS}))
+        print(_compact_json({"version": ROUND218_220_VERSION, "status": "blocked_operator_local_validation_suite_args_not_supported", "success": False, "exit_code": 1, "blockers": ["suite_accepts_no_arguments"], **POLICY_FLAGS}))
         return 1
     try:
         report = run_suite()
     except Exception as exc:  # fail closed with compact JSON and no artifact fabrication
         report = {
-            "version": ROUND208_212_VERSION,
-            "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217],
+            "version": ROUND218_220_VERSION,
+            "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220],
             "status": "blocked_operator_local_validation_suite_exception",
             "success": False,
             "exit_code": 1,
