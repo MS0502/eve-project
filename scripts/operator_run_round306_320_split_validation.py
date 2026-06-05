@@ -36,6 +36,11 @@ from scripts.operator_rehearse_runtime_mapping_no_persistence import (  # noqa: 
 )
 from scripts.operator_remeasure_eve_self_learning import _compact_json  # noqa: E402
 from scripts.operator_run_local_validation_suite import POLICY_FLAGS  # noqa: E402
+from scripts.operator_analyze_round336_350_artifact_failures import (  # noqa: E402
+    classify_pytest_failures,
+    extract_pytest_failure_nodeids,
+    extract_pytest_summary_counts,
+)
 
 ROUND306_320_VERSION = "v3_round306_320_split_validation_execution_guard"
 ARTIFACT_FREE_COMMAND = "python scripts/operator_run_round306_320_split_validation.py --round291-305-json _operator_artifacts/round291_305_split_validation_manifest.json --artifact-free"
@@ -84,13 +89,32 @@ def _subprocess_runner(command: Sequence[str], *, cwd: Path = REPO_ROOT) -> subp
 
 def _run_command(command: str, *, runner: Runner = _subprocess_runner, repo_root: str | Path = REPO_ROOT) -> dict[str, Any]:
     completed = runner(_split_command(command), cwd=Path(repo_root))
-    return {
+    result: dict[str, Any] = {
         "command": command,
         "returncode": completed.returncode,
         "success": completed.returncode == 0,
         "stdout_tail": completed.stdout.splitlines()[-20:],
         "stderr_tail": completed.stderr.splitlines()[-20:],
     }
+    if command == FULL_SUITE_COMMAND:
+        pytest_text = "\n".join(part for part in [completed.stdout, completed.stderr] if part)
+        nodeids = extract_pytest_failure_nodeids(pytest_text)
+        counts = extract_pytest_summary_counts(pytest_text)
+        taxonomy = classify_pytest_failures(nodeids)
+        result["pytest_failure_summary"] = {
+            "version": "v3_round336_350_full_pytest_failure_summary_capture",
+            "failed_count": counts.get("failed"),
+            "passed_count": counts.get("passed"),
+            "classified_failure_count": taxonomy["total_classified_failures"],
+            "cluster_counts": taxonomy["cluster_counts"],
+            "sample_clusters": taxonomy["clusters"],
+            "nodeids_captured_before_tail_truncation": bool(nodeids),
+            "full_stdout_retained": False,
+            "full_stderr_retained": False,
+            "vector_contents_read": False,
+            "vectors_created": False,
+        }
+    return result
 
 
 def consolidate_round306_split_validation_green_evidence(round291_305_report: Mapping[str, Any]) -> dict[str, Any]:
