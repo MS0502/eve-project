@@ -1011,3 +1011,19 @@ Results:
 Next recommendation:
 
 - If `_operator_artifacts/subset_medium_30k` is locally accessible, run the existing readiness gate and then a separate explicit load repair. If not, keep actual load blocked.
+
+## Rounds198-202 — EVE-specific self-learning remeasurement workflow
+
+- Round198 defined the exact operator-local guarded remeasurement command set for `eve_specific_vector_self_learning_cascade`.
+- Round199 added `scripts/operator_remeasure_eve_self_learning.py`, a stable marker-free smoke command that validates medium30k with `--attempt-load`, builds `build_full_engine(...)` only with explicit operator authorization, and measures Korean-first `민석` self-learning deltas in memory only.
+- Round200 added focused command/report behavior tests in `tests/test_v3_round198_202_eve_self_learning_remeasurement.py`.
+- Round201 documented the expected operator-local delta report schema.
+- Round202 preserved the broader validation taxonomy and recommends operator-local remeasurement before concept/runtime mapping repairs.
+
+Stable operator-local command:
+
+```bash
+python scripts/operator_remeasure_eve_self_learning.py --artifact-dir _operator_artifacts/subset_medium_30k --target-word 민석 --context-word 한국어 --context-word 감정 --context-word 기억 --context-word 대화 --output eve_v3_autonomous_handoff/validation/operator_local_round198_202_eve_self_learning_remeasurement.json
+```
+
+Production persistence remains NO-GO; runtime mapping default and enforcement remain disabled.
