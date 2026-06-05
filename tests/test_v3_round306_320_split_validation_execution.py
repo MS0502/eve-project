@@ -211,3 +211,100 @@ def test_round306_320_cli_artifact_dependent_missing_artifacts_fails_closed(tmp_
     assert payload["fail_closed"] is True
     assert payload["artifact_dependent_readiness"]["ready"] is False
     assert payload["runtime_mapping_enabled_default"] is False
+
+
+def test_round322_325_artifact_dependent_diagnostics_expose_missing_paths_and_git_status(tmp_path: Path) -> None:
+    (tmp_path / ".gitignore").write_text("_operator_artifacts/\n", encoding="utf-8")
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for artifact_id in round306_320.MEDIUM30K_ARTIFACT_IDS:
+        row = next(item for item in round306_320.DEFAULT_REQUIRED_LOCAL_ARTIFACTS if item["artifact_id"] == artifact_id)
+        path = tmp_path / row["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("operator-local path placeholder for diagnostics only\n", encoding="utf-8")
+
+    readiness = round306_320.build_artifact_dependent_readiness(repo_root=tmp_path)
+    diagnostics = readiness["artifact_dependent_diagnostics"]
+
+    assert diagnostics["version"] == "v3_round322_325_artifact_dependent_fail_closed_diagnostics"
+    assert diagnostics["required_artifact_ids"] == [row["artifact_id"] for row in round306_320.DEFAULT_REQUIRED_LOCAL_ARTIFACTS]
+    assert diagnostics["expected_local_paths"]["medium30k_vectors"] == "_operator_artifacts/subset_medium_30k/vectors.npy"
+    assert "_operator_artifacts/subset_medium_30k/vectors.npy" in diagnostics["observed_candidate_paths"]
+    assert diagnostics["complete_medium30k_candidate_present"] is True
+    assert diagnostics["present_artifacts_do_not_override_missing_required_artifacts"] is True
+    assert diagnostics["missing_artifact_ids"] == [
+        "round236_260_acceptance_handoff_json",
+        "round261_275_no_persistence_rehearsal_json",
+    ]
+    assert "Round261-275 rehearsal JSON" in diagnostics["why_subset_medium30k_not_accepted"]
+    medium_vector_row = next(row for row in diagnostics["artifact_diagnostics"] if row["artifact_id"] == "medium30k_vectors")
+    assert medium_vector_row["git_ignored"] is True
+    assert medium_vector_row["git_tracked"] is False
+    assert medium_vector_row["git_ignored_and_untracked"] is True
+    assert medium_vector_row["missing_or_unsafe_reasons"] == []
+    missing_json_row = next(row for row in diagnostics["artifact_diagnostics"] if row["artifact_id"] == "round261_275_no_persistence_rehearsal_json")
+    assert missing_json_row["observed_candidate_paths"] == []
+    assert "missing_expected_path" in missing_json_row["missing_or_unsafe_reasons"]
+    assert diagnostics["content_read"] is False
+    assert diagnostics["vector_contents_read"] is False
+    assert readiness["vector_contents_read"] is False
+
+
+def test_round326_330_medium30k_path_mapping_checks_paths_without_loading_vectors(tmp_path: Path) -> None:
+    (tmp_path / ".gitignore").write_text("_operator_artifacts/\n", encoding="utf-8")
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for artifact_id in round306_320.MEDIUM30K_ARTIFACT_IDS:
+        row = next(item for item in round306_320.DEFAULT_REQUIRED_LOCAL_ARTIFACTS if item["artifact_id"] == artifact_id)
+        path = tmp_path / row["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("operator-local path placeholder for diagnostics only\n", encoding="utf-8")
+
+    readiness = round306_320.build_artifact_dependent_readiness(repo_root=tmp_path)
+    mapping = readiness["medium30k_path_mapping_check"]
+
+    assert mapping["version"] == "v3_round326_330_medium30k_manifest_path_mapping_check"
+    assert mapping["success"] is True
+    assert mapping["status"] == "medium30k_manifest_paths_mapped_without_vector_load"
+    assert mapping["all_expected_paths_present"] is True
+    assert mapping["all_expected_paths_git_ignored_and_untracked"] is True
+    assert [row["artifact_id"] for row in mapping["mappings"]] == list(round306_320.MEDIUM30K_ARTIFACT_IDS)
+    assert all(row["observed_candidate_path"] for row in mapping["mappings"])
+    assert all(row["missing_or_unsafe_reasons"] == [] for row in mapping["mappings"])
+    assert mapping["vector_contents_read"] is False
+    assert mapping["vectors_loaded"] is False
+    assert mapping["vectors_created"] is False
+    assert mapping["artifacts_committed_or_staged"] is False
+    assert mapping["runtime_mapping_default_go"] is False
+
+
+def test_round331_335_validation_delta_records_diagnostic_and_path_mapping_delta(tmp_path: Path) -> None:
+    (tmp_path / ".gitignore").write_text("_operator_artifacts/\n", encoding="utf-8")
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for artifact_id in round306_320.MEDIUM30K_ARTIFACT_IDS:
+        row = next(item for item in round306_320.DEFAULT_REQUIRED_LOCAL_ARTIFACTS if item["artifact_id"] == artifact_id)
+        path = tmp_path / row["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("operator-local path placeholder for diagnostics only\n", encoding="utf-8")
+    artifact_dependent = round306_320.run_guarded_artifact_dependent_entrypoint(
+        _green_round291_305_report(),
+        operator_authorized=True,
+        authorization_token=round306_320.ROUND261_275_AUTHORIZATION_TOKEN,
+        repo_root=tmp_path,
+    )
+
+    report = round306_320.build_round331_335_validation_delta(
+        {"success": True, "status": "round307_310_artifact_free_validation_green"},
+        artifact_dependent,
+        focused_test_status="green",
+        broader_pytest_status="pending_operator_run",
+    )
+
+    assert report["version"] == "v3_round331_335_diagnostic_validation_delta_next_recommendation"
+    assert report["rounds"] == [331, 332, 333, 334, 335]
+    assert report["success"] is True
+    assert "artifact_dependent_diagnostics_actionable" in report["remaining_taxonomy"]
+    assert "medium30k_path_mapping_checked_without_vector_load" in report["remaining_taxonomy"]
+    assert report["improved_diagnostic_schema"]["vector_contents_read"] is False
+    assert report["path_mapping_behavior"]["vectors_loaded"] is False
+    assert report["production_persistence_enabled"] is False
+    assert report["runtime_mapping_enabled_default"] is False
+    assert report["enforcement_enabled"] is False
