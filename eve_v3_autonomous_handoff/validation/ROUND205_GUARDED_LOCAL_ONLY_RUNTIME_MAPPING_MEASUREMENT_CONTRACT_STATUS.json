@@ -1,0 +1,26 @@
+{
+  "agp_bypass_used": false,
+  "artifact_download_attempted": false,
+  "artifacts_included": false,
+  "artifacts_written": false,
+  "command_sequence": [
+    "git status --short -- _operator_artifacts seeds/subsets",
+    "python scripts/operator_measure_runtime_mapping_after_self_learning.py --artifact-dir _operator_artifacts/subset_medium_30k --target-word 민석 --context-word 한국어 --context-word 감정 --context-word 기억 --context-word 대화 --negative-token EVE --output eve_v3_autonomous_handoff/validation/operator_local_round203_207_runtime_mapping_after_self_learning.json",
+    "git status --short -- _operator_artifacts seeds/subsets"
+  ],
+  "controlled_smoke_rolls_back_runtime_mapping": true,
+  "default_runtime_load": false,
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "manual_python_snippet_required": false,
+  "production_persistence_enabled": false,
+  "production_persistence_no_go_respected": true,
+  "requires_real_operator_medium30k_artifact": true,
+  "round": 205,
+  "runtime_mapping_enabled_default": false,
+  "seed_vectors_mutated": false,
+  "selected_cluster_id": "concept_runtime_mapping_after_eve_self_learning_guarded_medium30k",
+  "semantic_memory_or_quarantine_mutated": false,
+  "stable_operator_local_command": "python scripts/operator_measure_runtime_mapping_after_self_learning.py --artifact-dir _operator_artifacts/subset_medium_30k --target-word 민석 --context-word 한국어 --context-word 감정 --context-word 기억 --context-word 대화 --negative-token EVE --output eve_v3_autonomous_handoff/validation/operator_local_round203_207_runtime_mapping_after_self_learning.json",
+  "version": "v3_round205_guarded_local_only_runtime_mapping_measurement_contract"
+}
