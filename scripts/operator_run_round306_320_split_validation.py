@@ -127,10 +127,170 @@ def consolidate_round306_split_validation_green_evidence(round291_305_report: Ma
     }
 
 
+
+MEDIUM30K_ARTIFACT_IDS: tuple[str, ...] = (
+    "medium30k_vocab",
+    "medium30k_vectors",
+    "medium30k_subset_manifest",
+)
+
+
+def _artifact_reason_codes(row: Mapping[str, Any]) -> list[str]:
+    """Return deterministic fail-closed reasons for one local artifact row."""
+
+    reasons: list[str] = []
+    if row.get("exists") is not True:
+        reasons.append("missing_expected_path")
+    if row.get("local_only") is not True:
+        reasons.append("path_not_under_operator_artifacts")
+    if row.get("git_ignored") is not True:
+        reasons.append("path_not_git_ignored")
+    if row.get("git_tracked") is True:
+        reasons.append("path_is_git_tracked")
+    if row.get("safe_to_reference") is not True:
+        reasons.append("unsafe_to_reference")
+    if row.get("safe_to_execute") is not True:
+        reasons.append("unsafe_to_execute")
+    return reasons
+
+
+def build_artifact_dependent_diagnostic_schema(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Rounds322-325: expose actionable fail-closed artifact diagnostics.
+
+    The schema is intentionally path- and git-metadata-only.  It never opens
+    vector files, never computes vector checksums, and never accepts an operator
+    path merely because a similarly named directory exists locally.
+    """
+
+    rows: list[dict[str, Any]] = []
+    observed_candidate_paths: list[str] = []
+    required = manifest.get("required_artifacts", [])
+    if not isinstance(required, list):
+        required = []
+    for raw in required:
+        row = raw if isinstance(raw, Mapping) else {}
+        expected_path = str(row.get("path", ""))
+        exists = row.get("exists") is True
+        if exists and expected_path:
+            observed_candidate_paths.append(expected_path)
+        reason_codes = _artifact_reason_codes(row)
+        rows.append(
+            {
+                "artifact_id": row.get("artifact_id"),
+                "kind": row.get("kind"),
+                "required_for": row.get("required_for"),
+                "expected_local_path": expected_path,
+                "observed_candidate_paths": [expected_path] if exists and expected_path else [],
+                "exists": exists,
+                "local_only": row.get("local_only") is True,
+                "git_ignored": row.get("git_ignored") is True,
+                "git_tracked": row.get("git_tracked") is True,
+                "git_untracked": row.get("git_tracked") is False,
+                "git_ignored_and_untracked": row.get("git_ignored") is True and row.get("git_tracked") is False,
+                "safe_to_reference": row.get("safe_to_reference") is True,
+                "safe_to_execute": row.get("safe_to_execute") is True,
+                "missing_or_unsafe_reasons": reason_codes,
+                "content_read": False,
+                "vector_contents_read": False,
+                "checksum_computed": False,
+                "placeholder_created": False,
+            }
+        )
+    required_ids = [str(row.get("artifact_id")) for row in rows if row.get("artifact_id")]
+    unsafe_ids = sorted(str(row["artifact_id"]) for row in rows if row.get("artifact_id") and row.get("safe_to_reference") is not True)
+    missing_ids = sorted(str(row["artifact_id"]) for row in rows if row.get("artifact_id") and row.get("exists") is not True)
+    present_but_not_sufficient = sorted(str(row["artifact_id"]) for row in rows if row.get("artifact_id") and row.get("exists") is True)
+    complete_medium30k_present = all(
+        any(row.get("artifact_id") == artifact_id and row.get("exists") is True for row in rows)
+        for artifact_id in MEDIUM30K_ARTIFACT_IDS
+    )
+    return {
+        "version": "v3_round322_325_artifact_dependent_fail_closed_diagnostics",
+        "rounds": [322, 323, 324, 325],
+        "required_artifact_ids": required_ids,
+        "expected_local_paths": {str(row["artifact_id"]): row["expected_local_path"] for row in rows if row.get("artifact_id")},
+        "observed_candidate_paths": sorted(observed_candidate_paths),
+        "artifact_diagnostics": rows,
+        "missing_artifact_ids": missing_ids,
+        "unsafe_artifact_ids": unsafe_ids,
+        "git_status_by_artifact": {
+            str(row["artifact_id"]): {
+                "git_ignored": row["git_ignored"],
+                "git_tracked": row["git_tracked"],
+                "git_untracked": row["git_untracked"],
+                "git_ignored_and_untracked": row["git_ignored_and_untracked"],
+            }
+            for row in rows
+            if row.get("artifact_id")
+        },
+        "complete_medium30k_candidate_present": complete_medium30k_present,
+        "present_artifacts_do_not_override_missing_required_artifacts": bool(present_but_not_sufficient and missing_ids),
+        "why_subset_medium30k_not_accepted": (
+            "medium30k files are only one artifact group; artifact-dependent validation also requires the Round261-275 rehearsal JSON and Round236-260 handoff JSON"
+            if complete_medium30k_present and missing_ids
+            else "all required artifacts must be present, local-only, git-ignored, and untracked before artifact-dependent validation can proceed"
+        ),
+        "content_read": False,
+        "vector_contents_read": False,
+        "vectors_loaded": False,
+        "vectors_created": False,
+    }
+
+
+def build_medium30k_manifest_path_mapping_check(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Rounds326-330: verify medium30k local path mapping without loading vectors."""
+
+    required = manifest.get("required_artifacts", [])
+    if not isinstance(required, list):
+        required = []
+    rows_by_id = {row.get("artifact_id"): row for row in required if isinstance(row, Mapping)}
+    mappings: list[dict[str, Any]] = []
+    for artifact_id in MEDIUM30K_ARTIFACT_IDS:
+        row = rows_by_id.get(artifact_id, {})
+        reasons = _artifact_reason_codes(row)
+        mappings.append(
+            {
+                "artifact_id": artifact_id,
+                "expected_manifest_path": row.get("path"),
+                "observed_candidate_path": row.get("path") if row.get("exists") is True else None,
+                "exists": row.get("exists") is True,
+                "git_ignored": row.get("git_ignored") is True,
+                "git_tracked": row.get("git_tracked") is True,
+                "git_untracked": row.get("git_tracked") is False,
+                "safe_to_reference": row.get("safe_to_reference") is True,
+                "safe_to_execute": row.get("safe_to_execute") is True,
+                "missing_or_unsafe_reasons": reasons,
+                "content_read": False,
+                "vector_contents_read": False,
+            }
+        )
+    all_present = all(row["exists"] for row in mappings)
+    all_safe = all(row["safe_to_execute"] for row in mappings)
+    return {
+        "version": "v3_round326_330_medium30k_manifest_path_mapping_check",
+        "rounds": [326, 327, 328, 329, 330],
+        "success": all_present and all_safe,
+        "status": "medium30k_manifest_paths_mapped_without_vector_load" if all_present and all_safe else "fail_closed_medium30k_manifest_path_mapping_not_ready",
+        "base_operator_path": "_operator_artifacts/subset_medium_30k",
+        "required_artifact_ids": list(MEDIUM30K_ARTIFACT_IDS),
+        "mappings": mappings,
+        "all_expected_paths_present": all_present,
+        "all_expected_paths_git_ignored_and_untracked": all(row["git_ignored"] and row["git_untracked"] for row in mappings),
+        "vector_contents_read": False,
+        "vectors_loaded": False,
+        "vectors_created": False,
+        "artifacts_committed_or_staged": False,
+        "production_persistence_go": False,
+        "runtime_mapping_default_go": False,
+        "enforcement_go": False,
+    }
+
 def build_artifact_dependent_readiness(*, repo_root: str | Path = REPO_ROOT) -> dict[str, Any]:
     """Return local-only artifact-dependent readiness without reading artifact contents."""
 
     manifest = build_guarded_artifact_staged_rehearsal_manifest(repo_root=repo_root)
+    diagnostics = build_artifact_dependent_diagnostic_schema(manifest)
+    path_mapping = build_medium30k_manifest_path_mapping_check(manifest)
     ready = manifest.get("staging_ready") is True
     return {
         "version": "v3_round307_315_artifact_dependent_readiness",
@@ -143,8 +303,11 @@ def build_artifact_dependent_readiness(*, repo_root: str | Path = REPO_ROOT) -> 
         "missing_artifact_ids": manifest.get("missing_artifact_ids", []),
         "unsafe_artifact_ids": manifest.get("unsafe_artifact_ids", []),
         "artifact_git_guard": manifest.get("artifact_git_guard", {}),
+        "artifact_dependent_diagnostics": diagnostics,
+        "medium30k_path_mapping_check": path_mapping,
         "planned_commands": list(ARTIFACT_DEPENDENT_PLANNED_COMMANDS),
         "content_read": False,
+        "vector_contents_read": False,
         "vectors_created": False,
         "vectors_loaded": False,
         "production_persistence_go": False,
@@ -291,6 +454,55 @@ def build_round316_320_validation_delta(
         **POLICY_FLAGS,
     }
 
+
+
+def build_round331_335_validation_delta(
+    artifact_free_report: Mapping[str, Any] | None = None,
+    artifact_dependent_report: Mapping[str, Any] | None = None,
+    *,
+    focused_test_status: str = "pending_operator_run",
+    broader_pytest_status: str = "pending_operator_run",
+    broader_failure_count: int | None = None,
+) -> dict[str, Any]:
+    """Rounds331-335: summarize diagnostic delta and next recommendation."""
+
+    readiness = artifact_dependent_report.get("artifact_dependent_readiness", {}) if artifact_dependent_report else {}
+    diagnostics = readiness.get("artifact_dependent_diagnostics", {}) if isinstance(readiness, Mapping) else {}
+    mapping = readiness.get("medium30k_path_mapping_check", {}) if isinstance(readiness, Mapping) else {}
+    artifact_dependent_fail_closed = artifact_dependent_report is not None and artifact_dependent_report.get("fail_closed") is True
+    diagnostic_schema_present = bool(diagnostics.get("artifact_diagnostics"))
+    path_mapping_checked = mapping.get("version") == "v3_round326_330_medium30k_manifest_path_mapping_check"
+    artifact_free_green = artifact_free_report is not None and artifact_free_report.get("success") is True
+    remaining_taxonomy = [
+        "production_persistence_remains_no_go",
+        "runtime_mapping_enabled_default_false",
+        "enforcement_disabled_by_default",
+        "artifact_free_validation_green" if artifact_free_green else "artifact_free_validation_pending_or_red",
+        "artifact_dependent_fail_closed_confirmed" if artifact_dependent_fail_closed else "artifact_dependent_fail_closed_not_observed_in_this_report",
+        "artifact_dependent_diagnostics_actionable" if diagnostic_schema_present else "artifact_dependent_diagnostics_missing",
+        "medium30k_path_mapping_checked_without_vector_load" if path_mapping_checked else "medium30k_path_mapping_not_checked",
+        "operator_artifacts_and_vectors_must_remain_uncommitted",
+    ]
+    return {
+        "version": "v3_round331_335_diagnostic_validation_delta_next_recommendation",
+        "rounds": [331, 332, 333, 334, 335],
+        "success": diagnostic_schema_present and path_mapping_checked and artifact_dependent_fail_closed,
+        "status": "round331_335_diagnostic_validation_delta_ready" if diagnostic_schema_present and path_mapping_checked else "blocked_round331_335_diagnostic_validation_delta",
+        "focused_test_command": FOCUSED_TEST_COMMAND,
+        "focused_test_status": focused_test_status,
+        "artifact_free_validation_status": artifact_free_report.get("status") if artifact_free_report else "not_run",
+        "artifact_dependent_validation_status": artifact_dependent_report.get("status") if artifact_dependent_report else "not_run",
+        "improved_diagnostic_schema": diagnostics,
+        "path_mapping_behavior": mapping,
+        "broader_pytest_status": broader_pytest_status,
+        "broader_failure_count": broader_failure_count,
+        "remaining_taxonomy": remaining_taxonomy,
+        "next_recommendation": (
+            "Keep production persistence, runtime mapping defaults, and enforcement disabled.  Next, run the artifact-dependent command only in an operator-local "
+            "workspace where every required JSON and medium30k path is present, git-ignored, and untracked; use the new per-artifact diagnostics to repair missing paths without reading vector contents."
+        ),
+        **POLICY_FLAGS,
+    }
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Round306-320 split-validation execution guards.")
