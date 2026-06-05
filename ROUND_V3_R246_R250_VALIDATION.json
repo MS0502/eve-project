@@ -1,0 +1,58 @@
+{
+  "adjacent_test_status": "defined_for_runtime_mapping_acceptance_lineage",
+  "agp_bypass_used": false,
+  "artifact_download_attempted": false,
+  "artifacts_staged_or_committed_by_suite": false,
+  "broader_validation_delta": "adds handoff-quality gates and taxonomy summaries; no runtime enablement or persistence delta",
+  "cluster": "validation_manifest",
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "focused_test_status": "defined_for_round236_260",
+  "measurement_only": true,
+  "production_persistence_enabled": false,
+  "production_persistence_no_go_respected": true,
+  "quality_gates": {
+    "agp_bypass_not_used": true,
+    "dummy_vectors_not_created": true,
+    "enforcement_disabled": true,
+    "production_persistence_disabled": true,
+    "production_persistence_no_go_respected": true,
+    "runtime_mapping_enabled_default_false": true,
+    "runtime_mapping_enabled_default_unchanged": true,
+    "seed_vectors_not_mutated": true,
+    "semantic_memory_or_quarantine_not_mutated": true
+  },
+  "rounds": [
+    246,
+    247,
+    248,
+    249,
+    250
+  ],
+  "runtime_mapping_enabled_default": false,
+  "runtime_mapping_enabled_default_changed": false,
+  "seed_vectors_mutated": false,
+  "semantic_memory_or_quarantine_mutated": false,
+  "success": true,
+  "validation_commands": {
+    "adjacent": [
+      "python -m pytest -q tests/test_v3_round221_225_runtime_mapping_acceptance_delta.py tests/test_v3_round226_230_runtime_mapping_acceptance_taxonomy.py tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py"
+    ],
+    "broader": [
+      "python -m pytest --collect-only -q",
+      "python -m compileall -q ."
+    ],
+    "focused": [
+      "python -m pytest -q tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py"
+    ],
+    "previous_focused": [
+      "python -m pytest -q tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py"
+    ]
+  },
+  "validation_json_files": [
+    "ROUND_V3_R236_R240_VALIDATION.json",
+    "ROUND_V3_R241_R245_VALIDATION.json",
+    "ROUND_V3_R246_R250_VALIDATION.json"
+  ],
+  "version": "v3_round246_250_validation_manifest"
+}

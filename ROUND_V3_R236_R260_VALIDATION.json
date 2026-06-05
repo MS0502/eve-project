@@ -1,0 +1,1189 @@
+{
+  "adjacent_test_commands": [
+    "python -m pytest -q tests/test_v3_round221_225_runtime_mapping_acceptance_delta.py tests/test_v3_round226_230_runtime_mapping_acceptance_taxonomy.py tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py"
+  ],
+  "agp_bypass_used": false,
+  "artifact_download_attempted": false,
+  "artifacts_staged_or_committed_by_suite": false,
+  "blockers": [],
+  "broader_validation_commands": [
+    "python -m pytest --collect-only -q",
+    "python -m compileall -q ."
+  ],
+  "clusters_selected": [
+    {
+      "cluster": "stage_matrix_quality_gates",
+      "cluster_id": "round236_240_stage_matrix_quality_gates",
+      "purpose": "turn the accepted/blocked stage matrix into explicit quality gates, stop-stage counts, and a handoff-safe focused-test plan",
+      "rounds": [
+        236,
+        237,
+        238,
+        239,
+        240
+      ]
+    },
+    {
+      "cluster": "operator_handoff_packet",
+      "cluster_id": "round241_245_operator_handoff_packet",
+      "purpose": "package accepted and blocked rows into an operator replay checklist without enabling runtime mapping or persistence",
+      "rounds": [
+        241,
+        242,
+        243,
+        244,
+        245
+      ]
+    },
+    {
+      "cluster": "validation_manifest",
+      "cluster_id": "round246_250_validation_manifest",
+      "purpose": "record focused, adjacent, collect-only, and compile validation commands and the broader validation delta",
+      "rounds": [
+        246,
+        247,
+        248,
+        249,
+        250
+      ]
+    },
+    {
+      "cluster": "remaining_taxonomy",
+      "cluster_id": "round251_255_remaining_taxonomy",
+      "purpose": "classify remaining taxonomy into accepted tokens, blocked controls, unresolved failures, no-go items, and explicit non-goals",
+      "rounds": [
+        251,
+        252,
+        253,
+        254,
+        255
+      ]
+    },
+    {
+      "cluster": "final_consolidation",
+      "cluster_id": "round256_260_final_consolidation",
+      "purpose": "consolidate the five clusters into a final PR-ready recommendation while preserving all safety defaults",
+      "rounds": [
+        256,
+        257,
+        258,
+        259,
+        260
+      ]
+    }
+  ],
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "exit_code": 0,
+  "focused_test_command": "python -m pytest -q tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py",
+  "production_persistence_enabled": false,
+  "production_persistence_no_go_respected": true,
+  "round236_240_stage_matrix_quality_gates": {
+    "accepted_tokens": [
+      "민석"
+    ],
+    "agp_bypass_used": false,
+    "artifact_download_attempted": false,
+    "artifacts_staged_or_committed_by_suite": false,
+    "blocked_control_tokens": [
+      "EVE"
+    ],
+    "cluster": "stage_matrix_quality_gates",
+    "dummy_vectors_created": false,
+    "enforcement_enabled": false,
+    "focused_test_command": "python -m pytest -q tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py",
+    "matrix_row_count": 2,
+    "measurement_only": true,
+    "production_persistence_enabled": false,
+    "production_persistence_no_go_respected": true,
+    "quality_gates": {
+      "accepted_rows_do_not_stop": true,
+      "agp_bypass_not_used": true,
+      "blocked_controls_stop_at_gate": true,
+      "dummy_vectors_not_created": true,
+      "enforcement_disabled": true,
+      "production_persistence_disabled": true,
+      "production_persistence_no_go_respected": true,
+      "row_count_matches_taxonomy": true,
+      "runtime_mapping_enabled_default_false": true,
+      "runtime_mapping_enabled_default_unchanged": true,
+      "seed_vectors_not_mutated": true,
+      "semantic_memory_or_quarantine_not_mutated": true,
+      "unresolved_failure_tokens_empty": true
+    },
+    "rounds": [
+      236,
+      237,
+      238,
+      239,
+      240
+    ],
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_default_changed": false,
+    "seed_vectors_mutated": false,
+    "selected_input_target": "runtime_mapping_accepted_blocked_stage_matrix_reporting_no_enablement",
+    "semantic_memory_or_quarantine_mutated": false,
+    "source_version": "v3_round231_235_runtime_mapping_acceptance_repair_selection",
+    "stage_coverage": {
+      "blocked_at_gate": {
+        "failed": 1,
+        "passed": 1
+      },
+      "enforcement_enabled_after_false": {
+        "failed": 0,
+        "passed": 2
+      },
+      "mapped_in_controlled_smoke": {
+        "failed": 1,
+        "passed": 1
+      },
+      "ready_at_precheck": {
+        "failed": 1,
+        "passed": 1
+      },
+      "rollback_complete": {
+        "failed": 0,
+        "passed": 2
+      },
+      "runtime_mapping_enabled_after_false": {
+        "failed": 0,
+        "passed": 2
+      },
+      "runtime_mapping_not_persisted": {
+        "failed": 0,
+        "passed": 2
+      },
+      "would_map_at_gate": {
+        "failed": 1,
+        "passed": 1
+      }
+    },
+    "stop_stage_counts": {
+      "blocked_at_gate": 1,
+      "none": 1
+    },
+    "success": true,
+    "unresolved_failure_tokens": [],
+    "version": "v3_round236_240_stage_matrix_quality_gate"
+  },
+  "round241_245_operator_handoff_packet": {
+    "accepted_for_future_operator_review": [
+      "민석"
+    ],
+    "agp_bypass_used": false,
+    "artifact_download_attempted": false,
+    "artifacts_staged_or_committed_by_suite": false,
+    "blocked_controls": [
+      "EVE"
+    ],
+    "cluster": "operator_handoff_packet",
+    "dummy_vectors_created": false,
+    "enforcement_enabled": false,
+    "handoff_documents": [
+      "ROUND_V3_R236_R240_HANDOFF.md",
+      "ROUND_V3_R241_R245_HANDOFF.md"
+    ],
+    "measurement_only": true,
+    "operator_replay_rows": [
+      {
+        "operator_action": "review_as_future_runtime_mapping_candidate",
+        "required_boundary": "must remain explicit operator authorization; do not change runtime_mapping_enabled default",
+        "token": "민석"
+      },
+      {
+        "operator_action": "keep_as_blocked_control_until concept/SA/AGP evidence exists",
+        "required_boundary": "blocked control is evidence that broad lexical auto-mapping remains unsafe",
+        "token": "EVE"
+      }
+    ],
+    "operator_summary": {
+      "accepted_count": 1,
+      "blocked_control_count": 1,
+      "enforcement": "not_enabled",
+      "production_persistence": "not_enabled",
+      "runtime_mapping_enablement": "not_enabled",
+      "status": "handoff_packet_ready",
+      "unresolved_failure_count": 0
+    },
+    "production_persistence_enabled": false,
+    "production_persistence_no_go_respected": true,
+    "quality_gates": {
+      "agp_bypass_not_used": true,
+      "dummy_vectors_not_created": true,
+      "enforcement_disabled": true,
+      "production_persistence_disabled": true,
+      "production_persistence_no_go_respected": true,
+      "runtime_mapping_enabled_default_false": true,
+      "runtime_mapping_enabled_default_unchanged": true,
+      "seed_vectors_not_mutated": true,
+      "semantic_memory_or_quarantine_not_mutated": true
+    },
+    "rounds": [
+      241,
+      242,
+      243,
+      244,
+      245
+    ],
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_default_changed": false,
+    "seed_vectors_mutated": false,
+    "semantic_memory_or_quarantine_mutated": false,
+    "success": true,
+    "unresolved_failure_tokens": [],
+    "version": "v3_round241_245_operator_handoff_packet"
+  },
+  "round246_250_validation_manifest": {
+    "adjacent_test_status": "defined_for_runtime_mapping_acceptance_lineage",
+    "agp_bypass_used": false,
+    "artifact_download_attempted": false,
+    "artifacts_staged_or_committed_by_suite": false,
+    "broader_validation_delta": "adds handoff-quality gates and taxonomy summaries; no runtime enablement or persistence delta",
+    "cluster": "validation_manifest",
+    "dummy_vectors_created": false,
+    "enforcement_enabled": false,
+    "focused_test_status": "defined_for_round236_260",
+    "measurement_only": true,
+    "production_persistence_enabled": false,
+    "production_persistence_no_go_respected": true,
+    "quality_gates": {
+      "agp_bypass_not_used": true,
+      "dummy_vectors_not_created": true,
+      "enforcement_disabled": true,
+      "production_persistence_disabled": true,
+      "production_persistence_no_go_respected": true,
+      "runtime_mapping_enabled_default_false": true,
+      "runtime_mapping_enabled_default_unchanged": true,
+      "seed_vectors_not_mutated": true,
+      "semantic_memory_or_quarantine_not_mutated": true
+    },
+    "rounds": [
+      246,
+      247,
+      248,
+      249,
+      250
+    ],
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_default_changed": false,
+    "seed_vectors_mutated": false,
+    "semantic_memory_or_quarantine_mutated": false,
+    "success": true,
+    "validation_commands": {
+      "adjacent": [
+        "python -m pytest -q tests/test_v3_round221_225_runtime_mapping_acceptance_delta.py tests/test_v3_round226_230_runtime_mapping_acceptance_taxonomy.py tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py"
+      ],
+      "broader": [
+        "python -m pytest --collect-only -q",
+        "python -m compileall -q ."
+      ],
+      "focused": [
+        "python -m pytest -q tests/test_v3_round236_260_runtime_mapping_acceptance_handoff.py"
+      ],
+      "previous_focused": [
+        "python -m pytest -q tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py"
+      ]
+    },
+    "validation_json_files": [
+      "ROUND_V3_R236_R240_VALIDATION.json",
+      "ROUND_V3_R241_R245_VALIDATION.json",
+      "ROUND_V3_R246_R250_VALIDATION.json"
+    ],
+    "version": "v3_round246_250_validation_manifest"
+  },
+  "round251_255_remaining_taxonomy": {
+    "agp_bypass_used": false,
+    "artifact_download_attempted": false,
+    "artifacts_staged_or_committed_by_suite": false,
+    "cluster": "remaining_taxonomy",
+    "decision_record": {
+      "next_safe_action": "operator may review the accepted token row and blocked-control row before any separate authorization round",
+      "reason": "acceptance evidence is operator-review measurement only; default no-load/no-enable boundary must remain intact",
+      "runtime_mapping_production_enablement": "no_go"
+    },
+    "dummy_vectors_created": false,
+    "enforcement_enabled": false,
+    "handoff_documents": [
+      "ROUND_V3_R251_R255_HANDOFF.md"
+    ],
+    "measurement_only": true,
+    "production_persistence_enabled": false,
+    "production_persistence_no_go_respected": true,
+    "remaining_taxonomy": {
+      "accepted_for_future_operator_review": [
+        "민석"
+      ],
+      "blocked_controls": [
+        "EVE"
+      ],
+      "explicit_no_go_items": [
+        "production_persistence_enablement",
+        "runtime_mapping_enabled_default_true",
+        "enforcement_enablement",
+        "agp_bypass",
+        "fabricated_or_dummy_vectors",
+        "seed_vector_mutation",
+        "semantic_memory_or_quarantine_mutation_from_mapping_report",
+        "broad_lexical_auto_mapping"
+      ],
+      "unresolved_failures": []
+    },
+    "rounds": [
+      251,
+      252,
+      253,
+      254,
+      255
+    ],
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_default_changed": false,
+    "seed_vectors_mutated": false,
+    "semantic_memory_or_quarantine_mutated": false,
+    "success": true,
+    "version": "v3_round251_255_remaining_taxonomy"
+  },
+  "round256_260_final_consolidation": {
+    "agp_bypass_used": false,
+    "artifact_download_attempted": false,
+    "artifacts_staged_or_committed_by_suite": false,
+    "broader_validation_delta": "adds handoff-quality gates and taxonomy summaries; no runtime enablement or persistence delta",
+    "cluster": "final_consolidation",
+    "cluster_statuses": {
+      "round236_240_stage_matrix_quality_gates": true,
+      "round241_245_operator_handoff_packet": true,
+      "round246_250_validation_manifest": true,
+      "round251_255_remaining_taxonomy": true
+    },
+    "clusters_selected": [
+      "stage_matrix_quality_gates",
+      "operator_handoff_packet",
+      "validation_manifest",
+      "remaining_taxonomy",
+      "final_consolidation"
+    ],
+    "dummy_vectors_created": false,
+    "enforcement_enabled": false,
+    "fixes_measurement_improvements": [
+      "stage-matrix quality gates over accepted/blocked runtime-mapping acceptance rows",
+      "operator handoff replay rows for accepted and blocked-control tokens",
+      "validation manifest linking focused, adjacent, collect-only, and compile checks",
+      "remaining taxonomy with explicit no-go items and next safe action"
+    ],
+    "measurement_only": true,
+    "next_recommendation": "stop short of production enablement; if the operator explicitly authorizes a future round, use the handoff packet to design one isolated no-persistence runtime-mapping rehearsal with split full-suite validation",
+    "production_persistence_enabled": false,
+    "production_persistence_no_go_respected": true,
+    "quality_gates": {
+      "agp_bypass_not_used": true,
+      "dummy_vectors_not_created": true,
+      "enforcement_disabled": true,
+      "production_persistence_disabled": true,
+      "production_persistence_no_go_respected": true,
+      "runtime_mapping_enabled_default_false": true,
+      "runtime_mapping_enabled_default_unchanged": true,
+      "seed_vectors_not_mutated": true,
+      "semantic_memory_or_quarantine_not_mutated": true
+    },
+    "remaining_taxonomy": {
+      "accepted_for_future_operator_review": [
+        "민석"
+      ],
+      "blocked_controls": [
+        "EVE"
+      ],
+      "explicit_no_go_items": [
+        "production_persistence_enablement",
+        "runtime_mapping_enabled_default_true",
+        "enforcement_enablement",
+        "agp_bypass",
+        "fabricated_or_dummy_vectors",
+        "seed_vector_mutation",
+        "semantic_memory_or_quarantine_mutation_from_mapping_report",
+        "broad_lexical_auto_mapping"
+      ],
+      "unresolved_failures": []
+    },
+    "rounds": [
+      256,
+      257,
+      258,
+      259,
+      260
+    ],
+    "rounds_completed": [
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260
+    ],
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_default_changed": false,
+    "seed_vectors_mutated": false,
+    "semantic_memory_or_quarantine_mutated": false,
+    "success": true,
+    "version": "v3_round256_260_final_consolidation"
+  },
+  "rounds_completed": [
+    236,
+    237,
+    238,
+    239,
+    240,
+    241,
+    242,
+    243,
+    244,
+    245,
+    246,
+    247,
+    248,
+    249,
+    250,
+    251,
+    252,
+    253,
+    254,
+    255,
+    256,
+    257,
+    258,
+    259,
+    260
+  ],
+  "runtime_mapping_enabled_default": false,
+  "runtime_mapping_enabled_default_changed": false,
+  "seed_vectors_mutated": false,
+  "semantic_memory_or_quarantine_mutated": false,
+  "source_round231_235": {
+    "agp_bypass_used": false,
+    "artifact_download_attempted": false,
+    "artifacts_staged_or_committed_by_suite": false,
+    "blockers": [],
+    "dummy_vectors_created": false,
+    "enforcement_enabled": false,
+    "exit_code": 0,
+    "focused_test_command": "python -m pytest -q tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py",
+    "implementation_summary": "read-only accepted/blocked stage-matrix reporting improvement; no enablement or persistence changes",
+    "production_persistence_enabled": false,
+    "production_persistence_no_go_respected": true,
+    "round226_230_acceptance_taxonomy": {
+      "acceptance_delta_green_evidence": {
+        "accepted_tokens": [
+          "민석"
+        ],
+        "blocked_control_tokens": [
+          "EVE"
+        ],
+        "selected_failure_cluster_id": "post_green_runtime_mapping_stage_delta_visibility_gap",
+        "source_status": "runtime_mapping_acceptance_delta_ready",
+        "source_success": true
+      },
+      "agp_bypass_used": false,
+      "artifact_download_attempted": false,
+      "artifacts_staged_or_committed_by_suite": false,
+      "blockers": [],
+      "dummy_vectors_created": false,
+      "enforcement_enabled": false,
+      "exit_code": 0,
+      "implementation_summary": "read-only runtime-mapping acceptance taxonomy/reporting improvement; no enablement or persistence changes",
+      "production_persistence_enabled": false,
+      "production_persistence_no_go_respected": true,
+      "round221_225_acceptance_delta": {
+        "agp_bypass_used": false,
+        "artifact_download_attempted": false,
+        "artifacts_staged_or_committed_by_suite": false,
+        "blockers": [],
+        "dummy_vectors_created": false,
+        "enforcement_enabled": false,
+        "exit_code": 0,
+        "production_persistence_enabled": false,
+        "production_persistence_no_go_respected": true,
+        "round221_green_evidence_interpretation": {
+          "agp_bypass_used": false,
+          "artifact_download_attempted": false,
+          "artifacts_staged_or_committed_by_suite": false,
+          "dummy_vectors_created": false,
+          "enforcement_enabled": false,
+          "green_evidence": {
+            "git_status_safety_safe": true,
+            "operator_local_validation_suite_green": true,
+            "production_persistence_enabled": false,
+            "runtime_mapping_enabled_default": false,
+            "selected_cluster_id": "concept_runtime_mapping_after_eve_self_learning_guarded_medium30k",
+            "status": "operator_local_validation_suite_green",
+            "summary_exit_code": 0,
+            "target_word": "민석",
+            "vector_lookup_after_commit": true,
+            "wrapper_primary_loaded": true
+          },
+          "hard_stops": [],
+          "next_narrow_repair_target": "runtime_mapping_acceptance_delta_measurement_no_enablement",
+          "production_persistence_enabled": false,
+          "production_persistence_no_go_respected": true,
+          "production_persistence_remains_no_go": true,
+          "ready_for_next_narrow_repair_target": true,
+          "round": 221,
+          "runtime_mapping_enabled_default": false,
+          "runtime_mapping_enabled_default_changed": false,
+          "seed_vectors_mutated": false,
+          "semantic_memory_or_quarantine_mutated": false,
+          "version": "v3_round221_operator_green_evidence_repair_target_gate"
+        },
+        "round222_failure_cluster_selection": {
+          "agp_bypass_used": false,
+          "artifact_download_attempted": false,
+          "artifacts_staged_or_committed_by_suite": false,
+          "behavior_to_improve": "operator-facing measurement determinism and failure localization, not runtime enablement",
+          "blocked_actions": [
+            "production_persistence_enablement",
+            "runtime_mapping_enabled_default_true",
+            "enforcement_enablement",
+            "AGP_bypass",
+            "vector_fabrication",
+            "seed_or_subset_mutation"
+          ],
+          "cluster_definition": "The operator suite proves the 민석 vector, guarded medium30k load, and controlled runtime-mapping smoke are green, but the next Codex round still lacks a normalized per-token stage delta showing exactly where future accepted or blocked tokens pass/fail.",
+          "dummy_vectors_created": false,
+          "enforcement_enabled": false,
+          "hard_stops": [],
+          "production_persistence_enabled": false,
+          "production_persistence_no_go_respected": true,
+          "round": 222,
+          "runtime_mapping_enabled_default": false,
+          "runtime_mapping_enabled_default_changed": false,
+          "seed_vectors_mutated": false,
+          "selected_failure_cluster_id": "post_green_runtime_mapping_stage_delta_visibility_gap",
+          "selected_repair_target": "runtime_mapping_acceptance_delta_measurement_no_enablement",
+          "semantic_memory_or_quarantine_mutated": false,
+          "version": "v3_round222_runtime_mapping_failure_cluster_selection",
+          "why_no_persistence_needed": "all source evidence comes from the ignored local one-command suite JSON and in-memory controlled-smoke results"
+        },
+        "round223_guarded_acceptance_delta_path": {
+          "accepted_tokens": [
+            "민석"
+          ],
+          "agp_bypass_used": false,
+          "artifact_download_attempted": false,
+          "artifacts_staged_or_committed_by_suite": false,
+          "blocked_control_tokens": [
+            "EVE"
+          ],
+          "delta_rows": [
+            {
+              "accepted_for_future_operator_review": true,
+              "blocked_control": false,
+              "classification_version": "v3_round221_225_runtime_mapping_acceptance_delta",
+              "first_failed_stage": null,
+              "stages": {
+                "blocked_at_gate": false,
+                "enforcement_enabled_after_false": true,
+                "mapped_in_controlled_smoke": true,
+                "ready_at_precheck": true,
+                "rollback_complete": true,
+                "runtime_mapping_enabled_after_false": true,
+                "runtime_mapping_not_persisted": true,
+                "would_map_at_gate": true
+              },
+              "token": "민석"
+            },
+            {
+              "accepted_for_future_operator_review": false,
+              "blocked_control": true,
+              "classification_version": "v3_round221_225_runtime_mapping_acceptance_delta",
+              "first_failed_stage": null,
+              "stages": {
+                "blocked_at_gate": true,
+                "enforcement_enabled_after_false": true,
+                "mapped_in_controlled_smoke": false,
+                "ready_at_precheck": false,
+                "rollback_complete": true,
+                "runtime_mapping_enabled_after_false": true,
+                "runtime_mapping_not_persisted": true,
+                "would_map_at_gate": false
+              },
+              "token": "EVE"
+            }
+          ],
+          "dummy_vectors_created": false,
+          "enforcement_enabled": false,
+          "hard_stops": [],
+          "measurement_only": true,
+          "negative_token": "EVE",
+          "production_persistence_enabled": false,
+          "production_persistence_no_go_respected": true,
+          "production_persistence_remains_no_go": true,
+          "repair_behavior": "normalize existing operator-local mapping evidence into deterministic per-token stage deltas for future focused repairs",
+          "round": 223,
+          "runtime_mapping_enabled_default": false,
+          "runtime_mapping_enabled_default_changed": false,
+          "seed_vectors_mutated": false,
+          "selected_failure_cluster_id": "post_green_runtime_mapping_stage_delta_visibility_gap",
+          "selected_repair_target": "runtime_mapping_acceptance_delta_measurement_no_enablement",
+          "semantic_memory_or_quarantine_mutated": false,
+          "status": "round223_guarded_acceptance_delta_ready",
+          "success": true,
+          "target_word": "민석",
+          "version": "v3_round223_guarded_runtime_mapping_acceptance_delta_path"
+        },
+        "round224_focused_test_plan": {
+          "agp_bypass_used": false,
+          "artifact_download_attempted": false,
+          "artifacts_staged_or_committed_by_suite": false,
+          "dummy_vectors_created": false,
+          "enforcement_enabled": false,
+          "focused_test_command": "python -m pytest -q tests/test_v3_round221_225_runtime_mapping_acceptance_delta.py",
+          "focused_tests_status": "defined",
+          "production_persistence_enabled": false,
+          "production_persistence_no_go_respected": true,
+          "round": 224,
+          "runtime_mapping_enabled_default": false,
+          "runtime_mapping_enabled_default_changed": false,
+          "seed_vectors_mutated": false,
+          "semantic_memory_or_quarantine_mutated": false,
+          "test_scope": [
+            "green operator suite evidence selects the repair target",
+            "one concrete failure cluster is selected without persistence or enablement",
+            "민석 acceptance and EVE blocked-control rows are normalized from mapping evidence",
+            "missing operator suite mapping evidence fails closed"
+          ],
+          "version": "v3_round224_focused_acceptance_delta_tests"
+        },
+        "round225_broader_validation_delta": {
+          "agp_bypass_used": false,
+          "artifact_download_attempted": false,
+          "artifacts_staged_or_committed_by_suite": false,
+          "broader_failure_count": null,
+          "broader_pytest_status": "not_run",
+          "broader_validation_delta": "added read-only acceptance-delta normalization over green operator-local runtime-mapping evidence",
+          "collect_only_status": "pending",
+          "compileall_status": "pending",
+          "dummy_vectors_created": false,
+          "enforcement_enabled": false,
+          "focused_tests_status": "defined",
+          "next_recommendation": "run the focused acceptance-delta command after the operator-local suite, then use the first_failed_stage taxonomy to choose the next narrow non-persistence repair",
+          "operator_local_suite_evidence_interpretation": "green one-command evidence is sufficient to choose measurement visibility as the next target; it is not evidence for production persistence enablement",
+          "production_persistence_enabled": false,
+          "production_persistence_no_go_respected": true,
+          "production_persistence_remains_no_go": true,
+          "remaining_failures": [],
+          "round": 225,
+          "runtime_mapping_enabled_default": false,
+          "runtime_mapping_enabled_default_changed": false,
+          "seed_vectors_mutated": false,
+          "semantic_memory_or_quarantine_mutated": false,
+          "version": "v3_round225_acceptance_delta_validation_and_next_recommendation"
+        },
+        "rounds_completed": [
+          221,
+          222,
+          223,
+          224,
+          225
+        ],
+        "runtime_mapping_enabled_default": false,
+        "runtime_mapping_enabled_default_changed": false,
+        "seed_vectors_mutated": false,
+        "selected_failure_cluster_id": "post_green_runtime_mapping_stage_delta_visibility_gap",
+        "selected_next_repair_target": "runtime_mapping_acceptance_delta_measurement_no_enablement",
+        "semantic_memory_or_quarantine_mutated": false,
+        "status": "runtime_mapping_acceptance_delta_ready",
+        "success": true,
+        "version": "v3_round221_225_runtime_mapping_acceptance_delta"
+      },
+      "round226_acceptance_delta_green_consolidation": {
+        "acceptance_delta_status": "runtime_mapping_acceptance_delta_ready",
+        "acceptance_delta_success": true,
+        "accepted_tokens": [
+          "민석"
+        ],
+        "agp_bypass_used": false,
+        "artifact_download_attempted": false,
+        "artifacts_staged_or_committed_by_suite": false,
+        "blocked_control_tokens": [
+          "EVE"
+        ],
+        "dummy_vectors_created": false,
+        "enforcement_enabled": false,
+        "hard_stops": [],
+        "next_concrete_non_persistence_repair_target": "runtime_mapping_acceptance_taxonomy_reporting_no_enablement",
+        "policy_guard_snapshot": {
+          "agp_bypass_not_used": true,
+          "dummy_vectors_not_created": true,
+          "enforcement_disabled": true,
+          "production_persistence_disabled": true,
+          "production_persistence_no_go_respected": true,
+          "runtime_mapping_enabled_default_false": true,
+          "runtime_mapping_enabled_default_unchanged": true,
+          "seed_vectors_not_mutated": true,
+          "semantic_memory_or_quarantine_not_mutated": true
+        },
+        "production_persistence_enabled": false,
+        "production_persistence_no_go_respected": true,
+        "round": 226,
+        "runtime_mapping_enabled_default": false,
+        "runtime_mapping_enabled_default_changed": false,
+        "seed_vectors_mutated": false,
+        "selected_next_repair_target": "runtime_mapping_acceptance_taxonomy_reporting_no_enablement",
+        "semantic_memory_or_quarantine_mutated": false,
+        "source_version": "v3_round221_225_runtime_mapping_acceptance_delta",
+        "success": true,
+        "version": "v3_round226_acceptance_delta_green_evidence_consolidation"
+      },
+      "round227_reporting_gap_selection": {
+        "agp_bypass_used": false,
+        "artifact_download_attempted": false,
+        "artifacts_staged_or_committed_by_suite": false,
+        "dummy_vectors_created": false,
+        "enforcement_enabled": false,
+        "explicit_non_goals": [
+          "production_persistence_enablement",
+          "runtime_mapping_enabled_default_true",
+          "enforcement_enablement",
+          "AGP_bypass",
+          "new_vector_creation_or_fabrication",
+          "semantic_memory_or_quarantine_mutation"
+        ],
+        "gap_definition": "Round221-225 exposes per-token rows, but does not provide an operator-ready taxonomy that summarizes accepted tokens, blocked controls, unresolved first-failed-stage counts, policy guard status, and the exact next validation command.",
+        "hard_stops": [],
+        "implementation_scope": "reporting-only taxonomy over existing acceptance-delta rows",
+        "production_persistence_enabled": false,
+        "production_persistence_no_go_respected": true,
+        "round": 227,
+        "runtime_mapping_enabled_default": false,
+        "runtime_mapping_enabled_default_changed": false,
+        "seed_vectors_mutated": false,
+        "selected_failure_cluster_id": "post_green_runtime_mapping_stage_delta_visibility_gap",
+        "selected_next_repair_target": "runtime_mapping_acceptance_taxonomy_reporting_no_enablement",
+        "selected_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+        "semantic_memory_or_quarantine_mutated": false,
+        "success": true,
+        "version": "v3_round227_runtime_mapping_reporting_gap_selection"
+      },
+      "round228_acceptance_taxonomy_improvement": {
+        "agp_bypass_used": false,
+        "artifact_download_attempted": false,
+        "artifacts_staged_or_committed_by_suite": false,
+        "dummy_vectors_created": false,
+        "enforcement_enabled": false,
+        "hard_stops": [],
+        "measurement_only": true,
+        "operator_summary": {
+          "accepted_tokens_for_future_review": [
+            "민석"
+          ],
+          "blocked_control_tokens": [
+            "EVE"
+          ],
+          "first_failed_stage_counts": {},
+          "focused_test_command": "python -m pytest -q tests/test_v3_round226_230_runtime_mapping_acceptance_taxonomy.py",
+          "next_recommendation": "keep runtime mapping disabled by default and use this taxonomy to choose the next narrow reporting or acceptance repair",
+          "status": "runtime_mapping_acceptance_taxonomy_ready"
+        },
+        "policy_guard_snapshot": {
+          "agp_bypass_not_used": true,
+          "dummy_vectors_not_created": true,
+          "enforcement_disabled": true,
+          "production_persistence_disabled": true,
+          "production_persistence_no_go_respected": true,
+          "runtime_mapping_enabled_default_false": true,
+          "runtime_mapping_enabled_default_unchanged": true,
+          "seed_vectors_not_mutated": true,
+          "semantic_memory_or_quarantine_not_mutated": true
+        },
+        "production_persistence_enabled": false,
+        "production_persistence_no_go_respected": true,
+        "round": 228,
+        "runtime_mapping_enabled_default": false,
+        "runtime_mapping_enabled_default_changed": false,
+        "seed_vectors_mutated": false,
+        "selected_next_repair_target": "runtime_mapping_acceptance_taxonomy_reporting_no_enablement",
+        "selected_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+        "semantic_memory_or_quarantine_mutated": false,
+        "success": true,
+        "taxonomy": {
+          "accepted_count": 1,
+          "accepted_tokens": [
+            "민석"
+          ],
+          "blocked_control_count": 1,
+          "blocked_control_tokens": [
+            "EVE"
+          ],
+          "failed_stage_counts": {},
+          "total_rows": 2,
+          "unresolved_failure_count": 0
+        },
+        "version": "v3_round228_acceptance_taxonomy_reporting_improvement"
+      },
+      "round229_focused_test_plan": {
+        "agp_bypass_used": false,
+        "artifact_download_attempted": false,
+        "artifacts_staged_or_committed_by_suite": false,
+        "dummy_vectors_created": false,
+        "enforcement_enabled": false,
+        "focused_test_command": "python -m pytest -q tests/test_v3_round226_230_runtime_mapping_acceptance_taxonomy.py",
+        "focused_tests_status": "defined",
+        "production_persistence_enabled": false,
+        "production_persistence_no_go_respected": true,
+        "round": 229,
+        "runtime_mapping_enabled_default": false,
+        "runtime_mapping_enabled_default_changed": false,
+        "seed_vectors_mutated": false,
+        "semantic_memory_or_quarantine_mutated": false,
+        "test_scope": [
+          "Round226 consolidates green acceptance-delta evidence and preserves no-go policy flags",
+          "Round227 selects one reporting-only gap without runtime enablement",
+          "Round228 emits accepted/blocked/failure taxonomy and focused command",
+          "CLI fails closed when the operator-local suite report is missing"
+        ],
+        "version": "v3_round229_acceptance_taxonomy_focused_tests"
+      },
+      "round230_broader_validation_delta": {
+        "agp_bypass_used": false,
+        "artifact_download_attempted": false,
+        "artifacts_staged_or_committed_by_suite": false,
+        "broader_failure_count": null,
+        "broader_pytest_status": "not_run",
+        "broader_validation_delta": "added read-only taxonomy reporting over the green runtime-mapping acceptance-delta measurement",
+        "collect_only_status": "pending",
+        "compileall_status": "pending",
+        "dummy_vectors_created": false,
+        "enforcement_enabled": false,
+        "focused_tests_status": "defined",
+        "next_recommendation": "operator may use the taxonomy to inspect unresolved first_failed_stage counts; production persistence remains NO-GO and runtime_mapping_enabled default remains false",
+        "production_persistence_enabled": false,
+        "production_persistence_no_go_respected": true,
+        "remaining_failures": [],
+        "round": 230,
+        "runtime_mapping_enabled_default": false,
+        "runtime_mapping_enabled_default_changed": false,
+        "seed_vectors_mutated": false,
+        "semantic_memory_or_quarantine_mutated": false,
+        "version": "v3_round230_acceptance_taxonomy_validation_and_next_recommendation"
+      },
+      "rounds_completed": [
+        226,
+        227,
+        228,
+        229,
+        230
+      ],
+      "runtime_mapping_enabled_default": false,
+      "runtime_mapping_enabled_default_changed": false,
+      "seed_vectors_mutated": false,
+      "selected_next_repair_target": "runtime_mapping_acceptance_taxonomy_reporting_no_enablement",
+      "selected_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+      "semantic_memory_or_quarantine_mutated": false,
+      "status": "runtime_mapping_acceptance_taxonomy_ready",
+      "success": true,
+      "version": "v3_round226_230_runtime_mapping_acceptance_taxonomy"
+    },
+    "round231_acceptance_taxonomy_green_evidence": {
+      "agp_bypass_used": false,
+      "artifact_download_attempted": false,
+      "artifacts_staged_or_committed_by_suite": false,
+      "dummy_vectors_created": false,
+      "enforcement_enabled": false,
+      "hard_stops": [],
+      "policy_guard_snapshot": {
+        "agp_bypass_not_used": true,
+        "dummy_vectors_not_created": true,
+        "enforcement_disabled": true,
+        "production_persistence_disabled": true,
+        "production_persistence_no_go_respected": true,
+        "runtime_mapping_enabled_default_false": true,
+        "runtime_mapping_enabled_default_unchanged": true,
+        "seed_vectors_not_mutated": true,
+        "semantic_memory_or_quarantine_not_mutated": true
+      },
+      "production_persistence_enabled": false,
+      "production_persistence_no_go_respected": true,
+      "round": 231,
+      "runtime_mapping_enabled_default": false,
+      "runtime_mapping_enabled_default_changed": false,
+      "seed_vectors_mutated": false,
+      "selected_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+      "semantic_memory_or_quarantine_mutated": false,
+      "source_version": "v3_round226_230_runtime_mapping_acceptance_taxonomy",
+      "success": true,
+      "taxonomy_green_evidence": {
+        "accepted_tokens": [
+          "민석"
+        ],
+        "blocked_control_tokens": [
+          "EVE"
+        ],
+        "selected_failure_cluster_id": "post_green_runtime_mapping_stage_delta_visibility_gap",
+        "source_status": "runtime_mapping_acceptance_delta_ready",
+        "source_success": true
+      },
+      "taxonomy_status": "runtime_mapping_acceptance_taxonomy_ready",
+      "taxonomy_success": true,
+      "version": "v3_round231_acceptance_taxonomy_green_evidence_consolidation"
+    },
+    "round232_next_repair_target_selection": {
+      "agp_bypass_used": false,
+      "artifact_download_attempted": false,
+      "artifacts_staged_or_committed_by_suite": false,
+      "dummy_vectors_created": false,
+      "enforcement_enabled": false,
+      "explicit_non_goals": [
+        "production_persistence_enablement",
+        "runtime_mapping_enabled_default_true",
+        "enforcement_enablement",
+        "AGP_bypass",
+        "new_vector_creation_or_fabrication",
+        "semantic_memory_or_quarantine_mutation"
+      ],
+      "hard_stops": [],
+      "implementation_scope": "reporting-only matrix over existing runtime-mapping acceptance rows",
+      "production_persistence_enabled": false,
+      "production_persistence_no_go_respected": true,
+      "round": 232,
+      "runtime_mapping_enabled_default": false,
+      "runtime_mapping_enabled_default_changed": false,
+      "seed_vectors_mutated": false,
+      "selected_next_repair_target": "runtime_mapping_accepted_blocked_stage_matrix_reporting_no_enablement",
+      "semantic_memory_or_quarantine_mutated": false,
+      "source_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+      "success": true,
+      "target_definition": "Expose an operator-ready accepted/blocked stage matrix from existing acceptance-delta rows so the accepted token path, blocked-control stop point, and any unresolved first-failed stages are visible without enablement.",
+      "version": "v3_round232_next_non_persistence_repair_target_selection"
+    },
+    "round233_stage_matrix_reporting_improvement": {
+      "accepted_blocked_stage_matrix": [
+        {
+          "classification": "accepted_for_future_operator_review",
+          "first_failed_stage": null,
+          "operator_stop_stage": null,
+          "stage_outcomes": [
+            {
+              "passed": true,
+              "stage": "would_map_at_gate"
+            },
+            {
+              "passed": false,
+              "stage": "blocked_at_gate"
+            },
+            {
+              "passed": true,
+              "stage": "ready_at_precheck"
+            },
+            {
+              "passed": true,
+              "stage": "mapped_in_controlled_smoke"
+            },
+            {
+              "passed": true,
+              "stage": "rollback_complete"
+            },
+            {
+              "passed": true,
+              "stage": "runtime_mapping_enabled_after_false"
+            },
+            {
+              "passed": true,
+              "stage": "enforcement_enabled_after_false"
+            },
+            {
+              "passed": true,
+              "stage": "runtime_mapping_not_persisted"
+            }
+          ],
+          "token": "민석"
+        },
+        {
+          "classification": "blocked_control",
+          "first_failed_stage": null,
+          "operator_stop_stage": "blocked_at_gate",
+          "stage_outcomes": [
+            {
+              "passed": false,
+              "stage": "would_map_at_gate"
+            },
+            {
+              "passed": true,
+              "stage": "blocked_at_gate"
+            },
+            {
+              "passed": false,
+              "stage": "ready_at_precheck"
+            },
+            {
+              "passed": false,
+              "stage": "mapped_in_controlled_smoke"
+            },
+            {
+              "passed": true,
+              "stage": "rollback_complete"
+            },
+            {
+              "passed": true,
+              "stage": "runtime_mapping_enabled_after_false"
+            },
+            {
+              "passed": true,
+              "stage": "enforcement_enabled_after_false"
+            },
+            {
+              "passed": true,
+              "stage": "runtime_mapping_not_persisted"
+            }
+          ],
+          "token": "EVE"
+        }
+      ],
+      "agp_bypass_used": false,
+      "artifact_download_attempted": false,
+      "artifacts_staged_or_committed_by_suite": false,
+      "dummy_vectors_created": false,
+      "enforcement_enabled": false,
+      "hard_stops": [],
+      "measurement_only": true,
+      "operator_summary": {
+        "accepted_tokens_for_future_review": [
+          "민석"
+        ],
+        "blocked_control_stop_stages": {
+          "EVE": "blocked_at_gate"
+        },
+        "blocked_control_tokens": [
+          "EVE"
+        ],
+        "focused_test_command": "python -m pytest -q tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py",
+        "next_recommendation": "validate the matrix, then use unresolved_first_failed_stages only for the next narrow non-persistence measurement target",
+        "status": "accepted_blocked_stage_matrix_ready",
+        "unresolved_failure_tokens": [],
+        "unresolved_first_failed_stages": {}
+      },
+      "policy_guard_snapshot": {
+        "agp_bypass_not_used": true,
+        "dummy_vectors_not_created": true,
+        "enforcement_disabled": true,
+        "production_persistence_disabled": true,
+        "production_persistence_no_go_respected": true,
+        "runtime_mapping_enabled_default_false": true,
+        "runtime_mapping_enabled_default_unchanged": true,
+        "seed_vectors_not_mutated": true,
+        "semantic_memory_or_quarantine_not_mutated": true
+      },
+      "production_persistence_enabled": false,
+      "production_persistence_no_go_respected": true,
+      "round": 233,
+      "runtime_mapping_enabled_default": false,
+      "runtime_mapping_enabled_default_changed": false,
+      "seed_vectors_mutated": false,
+      "selected_next_repair_target": "runtime_mapping_accepted_blocked_stage_matrix_reporting_no_enablement",
+      "semantic_memory_or_quarantine_mutated": false,
+      "stage_sequence": [
+        "would_map_at_gate",
+        "blocked_at_gate",
+        "ready_at_precheck",
+        "mapped_in_controlled_smoke",
+        "rollback_complete",
+        "runtime_mapping_enabled_after_false",
+        "enforcement_enabled_after_false",
+        "runtime_mapping_not_persisted"
+      ],
+      "success": true,
+      "version": "v3_round233_accepted_blocked_stage_matrix_reporting_improvement"
+    },
+    "round234_focused_test_plan": {
+      "agp_bypass_used": false,
+      "artifact_download_attempted": false,
+      "artifacts_staged_or_committed_by_suite": false,
+      "dummy_vectors_created": false,
+      "enforcement_enabled": false,
+      "focused_test_command": "python -m pytest -q tests/test_v3_round231_235_runtime_mapping_acceptance_repair_selection.py",
+      "focused_tests_status": "defined",
+      "production_persistence_enabled": false,
+      "production_persistence_no_go_respected": true,
+      "round": 234,
+      "runtime_mapping_enabled_default": false,
+      "runtime_mapping_enabled_default_changed": false,
+      "seed_vectors_mutated": false,
+      "semantic_memory_or_quarantine_mutated": false,
+      "test_scope": [
+        "Round231 consolidates green acceptance-taxonomy evidence and preserves policy guards",
+        "Round232 selects one concrete non-persistence stage-matrix reporting target",
+        "Round233 emits accepted/blocked stage rows for the Korean acceptance fixture without enablement",
+        "CLI fails closed when the operator-local suite report is missing"
+      ],
+      "version": "v3_round234_stage_matrix_focused_tests"
+    },
+    "round235_broader_validation_delta": {
+      "agp_bypass_used": false,
+      "artifact_download_attempted": false,
+      "artifacts_staged_or_committed_by_suite": false,
+      "broader_failure_count": null,
+      "broader_pytest_status": "not_run",
+      "broader_validation_delta": "added read-only accepted/blocked stage-matrix reporting over green runtime-mapping acceptance taxonomy evidence",
+      "collect_only_status": "pending",
+      "compileall_status": "pending",
+      "dummy_vectors_created": false,
+      "enforcement_enabled": false,
+      "focused_tests_status": "defined",
+      "next_recommendation": "use the stage matrix to choose the next narrow non-persistence measurement repair; production persistence remains NO-GO and runtime_mapping_enabled default remains false",
+      "production_persistence_enabled": false,
+      "production_persistence_no_go_respected": true,
+      "remaining_failures": [],
+      "round": 235,
+      "runtime_mapping_enabled_default": false,
+      "runtime_mapping_enabled_default_changed": false,
+      "seed_vectors_mutated": false,
+      "semantic_memory_or_quarantine_mutated": false,
+      "version": "v3_round235_stage_matrix_validation_delta_and_next_recommendation"
+    },
+    "rounds_completed": [
+      231,
+      232,
+      233,
+      234,
+      235
+    ],
+    "runtime_mapping_enabled_default": false,
+    "runtime_mapping_enabled_default_changed": false,
+    "seed_vectors_mutated": false,
+    "selected_next_repair_target": "runtime_mapping_accepted_blocked_stage_matrix_reporting_no_enablement",
+    "selected_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+    "semantic_memory_or_quarantine_mutated": false,
+    "status": "runtime_mapping_acceptance_repair_selection_ready",
+    "success": true,
+    "taxonomy_green_evidence": {
+      "accepted_tokens": [
+        "민석"
+      ],
+      "blocked_control_tokens": [
+        "EVE"
+      ],
+      "selected_reporting_gap": "accepted_blocked_stage_taxonomy_missing_from_acceptance_delta",
+      "source_status": "runtime_mapping_acceptance_taxonomy_ready",
+      "source_success": true
+    },
+    "version": "v3_round231_235_runtime_mapping_acceptance_repair_selection"
+  },
+  "status": "runtime_mapping_acceptance_handoff_ready",
+  "success": true,
+  "version": "v3_round236_260_runtime_mapping_acceptance_handoff"
+}

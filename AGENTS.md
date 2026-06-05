@@ -1126,3 +1126,29 @@ Round95 may add an operator acceptance fixture for runtime mapping, but actual r
 - Lexical vectors, EveSpecific vectors, and seed vectors remain evidence only; they are not AGP anchors.
 - A later controlled enable-smoke round requires checkpoint, rollback plan, focused tests, adjacent tests, collect-only, compileall, and broader validation.
 
+
+## v3 round236-260 policy — runtime mapping acceptance handoff
+
+Rounds236-260 are reporting-only over the green Round231-235 runtime-mapping
+acceptance stage matrix.
+
+Allowed:
+- Build stage-matrix quality gates over existing accepted/blocked rows.
+- Build operator handoff/replay rows for future review.
+- Record validation manifests and handoff docs every five rounds.
+- Summarize remaining taxonomy and no-go items.
+
+Forbidden:
+- Enabling production persistence.
+- Changing `runtime_mapping_enabled` default to true.
+- Enabling enforcement.
+- Bypassing AGP.
+- Creating or fabricating vectors.
+- Mutating fastText seed vectors, EveSpecific vectors, semantic memory, or quarantine.
+- Committing operator artifacts, seed subset artifacts, zip files, part files, `vectors.npy`, `vocab.txt`, or `subset_manifest.json`.
+
+Boundary remains:
+- `민석` may be reported as accepted for future operator review only.
+- `EVE` remains a blocked control in this measurement line.
+- The default runtime remains no-load unless explicitly operator-authorized.
+- Any future runtime-mapping rehearsal must be a separate explicit round with no production persistence and split full-suite validation.
