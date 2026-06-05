@@ -252,3 +252,10 @@ Boundary:
   - `build_round135_broader_validation_taxonomy_refresh(...)`: records compile/focused/collect-only/legacy behavior/broader validation taxonomy.
   - `build_round136_go_no_go_refresh_after_system_exit(...)`: keeps the production-persistence recommendation NO-GO unless collect-only and broader validation are green.
 - `tests/test_v3_round132_136_system_exit_isolation.py`: focused tests for diagnosis, import safety, test-intent preservation, collect-only status recording, taxonomy, go/no-go, and JSON export safety.
+
+## Rounds198-202 guarded EVE-specific remeasurement surface
+
+- `scripts/operator_remeasure_eve_self_learning.py` is the stable operator-local smoke command for `eve_specific_vector_self_learning_cascade`.
+- It depends on `scripts/operator_validate_medium30k.py --attempt-load` evidence and `main.build_full_engine(..., operator_medium30k_load_authorized=True)`.
+- Measurement is in-memory only: EVE-specific observation, commit-gate audit, explicit vector-store update, and wrapper telemetry delta.
+- It must not write or track seed/vector artifacts and must not enable production persistence, runtime mapping defaults, enforcement, or AGP bypass.

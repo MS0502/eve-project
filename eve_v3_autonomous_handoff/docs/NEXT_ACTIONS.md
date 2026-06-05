@@ -428,3 +428,15 @@ Hard boundaries still in force:
 4. If the operator artifact directory is present locally, rerun the existing seed/vector readiness gate against `_operator_artifacts/subset_medium_30k`.
 5. Only after that readiness gate is green, prepare a separate focused `FasttextEmbeddingAdapter.load()` repair for the medium 30k explicit-load path.
 6. If the directory is absent, preserve the Round179 hard block and do not create dummy vectors or download artifacts.
+
+## After Round202
+
+1. In operator-local Codespaces with the verified real medium30k artifact, run:
+
+   ```bash
+   python scripts/operator_remeasure_eve_self_learning.py --artifact-dir _operator_artifacts/subset_medium_30k --target-word 민석 --context-word 한국어 --context-word 감정 --context-word 기억 --context-word 대화 --output eve_v3_autonomous_handoff/validation/operator_local_round198_202_eve_self_learning_remeasurement.json
+   ```
+
+2. Compare the output to `eve_v3_autonomous_handoff/validation/ROUND201_EXPECTED_OPERATOR_LOCAL_DELTA_SCHEMA_STATUS.json`.
+3. If the EVE-specific vector/self-learning delta is green, reassess the concept/runtime mapping cascade next.
+4. Do not enable production persistence, runtime mapping by default, enforcement, or AGP bypass.

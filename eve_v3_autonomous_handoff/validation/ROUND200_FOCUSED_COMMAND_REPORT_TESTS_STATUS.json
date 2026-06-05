@@ -1,0 +1,24 @@
+{
+  "agp_bypass_used": false,
+  "artifact_download_attempted": false,
+  "artifacts_included": false,
+  "artifacts_written": false,
+  "collect_only_status": "passed_1336_collected",
+  "compileall_status": "passed",
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "focused_test_command": "python -m pytest -q tests/test_v3_round198_202_eve_self_learning_remeasurement.py",
+  "focused_tests_result": {
+    "failed": 0,
+    "passed": 6
+  },
+  "focused_tests_status": "passed",
+  "production_persistence_enabled": false,
+  "production_persistence_no_go_respected": true,
+  "round": 200,
+  "runtime_mapping_enabled_default": false,
+  "seed_vectors_mutated": false,
+  "selected_cluster_id": "eve_specific_vector_self_learning_cascade",
+  "semantic_memory_or_quarantine_mutated": false,
+  "version": "v3_round200_focused_command_report_tests_status"
+}
