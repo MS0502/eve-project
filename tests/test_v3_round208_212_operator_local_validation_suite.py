@@ -147,8 +147,33 @@ def test_round210_green_suite_writes_report_and_extracts_prompt_summary(tmp_path
     assert report["operator_prompt_summary"]["runtime_mapping_enabled_default"] is False
     assert report_path.exists()
     written = json.loads(report_path.read_text(encoding="utf-8"))
-    assert written["rounds_completed"] == [208, 209, 210, 211, 212]
+    assert written["rounds_completed"] == [208, 209, 210, 211, 212, 213, 214, 215, 216, 217]
+    assert written["round213_git_safety_diagnosis"]["affected_report_path"] == "_operator_artifacts/operator_local_validation_latest.json"
+    assert written["round216_final_operator_workflow"]["copy_paste_summary_only_after_all_checks_pass"] is True
+    assert written["round217_validation_delta"]["production_persistence_enabled"] is False
     assert calls[0].endswith("scripts/operator_validate_medium30k.py --attempt-load")
+
+
+def test_git_status_safety_allows_exact_ignored_local_report(tmp_path: Path) -> None:
+    report_path = tmp_path / "_operator_artifacts" / "operator_local_validation_latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
+
+    def runner(command: Sequence[str], **kwargs):
+        joined = " ".join(command)
+        if "git status" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="", stderr="")
+        if "git check-ignore" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="", stderr="")
+
+    safety = suite.run_git_status_safety_check(repo_root=tmp_path, runner=runner)
+
+    assert safety["success"] is True
+    assert safety["safe"] is True
+    assert safety["operator_local_report_exists"] is True
+    assert safety["operator_local_report_ignored"] is True
+    assert safety["allowed_ignored_local_outputs"] == ["_operator_artifacts/operator_local_validation_latest.json"]
 
 
 def test_git_status_safety_blocks_guarded_path_changes(tmp_path: Path) -> None:
@@ -162,10 +187,53 @@ def test_git_status_safety_blocks_guarded_path_changes(tmp_path: Path) -> None:
 
     assert safety["success"] is False
     assert safety["safe"] is False
+    assert safety["blocked_status_lines"] == [" M seeds/subsets/cc.ko.300.subset.medium.30k/vocab.txt"]
     assert "guarded_paths_present_in_git_status" in safety["blockers"]
 
 
-def test_main_prints_compact_json_then_copy_paste_summary(monkeypatch, tmp_path: Path, capsys) -> None:
+def test_git_status_safety_blocks_unignored_local_report(tmp_path: Path) -> None:
+    report_path = tmp_path / "_operator_artifacts" / "operator_local_validation_latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
+
+    def runner(command: Sequence[str], **kwargs):
+        joined = " ".join(command)
+        if "git status" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="?? _operator_artifacts/operator_local_validation_latest.json\n", stderr="")
+        if "git check-ignore" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=1, stdout="", stderr="")
+        return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="", stderr="")
+
+    safety = suite.run_git_status_safety_check(repo_root=tmp_path, runner=runner)
+
+    assert safety["safe"] is False
+    assert "operator_local_report_unignored" in safety["blockers"]
+    assert "guarded_paths_present_in_git_status" in safety["blockers"]
+
+
+def test_git_status_safety_blocks_tracked_or_staged_local_report(tmp_path: Path) -> None:
+    report_path = tmp_path / "_operator_artifacts" / "operator_local_validation_latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
+
+    def runner(command: Sequence[str], **kwargs):
+        joined = " ".join(command)
+        if "git status" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="A  _operator_artifacts/operator_local_validation_latest.json\n", stderr="")
+        if "git check-ignore" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="", stderr="")
+        if "git ls-files -- _operator_artifacts/operator_local_validation_latest.json" in joined:
+            return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="_operator_artifacts/operator_local_validation_latest.json\n", stderr="")
+        return subprocess.CompletedProcess(args=list(command), returncode=0, stdout="", stderr="")
+
+    safety = suite.run_git_status_safety_check(repo_root=tmp_path, runner=runner)
+
+    assert safety["safe"] is False
+    assert "operator_local_report_tracked_or_staged" in safety["blockers"]
+    assert "guarded_paths_present_in_git_status" in safety["blockers"]
+
+
+def test_main_prints_only_compact_json_on_failure(monkeypatch, tmp_path: Path, capsys) -> None:
     payload = {
         "version": suite.ROUND208_212_VERSION,
         "rounds_completed": [208, 209, 210, 211, 212],
@@ -185,18 +253,49 @@ def test_main_prints_compact_json_then_copy_paste_summary(monkeypatch, tmp_path:
 
     assert exit_code == 1
     assert json.loads(output[0])["status"] == "blocked_operator_local_validation_suite"
+    assert len(output) == 1
+    assert all("OPERATOR_LOCAL_VALIDATION_SUMMARY" not in line for line in output)
+
+
+def test_main_prints_copy_paste_summary_only_after_success(monkeypatch, capsys) -> None:
+    payload = {
+        "version": suite.ROUND208_212_VERSION,
+        "rounds_completed": [208, 209, 210, 211, 212, 213, 214, 215, 216, 217],
+        "status": "operator_local_validation_suite_green",
+        "success": True,
+        "exit_code": 0,
+        "steps": [],
+        "git_status_safety": {"safe": True},
+        "blockers": [],
+        **suite.POLICY_FLAGS,
+    }
+    payload["operator_prompt_summary"] = suite.build_operator_prompt_summary(payload)
+    monkeypatch.setattr(suite, "run_suite", lambda: dict(payload))
+
+    exit_code = suite.main([])
+    output = capsys.readouterr().out.splitlines()
+
+    assert exit_code == 0
+    assert json.loads(output[0])["status"] == "operator_local_validation_suite_green"
     assert output[1] == "OPERATOR_LOCAL_VALIDATION_SUMMARY:"
     assert any("target_word: 민석" in line for line in output)
 
 
-def test_round211_and_round212_reports_preserve_no_go_policy() -> None:
+def test_round211_to_round217_reports_preserve_no_go_policy() -> None:
     workflow = suite.build_round211_operator_workflow()
     delta = suite.build_round212_broader_validation_delta(focused_suite_tests_status="green", compileall_status="green")
+    diagnosis = suite.build_round213_git_safety_diagnosis()
+    final_workflow = suite.build_round216_final_operator_workflow()
+    validation_delta = suite.build_round217_validation_delta_and_next_recommendation(focused_git_safety_tests_status="green")
 
     assert workflow["version"] == "v3_round211_one_command_operator_workflow"
     assert workflow["report_path"] == "_operator_artifacts/operator_local_validation_latest.json"
     assert workflow["no_manual_python_snippets"] is True
     assert delta["version"] == "v3_round212_operator_suite_broader_validation_delta"
     assert delta["focused_suite_tests_status"] == "green"
-    assert delta["production_persistence_enabled"] is False
-    assert delta["next_recommendation"].startswith("operator_run_one_command_suite_after_merge")
+    assert "legacy tracked upload zip" in diagnosis["root_cause"]
+    assert diagnosis["legacy_tracked_archive_removed"].endswith(".zip")
+    assert final_workflow["copy_paste_summary_only_after_all_checks_pass"] is True
+    assert validation_delta["focused_git_safety_tests_status"] == "green"
+    assert validation_delta["production_persistence_enabled"] is False
+    assert validation_delta["next_recommendation"].startswith("operator_rerun_one_command_suite")
