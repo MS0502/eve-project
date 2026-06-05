@@ -41,6 +41,9 @@ from scripts.operator_analyze_round336_350_artifact_failures import (  # noqa: E
     extract_pytest_failure_nodeids,
     extract_pytest_summary_counts,
 )
+from scripts.operator_analyze_round351_365_failure_clusters import (  # noqa: E402
+    classify_round351_355_failures,
+)
 
 ROUND306_320_VERSION = "v3_round306_320_split_validation_execution_guard"
 ARTIFACT_FREE_COMMAND = "python scripts/operator_run_round306_320_split_validation.py --round291-305-json _operator_artifacts/round291_305_split_validation_manifest.json --artifact-free"
@@ -101,6 +104,7 @@ def _run_command(command: str, *, runner: Runner = _subprocess_runner, repo_root
         nodeids = extract_pytest_failure_nodeids(pytest_text)
         counts = extract_pytest_summary_counts(pytest_text)
         taxonomy = classify_pytest_failures(nodeids)
+        concrete_taxonomy = classify_round351_355_failures(nodeids, expected_failed_count=counts.get("failed"))
         result["pytest_failure_summary"] = {
             "version": "v3_round336_350_full_pytest_failure_summary_capture",
             "failed_count": counts.get("failed"),
@@ -108,6 +112,10 @@ def _run_command(command: str, *, runner: Runner = _subprocess_runner, repo_root
             "classified_failure_count": taxonomy["total_classified_failures"],
             "cluster_counts": taxonomy["cluster_counts"],
             "sample_clusters": taxonomy["clusters"],
+            "sample_nodeids": nodeids[:20],
+            "round351_365_concrete_cluster_counts": concrete_taxonomy["cluster_counts"],
+            "round351_365_sample_clusters": concrete_taxonomy["clusters"],
+            "round351_365_unexpanded_failure_count": concrete_taxonomy["unexpanded_failure_count"],
             "nodeids_captured_before_tail_truncation": bool(nodeids),
             "full_stdout_retained": False,
             "full_stderr_retained": False,
