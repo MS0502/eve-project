@@ -1,0 +1,36 @@
+{
+  "agp_bypass_used": false,
+  "artifact_download_attempted": false,
+  "artifacts_included": false,
+  "artifacts_written": false,
+  "dummy_vectors_created": false,
+  "enforcement_enabled": false,
+  "exit_code": 0,
+  "marker_required": false,
+  "operator_green_delta": {
+    "commit_gate_pass": true,
+    "created_vectors_contains_target_word": true,
+    "production_persistence_required": false,
+    "runtime_mapping_enabled_default": false,
+    "wrapper_eve_specific_hit_delta_green": true
+  },
+  "production_persistence_enabled": false,
+  "production_persistence_no_go_respected": true,
+  "real_vector_load": "explicit_guarded_operator_authorized_medium30k_only",
+  "round": 203,
+  "runtime_load_summary": {
+    "attached_to_engine": true,
+    "blockers": [],
+    "guard_called": true
+  },
+  "runtime_mapping_enabled_default": false,
+  "seed_vectors_mutated": false,
+  "selected_cluster_id": "eve_specific_vector_self_learning_cascade",
+  "semantic_memory_or_quarantine_mutated": false,
+  "source": "operator_local_codespaces_remeasurement_after_pr32_merge",
+  "source_command": "python scripts/operator_remeasure_eve_self_learning.py --artifact-dir _operator_artifacts/subset_medium_30k --target-word 민석 --context-word 한국어 --context-word 감정 --context-word 기억 --context-word 대화",
+  "status": "operator_eve_self_learning_remeasurement_green",
+  "success": true,
+  "target_word": "민석",
+  "version": "v3_round203_operator_local_green_evidence_record"
+}
