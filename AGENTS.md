@@ -1152,3 +1152,25 @@ Boundary remains:
 - `EVE` remains a blocked control in this measurement line.
 - The default runtime remains no-load unless explicitly operator-authorized.
 - Any future runtime-mapping rehearsal must be a separate explicit round with no production persistence and split full-suite validation.
+
+## v3 round276-290 policy — rehearsal evidence consolidation and rollback audit
+
+Rounds276-290 consolidate the green Round261-275 no-persistence runtime-mapping
+rehearsal and add a read-only rollback/no-persistence audit surface.
+
+Rules:
+- Production persistence remains NO-GO.
+- `runtime_mapping_enabled` default remains `False`.
+- Enforcement remains disabled by default.
+- The audit command must not re-enter runtime mapping, build the production
+  engine, load vectors, bypass AGP, or mutate semantic memory/quarantine.
+- JSON outputs belong under ignored `_operator_artifacts/` and must not be
+  committed.
+- `민석` remains an accepted operator-local rehearsal token only.
+- `EVE` remains a blocked control until separate concept/SA/AGP evidence exists.
+- The rollback audit is observability only; it must not apply persistence,
+  mapping defaults, enforcement, rollback, or threshold changes.
+
+Next:
+- Run split full-suite validation and staged JSON-only rehearsal/audit locally
+  before any separate persistence decision round.
