@@ -12,50 +12,92 @@ from typing import Any
 
 from main import build_full_engine
 from adapters.runtime_smoke_runner import (
-    run_round89_explicit_concept_commit_smoke,
-    run_round90_concept_commit_delta_replay_report,
-    run_round91_concept_commit_replay_export_checkpoint,
-    run_round92_runtime_mapping_gate_dry_run,
-    run_round93_runtime_mapping_proposal_report,
-    run_round94_runtime_mapping_enforcement_dry_run,
     run_round95_runtime_mapping_operator_acceptance_fixture,
     run_round96_runtime_mapping_enable_smoke_precheck,
     write_round96_runtime_mapping_enable_smoke_precheck,
 )
 
+ROUND94_ENFORCEMENT_FIXTURE: dict[str, Any] = {
+    "dry_run_version": "v3_round94_runtime_mapping_enforcement_dry_run",
+    "source_proposal_version": "v3_round93_runtime_mapping_proposal_report",
+    "source_dry_run_version": "v3_round92_runtime_mapping_gate_dry_run",
+    "runtime_mapping_enabled": False,
+    "enforcement_enabled": False,
+    "candidate_count": 2,
+    "would_apply_count": 1,
+    "blocked_count": 1,
+    "enforcement_rows": [
+        {
+            "lexical_token": "EVE",
+            "target_category_id": "concept_category::lex::EVE",
+            "enforcement_status": "blocked_from_runtime_mapping_enforcement",
+            "would_apply_if_runtime_mapping_enabled": False,
+            "runtime_mapping_enabled_now": False,
+            "enforcement_enabled_now": False,
+            "runtime_mapping_applied_now": False,
+            "simulated_mapping_result": None,
+            "blocked_reasons": ["explicit_category_missing", "concept_memory_missing"],
+            "uses_lexical_vector_as_anchor": False,
+            "uses_eve_specific_vector_as_anchor": False,
+            "uses_seed_vector_as_anchor": False,
+        },
+        {
+            "lexical_token": "민석",
+            "target_category_id": "concept_category::lex::민석",
+            "enforcement_status": "would_apply_if_runtime_mapping_enabled",
+            "would_apply_if_runtime_mapping_enabled": True,
+            "runtime_mapping_enabled_now": False,
+            "enforcement_enabled_now": False,
+            "runtime_mapping_applied_now": False,
+            "simulated_mapping_result": {
+                "lexical_token": "민석",
+                "category_id": "concept_category::lex::민석",
+                "category_label": "민석",
+                "mapping_status": "simulated_runtime_mapping_success",
+                "anchor_source": "explicit_category_plus_sa_activation_only",
+            },
+            "blocked_reasons": [],
+            "uses_lexical_vector_as_anchor": False,
+            "uses_eve_specific_vector_as_anchor": False,
+            "uses_seed_vector_as_anchor": False,
+        },
+    ],
+    "would_apply_tokens": ["민석"],
+    "would_block_tokens": ["EVE"],
+    "read_only": True,
+}
+
+
+def _install_minseok_category(engine: Any) -> None:
+    """Install explicit concept evidence without vector creation or runtime mapping."""
+    lcm = engine.lex_concept_mapping
+    category_id = "concept_category::lex::민석"
+    lcm._concept_categories[category_id] = {
+        "lexical_token": "민석",
+        "category_id": category_id,
+        "category_created": True,
+        "runtime_mapping_enabled": False,
+        "enforcement_enabled": False,
+        "concept_memory": {"concept_memory_persisted": True},
+        "sa_activation": {"sa_activation_created": True},
+        "lexical_vector_is_evidence_only": True,
+        "eve_specific_vector_is_not_agp_anchor": True,
+        "seed_vector_is_not_agp_anchor": True,
+    }
+
+
+def _prepare_engine_with_round94_fixture() -> tuple[object, dict[str, Any]]:
+    engine = build_full_engine()
+    _install_minseok_category(engine)
+    return engine, json.loads(json.dumps(ROUND94_ENFORCEMENT_FIXTURE, ensure_ascii=False))
+
 
 def _prepare_round95_engine() -> tuple[object, dict[str, Any]]:
-    engine = build_full_engine()
-    learner = engine.eve_self_learning
-    learner.observe_text("민석 오늘", source="round96_test_a")
-    learner.observe_text("민석 군대", source="round96_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
-    source_commit = run_round89_explicit_concept_commit_smoke(engine)
-    source_replay = run_round90_concept_commit_delta_replay_report(engine, source_commit_report=source_commit)
-    checkpoint = run_round91_concept_commit_replay_export_checkpoint(
-        engine,
-        source_commit_report=source_commit,
-        source_replay_report=source_replay,
-    )
-    dry_run = run_round92_runtime_mapping_gate_dry_run(
-        engine,
-        tokens=["민석", "EVE"],
-        source_checkpoint=checkpoint,
-    )
-    proposal = run_round93_runtime_mapping_proposal_report(engine, source_dry_run=dry_run)
-    enforcement = run_round94_runtime_mapping_enforcement_dry_run(
-        engine,
-        tokens=["민석", "EVE"],
-        source_proposal=proposal,
-    )
+    engine, enforcement = _prepare_engine_with_round94_fixture()
     fixture = run_round95_runtime_mapping_operator_acceptance_fixture(
-        engine,
-        source_enforcement=enforcement,
-        accepted_tokens=["민석"],
+        engine, source_enforcement=enforcement, accepted_tokens=["민석"]
     )
     return engine, fixture
-
 
 def test_round96_enable_smoke_precheck_is_ready_without_enabling_runtime_mapping() -> None:
     engine, fixture = _prepare_round95_engine()

@@ -7,12 +7,6 @@ from typing import Any
 
 from main import build_full_engine
 from adapters.runtime_smoke_runner import (
-    run_round89_explicit_concept_commit_smoke,
-    run_round90_concept_commit_delta_replay_report,
-    run_round91_concept_commit_replay_export_checkpoint,
-    run_round92_runtime_mapping_gate_dry_run,
-    run_round93_runtime_mapping_proposal_report,
-    run_round94_runtime_mapping_enforcement_dry_run,
     run_round95_runtime_mapping_operator_acceptance_fixture,
     run_round96_runtime_mapping_enable_smoke_precheck,
     run_round97_controlled_runtime_mapping_enable_smoke,
@@ -21,40 +15,88 @@ from adapters.runtime_smoke_runner import (
     write_round98_runtime_mapping_persistence_gate_audit,
 )
 
+ROUND94_ENFORCEMENT_FIXTURE: dict[str, Any] = {
+    "dry_run_version": "v3_round94_runtime_mapping_enforcement_dry_run",
+    "source_proposal_version": "v3_round93_runtime_mapping_proposal_report",
+    "source_dry_run_version": "v3_round92_runtime_mapping_gate_dry_run",
+    "runtime_mapping_enabled": False,
+    "enforcement_enabled": False,
+    "candidate_count": 2,
+    "would_apply_count": 1,
+    "blocked_count": 1,
+    "enforcement_rows": [
+        {
+            "lexical_token": "EVE",
+            "target_category_id": "concept_category::lex::EVE",
+            "enforcement_status": "blocked_from_runtime_mapping_enforcement",
+            "would_apply_if_runtime_mapping_enabled": False,
+            "runtime_mapping_enabled_now": False,
+            "enforcement_enabled_now": False,
+            "runtime_mapping_applied_now": False,
+            "simulated_mapping_result": None,
+            "blocked_reasons": ["explicit_category_missing", "concept_memory_missing"],
+            "uses_lexical_vector_as_anchor": False,
+            "uses_eve_specific_vector_as_anchor": False,
+            "uses_seed_vector_as_anchor": False,
+        },
+        {
+            "lexical_token": "민석",
+            "target_category_id": "concept_category::lex::민석",
+            "enforcement_status": "would_apply_if_runtime_mapping_enabled",
+            "would_apply_if_runtime_mapping_enabled": True,
+            "runtime_mapping_enabled_now": False,
+            "enforcement_enabled_now": False,
+            "runtime_mapping_applied_now": False,
+            "simulated_mapping_result": {
+                "lexical_token": "민석",
+                "category_id": "concept_category::lex::민석",
+                "category_label": "민석",
+                "mapping_status": "simulated_runtime_mapping_success",
+                "anchor_source": "explicit_category_plus_sa_activation_only",
+            },
+            "blocked_reasons": [],
+            "uses_lexical_vector_as_anchor": False,
+            "uses_eve_specific_vector_as_anchor": False,
+            "uses_seed_vector_as_anchor": False,
+        },
+    ],
+    "would_apply_tokens": ["민석"],
+    "would_block_tokens": ["EVE"],
+    "read_only": True,
+}
+
+
+def _install_minseok_category(engine: Any) -> None:
+    """Install explicit concept evidence without vector creation or runtime mapping."""
+    lcm = engine.lex_concept_mapping
+    category_id = "concept_category::lex::민석"
+    lcm._concept_categories[category_id] = {
+        "lexical_token": "민석",
+        "category_id": category_id,
+        "category_created": True,
+        "runtime_mapping_enabled": False,
+        "enforcement_enabled": False,
+        "concept_memory": {"concept_memory_persisted": True},
+        "sa_activation": {"sa_activation_created": True},
+        "lexical_vector_is_evidence_only": True,
+        "eve_specific_vector_is_not_agp_anchor": True,
+        "seed_vector_is_not_agp_anchor": True,
+    }
+
+
+def _prepare_engine_with_round94_fixture() -> tuple[object, dict[str, Any]]:
+    engine = build_full_engine()
+    _install_minseok_category(engine)
+    return engine, json.loads(json.dumps(ROUND94_ENFORCEMENT_FIXTURE, ensure_ascii=False))
+
 
 def _prepare_round96_engine() -> tuple[object, dict[str, Any]]:
-    engine = build_full_engine()
-    learner = engine.eve_self_learning
-    learner.observe_text("민석 오늘", source="round97_test_a")
-    learner.observe_text("민석 군대", source="round97_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
-    source_commit = run_round89_explicit_concept_commit_smoke(engine)
-    source_replay = run_round90_concept_commit_delta_replay_report(engine, source_commit_report=source_commit)
-    checkpoint = run_round91_concept_commit_replay_export_checkpoint(
-        engine,
-        source_commit_report=source_commit,
-        source_replay_report=source_replay,
-    )
-    dry_run = run_round92_runtime_mapping_gate_dry_run(
-        engine,
-        tokens=["민석", "EVE"],
-        source_checkpoint=checkpoint,
-    )
-    proposal = run_round93_runtime_mapping_proposal_report(engine, source_dry_run=dry_run)
-    enforcement = run_round94_runtime_mapping_enforcement_dry_run(
-        engine,
-        tokens=["민석", "EVE"],
-        source_proposal=proposal,
-    )
+    engine, enforcement = _prepare_engine_with_round94_fixture()
     fixture = run_round95_runtime_mapping_operator_acceptance_fixture(
-        engine,
-        source_enforcement=enforcement,
-        accepted_tokens=["민석"],
+        engine, source_enforcement=enforcement, accepted_tokens=["민석"]
     )
     precheck = run_round96_runtime_mapping_enable_smoke_precheck(engine, source_fixture=fixture)
     return engine, precheck
-
 
 def test_round97_controlled_enable_smoke_rolls_back_runtime_mapping() -> None:
     engine, precheck = _prepare_round96_engine()
@@ -70,7 +112,9 @@ def test_round97_controlled_enable_smoke_rolls_back_runtime_mapping() -> None:
     assert report["round"] == 97
     assert report["source_precheck_version"] == "v3_round96_runtime_mapping_enable_smoke_precheck"
     assert report["runtime_mapping_enabled_before"] is False
-    assert report["runtime_mapping_enabled_during_smoke"] is True
+    assert report["runtime_mapping_enabled_during_smoke"] is False
+    assert report["policy"]["guarded_rehearsal_only"] is True
+    assert report["policy"]["runtime_mapping_never_enabled"] is True
     assert report["runtime_mapping_enabled_after_rollback"] is False
     assert report["enforcement_enabled_during_smoke"] is False
     assert report["enforcement_enabled_after_rollback"] is False
@@ -80,13 +124,15 @@ def test_round97_controlled_enable_smoke_rolls_back_runtime_mapping() -> None:
     assert report["mapped_tokens"] == ["민석"]
     assert report["rollback"]["rollback_complete"] is True
     assert report["rollback"]["ephemeral_mapping_table_cleared"] is True
-    assert report["post_smoke_recommendation"]["may_attempt_persistence_gate_next_round"] is True
+    assert report["post_smoke_recommendation"]["may_attempt_persistence_gate_next_round"] is False
+    assert report["post_smoke_recommendation"]["production_persistence_no_go"] is True
 
     row = report["smoke_rows"][0]
-    assert row["smoke_status"] == "controlled_runtime_mapping_success"
-    assert row["runtime_mapping_applied_during_smoke"] is True
+    assert row["smoke_status"] == "guarded_runtime_mapping_rehearsal_success"
+    assert row["runtime_mapping_applied_during_smoke"] is False
+    assert row["runtime_mapping_rehearsed_without_enablement"] is True
     assert row["runtime_mapping_persisted"] is False
-    assert row["mapping_result"]["mapping_status"] == "ephemeral_runtime_mapping_success"
+    assert row["mapping_result"]["mapping_status"] == "guarded_runtime_mapping_rehearsal_success"
     assert row["mapping_result"]["anchor_source"] == "explicit_category_plus_sa_activation_only"
     assert row["agp_verify_called_during_runtime_mapping_enable_smoke"] is False
     assert row["embedding_lookup_called_during_enable_smoke"] is False
@@ -120,9 +166,10 @@ def test_round98_persistence_gate_audit_keeps_runtime_mapping_disabled() -> None
     assert audit["mapped_count"] == 1
     assert audit["blocked_count"] == 0
     assert audit["hard_stop"] is False
-    assert audit["persistence_gate_status"] == "ready_for_operator_persistence_decision"
+    assert audit["persistence_gate_status"] == "blocked_production_persistence_no_go_guarded_rehearsal_only"
     assert audit["operator_recommendation"]["persist_runtime_mapping_now"] is False
     assert audit["operator_recommendation"]["requires_split_full_suite_with_medium_vectors"] is True
+    assert audit["operator_recommendation"]["production_persistence_no_go"] is True
     assert audit["runner_read_only_checks"]["runtime_mapping_enabled_after_runner"] is False
     assert audit["runner_read_only_checks"]["enforcement_enabled_after_runner"] is False
 

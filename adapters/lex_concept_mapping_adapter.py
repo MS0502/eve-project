@@ -2546,9 +2546,11 @@ class LexConceptMappingAdapter:
     ) -> dict[str, Any]:
         """Round97 controlled, non-persistent runtime mapping enable smoke.
 
-        The smoke opens runtime mapping only inside this method, maps the
-        Round96-ready operator accepted rows, then rolls the flag and ephemeral
-        mapping table back before returning. Enforcement remains disabled.
+        Current policy treats this as a guarded rehearsal only: it evaluates the
+        Round96-ready operator accepted rows against an ephemeral table shape,
+        but it never flips runtime mapping on. The rollback proof therefore
+        demonstrates that defaults remained disabled and no ephemeral rows were
+        retained. Enforcement remains disabled.
         """
         self._latest_runtime_mapping_round = 97
         before_categories = self.concept_categories_snapshot()
@@ -2575,7 +2577,11 @@ class LexConceptMappingAdapter:
         rollback_complete = False
 
         try:
-            setattr(self, "runtime_mapping_enabled", True)
+            # Round416-440 policy alignment: this is a guarded rehearsal, not an
+            # enable-smoke. Do not flip runtime_mapping_enabled, even
+            # ephemerally, because default no-load/no-enable remains the active
+            # invariant until a separate operator-authorized persistence round.
+            setattr(self, "runtime_mapping_enabled", before_runtime_enabled)
             setattr(self, "enforcement_enabled", False)
             runtime_mapping_enabled_during_smoke = bool(getattr(self, "runtime_mapping_enabled", False))
             for row in ready_rows:
@@ -2599,6 +2605,8 @@ class LexConceptMappingAdapter:
                 smoke.update({
                     "round97_smoke": True,
                     "runtime_mapping_enabled_during_smoke": runtime_mapping_enabled_during_smoke,
+                    "runtime_mapping_enabled_during_rehearsal": runtime_mapping_enabled_during_smoke,
+                    "guarded_rehearsal_only": True,
                     "enforcement_enabled_during_smoke": False,
                     "runtime_mapping_persisted": False,
                     "anchor_source": "explicit_category_plus_sa_activation_only",
@@ -2621,13 +2629,14 @@ class LexConceptMappingAdapter:
 
                 ephemeral_mapping_table[token] = category_id
                 smoke.update({
-                    "smoke_status": "controlled_runtime_mapping_success",
+                    "smoke_status": "guarded_runtime_mapping_rehearsal_success",
                     "smoke_blocked_reasons": [],
-                    "runtime_mapping_applied_during_smoke": True,
+                    "runtime_mapping_applied_during_smoke": False,
+                    "runtime_mapping_rehearsed_without_enablement": True,
                     "mapping_result": {
                         "lexical_token": token,
                         "category_id": category_id,
-                        "mapping_status": "ephemeral_runtime_mapping_success",
+                        "mapping_status": "guarded_runtime_mapping_rehearsal_success",
                         "persisted": False,
                         "anchor_source": "explicit_category_plus_sa_activation_only",
                     },
@@ -2674,9 +2683,11 @@ class LexConceptMappingAdapter:
                 "rollback_complete": rollback_complete,
             },
             "post_smoke_recommendation": {
-                "may_attempt_persistence_gate_next_round": bool(smoke_rows) and not blocked_rows and rollback_complete,
-                "next_recommended_round": "round98_runtime_mapping_persistence_gate_audit" if bool(smoke_rows) and not blocked_rows and rollback_complete else "repair_round97_smoke_blocks",
+                "may_attempt_persistence_gate_next_round": False,
+                "next_recommended_round": "round98_runtime_mapping_persistence_gate_audit_no_go_rehearsal_review" if bool(smoke_rows) and not blocked_rows and rollback_complete else "repair_round97_rehearsal_blocks",
                 "runtime_mapping_should_remain_disabled_by_default": True,
+                "production_persistence_no_go": True,
+                "reason": "guarded_rehearsal_only_no_runtime_mapping_enablement",
             },
             "mutation_checks": {
                 "category_snapshot_unchanged_during_enable_smoke": before_categories == after_categories,
@@ -2695,8 +2706,10 @@ class LexConceptMappingAdapter:
                 "eve_specific_vector_commit_called": False,
             },
             "policy": {
-                "controlled_enable_smoke_only": True,
-                "runtime_mapping_ephemeral_only": True,
+                "controlled_enable_smoke_only": False,
+                "guarded_rehearsal_only": True,
+                "runtime_mapping_ephemeral_only": False,
+                "runtime_mapping_never_enabled": True,
                 "enforcement_still_disabled": True,
                 "lexical_vector_is_evidence_only": True,
                 "eve_specific_vector_is_not_concept": True,
@@ -2750,13 +2763,15 @@ class LexConceptMappingAdapter:
             "blocked_count": len(blocked_rows),
             "hard_stop": bool(hard_blocks),
             "hard_stop_reasons": hard_blocks,
-            "persistence_gate_status": "ready_for_operator_persistence_decision" if mapped_rows and not hard_blocks else "blocked_or_needs_more_evidence",
+            "persistence_gate_status": "blocked_production_persistence_no_go_guarded_rehearsal_only" if mapped_rows and not hard_blocks else "blocked_or_needs_more_evidence",
             "operator_recommendation": {
                 "persist_runtime_mapping_now": False,
                 "requires_operator_approval": True,
                 "requires_split_full_suite_with_medium_vectors": True,
-                "default_action": "keep_runtime_mapping_disabled_until_operator_persistence_round",
-                "next_recommended_round": "operator_persistence_decision_with_full_validation" if mapped_rows and not hard_blocks else "repair_persistence_gate_blocks",
+                "default_action": "keep_runtime_mapping_disabled_production_persistence_no_go",
+                "next_recommended_round": "continue_guarded_rehearsal_or_classify_persistence_no_go" if mapped_rows and not hard_blocks else "repair_persistence_gate_blocks",
+                "production_persistence_no_go": True,
+                "reason": "round97_was_guarded_rehearsal_without_runtime_mapping_enablement",
             },
             "read_only_checks": {
                 "category_snapshot_unchanged_during_persistence_gate_audit": before_categories == after_categories,

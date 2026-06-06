@@ -8,9 +8,11 @@ load vector artifacts, enable production persistence, change the
 ``runtime_mapping_enabled`` default, enable enforcement, call AGP, or mutate
 fastText/EveSpecific/PMI+SVD vectors.
 
-The only allowed mutable action is the existing Round97-style ephemeral runtime
-mapping flag inside the rehearsal scope, and the command requires explicit
-operator authorization before that scope is entered.
+Round416-440 policy narrows the former Round97 enable-smoke into a guarded
+rehearsal only: even the isolated scope must keep ``runtime_mapping_enabled``
+false while proving that the mapping table shape can be rolled back and no
+persistence/vector mutation occurs. The command still requires explicit operator
+authorization before that scope is entered.
 """
 
 from __future__ import annotations
@@ -307,7 +309,8 @@ def run_isolated_no_persistence_rehearsal(
         "after": after_fixtures,
     }
     success = bool(
-        smoke.get("runtime_mapping_enabled_during_smoke") is True
+        smoke.get("runtime_mapping_enabled_during_smoke") is False
+        and _as_mapping(smoke.get("policy")).get("guarded_rehearsal_only") is True
         and smoke.get("mapped_tokens") == sorted(tokens["accepted_tokens"])
         and all(rollback_checks.values())
         and all(no_vector_checks.values())
@@ -349,7 +352,7 @@ def run_isolated_no_persistence_rehearsal(
                 f"--operator-authorized --authorization-token {AUTHORIZATION_TOKEN} "
                 "--output _operator_artifacts/round261_275_no_persistence_runtime_mapping_rehearsal.json"
             ),
-            "next_recommendation": "operator may run the guarded no-persistence rehearsal locally; keep production persistence NO-GO until split validation and an explicit separate persistence decision",
+            "next_recommendation": "operator may rerun the guarded no-enable/no-persistence rehearsal locally; production persistence remains NO-GO and runtime_mapping_enabled default remains false",
             "remaining_taxonomy": [
                 "production_persistence_no_go",
                 "runtime_mapping_enabled_default_false",
@@ -366,7 +369,7 @@ def run_isolated_no_persistence_rehearsal(
         "korean_fixture_preservation": korean_preservation,
         "artifact_git_guard": _git_forbidden_artifact_snapshot(Path(repo_root)),
         "validation_commands": VALIDATION_COMMANDS,
-        "broader_validation_delta": "adds an authorized isolated no-persistence rehearsal path over the Round236-260 handoff without loading vectors or changing defaults",
+        "broader_validation_delta": "keeps the authorized isolated no-persistence rehearsal path no-enable by default while preserving handoff rollback and no-vector guarantees",
         "blockers": [] if success else ["rehearsal_safety_proof_failed"],
         **POLICY_FLAGS,
     }
