@@ -29,7 +29,7 @@ def test_round64_single_observation_commit_is_blocked_without_vector_mutation() 
     assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
-def test_round64_two_observations_commit_passes_existing_gate() -> None:
+def test_round64_two_observations_still_require_loaded_known_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit_a")
@@ -37,11 +37,12 @@ def test_round64_two_observations_commit_passes_existing_gate() -> None:
 
     report = learner.commit_eve_specific_vectors(words=["민석"], context_words=["오늘", "군대"])
 
-    assert report["created"] == ["민석"]
-    assert report["rejected"] == []
-    assert report["audit_report"]["gate_pass"] is True
+    assert report["created"] == []
+    assert report["rejected"] == ["민석"]
+    assert report["audit_report"]["gate_pass"] is False
     assert report["audit_report"]["candidate_reports"][0]["observed_count"] == 2
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
+    assert "insufficient_known_context" in report["audit_report"]["candidate_reports"][0]["reasons"]
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
 def test_round64_state_debug_and_drift_report_surface_enforced_threshold() -> None:

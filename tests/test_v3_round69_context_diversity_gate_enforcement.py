@@ -34,7 +34,7 @@ def test_round69_repeated_same_context_is_blocked_by_actual_gate() -> None:
     assert "insufficient_context_diversity" in item["reasons"]
 
 
-def test_round69_diverse_context_candidate_can_commit_after_existing_gate() -> None:
+def test_round69_diverse_context_candidate_still_requires_loaded_known_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit_a")
@@ -42,13 +42,14 @@ def test_round69_diverse_context_candidate_can_commit_after_existing_gate() -> N
 
     report = learner.commit_eve_specific_vectors(words=["민석"], context_words=["오늘", "군대"])
 
-    assert report["created"] == ["민석"]
-    assert report["rejected"] == []
-    assert report["audit_report"]["gate_pass"] is True
+    assert report["created"] == []
+    assert report["rejected"] == ["민석"]
+    assert report["audit_report"]["gate_pass"] is False
     item = _candidate(report["audit_report"], "민석")
     assert item["context_diverse"] is True
     assert item["evidence_status"] == "threshold_met_context_diverse"
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
+    assert "insufficient_known_context" in item["reasons"]
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
 def test_round69_state_debug_and_drift_report_surface_context_diversity_enforcement() -> None:

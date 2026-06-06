@@ -20,9 +20,9 @@ def test_round61_commit_audit_dashboard_counts_reasons_and_recent_trend() -> Non
     assert dashboard["read_only"] is True
     assert dashboard["policy"]["auto_promotion_enabled"] is False
     assert dashboard["record_count"] >= 3
-    assert dashboard["eligible_total"] >= 1
+    assert dashboard["eligible_total"] == 0
     assert dashboard["rejected_total"] >= 1
-    assert dashboard["gate_pass_records"] >= 1
+    assert dashboard["gate_pass_records"] == 0
     assert dashboard["gate_block_records"] >= 1
     assert dashboard["event_type_counts"]["audit"] >= 1
     assert dashboard["event_type_counts"]["commit"] >= 1

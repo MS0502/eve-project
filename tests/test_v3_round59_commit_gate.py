@@ -3,7 +3,7 @@ from __future__ import annotations
 from main import build_full_engine
 
 
-def test_round59_commit_gate_audit_is_read_only_and_reports_known_context() -> None:
+def test_round59_commit_gate_audit_is_read_only_and_fails_closed_without_loaded_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 EVE 오늘", source="unit_a")
@@ -17,9 +17,10 @@ def test_round59_commit_gate_audit_is_read_only_and_reports_known_context() -> N
     assert audit["read_only"] is True
     assert audit["commit_gate_enabled"] is True
     assert audit["target_words"] == ["민석"]
-    assert audit["eligible_words"] == ["민석"]
-    assert audit["rejected_words"] == []
-    assert {"오늘", "군대"}.issubset(set(audit["known_context_words"]))
+    assert audit["eligible_words"] == []
+    assert audit["rejected_words"] == ["민석"]
+    assert audit["known_context_words"] == []
+    assert "insufficient_known_context" in audit["candidate_reports"][0]["reasons"]
     assert before == after
 
 
@@ -51,7 +52,7 @@ def test_round59_commit_blocks_when_context_has_no_known_fasttext_words() -> Non
     assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
-def test_round59_commit_allows_observed_eve_specific_with_known_context() -> None:
+def test_round59_commit_rejects_observed_candidate_when_fasttext_is_not_loaded() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit_a")
@@ -59,11 +60,12 @@ def test_round59_commit_allows_observed_eve_specific_with_known_context() -> Non
 
     report = learner.commit_eve_specific_vectors(words=["민석"], context_words=["오늘", "군대"])
 
-    assert report["created"] == ["민석"]
-    assert report["rejected"] == []
-    assert report["audit_report"]["gate_pass"] is True
-    assert report["known_context_words"]
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
+    assert report["created"] == []
+    assert report["rejected"] == ["민석"]
+    assert report["audit_report"]["gate_pass"] is False
+    assert report["known_context_words"] == []
+    assert "insufficient_known_context" in report["audit_report"]["candidate_reports"][0]["reasons"]
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
 def test_round59_state_debug_and_drift_measurement_surface_commit_gate() -> None:

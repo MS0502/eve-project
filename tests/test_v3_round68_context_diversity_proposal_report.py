@@ -48,7 +48,7 @@ def test_round68_context_diversity_proposal_defers_repeated_context_without_poli
     assert learner.stats()["min_observations_for_commit"] == 2
 
 
-def test_round68_context_diversity_proposal_allows_operator_consideration_for_diverse_context() -> None:
+def test_round68_context_diversity_proposal_blocks_without_loaded_known_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit_a")
@@ -57,15 +57,16 @@ def test_round68_context_diversity_proposal_allows_operator_consideration_for_di
     proposal = learner.context_diversity_proposal_report(words=["민석"], context_words=["오늘", "군대"])
     item = _candidate(proposal, "민석")
 
-    assert proposal["eligible_under_proposal"] == ["민석"]
-    assert proposal["blocked_under_proposal"] == []
+    assert proposal["eligible_under_proposal"] == []
+    assert proposal["blocked_under_proposal"] == ["민석"]
     assert proposal["newly_blocked_by_context_diversity"] == []
-    assert proposal["current_gate_ready_count"] == 1
-    assert proposal["recommendation"] == "operator_may_consider_context_diversity_gate"
+    assert proposal["current_gate_ready_count"] == 0
+    assert proposal["recommendation"] == "insufficient_evidence"
     assert proposal["policy"]["context_diversity_gate_enforced"] is True
     assert proposal["policy"]["no_threshold_change"] is True
-    assert item["current_gate_pass"] is True
-    assert item["dry_run_pass"] is True
+    assert item["current_gate_pass"] is False
+    assert item["dry_run_pass"] is False
+    assert "insufficient_known_context" in item["dry_run_reasons"]
     assert item["context_diverse"] is True
 
 

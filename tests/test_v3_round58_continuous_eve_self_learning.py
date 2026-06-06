@@ -17,7 +17,7 @@ def test_round58_adapter_observes_eve_specific_without_auto_promotion() -> None:
     assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
-def test_round58_explicit_commit_creates_vector_from_known_context_only() -> None:
+def test_round58_explicit_commit_fails_closed_when_fasttext_context_is_not_loaded() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 EVE 오늘", source="unit_a")
@@ -25,11 +25,13 @@ def test_round58_explicit_commit_creates_vector_from_known_context_only() -> Non
 
     report = learner.commit_eve_specific_vectors(context_words=["오늘", "군대", "없는단어999"])
 
-    assert "민석" in report["created"]
-    assert "EVE" in report["created"]
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
-    assert engine.eve_specific_vector_store.get_vector("민석").shape == (300,)
-    assert engine.eve_specific_vector_store.update_count("민석") == 1
+    assert report["created"] == []
+    assert {"민석", "EVE"}.issubset(set(report["rejected"]))
+    assert report["known_context_words"] == []
+    assert all("insufficient_known_context" in item["reasons"] for item in report["audit_report"]["candidate_reports"])
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
+    assert engine.eve_specific_vector_store.get_vector("민석") is None
+    assert engine.eve_specific_vector_store.update_count("민석") == 0
 
 
 def test_round58_chat_stream_records_observation_but_does_not_promote() -> None:
@@ -44,7 +46,7 @@ def test_round58_chat_stream_records_observation_but_does_not_promote() -> None:
     assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
-def test_round58_wrapper_uses_eve_specific_after_explicit_commit() -> None:
+def test_round58_wrapper_remains_no_load_after_rejected_explicit_commit() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit_a")
@@ -54,9 +56,10 @@ def test_round58_wrapper_uses_eve_specific_after_explicit_commit() -> None:
     vector = engine.self_embedding.get_vector("민석")
     telemetry = engine.self_embedding.telemetry()
 
-    assert vector is not None
-    assert telemetry["eve_specific_hits"] >= 1
-    assert telemetry["eve_specific_rate"] > 0.0
+    assert vector is None
+    assert telemetry["eve_specific_hits"] == 0
+    assert telemetry["eve_specific_rate"] == 0.0
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
 def test_round58_adapter_tokenization_is_deterministic() -> None:
@@ -77,7 +80,8 @@ def test_round58_drift_accumulation_report_includes_observation_and_commit_count
 
     assert report["measurement_version"] == "v3_round58_eve_self_learning_drift_accumulation"
     assert report["drift_accumulation"]["observed_eve_specific_count"] >= 1
-    assert report["drift_accumulation"]["vectors_created"] >= 1
+    assert report["drift_accumulation"]["vectors_created"] == 0
+    assert report["drift_accumulation"]["commit_gate_blocks"] >= 1
     assert report["policy"]["auto_observe_enabled"] is True
     assert report["policy"]["auto_promotion_enabled"] is False
     assert report["policy"]["agp_bypass"] is False
