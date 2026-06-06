@@ -96,6 +96,8 @@ def test_round65_snapshot_does_not_weaken_round64_commit_threshold() -> None:
 
     learner.observe_text("민석 군대", source="unit_b")
     double = learner.commit_eve_specific_vectors(words=["민석"], context_words=["오늘", "군대"])
-    assert double["created"] == ["민석"]
+    assert double["created"] == []
+    assert double["rejected"] == ["민석"]
     assert double["audit_report"]["min_observations_for_commit"] == 2
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
+    assert "insufficient_known_context" in double["audit_report"]["candidate_reports"][0]["reasons"]
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False

@@ -40,7 +40,7 @@ def test_round62_threshold_dry_run_blocks_single_observation_without_policy_chan
     assert "insufficient_observations" in threshold2["candidate_reports"][0]["reasons"]
 
 
-def test_round62_threshold_dry_run_distinguishes_two_vs_three_observations() -> None:
+def test_round62_threshold_dry_run_still_requires_loaded_known_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석", source="unit")
@@ -54,9 +54,10 @@ def test_round62_threshold_dry_run_distinguishes_two_vs_three_observations() -> 
 
     threshold2 = _threshold_report(dry_run, 2)
     threshold3 = _threshold_report(dry_run, 3)
-    assert threshold2["eligible_words"] == ["민석"]
-    assert threshold2["rejected_words"] == []
-    assert threshold2["gate_pass"] is True
+    assert threshold2["eligible_words"] == []
+    assert threshold2["rejected_words"] == ["민석"]
+    assert threshold2["gate_pass"] is False
+    assert "insufficient_known_context" in threshold2["candidate_reports"][0]["reasons"]
     assert threshold3["eligible_words"] == []
     assert threshold3["rejected_words"] == ["민석"]
     assert "insufficient_observations" in threshold3["candidate_reports"][0]["reasons"]

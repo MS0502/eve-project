@@ -43,7 +43,7 @@ def test_round67_context_diversity_gate_dry_run_blocks_repeated_context_without_
     assert learner.stats()["min_observations_for_commit"] == 2
 
 
-def test_round67_context_diversity_gate_dry_run_allows_diverse_context_candidate() -> None:
+def test_round67_context_diversity_gate_dry_run_blocks_without_loaded_known_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit_a")
@@ -52,11 +52,12 @@ def test_round67_context_diversity_gate_dry_run_allows_diverse_context_candidate
     report = learner.dry_run_context_diversity_gate(words=["민석"], context_words=["오늘", "군대"])
     item = _candidate(report, "민석")
 
-    assert report["eligible_words"] == ["민석"]
-    assert report["blocked_words"] == []
+    assert report["eligible_words"] == []
+    assert report["blocked_words"] == ["민석"]
     assert report["newly_blocked_by_context_diversity"] == []
-    assert item["current_gate_pass"] is True
-    assert item["dry_run_pass"] is True
+    assert item["current_gate_pass"] is False
+    assert item["dry_run_pass"] is False
+    assert "insufficient_known_context" in item["dry_run_reasons"]
     assert item["context_diverse"] is True
     assert item["evidence_status"] == "threshold_met_context_diverse"
     assert report["policy"]["context_diversity_gate_enforced"] is True

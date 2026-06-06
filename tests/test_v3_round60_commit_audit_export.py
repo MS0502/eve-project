@@ -23,10 +23,10 @@ def test_round60_commit_audit_snapshot_persists_allowed_and_rejected_records() -
     assert snapshot["policy"]["memory_quarantine_unchanged"] is True
     assert snapshot["record_count"] >= 2
     assert snapshot["rejected_total"] >= 1
-    assert snapshot["eligible_total"] >= 1
+    assert snapshot["eligible_total"] == 0
     assert any("민석" in r["rejected_words"] for r in snapshot["records"])
-    assert any("민석" in r["eligible_words"] for r in snapshot["records"])
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
+    assert all("민석" not in r["eligible_words"] for r in snapshot["records"])
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
 
 def test_round60_write_commit_audit_export_writes_json_without_vector_mutation(tmp_path) -> None:

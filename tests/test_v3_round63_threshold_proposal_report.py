@@ -36,7 +36,7 @@ def test_round63_threshold_proposal_blocks_single_observation_without_policy_cha
     assert learner.stats()["min_observations_for_commit"] == 2
 
 
-def test_round63_threshold_proposal_marks_ready_but_still_requires_operator_review() -> None:
+def test_round63_threshold_proposal_blocks_without_loaded_known_context() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석", source="unit")
@@ -48,8 +48,8 @@ def test_round63_threshold_proposal_marks_ready_but_still_requires_operator_revi
         target_observation_threshold=2,
     )
 
-    assert proposal["eligible_under_proposal"] == ["민석"]
-    assert proposal["blocked_under_proposal"] == []
+    assert proposal["eligible_under_proposal"] == []
+    assert proposal["blocked_under_proposal"] == ["민석"]
     assert proposal["recommendation"] == "already_at_or_above_target"
     assert proposal["operator_review_required"] is True
     assert proposal["active_policy_unchanged"] is True
