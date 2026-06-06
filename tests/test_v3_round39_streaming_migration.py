@@ -8,6 +8,7 @@ must not auto-load, and yielded chunks must remain unchanged.
 from pathlib import Path
 
 from main import build_full_engine
+from tests.fasttext_observation_stub import install_explicit_loaded_fasttext_stub
 
 SELF_EMBEDDING = Path("adapters/self_embedding_adapter.py")
 STREAMING = Path("language/streaming.py")
@@ -23,10 +24,10 @@ def test_streaming_default_uses_self_embedding_and_no_fasttext_trace():
     chunks = _chat(engine)
 
     assert chunks
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert len(engine.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert len(engine.fasttext_trace) == 0
     assert engine.stats()["in_use_by_generation"] == "wrapper"
-    assert engine.stats()["fasttext_parallel_observation"] == "fasttext"
+    assert engine.stats()["fasttext_parallel_observation"] is None
 
 
 def test_streaming_does_not_auto_load_fasttext():
@@ -35,14 +36,15 @@ def test_streaming_does_not_auto_load_fasttext():
     for text in ["민석아 힘들다", "오늘 날씨 좋다", "너는 누구야?"]:
         _chat(engine, text)
 
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.fasttext_embedding.stats()["vocab_size"] == 30000
-    assert len(engine.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
+    assert len(engine.fasttext_trace) == 0
 
 
 def test_streaming_parallel_trace_when_fasttext_loaded():
     engine = build_full_engine()
-    assert engine.fasttext_embedding.load() is True
+    install_explicit_loaded_fasttext_stub(engine)
+    assert engine.fasttext_embedding.is_loaded() is True
 
     chunks = _chat(engine, "민석아 힘들다")
 
@@ -58,13 +60,13 @@ def test_streaming_parallel_trace_when_fasttext_loaded():
     assert "self_embedding_result" in trace
     assert "fasttext_result" in trace
     assert trace["fasttext_result"]["loaded"] is True
-    assert trace["fasttext_result"]["subset_name"] == "cc.ko.300.subset.medium.30k"
+    assert trace["fasttext_result"]["subset_name"] == "artifact_free_explicit_loaded_stub"
 
 
 def test_streaming_output_chunks_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_chunks = _chat(unloaded, "민석아 힘들다")
     loaded_chunks = _chat(loaded, "민석아 힘들다")
@@ -76,7 +78,7 @@ def test_streaming_output_chunks_unaffected_by_fasttext_observation():
 def test_streaming_chunk_order_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_chunks = _chat(unloaded, "너는 누구야?")
     loaded_chunks = _chat(loaded, "너는 누구야?")
@@ -88,7 +90,7 @@ def test_streaming_chunk_order_unaffected_by_fasttext_observation():
 def test_streaming_chunk_timing_shape_unaffected():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_chunks = _chat(unloaded, "오늘 날씨 좋다")
     loaded_chunks = _chat(loaded, "오늘 날씨 좋다")
@@ -99,7 +101,7 @@ def test_streaming_chunk_timing_shape_unaffected():
 
 def test_streaming_trace_data_dict_and_operation_counts():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     chunks = _chat(engine, "민석아 힘들다")
 
@@ -111,7 +113,7 @@ def test_streaming_trace_data_dict_and_operation_counts():
 
 def test_streaming_fasttext_trace_cap():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     engine.fasttext_trace_cap = 3
 
     for text in ["민석아 힘들다", "오늘 날씨 좋다", "너는 누구야?", "내가 누구야?"]:
@@ -129,7 +131,7 @@ def test_state_debug_streaming_section_unloaded():
 
     assert section["module"] == "language/streaming"
     assert section["in_use_by_generation"] == "wrapper"
-    assert section["parallel_observation"] == "fasttext"
+    assert section["parallel_observation"] is None
     assert section["fasttext_observation_count"] == 0
     assert section["operations_observed"]["stream_chunk"] == 0
     assert section["migration_stage"] == "streaming_parallel_observation_only"
@@ -137,7 +139,7 @@ def test_state_debug_streaming_section_unloaded():
 
 def test_state_debug_streaming_section_loaded_after_parallel_trace():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     chunks = _chat(engine, "민석아 힘들다")
 
     section = engine.state_debug.snapshot_state()["streaming"]
@@ -151,7 +153,7 @@ def test_state_debug_streaming_section_loaded_after_parallel_trace():
 
 def test_state_debug_is_read_only_for_streaming_migration():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _chat(engine, "민석아 힘들다")
     before_trace = list(engine.fasttext_trace)
     before_counts = dict(engine.fasttext_operation_counts)
@@ -168,7 +170,7 @@ def test_state_debug_is_read_only_for_streaming_migration():
 
 def test_streaming_generation_path_still_uses_pmi_svd_not_fasttext():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300

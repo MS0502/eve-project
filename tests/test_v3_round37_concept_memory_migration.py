@@ -8,6 +8,7 @@ fastText must not auto-load, and concept writes/queries must be unchanged.
 from pathlib import Path
 
 from main import build_full_engine
+from tests.fasttext_observation_stub import install_explicit_loaded_fasttext_stub
 
 SELF_EMBEDDING = Path("adapters/self_embedding_adapter.py")
 CONCEPT_MEMORY = Path("adapters/concept_memory_adapter.py")
@@ -30,10 +31,10 @@ def test_concept_memory_default_uses_self_embedding_and_no_fasttext_trace():
     assert learned is not None
     assert found is not None
     assert found.definition == "함께 시간을 보내는 사람"
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert len(engine.concept_memory.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert len(engine.concept_memory.fasttext_trace) == 0
     assert engine.concept_memory.stats()["in_use_by_generation"] == "wrapper"
-    assert engine.concept_memory.stats()["fasttext_parallel_observation"] == "fasttext"
+    assert engine.concept_memory.stats()["fasttext_parallel_observation"] is None
 
 
 def test_concept_memory_does_not_auto_load_fasttext():
@@ -43,14 +44,15 @@ def test_concept_memory_does_not_auto_load_fasttext():
         _learn_sample(engine)
         _query_sample(engine)
 
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.fasttext_embedding.stats()["vocab_size"] == 30000
-    assert len(engine.concept_memory.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
+    assert len(engine.concept_memory.fasttext_trace) == 0
 
 
 def test_concept_memory_parallel_trace_when_fasttext_loaded_for_write_and_query():
     engine = build_full_engine()
-    assert engine.fasttext_embedding.load() is True
+    install_explicit_loaded_fasttext_stub(engine)
+    assert engine.fasttext_embedding.is_loaded() is True
 
     learned = _learn_sample(engine)
     found = _query_sample(engine)
@@ -66,13 +68,13 @@ def test_concept_memory_parallel_trace_when_fasttext_loaded_for_write_and_query(
         assert "self_embedding_result" in trace
         assert "fasttext_result" in trace
         assert trace["fasttext_result"]["loaded"] is True
-        assert trace["fasttext_result"]["subset_name"] == "cc.ko.300.subset.medium.30k"
+        assert trace["fasttext_result"]["subset_name"] == "artifact_free_explicit_loaded_stub"
 
 
 def test_concept_memory_query_decision_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     _learn_sample(unloaded)
     _learn_sample(loaded)
@@ -89,7 +91,7 @@ def test_concept_memory_query_decision_unaffected_by_fasttext_observation():
 def test_concept_memory_writes_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     u = _learn_sample(unloaded)
     l = _learn_sample(loaded)
@@ -103,7 +105,7 @@ def test_concept_memory_writes_unaffected_by_fasttext_observation():
 
 def test_concept_memory_quarantine_path_not_active_and_unaffected():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _learn_sample(engine)
     _query_sample(engine)
 
@@ -114,7 +116,7 @@ def test_concept_memory_quarantine_path_not_active_and_unaffected():
 
 def test_concept_memory_trace_cap_and_data_dict():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     engine.concept_memory.fasttext_trace_cap = 3
 
     for idx in range(5):
@@ -132,7 +134,7 @@ def test_state_debug_concept_memory_section_unloaded():
 
     assert section["module"] == "concept_memory_adapter"
     assert section["in_use_by_generation"] == "wrapper"
-    assert section["parallel_observation"] == "fasttext"
+    assert section["parallel_observation"] is None
     assert section["fasttext_trace_size"] == 0
     assert section["operations_observed"]["query"] == 0
     assert section["operations_observed"]["write"] == 0
@@ -141,7 +143,7 @@ def test_state_debug_concept_memory_section_unloaded():
 
 def test_state_debug_concept_memory_section_loaded_after_parallel_trace():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _learn_sample(engine)
     _query_sample(engine)
 
@@ -158,7 +160,7 @@ def test_state_debug_concept_memory_section_loaded_after_parallel_trace():
 
 def test_state_debug_is_read_only_for_concept_memory_migration():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _learn_sample(engine)
     _query_sample(engine)
     before_trace = list(engine.concept_memory.fasttext_trace)
@@ -178,7 +180,7 @@ def test_state_debug_is_read_only_for_concept_memory_migration():
 
 def test_generation_path_still_uses_pmi_svd_not_fasttext_for_concept_memory():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300

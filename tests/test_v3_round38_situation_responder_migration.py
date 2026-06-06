@@ -8,6 +8,7 @@ auto-load, and response selection/text/timing shape must be unchanged.
 from pathlib import Path
 
 from main import build_full_engine
+from tests.fasttext_observation_stub import install_explicit_loaded_fasttext_stub
 from utils.types import Meaning
 
 SELF_EMBEDDING = Path("adapters/self_embedding_adapter.py")
@@ -39,10 +40,10 @@ def test_situation_responder_default_uses_self_embedding_and_no_fasttext_trace()
 
     assert plan is not None
     assert plan.core_message
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert len(engine.situation_responder.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert len(engine.situation_responder.fasttext_trace) == 0
     assert engine.situation_responder.stats()["in_use_by_generation"] == "wrapper"
-    assert engine.situation_responder.stats()["fasttext_parallel_observation"] == "fasttext"
+    assert engine.situation_responder.stats()["fasttext_parallel_observation"] is None
 
 
 def test_situation_responder_does_not_auto_load_fasttext():
@@ -51,14 +52,15 @@ def test_situation_responder_does_not_auto_load_fasttext():
     for _ in range(3):
         _build_greeting(engine)
 
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.fasttext_embedding.stats()["vocab_size"] == 30000
-    assert len(engine.situation_responder.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
+    assert len(engine.situation_responder.fasttext_trace) == 0
 
 
 def test_situation_responder_parallel_trace_when_fasttext_loaded():
     engine = build_full_engine()
-    assert engine.fasttext_embedding.load() is True
+    install_explicit_loaded_fasttext_stub(engine)
+    assert engine.fasttext_embedding.is_loaded() is True
 
     plan = _build_greeting(engine)
 
@@ -73,13 +75,13 @@ def test_situation_responder_parallel_trace_when_fasttext_loaded():
     assert "self_embedding_result" in trace
     assert "fasttext_result" in trace
     assert trace["fasttext_result"]["loaded"] is True
-    assert trace["fasttext_result"]["subset_name"] == "cc.ko.300.subset.medium.30k"
+    assert trace["fasttext_result"]["subset_name"] == "artifact_free_explicit_loaded_stub"
 
 
 def test_situation_responder_response_selection_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     u = _build_greeting(unloaded)
     l = _build_greeting(loaded)
@@ -96,7 +98,7 @@ def test_situation_responder_response_selection_unaffected_by_fasttext_observati
 def test_situation_responder_user_visible_output_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_output = _chat(unloaded, "내가 누구야?")
     loaded_output = _chat(loaded, "내가 누구야?")
@@ -108,7 +110,7 @@ def test_situation_responder_user_visible_output_unaffected_by_fasttext_observat
 def test_situation_responder_response_timing_shape_unaffected():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_output = _chat(unloaded, "너는 누구야?")
     loaded_output = _chat(loaded, "너는 누구야?")
@@ -119,7 +121,7 @@ def test_situation_responder_response_timing_shape_unaffected():
 
 def test_situation_responder_trace_data_dict_and_operation_counts():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     _build_greeting(engine)
 
@@ -131,7 +133,7 @@ def test_situation_responder_trace_data_dict_and_operation_counts():
 
 def test_situation_responder_fasttext_trace_cap():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     engine.situation_responder.fasttext_trace_cap = 3
 
     for _ in range(5):
@@ -149,7 +151,7 @@ def test_state_debug_situation_responder_section_unloaded():
 
     assert section["module"] == "situation_responder"
     assert section["in_use_by_generation"] == "wrapper"
-    assert section["parallel_observation"] == "fasttext"
+    assert section["parallel_observation"] is None
     assert section["fasttext_observation_count"] == 0
     assert section["operations_observed"]["respond"] == 0
     assert section["migration_stage"] == "situation_responder_parallel_observation_only"
@@ -157,7 +159,7 @@ def test_state_debug_situation_responder_section_unloaded():
 
 def test_state_debug_situation_responder_section_loaded_after_parallel_trace():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _build_greeting(engine)
 
     section = engine.state_debug.snapshot_state()["situation_responder"]
@@ -171,7 +173,7 @@ def test_state_debug_situation_responder_section_loaded_after_parallel_trace():
 
 def test_state_debug_is_read_only_for_situation_responder_migration():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _build_greeting(engine)
     before_trace = list(engine.situation_responder.fasttext_trace)
     before_counts = dict(engine.situation_responder.fasttext_operation_counts)
@@ -188,7 +190,7 @@ def test_state_debug_is_read_only_for_situation_responder_migration():
 
 def test_situation_generation_path_still_uses_pmi_svd_not_fasttext():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300

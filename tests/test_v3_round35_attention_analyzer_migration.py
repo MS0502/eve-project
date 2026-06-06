@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from main import build_full_engine
+from tests.fasttext_observation_stub import install_explicit_loaded_fasttext_stub
 
 SELF_EMBEDDING = Path("adapters/self_embedding_adapter.py")
 CONCEPT_MEMORY = Path("adapters/concept_memory_adapter.py")
@@ -29,10 +30,10 @@ def test_attention_default_uses_self_embedding_and_no_fasttext_trace():
     result = _sample_attention(engine)
 
     assert result.top_entities
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert len(engine.attention.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert len(engine.attention.fasttext_trace) == 0
     assert engine.attention.stats()["in_use_by_generation"] == "wrapper"
-    assert engine.attention.stats()["fasttext_parallel_observation"] == "fasttext"
+    assert engine.attention.stats()["fasttext_parallel_observation"] is None
 
 
 def test_attention_does_not_auto_load_fasttext():
@@ -41,14 +42,15 @@ def test_attention_does_not_auto_load_fasttext():
     for _ in range(3):
         _sample_attention(engine)
 
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.fasttext_embedding.stats()["vocab_size"] == 30000
-    assert len(engine.attention.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
+    assert len(engine.attention.fasttext_trace) == 0
 
 
 def test_attention_parallel_trace_when_fasttext_loaded():
     engine = build_full_engine()
-    assert engine.fasttext_embedding.load() is True
+    install_explicit_loaded_fasttext_stub(engine)
+    assert engine.fasttext_embedding.is_loaded() is True
 
     result = _sample_attention(engine)
 
@@ -61,13 +63,14 @@ def test_attention_parallel_trace_when_fasttext_loaded():
     assert "self_embedding_result" in trace
     assert "fasttext_result" in trace
     assert trace["fasttext_result"]["loaded"] is True
+    assert trace["fasttext_result"]["subset_name"] == "artifact_free_explicit_loaded_stub"
     assert set(trace["fasttext_result"]["scores"]) == {"오늘", "친구", "좋아"}
 
 
 def test_attention_decision_unaffected_by_fasttext_observation():
     unloaded_engine = build_full_engine()
     loaded_engine = build_full_engine()
-    loaded_engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded_engine)
 
     unloaded = _sample_attention(unloaded_engine)
     loaded = _sample_attention(loaded_engine)
@@ -80,7 +83,7 @@ def test_attention_decision_unaffected_by_fasttext_observation():
 
 def test_attention_trace_data_dict_and_trace_cap():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     engine.attention.fasttext_trace_cap = 3
 
     for idx in range(5):
@@ -103,14 +106,14 @@ def test_state_debug_attention_section_unloaded():
 
     assert section["module"] == "attention_analyzer"
     assert section["in_use_by_generation"] == "wrapper"
-    assert section["parallel_observation"] == "fasttext"
+    assert section["parallel_observation"] is None
     assert section["fasttext_trace_size"] == 0
     assert section["migration_stage"] == "attention_parallel_observation_only"
 
 
 def test_state_debug_attention_section_loaded_after_parallel_trace():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _sample_attention(engine)
 
     state = engine.state_debug.snapshot_state()
@@ -124,7 +127,7 @@ def test_state_debug_attention_section_loaded_after_parallel_trace():
 
 def test_state_debug_is_read_only_for_attention_migration():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _sample_attention(engine)
     before_trace = list(engine.attention.fasttext_trace)
     before_count = engine.attention.fasttext_observation_count
@@ -141,7 +144,7 @@ def test_state_debug_is_read_only_for_attention_migration():
 
 def test_generation_path_still_uses_pmi_svd_not_fasttext():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300
