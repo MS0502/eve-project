@@ -14,8 +14,6 @@ shortcut. These tests lock down the four review concerns raised after rounds
 
 from __future__ import annotations
 
-import numpy as np
-
 from main import build_full_engine
 from adapters.agp_adapter import AGP_REASON_ANCHORED, AGP_REASON_UNKNOWN_CATEGORY
 
@@ -52,11 +50,19 @@ def test_round71_round55_56_wrapper_routing_is_explicit() -> None:
     assert wrapper.fallback is engine.self_embedding_backup
     assert wrapper.eve_specific is store
 
-    assert store.add_or_update_vector("민석", ["안녕"], engine=engine) is True
+    # Default runtime is no-load: without explicit operator-authorized fastText
+    # artifacts, direct vector creation must fail closed instead of fabricating a
+    # default EveSpecific vector.
+    assert engine.fasttext_embedding.is_loaded() is False
+    before = store.stats().copy()
+    assert store.add_or_update_vector("민석", ["안녕"], engine=engine) is False
+    assert store.stats()["stored_count"] == before["stored_count"]
+
     vec = wrapper.get_vector("민석")
-    assert isinstance(vec, np.ndarray)
-    assert vec.shape == (300,)
-    assert wrapper.telemetry()["eve_specific_hits"] >= 1
+    assert vec is None
+    telemetry = wrapper.telemetry()
+    assert telemetry["eve_specific_hits"] == 0
+    assert telemetry["fallback_uses"] >= 1
 
 
 def test_round71_agp_anchor_does_not_use_eve_specific_vectors() -> None:
@@ -64,11 +70,14 @@ def test_round71_agp_anchor_does_not_use_eve_specific_vectors() -> None:
     agp = engine.agp_adapter
     wrapper = engine.self_embedding
 
-    assert engine.eve_specific_vector_store.add_or_update_vector("민석", ["안녕"], engine=engine) is True
+    # No-load default must not fabricate a vector for AGP to consult. The AGP
+    # invariant is still tested below: anchoring depends only on explicit
+    # categories plus SA activation, never lexical vector availability.
+    assert engine.eve_specific_vector_store.add_or_update_vector("민석", ["안녕"], engine=engine) is False
     before = wrapper.telemetry().copy()
 
-    # If AGP used EveSpecific vectors as anchors, this would pass merely because
-    # "민석" has a stored vector. It must fail because SA activation is empty.
+    # If AGP used lexical vectors as anchors, this would pass merely because the
+    # word is lexically meaningful. It must fail because SA activation is empty.
     failed = agp.verify(
         "민석",
         meaning={"meaning_categories": ["민석"]},

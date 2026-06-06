@@ -348,12 +348,34 @@ def run_round72_eve_specific_smoke_baseline(
         if not word:
             continue
         added = False
+        known_context: list[str] = []
+        reason = "store_missing"
+        if store is not None and hasattr(store, "_context_vectors"):
+            try:
+                _vectors, used = store._context_vectors(context, engine=engine)
+                known_context = list(used)
+            except Exception:
+                known_context = []
         if store is not None and hasattr(store, "add_or_update_vector"):
             try:
                 added = bool(store.add_or_update_vector(word, context, engine=engine))
             except Exception:
                 added = False
-        probe_results.append({"word": word, "added": bool(added), "context_words": list(context)})
+                reason = "vector_store_exception"
+            else:
+                if added:
+                    reason = "added_to_isolated_smoke_engine"
+                elif not known_context:
+                    reason = "no_known_fasttext_context"
+                else:
+                    reason = "vector_store_rejected"
+        probe_results.append({
+            "word": word,
+            "added": bool(added),
+            "context_words": list(context),
+            "known_context_words": list(known_context),
+            "reason": reason,
+        })
     smoke = run_conversation_smoke(engine, fixtures)
     round72_baseline = measure_eve_specific_round72_baseline(engine)
     return {

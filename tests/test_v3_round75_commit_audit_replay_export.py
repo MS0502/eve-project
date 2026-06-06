@@ -30,19 +30,19 @@ def test_round75_replay_export_consolidates_round73_74_evidence() -> None:
     assert report["source_delta_report_version"] == "v3_round74_explicit_commit_drift_telemetry_delta"
     assert report["source_commit_smoke_version"] == "v3_round73_explicit_eve_specific_commit_smoke"
     assert report["target_word"] == "민석"
-    assert report["commit_created_target"] is True
-    assert report["wrapper_vector_found_after_commit"] is True
-    assert report["store_delta"] == 1
+    assert report["commit_created_target"] is False
+    assert report["wrapper_vector_found_after_commit"] is False
+    assert report["store_delta"] == 0
     assert report["audit_record_count"] >= 2
     assert report["audit_event_type_counts"]["audit"] >= 1
     assert report["audit_event_type_counts"]["commit"] >= 1
 
     verification = report["replay_verification"]
     assert verification["has_audit_and_commit_records"] is True
-    assert verification["target_created"] is True
-    assert verification["target_lookup_shifted_to_eve_specific"] is True
+    assert verification["target_created"] is False
+    assert verification["target_lookup_shifted_to_eve_specific"] is False
     assert verification["pre_commit_lookup_not_eve_specific"] is True
-    assert verification["store_delta_is_one"] is True
+    assert verification["store_delta_is_one"] is False
     assert verification["audit_record_delta_at_least_two"] is True
 
 
@@ -85,7 +85,7 @@ def test_round75_build_replay_from_existing_delta_does_not_rerun_commit() -> Non
     replay = build_round75_commit_audit_replay_export(delta, audit_records)
 
     assert replay["replay_export_version"] == "v3_round75_commit_audit_replay_export"
-    assert replay["store_delta"] == 1
+    assert replay["store_delta"] == 0
     assert len(engine.eve_self_learning.commit_audit_records()) == audit_count_before
     assert engine.eve_specific_vector_store.stats() == store_before
     assert engine.self_embedding.telemetry() == telemetry_before
