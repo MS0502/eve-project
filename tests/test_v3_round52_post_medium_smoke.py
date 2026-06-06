@@ -33,28 +33,40 @@ def test_round52_post_medium_smoke_executes_all_fixtures():
     assert result["read_only"] is True
 
 
-def test_round52_post_medium_primary_hit_rate_higher_than_post_bridge():
+def test_round52_post_medium_primary_hit_rate_reports_no_load_default():
     _, result, _ = _post_medium_smoke()
     comparison = compare_three_baselines(None, None, result)
     assert comparison["analysis_version"] == ROUND52_ANALYSIS_VERSION
     assert comparison["analysis_round"] == ROUND52_ANALYSIS_ROUND
     assert comparison["primary_hit_rate_trajectory"]["post_bridge_small_5k"] == 0.25
-    assert comparison["primary_hit_rate_trajectory"]["post_medium_swap_30k"] > 0.25
+    # Current default runtime is intentionally no-load unless an operator
+    # explicitly authorizes medium30k loading, so artifact-free smoke must not
+    # claim a primary-hit improvement.
+    assert result["wrapper_telemetry"]["primary_loaded"] is False
+    assert comparison["primary_hit_rate_trajectory"]["post_medium_swap_30k"] == 0.0
 
 
-def test_round52_post_medium_fallback_rate_lower():
+def test_round52_post_medium_fallback_rate_reports_no_load_default():
     _, result, _ = _post_medium_smoke()
     comparison = compare_three_baselines(None, None, result)
     assert comparison["fallback_rate_trajectory"]["post_bridge_small_5k"] == 0.75
-    assert comparison["fallback_rate_trajectory"]["post_medium_swap_30k"] < 0.75
+    assert result["wrapper_telemetry"]["primary_loaded"] is False
+    assert comparison["fallback_rate_trajectory"]["post_medium_swap_30k"] == 1.0
 
 
-def test_round52_general_korean_oov_largely_resolved():
+def test_round52_general_korean_oov_remains_honest_when_primary_no_load():
     _, result, _ = _post_medium_smoke()
     comparison = compare_three_baselines(None, None, result)
-    resolved = set(comparison["oov_pattern_change"]["actual_resolved_in_smoke"])
-    assert {"어때", "그래", "뭐야", "좋아해", "군대", "코딩"}.issubset(resolved)
-    assert comparison["oov_pattern_change"]["actual_general_korean_still_oov_in_smoke"] == []
+    assert result["wrapper_telemetry"]["primary_loaded"] is False
+    assert comparison["oov_pattern_change"]["actual_resolved_in_smoke"] == []
+    assert set(comparison["oov_pattern_change"]["actual_general_korean_still_oov_in_smoke"]) == {
+        "어때",
+        "그래",
+        "뭐야",
+        "좋아해",
+        "군대",
+        "코딩",
+    }
 
 
 def test_round52_eve_specific_still_in_oov():
@@ -73,14 +85,14 @@ def test_round52_three_baseline_comparison_data():
     assert comparison["read_only"] is True
 
 
-def test_round52_round49_projection_accuracy_validated():
+def test_round52_round49_projection_accuracy_records_no_load_low_unexpected():
     _, result, _ = _post_medium_smoke()
     projection = project_medium_30k_impact({"primary_hit_rate": 0.25, "fallback_rate": 0.75}, ["어때", "그래", "EVE"])
     validation = validate_round49_projection_accuracy(projection, result)
     assert validation["analysis_version"] == ROUND52_ANALYSIS_VERSION
     assert validation["projected_range"] == [0.5, 0.65]
-    assert validation["actual_primary_hit_rate"] > 0.5
-    assert validation["projection_accuracy"] in {"verified", "high_unexpected"}
+    assert validation["actual_primary_hit_rate"] == 0.0
+    assert validation["projection_accuracy"] == "low_unexpected"
     assert validation["interpretation_data_dict"] == "manual_decision"
 
 
