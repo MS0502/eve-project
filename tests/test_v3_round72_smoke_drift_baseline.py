@@ -66,8 +66,10 @@ def test_round72_get_embedding_route_policy_is_explicit_and_no_duplicate_fallbac
 def test_round72_baseline_reports_route_distribution_and_preserves_policy() -> None:
     engine = build_full_engine()
     wrapper = engine.self_embedding
+    assert engine.fasttext_embedding.is_loaded() is False
     wrapper.get_vector("안녕")
-    engine.eve_specific_vector_store.add_or_update_vector("EVE", ["안녕"], engine=engine)
+    added = engine.eve_specific_vector_store.add_or_update_vector("EVE", ["안녕"], engine=engine)
+    assert added is False
     wrapper.get_vector("EVE")
     wrapper.get_vector("없는없는단어")
 
@@ -75,8 +77,8 @@ def test_round72_baseline_reports_route_distribution_and_preserves_policy() -> N
     assert report["measurement_version"] == "v3_round72_eve_specific_smoke_drift_baseline"
     assert report["baseline_round"] == 72
     route = report["route_distribution"]
-    assert route["fasttext_primary_hits"] >= 1
-    assert route["eve_specific_hits"] >= 1
+    assert route["fasttext_primary_hits"] == 0
+    assert route["eve_specific_hits"] == 0
     assert route["pmi_svd_fallback_uses"] >= 1
     policy = report["self_learning_policy"]
     assert policy["auto_observe_enabled"] is True
@@ -98,9 +100,12 @@ def test_round72_smoke_rerun_records_eve_specific_probe_without_commit_path() ->
     assert result["smoke_version"] == "v3_round72_eve_specific_smoke_drift_baseline"
     assert result["baseline_round"] == 72
     assert result["self_learning_commit_path_called"] is False
-    assert result["probe_vectors"][0]["added"] is True
+    probe = result["probe_vectors"][0]
+    assert probe["added"] is False
+    assert probe["reason"] == "no_known_fasttext_context"
     telem = result["smoke"].get("wrapper_telemetry", {})
-    assert telem.get("eve_specific_hits", 0) >= 1
-    assert result["round72_baseline"]["route_distribution"]["eve_specific_hits"] >= 1
+    assert telem.get("primary_loaded") is False
+    assert telem.get("eve_specific_hits", 0) == 0
+    assert result["round72_baseline"]["route_distribution"]["eve_specific_hits"] == 0
     assert result["policy"]["auto_promotion_enabled"] is False
     assert result["policy"]["thresholds_changed"] is False

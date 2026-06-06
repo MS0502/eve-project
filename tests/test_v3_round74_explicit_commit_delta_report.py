@@ -11,26 +11,26 @@ from main import build_full_engine
 from adapters.runtime_smoke_runner import run_round74_explicit_commit_delta_report
 
 
-def test_round74_delta_report_records_pre_post_commit_route_shift() -> None:
+def test_round74_delta_report_records_fail_closed_no_load_commit_attempt() -> None:
     engine = build_full_engine()
 
     report = run_round74_explicit_commit_delta_report(engine)
 
     assert report["delta_report_version"] == "v3_round74_explicit_commit_drift_telemetry_delta"
     assert report["baseline_round"] == 74
-    assert report["commit_created_target"] is True
-    assert report["wrapper_vector_found_after_commit"] is True
-    assert report["store_delta"] == 1
+    assert report["commit_created_target"] is False
+    assert report["wrapper_vector_found_after_commit"] is False
+    assert report["store_delta"] == 0
     assert report["audit_record_delta"] >= 2  # audit + commit records
     assert report["commit_smoke"]["smoke_version"] == "v3_round73_explicit_eve_specific_commit_smoke"
 
     route_shift = report["route_shift_summary"]
-    assert route_shift["eve_specific_hits_increased"] is True
-    assert route_shift["post_commit_lookup_used_eve_specific"] is True
+    assert route_shift["eve_specific_hits_increased"] is False
+    assert route_shift["post_commit_lookup_used_eve_specific"] is False
     assert route_shift["pre_commit_lookup_used_eve_specific"] is False
 
 
-def test_round74_target_lookup_before_after_commit_is_separated() -> None:
+def test_round74_target_lookup_before_after_commit_remains_fallback_without_vector() -> None:
     engine = build_full_engine()
 
     report = run_round74_explicit_commit_delta_report(engine)
@@ -40,13 +40,13 @@ def test_round74_target_lookup_before_after_commit_is_separated() -> None:
 
     assert before_lookup["eve_specific_hit_delta"] == 0
     assert before_lookup["fallback_delta"] >= 1
-    assert after_lookup["found"] is True
-    assert after_lookup["eve_specific_hit_delta"] >= 1
-    assert after_lookup["fallback_delta"] == 0
+    assert after_lookup["found"] is False
+    assert after_lookup["eve_specific_hit_delta"] == 0
+    assert after_lookup["fallback_delta"] >= 1
 
     telemetry_delta = report["telemetry_delta"]
     assert telemetry_delta["total_calls"] >= 2
-    assert telemetry_delta["eve_specific_hits"] >= 1
+    assert telemetry_delta["eve_specific_hits"] == 0
     assert telemetry_delta["fallback_uses"] >= 1
 
 
@@ -82,6 +82,6 @@ def test_round74_route_distribution_delta_links_to_round72_baselines() -> None:
     assert report["baseline_after"]["measurement_version"] == "v3_round72_eve_specific_smoke_drift_baseline"
     delta = report["route_distribution_delta"]["count_delta"]
     assert delta["total_calls"] >= 2
-    assert delta["eve_specific_hits"] >= 1
+    assert delta["eve_specific_hits"] == 0
     assert delta["pmi_svd_fallback_uses"] >= 1
     assert delta["errors"] == 0

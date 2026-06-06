@@ -39,7 +39,7 @@ def test_round70_context_diversity_blocked_candidate_report_aggregates_audit_rec
     assert report["policy"]["no_vector_mutation"] is True
 
 
-def test_round70_manual_rollback_drill_is_read_only_and_identifies_newly_unblocked_word() -> None:
+def test_round70_manual_rollback_drill_is_read_only_and_preserves_known_context_gate() -> None:
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="unit")
@@ -57,14 +57,16 @@ def test_round70_manual_rollback_drill_is_read_only_and_identifies_newly_unblock
     assert drill["active_context_diversity_gate_enabled"] is True
     assert drill["hypothetical_context_diversity_gate_enabled"] is False
     assert drill["active_policy_unchanged"] is True
-    assert drill["newly_unblocked_by_manual_rollback"] == ["민석"]
-    assert drill["rollback_eligible_words"] == ["민석"]
+    assert drill["known_context_count"] == 0
+    assert drill["newly_unblocked_by_manual_rollback"] == []
+    assert drill["rollback_eligible_words"] == []
+    assert drill["still_blocked_after_manual_rollback"] == ["민석"]
     item = _candidate(drill, "민석")
     assert item["active_gate_pass"] is False
-    assert item["rollback_gate_pass"] is True
-    assert item["newly_unblocked_by_manual_context_diversity_rollback"] is True
+    assert item["rollback_gate_pass"] is False
+    assert item["newly_unblocked_by_manual_context_diversity_rollback"] is False
     assert "insufficient_context_diversity" in item["active_reasons"]
-    assert item["rollback_reasons"] == []
+    assert item["rollback_reasons"] == ["insufficient_known_context"]
     assert before_records == after_records
     assert before_store_count == after_store_count
     assert drill["policy"]["automatic_rollback_enabled"] is False

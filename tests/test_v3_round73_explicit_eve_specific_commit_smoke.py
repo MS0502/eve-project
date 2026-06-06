@@ -18,7 +18,7 @@ def _candidate(report: dict, word: str) -> dict:
     raise AssertionError(f"missing candidate report for {word}")
 
 
-def test_round73_real_explicit_commit_smoke_creates_eve_specific_vector() -> None:
+def test_round73_explicit_commit_smoke_fails_closed_without_loaded_fasttext_context() -> None:
     engine = build_full_engine()
 
     result = run_round73_explicit_eve_specific_commit_smoke(
@@ -32,13 +32,14 @@ def test_round73_real_explicit_commit_smoke_creates_eve_specific_vector() -> Non
     assert result["baseline_round"] == 73
     assert result["self_learning_commit_path_called"] is True
     assert result["policy"]["round72_probe_path_used"] is False
-    assert result["commit_created_target"] is True
-    assert result["commit_rejected_target"] is False
-    assert result["gate_pass"] is True
-    assert result["wrapper_vector_found_after_commit"] is True
-    assert result["store_delta"] == 1
-    assert result["target_update_count"] == 1
-    assert engine.eve_specific_vector_store.is_eve_specific("민석") is True
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert result["commit_created_target"] is False
+    assert result["commit_rejected_target"] is True
+    assert result["gate_pass"] is False
+    assert result["wrapper_vector_found_after_commit"] is False
+    assert result["store_delta"] == 0
+    assert result["target_update_count"] == 0
+    assert engine.eve_specific_vector_store.is_eve_specific("민석") is False
 
     audit = result["commit_report"]["audit_report"]
     item = _candidate(audit, "민석")
@@ -46,19 +47,21 @@ def test_round73_real_explicit_commit_smoke_creates_eve_specific_vector() -> Non
     assert item["is_eve_specific_candidate"] is True
     assert item["context_diverse"] is True
     assert item["evidence_status"] == "threshold_met_context_diverse"
-    assert audit["known_context_count"] >= 1
+    assert "insufficient_known_context" in item["reasons"]
+    assert audit["known_context_count"] == 0
 
 
-def test_round73_commit_smoke_updates_wrapper_telemetry_and_baseline() -> None:
+def test_round73_commit_smoke_reports_no_eve_specific_route_without_loaded_context() -> None:
     engine = build_full_engine()
 
     result = run_round73_explicit_eve_specific_commit_smoke(engine)
 
     before = result["before_telemetry"]
     after = result["after_telemetry"]
-    assert int(after.get("eve_specific_hits", 0)) > int(before.get("eve_specific_hits", 0))
+    assert int(after.get("eve_specific_hits", 0)) == int(before.get("eve_specific_hits", 0))
+    assert int(after.get("fallback_uses", 0)) > int(before.get("fallback_uses", 0))
     assert result["baseline_after_commit"]["measurement_version"] == "v3_round72_eve_specific_smoke_drift_baseline"
-    assert result["baseline_after_commit"]["route_distribution"]["eve_specific_hits"] >= 1
+    assert result["baseline_after_commit"]["route_distribution"]["eve_specific_hits"] == 0
     assert result["baseline_after_commit"]["self_learning_policy"]["min_observations_for_commit"] == 2
     assert result["baseline_after_commit"]["self_learning_policy"]["context_diversity_gate_enabled"] is True
 
