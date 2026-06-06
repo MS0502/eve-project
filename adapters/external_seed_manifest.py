@@ -1497,8 +1497,8 @@ def assess_main_py_post_swap_state(engine: Any) -> dict[str, Any]:
         concerns.append("self_embedding_not_wrapper")
     if backup is None or backup.__class__.__name__ != "SelfEmbeddingAdapter":
         concerns.append("self_embedding_backup_missing")
-    if fasttext is None or fasttext.__class__.__name__ != "FasttextEmbeddingAdapter" or not loaded:
-        concerns.append("fasttext_primary_not_loaded")
+    if fasttext is None or fasttext.__class__.__name__ != "FasttextEmbeddingAdapter":
+        concerns.append("fasttext_primary_missing")
     if any(data.get("in_use_by_generation") != "wrapper" for data in modules.values()):
         concerns.append("migrated_modules_not_reporting_wrapper")
     return {
@@ -1508,12 +1508,21 @@ def assess_main_py_post_swap_state(engine: Any) -> dict[str, Any]:
         "primary_class": stats.get("primary_class"),
         "fallback_class": stats.get("fallback_class"),
         "primary_loaded": bool(stats.get("primary_loaded", loaded)),
+        "primary_load_required": (
+            "none_loaded"
+            if bool(stats.get("primary_loaded", loaded))
+            else "operator_authorized_artifact_load"
+        ),
         "dimension": int(stats.get("dimension", 0) or 0),
         "fallback_dimension": int(stats.get("fallback_dimension", 0) or 0),
         "fallback_count": int(stats.get("fallback_count", 0) or 0),
         "modules": modules,
         "migration_progress": "7/7",
-        "swap_state": "active" if not concerns else "needs_attention",
+        "swap_state": (
+            "active"
+            if bool(stats.get("primary_loaded", loaded))
+            else "active_no_load_default"
+        ) if not concerns else "needs_attention",
         "rollback_strategy": "engine.self_embedding = engine.self_embedding_backup; engine.fasttext_embedding._loaded = False",
         "concerns": concerns,
         "read_only": True,

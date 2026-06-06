@@ -8,6 +8,37 @@ from adapters.external_seed_manifest import assess_main_py_post_swap_state
 from adapters.self_embedding_adapter import SelfEmbeddingAdapter
 
 
+class LoadedFasttextFixture:
+    subset_name = "loaded.fasttext.fixture"
+    dimension = 300
+
+    def __init__(self):
+        self._loaded = True
+        self._vocab = ["known"]
+        self._vector = [1.0] + [0.0] * 299
+
+    def is_loaded(self):
+        return self._loaded
+
+    def get_dimension(self):
+        return self.dimension
+
+    def get_vector(self, word):
+        return list(self._vector) if word == "known" else None
+
+    def get_embedding(self, word):
+        return self.get_vector(word)
+
+    def stats(self):
+        return {"loaded": self._loaded, "dimension": self.dimension, "vocab_size": len(self._vocab)}
+
+
+def _attach_loaded_fasttext_fixture(engine):
+    engine.fasttext_embedding = LoadedFasttextFixture()
+    engine.self_embedding.primary = engine.fasttext_embedding
+    return engine.fasttext_embedding
+
+
 def test_round41_engine_self_embedding_is_wrapper():
     engine = build_full_engine()
     assert isinstance(engine.self_embedding, EmbeddingWrapper)
@@ -15,15 +46,17 @@ def test_round41_engine_self_embedding_is_wrapper():
     assert engine.self_embedding_backup.__class__.__name__ == "SelfEmbeddingAdapter"
 
 
-def test_round41_fasttext_primary_loaded_by_default_for_final_swap():
+def test_round41_fasttext_primary_is_no_load_until_operator_artifact_authorization():
     engine = build_full_engine()
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.self_embedding.stats()["primary_loaded"] is True
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.self_embedding.stats()["primary_loaded"] is False
+    assert engine.medium30k_runtime_load_report["status"] == "default_no_load_explicit_authorization_required"
 
 
-def test_round41_wrapper_primary_used_for_known_word():
+def test_round41_wrapper_primary_used_for_known_word_when_explicitly_loaded():
     engine = build_full_engine()
-    word = engine.fasttext_embedding._vocab[0]
+    loaded = _attach_loaded_fasttext_fixture(engine)
+    word = loaded._vocab[0]
     vec = engine.self_embedding.get_vector(word)
     assert vec is not None
     assert len(vec) == 300
@@ -123,13 +156,14 @@ def test_round41_runtime_unload_falls_back_safely():
     assert engine.self_embedding.stats()["fallback_count"] >= 1
 
 
-def test_round41_post_swap_assessment_ready():
+def test_round41_post_swap_assessment_ready_without_default_vector_load():
     engine = build_full_engine()
     report = assess_main_py_post_swap_state(engine)
-    assert report["swap_state"] == "active"
+    assert report["swap_state"] == "active_no_load_default"
     assert report["migration_progress"] == "7/7"
     assert report["self_embedding_active"] == "EmbeddingWrapper"
-    assert report["primary_loaded"] is True
+    assert report["primary_loaded"] is False
+    assert report["primary_load_required"] == "operator_authorized_artifact_load"
     assert report["concerns"] == []
 
 
@@ -141,4 +175,5 @@ def test_round41_main_py_contains_wrapper_swap_and_backup():
     text = Path("main.py").read_text(encoding="utf-8")
     assert "engine.self_embedding_backup = engine.self_embedding" in text
     assert "EmbeddingWrapper" in text
-    assert "engine.fasttext_embedding.load()" in text
+    assert "apply_round194_guarded_medium30k_runtime_load" in text
+    assert "operator_medium30k_load_authorized" in text
