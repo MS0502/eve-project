@@ -11,6 +11,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Mapping
 
+from adapters.affect_event_to_axis_proposal_map import event_to_axis_proposal_map
 from adapters.emotion_state_transition_contract import (
     EMPATHY_CONTRACT,
     MALICIOUS_FEEDBACK_QUARANTINE_RULE,
@@ -69,6 +70,26 @@ def _effect_requests_application(effect: Any) -> bool:
     return any(item.get(flag) is True for flag in forbidden_flags)
 
 
+def _transition_category_map() -> dict[str, dict[str, Any]]:
+    """Return validator-known event categories without enabling runtime use."""
+
+    categories = social_feedback_category_map()
+    for event, row in event_to_axis_proposal_map().items():
+        categories.setdefault(
+            event,
+            {
+                "category": event,
+                "possible_emotional_impact": tuple(row.get("allowed_axis_deltas", ())),
+                "quarantine_required": bool(row.get("requires_quarantine", True)),
+                "core_identity_update_forbidden": True,
+                "long_term_memory_update_requires_appraisal": bool(row.get("requires_appraisal", True)),
+                "future_behavior_may_be_influenced": False,
+                "recovery_loop_may_be_required": event in {"malicious_comment", "rejection", "social_threat", "identity_attack", "imagination_negative_spiral"},
+            },
+        )
+    return categories
+
+
 def validator_contract_summary() -> dict[str, Any]:
     """Return a detached read-only summary of the validator contract."""
 
@@ -77,6 +98,7 @@ def validator_contract_summary() -> dict[str, Any]:
         "based_on_contract_version": ROUND681_700_VERSION,
         "feature_track": FEATURE_TRACK,
         "accepted_event_categories": sorted(social_feedback_category_map()),
+        "additional_affect_proposal_event_categories_supported_for_read_only_builder_compatibility": sorted(set(_transition_category_map()) - set(social_feedback_category_map())),
         "high_risk_social_feedback_categories": list(HIGH_RISK_SOCIAL_FEEDBACK_CATEGORIES),
         "expected_empathy_mode": EXPECTED_EMPATHY_MODE,
         "unknown_event_category_policy": "fail_closed",
@@ -100,7 +122,7 @@ def validate_emotion_transition_payload(payload: Mapping[str, Any] | None) -> di
     """
 
     candidate = deepcopy(dict(payload or {}))
-    category_map = social_feedback_category_map()
+    category_map = _transition_category_map()
     event_category = candidate.get("event_category")
     category_row = category_map.get(event_category) if isinstance(event_category, str) else None
     is_known_category = category_row is not None
