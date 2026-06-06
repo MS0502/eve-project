@@ -180,14 +180,17 @@ def test_round40_all_trace_modules_have_parallel_observation_option_unloaded():
 
     for name, getter in TRACE_MODULES.items():
         stats = getter(engine).stats()
-        assert stats["fasttext_parallel_observation"] == "fasttext", name
+        assert stats["fasttext_parallel_observation"] is None, name
         assert stats["fasttext_trace_size"] == 0, name
-    assert engine.fasttext_embedding.is_loaded() is True
+        assert stats["in_use_by_generation"] == "wrapper", name
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.self_embedding.stats()["primary_loaded"] is False
 
 
 def test_round40_trace_modules_use_data_dict_pattern_when_loaded():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
+    engine.self_embedding.primary = engine.fasttext_embedding
 
     _exercise_trace_modules(engine)
 
@@ -210,7 +213,8 @@ def test_round40_all_trace_modules_have_trace_cap_1000():
 
 def test_round40_fasttext_load_activates_all_trace_modules():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
+    engine.self_embedding.primary = engine.fasttext_embedding
 
     _exercise_trace_modules(engine)
 
@@ -223,7 +227,8 @@ def test_round40_fasttext_load_activates_all_trace_modules():
 
 def test_round40_simultaneous_traces_accumulate_independently():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
+    engine.self_embedding.primary = engine.fasttext_embedding
 
     _exercise_trace_modules(engine)
     before = {name: _trace_size(getter(engine)) for name, getter in TRACE_MODULES.items()}
@@ -247,7 +252,8 @@ def test_round40_simultaneous_traces_accumulate_independently():
 def test_round40_decisions_unchanged_across_all_trace_modules():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    loaded.fasttext_embedding = OOVFasttextAdapter(loaded=True)
+    loaded.self_embedding.primary = loaded.fasttext_embedding
 
     unloaded_results = _exercise_trace_modules(unloaded)
     loaded_results = _exercise_trace_modules(loaded)
@@ -282,6 +288,7 @@ def test_round40_fasttext_load_failure_does_not_break_modules():
 def test_round40_fasttext_lookup_failure_isolated_from_decisions():
     engine = build_full_engine()
     engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
+    engine.self_embedding.primary = engine.fasttext_embedding
 
     results = _exercise_trace_modules(engine)
 
@@ -325,7 +332,7 @@ def test_round40_fasttext_corruption_does_not_propagate_to_self_embedding_path()
 
 def test_round40_fasttext_unload_during_runtime_gracefully_stops_parallel_observation():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
     _exercise_trace_modules(engine)
     before = {name: _trace_size(getter(engine)) for name, getter in TRACE_MODULES.items()}
 
@@ -340,7 +347,7 @@ def test_round40_fasttext_unload_during_runtime_gracefully_stops_parallel_observ
 
 def test_round40_three_systems_coexist_safely_with_agp_veto():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
     engine.agp_adapter.set_mode(AGP_MODE_VETO)
     engine.compositor.agp_mode = AGP_MODE_VETO
 
@@ -355,7 +362,7 @@ def test_round40_three_systems_coexist_safely_with_agp_veto():
 
 def test_round40_three_systems_traces_are_separated():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
     _sample_compositor(engine)
     _sample_attention(engine)
 
@@ -370,7 +377,8 @@ def test_round40_three_systems_traces_are_separated():
 def test_round40_three_systems_decisions_independent():
     unloaded = build_full_engine()
     loaded_veto = build_full_engine()
-    loaded_veto.fasttext_embedding.load()
+    loaded_veto.fasttext_embedding = OOVFasttextAdapter(loaded=True)
+    loaded_veto.self_embedding.primary = loaded_veto.fasttext_embedding
     loaded_veto.agp_adapter.set_mode(AGP_MODE_VETO)
     loaded_veto.compositor.agp_mode = AGP_MODE_VETO
 
@@ -427,7 +435,7 @@ def test_round40_engine_self_embedding_still_pmi_svd_and_main_py_unchanged():
 
 def test_round40_audit_is_read_only_for_existing_traces():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    engine.fasttext_embedding = OOVFasttextAdapter(loaded=True)
     _exercise_trace_modules(engine)
     before = {
         name: (list(getattr(getter(engine), "fasttext_trace")), _observation_count(getter(engine)))
@@ -447,10 +455,11 @@ def test_round40_audit_is_read_only_for_existing_traces():
 def test_round40_has_no_final_swap_or_default_fasttext_load():
     engine = build_full_engine()
 
-    assert engine.fasttext_embedding.is_loaded() is True
+    assert engine.fasttext_embedding.is_loaded() is False
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300
     assert engine.self_embedding is not engine.fasttext_embedding
+    assert engine.self_embedding.stats()["primary_loaded"] is False
 
 
 def test_round40_code_change_boundary_is_audit_only():
