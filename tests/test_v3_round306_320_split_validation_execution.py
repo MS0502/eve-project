@@ -197,6 +197,8 @@ def test_round306_320_cli_artifact_dependent_missing_artifacts_fails_closed(tmp_
             "--operator-authorized",
             "--authorization-token",
             round306_320.ROUND261_275_AUTHORIZATION_TOKEN,
+            "--repo-root",
+            str(tmp_path),
         ],
         cwd=Path(__file__).resolve().parents[1],
         text=True,
@@ -211,6 +213,7 @@ def test_round306_320_cli_artifact_dependent_missing_artifacts_fails_closed(tmp_
     assert payload["fail_closed"] is True
     assert payload["artifact_dependent_readiness"]["ready"] is False
     assert payload["runtime_mapping_enabled_default"] is False
+    assert payload["artifact_guard_repo_root"] == str(tmp_path.resolve())
 
 
 def test_round322_325_artifact_dependent_diagnostics_expose_missing_paths_and_git_status(tmp_path: Path) -> None:
