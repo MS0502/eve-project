@@ -11,6 +11,7 @@ from pathlib import Path
 from adapters.agp_adapter import AGP_MODE_OBSERVATION, AGP_MODE_VETO, AGP_FALLBACK_SURFACE_POOL
 from adapters.compositor_adapter import CompositionResult
 from main import build_full_engine
+from tests.fasttext_observation_stub import install_explicit_loaded_fasttext_stub
 
 SELF_EMBEDDING = Path("adapters/self_embedding_adapter.py")
 CONCEPT_MEMORY = Path("adapters/concept_memory_adapter.py")
@@ -36,10 +37,10 @@ def test_compositor_default_uses_self_embedding_and_no_fasttext_trace():
     output = _phrase(engine)
 
     assert output
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert len(engine.compositor.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert len(engine.compositor.fasttext_trace) == 0
     assert engine.compositor.stats()["in_use_by_generation"] == "wrapper"
-    assert engine.compositor.stats()["fasttext_parallel_observation"] == "fasttext"
+    assert engine.compositor.stats()["fasttext_parallel_observation"] is None
 
 
 def test_compositor_does_not_auto_load_fasttext():
@@ -48,14 +49,15 @@ def test_compositor_does_not_auto_load_fasttext():
     for _ in range(3):
         _phrase(engine)
 
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.fasttext_embedding.stats()["vocab_size"] == 30000
-    assert len(engine.compositor.fasttext_trace) >= 1
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
+    assert len(engine.compositor.fasttext_trace) == 0
 
 
 def test_compositor_parallel_trace_when_fasttext_loaded():
     engine = build_full_engine()
-    assert engine.fasttext_embedding.load() is True
+    install_explicit_loaded_fasttext_stub(engine)
+    assert engine.fasttext_embedding.is_loaded() is True
 
     output = _phrase(engine)
 
@@ -68,13 +70,13 @@ def test_compositor_parallel_trace_when_fasttext_loaded():
     assert "self_embedding_result" in trace
     assert "fasttext_result" in trace
     assert trace["fasttext_result"]["loaded"] is True
-    assert trace["fasttext_result"]["subset_name"] == "cc.ko.300.subset.medium.30k"
+    assert trace["fasttext_result"]["subset_name"] == "artifact_free_explicit_loaded_stub"
 
 
 def test_compositor_output_unaffected_by_fasttext_observation():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_output = _phrase(unloaded)
     loaded_output = _phrase(loaded)
@@ -86,7 +88,7 @@ def test_compositor_output_unaffected_by_fasttext_observation():
 def test_compositor_agp_path_unaffected_by_fasttext():
     unloaded = build_full_engine()
     loaded = build_full_engine()
-    loaded.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(loaded)
 
     unloaded_output = _phrase(unloaded)
     loaded_output = _phrase(loaded)
@@ -96,13 +98,13 @@ def test_compositor_agp_path_unaffected_by_fasttext():
     assert len(loaded.compositor.agp_trace) == 1
     assert unloaded.compositor.agp_trace[-1]["mode"] == AGP_MODE_OBSERVATION
     assert loaded.compositor.agp_trace[-1]["mode"] == AGP_MODE_OBSERVATION
-    assert len(unloaded.compositor.fasttext_trace) >= 1
+    assert len(unloaded.compositor.fasttext_trace) == 0
     assert len(loaded.compositor.fasttext_trace) == 1
 
 
 def test_compositor_agp_veto_and_fasttext_observation_coexist_safely():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     engine.agp_adapter.set_mode(AGP_MODE_VETO)
     engine.compositor.agp_mode = AGP_MODE_VETO
 
@@ -121,7 +123,7 @@ def test_compositor_agp_veto_and_fasttext_observation_coexist_safely():
 
 def test_compositor_traces_are_separate_data_structures():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     _phrase(engine)
 
@@ -134,7 +136,7 @@ def test_compositor_traces_are_separate_data_structures():
 
 def test_compositor_fasttext_trace_cap():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     engine.compositor.fasttext_trace_cap = 3
 
     for _ in range(5):
@@ -152,14 +154,14 @@ def test_state_debug_compositor_section_unloaded():
 
     assert section["module"] == "compositor_adapter"
     assert section["in_use_by_generation"] == "wrapper"
-    assert section["parallel_observation"] == "fasttext"
+    assert section["parallel_observation"] is None
     assert section["agp_mode"] == AGP_MODE_OBSERVATION
     assert section["migration_stage"] == "compositor_parallel_observation_only"
 
 
 def test_state_debug_compositor_section_loaded_after_parallel_trace():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _phrase(engine)
 
     section = engine.state_debug.snapshot_state()["compositor"]
@@ -172,7 +174,7 @@ def test_state_debug_compositor_section_loaded_after_parallel_trace():
 
 def test_state_debug_is_read_only_for_compositor_migration():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
     _phrase(engine)
     before_fasttext_trace = list(engine.compositor.fasttext_trace)
     before_agp_trace = list(engine.compositor.agp_trace)
@@ -191,7 +193,7 @@ def test_state_debug_is_read_only_for_compositor_migration():
 
 def test_embedding_generation_path_still_uses_pmi_svd_not_fasttext():
     engine = build_full_engine()
-    engine.fasttext_embedding.load()
+    install_explicit_loaded_fasttext_stub(engine)
 
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300

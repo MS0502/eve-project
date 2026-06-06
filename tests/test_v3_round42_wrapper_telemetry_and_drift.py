@@ -7,8 +7,10 @@ from adapters.external_seed_manifest import (
 )
 
 
-def _known_word(engine):
-    return engine.fasttext_embedding._vocab[0]
+def _fallback_only_word(engine):
+    word = "round42_fallback_known"
+    engine.self_embedding_backup.embeddings[word] = [1.0, 0.0]
+    return word
 
 
 def test_round42_wrapper_telemetry_returns_data_dict():
@@ -19,15 +21,17 @@ def test_round42_wrapper_telemetry_returns_data_dict():
     assert data["read_only"] is True
 
 
-def test_round42_wrapper_primary_hit_rate():
+def test_round42_wrapper_reports_no_primary_hits_when_fasttext_unloaded():
     engine = build_full_engine()
-    word = _known_word(engine)
+    word = _fallback_only_word(engine)
     engine.self_embedding.get_vector(word)
     data = engine.self_embedding.telemetry()
     assert data["total_calls"] == 1
-    assert data["primary_hits"] >= 1
-    assert data["primary_hit_rate"] > 0
-    assert data["fallback_rate"] == 0
+    assert data["primary_loaded"] is False
+    assert data["primary_hits"] == 0
+    assert data["primary_hit_rate"] == 0.0
+    assert data["fallback_uses"] >= 1
+    assert data["fallback_rate"] > 0.0
 
 
 def test_round42_wrapper_fallback_rate():
@@ -85,7 +89,7 @@ def test_round42_wrapper_oov_log_cap():
 
 def test_round42_wrapper_telemetry_is_read_only():
     engine = build_full_engine()
-    engine.self_embedding.get_vector(_known_word(engine))
+    engine.self_embedding.get_vector(_fallback_only_word(engine))
     wrapper = engine.self_embedding
     before = (
         wrapper._call_count,
@@ -118,11 +122,12 @@ def test_round42_drift_baseline_recorded_at_round42():
 
 def test_round42_drift_measurement_data_dict():
     engine = build_full_engine()
-    engine.self_embedding.get_vector(_known_word(engine))
+    engine.self_embedding.get_vector(_fallback_only_word(engine))
     report = measure_seed_drift_baseline(engine)
     assert isinstance(report, dict)
     assert isinstance(report["drift_indicators"], dict)
-    assert report["drift_indicators"]["primary_hit_rate"] > 0
+    assert report["drift_indicators"]["primary_hit_rate"] == 0.0
+    assert report["drift_indicators"]["fallback_rate"] > 0.0
     assert report["read_only"] is True
 
 
@@ -162,18 +167,19 @@ def test_round42_agp_wrapper_correlation_is_read_only():
 
 def test_round42_telemetry_does_not_change_decision():
     engine = build_full_engine()
-    word = _known_word(engine)
-    before = engine.self_embedding.get_vector(word).tolist()
+    word = _fallback_only_word(engine)
+    before = list(engine.self_embedding.get_vector(word))
     _ = engine.self_embedding.telemetry()
-    after = engine.self_embedding.get_vector(word).tolist()
+    after = list(engine.self_embedding.get_vector(word))
     assert before == after
 
 
 def test_round42_state_debug_exposes_wrapper_telemetry_and_seed_drift():
     engine = build_full_engine()
-    engine.self_embedding.get_vector(_known_word(engine))
+    engine.self_embedding.get_vector(_fallback_only_word(engine))
     state = engine.state_debug.snapshot_state()
-    assert state["wrapper_telemetry"]["primary_hit_rate"] > 0
+    assert state["wrapper_telemetry"]["primary_hit_rate"] == 0.0
+    assert state["wrapper_telemetry"]["fallback_rate"] > 0.0
     assert state["wrapper_telemetry"]["read_only"] is True
     assert state["seed_drift"]["baseline_round"] == 42
     assert state["seed_drift"]["status"] == "tracking_started"
