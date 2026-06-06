@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -52,11 +53,18 @@ def _manifest_and_subset_entry():
     return manifest, matches[0]
 
 
+def _assert_vector_artifact_absent_or_ignored_untracked(path: Path) -> None:
+    if not path.exists():
+        return
+    assert subprocess.run(["git", "check-ignore", "-q", str(path)], check=False).returncode == 0
+    assert subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0
+
+
 def test_small_subset_directory_and_metadata_files_exist_but_vectors_are_not_committed():
     assert SUBSET_DIR.is_dir()
     assert VOCAB.is_file()
     assert SUBSET_MANIFEST.is_file()
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
 
 
 def test_small_subset_manifest_entry_registered_and_valid():
@@ -82,10 +90,12 @@ def test_small_vectors_checksum_is_manifest_only_until_operator_artifact_is_pres
     audit = audit_subset_artifact(manifest, subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME)
 
     assert entry["vectors_checksum"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_VECTORS_CHECKSUM
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
     assert audit["vectors"]["shape"] is None
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
     assert audit["vectors"]["expected_shape"] == (5000, 300)
 
 
@@ -114,13 +124,15 @@ def test_small_parent_reference_and_state_ladder_unchanged():
     assert subset_state(manifest, FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME) == SUBSET_STATE_EXTRACTED
 
 
-def test_small_subset_audit_fails_closed_without_vectors_and_is_distinct_from_mini_fixture():
+def test_small_subset_audit_fails_closed_without_reading_vectors_and_is_distinct_from_mini_fixture():
     audit = audit_subset_artifact(subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME)
 
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
     assert audit["subset_name"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME
     assert audit["vocab"]["line_count"] == 5000
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
 
 
 def test_readiness_prefers_medium_metadata_but_requires_more_audit_without_vectors():
@@ -131,6 +143,8 @@ def test_readiness_prefers_medium_metadata_but_requires_more_audit_without_vecto
     assert readiness["available_subset"]["dimension"] == 300
     assert readiness["available_subset"]["vocab_size"] == 30000
     assert readiness["available_subset"]["audit_valid"] is False
+    assert readiness["available_subset"]["vector_contents_read"] is False
+    assert readiness["available_subset"]["runtime_loaded"] is False
     assert readiness["recommendation_data"]["automatic_application"] is False
     assert readiness["state_transition"] is False
 

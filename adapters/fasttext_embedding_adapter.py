@@ -145,6 +145,7 @@ class FasttextEmbeddingAdapter:
             manifest,
             subset_name=self.subset_name,
             subset_dir=self.subset_dir,
+            allow_vector_content_read=True,
         )
         if not audit.get("valid"):
             raise ValueError(f"subset_audit_failed:{audit.get('errors', [])}")

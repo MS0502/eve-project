@@ -1,5 +1,6 @@
-import json
 import hashlib
+import json
+import subprocess
 from pathlib import Path
 
 from main import build_full_engine
@@ -39,11 +40,18 @@ def _sha256(path: Path) -> str:
     return "SHA256:" + digest.hexdigest()
 
 
+def _assert_vector_artifact_absent_or_ignored_untracked(path: Path) -> None:
+    if not path.exists():
+        return
+    assert subprocess.run(["git", "check-ignore", "-q", str(path)], check=False).returncode == 0
+    assert subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0
+
+
 def test_round50_medium_subset_directory_and_metadata_files_exist_but_vectors_are_not_committed():
     assert SUBSET_DIR.is_dir()
     assert VOCAB.is_file()
     assert SUBSET_MANIFEST.is_file()
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
 
 
 def test_round50_medium_vocab_txt_has_30000_utf8_lines():
@@ -54,21 +62,23 @@ def test_round50_medium_vocab_txt_has_30000_utf8_lines():
     assert "코딩" in vocab
 
 
-def test_round50_medium_vectors_are_operator_local_and_missing_vectors_fail_closed():
+def test_round50_medium_vectors_are_operator_local_and_audit_fails_closed_without_reading_contents():
     audit = audit_subset_artifact(subset_name=FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME)
 
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
     assert audit["vectors"]["shape"] is None
     assert audit["vectors"]["expected_shape"] == (30000, 300)
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
 
 
 def test_round50_medium_checksums_match_metadata_without_committed_vectors():
     entry = fasttext_korean_subset_medium_30k_entry()
     assert _sha256(VOCAB) == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_VOCAB_CHECKSUM == entry["vocab_checksum"]
     assert entry["vectors_checksum"] == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_VECTORS_CHECKSUM
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
     assert _sha256(SUBSET_MANIFEST) == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_MANIFEST_CHECKSUM == entry["subset_manifest_checksum"]
     assert compute_seed_checksum(VOCAB) == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_VOCAB_CHECKSUM
 
@@ -102,10 +112,12 @@ def test_round50_medium_audit_reports_missing_vectors_without_runtime_use():
     manifest = load_manifest_file()
     audit = audit_subset_artifact(manifest, subset_name=FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME)
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
     assert audit["runtime_used"] is False
     assert audit["self_embedding_rewrite"] is False
     assert audit["vectors"]["shape"] is None
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
     assert audit["vocab"]["line_count"] == 30000
 
 
@@ -134,6 +146,8 @@ def test_round50_readiness_lists_medium_as_preferred_but_no_wrapper_swap():
     assert readiness["available_subset"]["name"] == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME
     assert readiness["available_subset"]["vocab_size"] == 30000
     assert readiness["available_subset"]["audit_valid"] is False
+    assert readiness["available_subset"]["vector_contents_read"] is False
+    assert readiness["available_subset"]["runtime_loaded"] is False
     assert any(item["name"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME for item in readiness["available_subsets"])
     assert any(item["name"] == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME for item in readiness["available_subsets"])
     assert readiness["recommendation_data"]["automatic_application"] is False

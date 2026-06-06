@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -58,13 +59,20 @@ def _manifest_and_subset_entry():
     return manifest, subsets[0]
 
 
+def _assert_vector_artifact_absent_or_ignored_untracked(path: Path) -> None:
+    if not path.exists():
+        return
+    assert subprocess.run(["git", "check-ignore", "-q", str(path)], check=False).returncode == 0
+    assert subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0
+
+
 def test_subset_checksums_still_match_manifest_metadata_without_committed_vectors():
     """Committed metadata must match; vectors checksum remains operator-local provenance."""
     manifest, entry = _manifest_and_subset_entry()
 
     assert _sha256(VOCAB) == entry["vocab_checksum"] == FASTTEXT_KOREAN_SUBSET_MINI_1K_VOCAB_CHECKSUM
     assert entry["vectors_checksum"] == FASTTEXT_KOREAN_SUBSET_MINI_1K_VECTORS_CHECKSUM
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
     assert _sha256(SUBSET_MANIFEST) == entry["subset_manifest_checksum"]
     assert validate_manifest(manifest)["valid"] is True
 
@@ -76,10 +84,12 @@ def test_subset_shape_vocab_and_missing_vector_invariants():
 
     assert len(vocab_lines) == 1000
     assert "\ufffd" not in "".join(vocab_lines)
-    assert not VECTORS.exists()
+    _assert_vector_artifact_absent_or_ignored_untracked(VECTORS)
     assert audit["vectors"]["shape"] is None
     assert audit["vectors"]["expected_shape"] == (1000, 300)
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
 
 
 def test_subset_manifest_required_fields_and_payload_integrity():
@@ -139,8 +149,10 @@ def test_runtime_not_using_subset_and_no_fasttext_import():
     audit = audit_subset_artifact()
 
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
     assert audit["runtime_used"] is False
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
     assert audit["self_embedding_rewrite"] is False
     assert ("fasttext" in sys.modules) == before_fasttext
     assert "vectors.npy" not in self_text
@@ -175,7 +187,9 @@ def test_subset_audit_is_read_only_for_manifest_and_engine():
     manifest_after = load_manifest_file(SEED_MANIFEST_PATH)
 
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
     assert readiness["self_embedding_rewrite"] is False
     assert manifest_after == manifest_before
     assert engine.agp_adapter.mode == agp_mode_before
@@ -200,6 +214,8 @@ def test_self_embedding_rewrite_readiness_assessment_returns_data_dict():
     assert any(item["name"] == FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME for item in readiness["available_subsets"])
     assert readiness["readiness"] == "needs_more_audit"
     assert readiness["available_subset"]["audit_valid"] is False
+    assert readiness["available_subset"]["vector_contents_read"] is False
+    assert readiness["available_subset"]["runtime_loaded"] is False
     assert readiness["recommendation_data"]["automatic_application"] is False
     assert readiness["state_transition"] is False
 

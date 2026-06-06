@@ -80,6 +80,7 @@ def build_seed_vector_artifact_readiness_gate(
     manifest_data: dict[str, Any] | None = None,
     subset_names: Iterable[str] | None = None,
     subset_dirs: dict[str, str | Path] | None = None,
+    allow_vector_content_read: bool | None = None,
 ) -> dict[str, Any]:
     """Return a read-only readiness gate for registered fastText subset files.
 
@@ -91,6 +92,7 @@ def build_seed_vector_artifact_readiness_gate(
     """
 
     manifest = deepcopy(manifest_data) if manifest_data is not None else load_manifest_file()
+    vector_read_allowed = bool(manifest_data is not None or subset_dirs) if allow_vector_content_read is None else bool(allow_vector_content_read)
     selected_names = list(subset_names or (FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME,))
     subset_results: list[dict[str, Any]] = []
     all_blockers: list[str] = []
@@ -99,7 +101,12 @@ def build_seed_vector_artifact_readiness_gate(
     for subset_name in selected_names:
         entry = _entry_for_subset(manifest, subset_name)
         subset_dir = _path_for_subset(subset_name, entry, subset_dirs)
-        audit = audit_subset_artifact(manifest, subset_name=subset_name, subset_dir=subset_dir)
+        audit = audit_subset_artifact(
+            manifest,
+            subset_name=subset_name,
+            subset_dir=subset_dir,
+            allow_vector_content_read=vector_read_allowed,
+        )
         classification, blockers = _classify_audit_errors(audit.get("errors", []))
         files = audit.get("file_checks", {}).get("files", {}) if isinstance(audit.get("file_checks"), dict) else {}
         subset_missing = [
@@ -122,6 +129,11 @@ def build_seed_vector_artifact_readiness_gate(
                 "vectors_file_present": bool(files.get("vectors", {}).get("exists")) if isinstance(files.get("vectors"), dict) else False,
                 "vocab_file_present": bool(files.get("vocab", {}).get("exists")) if isinstance(files.get("vocab"), dict) else False,
                 "subset_manifest_file_present": bool(files.get("subset_manifest", {}).get("exists")) if isinstance(files.get("subset_manifest"), dict) else False,
+                "artifact_present": bool(audit.get("artifact_present")),
+                "artifact_safe_to_reference": bool(audit.get("artifact_safe_to_reference")),
+                "artifact_safe_to_load": bool(audit.get("artifact_safe_to_load")),
+                "vector_contents_read": bool(audit.get("vector_contents_read")),
+                "runtime_loaded": bool(audit.get("runtime_loaded")),
                 "load_should_be_attempted": bool(audit.get("valid")),
             }
         )
@@ -135,6 +147,8 @@ def build_seed_vector_artifact_readiness_gate(
         "status": status,
         "ready": ready,
         "load_should_be_attempted": ready,
+        "vector_contents_read": any(item.get("vector_contents_read") for item in subset_results),
+        "runtime_loaded": any(item.get("runtime_loaded") for item in subset_results),
         "selected_subsets": subset_results,
         "readiness_blockers": sorted(set(all_blockers)),
         "missing_files": sorted(set(missing_files)),
