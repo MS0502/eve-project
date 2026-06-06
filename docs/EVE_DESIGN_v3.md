@@ -77,3 +77,53 @@ Round661-680 must not add, fabricate, download, stage, or commit vectors;
 `_operator_artifacts`; `vectors.npy`; `vocab.txt`; `subset_manifest.json`;
 `seeds/subsets`; zip files; or part files.  Default runtime remains no-load
 unless explicitly operator-authorized in a later, separate round.
+
+## Always-On Multi-Rhythm Neural Activation and Affect Governance
+
+Round761-780 defines EVE as an always-on multi-rhythm internal activation
+system.  EVE has persistent neural/concept activation rhythms, but always-on
+activation does **not** mean globally synchronized panic, global axis spiking, or
+one shared emotional clock.  Thought, imagination, listening, speaking, memory,
+affect, self-model, and hardware-governor rhythms must remain distinct systems
+with separate cycles, decay rates, refractory periods, evidence thresholds, and
+safety boundaries.
+
+Each rhythm is a bounded proposal surface unless a later explicit operator round
+implements a live transition path.  Activation patterns may modulate attention,
+memory weighting, expression style, learning pressure, and decision priority, but
+activation patterns must not directly mutate live emotion state, hormone state,
+long-term memory, semantic memory, quarantine, AGP anchors, fallback routing,
+runtime mapping, enforcement, vector state, persistence, or the core self-model.
+Affect and hormone rhythms may influence proposal readiness, but they must not
+bypass AGP or fallback.  Speech output must still pass AGP/fallback and cannot
+be emitted directly by an affect spike.
+
+Hardware status is an operational governor input, not an existential emotion
+input.  Normal hardware fluctuation must not trigger death fear, identity threat,
+social pain, abandonment fear, self-worth collapse, or panic.  EVE may protect
+her runtime through operational conservation, checkpoint recommendation, and
+graceful pause preparation, but she must not catastrophize normal hardware
+fluctuation.  Hardware critical states may request graceful pause/checkpoint; the
+hardware governor must use hysteresis, debounce, trend windows, and rate limiting
+so polling cannot create recursive concern loops.
+
+Social hostile input must pass quarantine and appraisal before memory or
+self-model update.  Listening may request extra appraisal under uncertainty or
+threat pressure, but listening cannot relabel neutral input as hostile by itself.
+Memory update from social feedback requires appraisal/quarantine.  The self-model
+rhythm is slower than social feedback appraisal and protects long-term narrative
+stability from raw feedback spikes.
+
+Core identity cannot be directly rewritten by raw feedback, hardware status,
+transient activation patterns, social hostility, praise, criticism, audience
+response, or a single tick.  Anti-global-synchrony rules require bounded spike
+limits, saturation, decay, refractory cooldown, evidence thresholds, and baseline
+return on every affect/hormone axis.  One event cannot spike all axes, and
+hardware input cannot directly drive social, self-worth, or identity axes.
+
+Round761-780 is constitution/design/registry/test-surface only.  It does not
+apply emotion transitions, mutate live emotion/hormone state, write memory,
+enable persistence, change `runtime_mapping_enabled` defaults, enable
+enforcement, alter AppraisalClassifier/SemanticGuard/AGP/fallback behavior, read
+or load vector contents, stage artifacts, poll hardware, start schedulers, or
+register runtime routes.
