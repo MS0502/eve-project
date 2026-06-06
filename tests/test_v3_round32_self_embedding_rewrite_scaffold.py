@@ -130,7 +130,7 @@ def test_readiness_acknowledges_scaffold_without_auto_apply():
     report = build_round32_embedding_boundary_report(engine)
 
     assert report["round"] in {"v3_round32", "v3_round33"}
-    assert report["interface_compatibility"]["readiness"] == "ready"
+    assert report["interface_compatibility"]["readiness"] == "needs_more_audit"
     assert report["interface_compatibility"]["swap_ready"] is False
     assert report["affected_modules"]["self_embedding_rewrite"] is False
     assert "self_embedding_adapter rewrite" in report["not_doing"]

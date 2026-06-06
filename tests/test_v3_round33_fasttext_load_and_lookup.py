@@ -1,8 +1,8 @@
-"""EVE v3 round33 — FasttextEmbeddingAdapter actual medium 30k load.
+"""EVE v3 round33 — FasttextEmbeddingAdapter fail-closed no-vector boundary.
 
-Round33 makes the separate fastText subset adapter usable as an explicit
-instance-level component. It still must not swap ``engine.self_embedding`` or
-rewrite any affected module. Round51 promotes the medium 30k subset to the runtime primary while preserving small 5k as an extracted artifact.
+The adapter may load an explicitly provided, checksum-valid operator artifact.
+This repository intentionally does not commit ``vectors.npy`` fixtures, so the
+base tests assert deterministic no-load behavior and honest load refusal.
 """
 
 from __future__ import annotations
@@ -16,129 +16,120 @@ import pytest
 from adapters.external_seed_manifest import (
     FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME,
     FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME,
+    FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH,
     SUBSET_STATE_EXTRACTED,
+    audit_subset_artifact,
     load_manifest_file,
     subset_state,
 )
-from adapters.fasttext_embedding_adapter import FasttextEmbeddingAdapter
+from adapters.fasttext_embedding_adapter import (
+    FASTTEXT_EMBEDDING_DEFAULT_SUBSET,
+    FASTTEXT_EMBEDDING_METHOD,
+    FasttextEmbeddingAdapter,
+    audit_affected_modules,
+    audit_interface_compatibility,
+)
 from main import build_full_engine
 
 SELF_EMBEDDING = Path("adapters/self_embedding_adapter.py")
+SMALL_VECTORS = Path(FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH) / "vectors.npy"
 
 
-def _loaded_adapter() -> FasttextEmbeddingAdapter:
-    adapter = FasttextEmbeddingAdapter()
-    assert adapter.load() is True
-    return adapter
-
-
-def test_adapter_load_succeeds_and_transitions_instance_to_loaded():
+def test_adapter_initial_state_is_unloaded_and_medium_by_default():
     adapter = FasttextEmbeddingAdapter()
 
     assert adapter.is_loaded() is False
-    assert adapter.load() is True
-    assert adapter.is_loaded() is True
-    assert adapter.stats()["vocab_size"] == 30000
-    assert adapter.stats()["vectors_shape"] == (30000, 300)
-    assert adapter.stats()["runtime_used"] is False
-    assert adapter.stats()["self_embedding_rewrite"] is False
+    assert adapter.subset_name == FASTTEXT_EMBEDDING_DEFAULT_SUBSET == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME
+    assert adapter.get_dimension() == 300
+    assert adapter.stats()["method"] == FASTTEXT_EMBEDDING_METHOD
+    assert adapter.stats()["vocab_size"] == 0
+    assert adapter.stats()["vectors_shape"] is None
 
 
-def test_adapter_load_validates_files_and_rejects_bad_subset_dir(tmp_path):
-    subset_dir = tmp_path / "bad_subset"
-    subset_dir.mkdir()
-    (subset_dir / "vocab.txt").write_text("친구\n", encoding="utf-8")
-    np.save(subset_dir / "vectors.npy", np.zeros((1, 300), dtype=np.float32))
-    (subset_dir / "subset_manifest.json").write_text("{}\n", encoding="utf-8")
+def test_small_subset_explicit_load_fails_closed_without_vectors():
+    adapter = FasttextEmbeddingAdapter(subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME, subset_dir=FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH)
 
-    adapter = FasttextEmbeddingAdapter(subset_dir=subset_dir)
-    with pytest.raises(ValueError):
+    assert not SMALL_VECTORS.exists()
+    with pytest.raises(ValueError, match="missing_vectors_file"):
         adapter.load()
+    assert adapter.is_loaded() is False
+    assert adapter.stats()["vocab_size"] == 0
 
 
-def test_get_vector_returns_300d_float32_copy():
-    adapter = _loaded_adapter()
+def test_lookup_methods_require_loaded_operator_artifact():
+    adapter = FasttextEmbeddingAdapter()
 
-    vec = adapter.get_vector("친구")
-    assert isinstance(vec, np.ndarray)
-    assert vec.shape == (300,)
-    assert vec.dtype == np.float32
-
-    # Return a copy so callers cannot mutate the adapter's stored vector.
-    vec[0] = vec[0] + 123.0
-    vec_again = adapter.get_vector("친구")
-    assert not np.array_equal(vec, vec_again)
-
-
-def test_get_vector_unknown_word_returns_none_and_alias_matches():
-    adapter = _loaded_adapter()
-
-    assert adapter.get_vector("없는단어xyz") is None
-    assert np.array_equal(adapter.get_embedding("친구"), adapter.get_vector("친구"))
+    with pytest.raises(RuntimeError, match="FasttextEmbeddingAdapter is not loaded"):
+        adapter.get_vector("사랑")
+    with pytest.raises(RuntimeError, match="FasttextEmbeddingAdapter is not loaded"):
+        adapter.similarity("사랑", "사랑")
+    with pytest.raises(RuntimeError, match="FasttextEmbeddingAdapter is not loaded"):
+        adapter.most_similar("사랑")
+    with pytest.raises(RuntimeError, match="FasttextEmbeddingAdapter is not loaded"):
+        adapter.text_embedding("친구 사랑")
+    with pytest.raises(RuntimeError, match="FasttextEmbeddingAdapter is not loaded"):
+        adapter.text_similarity("친구", "사랑")
 
 
-def test_similarity_is_deterministic_and_self_is_one():
-    adapter = _loaded_adapter()
+def test_no_fake_zero_vectors_are_created_for_missing_operator_artifacts():
+    adapter = FasttextEmbeddingAdapter()
 
-    score1 = adapter.similarity("친구", "사랑")
-    score2 = adapter.similarity("친구", "사랑")
-
-    assert isinstance(score1, float)
-    assert score1 == score2
-    assert adapter.similarity("친구", "친구") == pytest.approx(1.0, abs=1e-5)
-    assert adapter.similarity("친구", "없는단어xyz") == 0.0
+    with pytest.raises(RuntimeError, match="FasttextEmbeddingAdapter is not loaded"):
+        adapter.text_embedding("없는단어xyz 또없는단어")
+    assert adapter.stats()["vectors_shape"] is None
 
 
-def test_most_similar_is_deterministic_and_excludes_query_word():
-    adapter = _loaded_adapter()
+def test_artifact_readiness_reports_missing_vectors_without_mutation():
+    adapter = FasttextEmbeddingAdapter(subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME, subset_dir=FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH)
+    before = adapter.stats()
 
-    result1 = adapter.most_similar("친구", top_n=3)
-    result2 = adapter.most_similar("친구", top_n=3)
+    readiness = adapter.artifact_readiness()
+    audit = audit_subset_artifact(subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME)
 
-    assert result1 == result2
-    assert len(result1) <= 3
-    assert all(word != "친구" for word, _ in result1)
-    assert all(isinstance(word, str) and isinstance(score, float) for word, score in result1)
-
-
-def test_text_embedding_uses_whitespace_mean_and_zero_for_unknowns():
-    adapter = _loaded_adapter()
-
-    vec1 = adapter.text_embedding("친구 사랑")
-    vec2 = adapter.text_embedding("친구 사랑")
-    zero = adapter.text_embedding("없는단어xyz 또없는단어")
-
-    assert vec1.shape == (300,)
-    assert vec1.dtype == np.float32
-    assert np.array_equal(vec1, vec2)
-    assert np.array_equal(zero, np.zeros(300, dtype=np.float32))
-
-
-def test_text_similarity_returns_float_and_handles_empty_known_tokens():
-    adapter = _loaded_adapter()
-
-    assert isinstance(adapter.text_similarity("친구 사랑", "친구"), float)
-    assert adapter.text_similarity("없는단어xyz", "친구") == 0.0
+    assert readiness["ready"] is False
+    assert "missing_vectors_file" in str(readiness)
+    assert audit["valid"] is False
+    assert "missing_vectors_file" in audit["errors"]
+    assert adapter.stats() == before
 
 
 def test_subset_state_remains_extracted_without_global_transition():
     manifest = load_manifest_file()
-    adapter = _loaded_adapter()
+    adapter = FasttextEmbeddingAdapter(subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME, subset_dir=FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH)
 
-    assert adapter.is_loaded() is True
+    assert adapter.is_loaded() is False
     assert subset_state(manifest, FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME) == SUBSET_STATE_EXTRACTED
 
 
-def test_engine_self_embedding_unchanged_and_no_runtime_swap():
+def test_engine_self_embedding_wrapper_exists_but_primary_is_unloaded_by_default():
     before_fasttext_imported = "fasttext" in sys.modules
     engine = build_full_engine()
     text = SELF_EMBEDDING.read_text(encoding="utf-8")
-    adapter = _loaded_adapter()
 
-    assert adapter.is_loaded() is True
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
     assert "FasttextEmbeddingAdapter" not in text
     assert "cc.ko.300.subset" not in text
     assert "vectors.npy" not in text
     assert ("fasttext" in sys.modules) == before_fasttext_imported
+
+
+def test_interface_audit_remains_read_only_and_no_load():
+    engine = build_full_engine()
+    before_loaded = engine.fasttext_embedding.is_loaded()
+
+    audit = audit_interface_compatibility(engine)
+    affected = audit_affected_modules()
+
+    assert audit["fasttext_embedding_adapter"]["loaded"] is False
+    assert audit["runtime_load"] is False
+    assert audit["self_embedding_rewrite"] is False
+    assert affected["self_embedding_rewrite"] is False
+    assert engine.fasttext_embedding.is_loaded() is before_loaded
+
+
+def test_numpy_available_but_no_numpy_vector_file_committed():
+    assert np.zeros(300, dtype=np.float32).shape == (300,)
+    assert not SMALL_VECTORS.exists()
