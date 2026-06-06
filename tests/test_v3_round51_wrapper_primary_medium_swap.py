@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -60,11 +61,17 @@ def test_wrapper_primary_uses_medium_unloaded_adapter():
     assert engine.self_embedding.stats()["primary_stats"]["loaded"] is False
 
 
-def test_medium_30k_load_requires_operator_vectors_and_fails_closed_when_absent():
-    adapter = FasttextEmbeddingAdapter()
+def _assert_vector_artifact_absent_or_ignored_untracked(path: Path) -> None:
+    if not path.exists():
+        return
+    assert subprocess.run(["git", "check-ignore", "-q", str(path)], check=False).returncode == 0
+    assert subprocess.run(["git", "ls-files", "--error-unmatch", str(path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0
+
+
+def test_medium_30k_load_requires_operator_vectors_and_fails_closed_when_absent(tmp_path: Path):
+    adapter = FasttextEmbeddingAdapter(subset_dir=tmp_path / "isolated_missing_medium30k")
 
     assert adapter.is_loaded() is False
-    assert not MEDIUM_VECTORS.exists()
     with pytest.raises(ValueError, match="missing_vectors_file"):
         adapter.load()
     assert adapter.is_loaded() is False
@@ -98,13 +105,16 @@ def test_eve_specific_still_absent_from_medium_vocab(word: str):
         adapter.get_vector(word)
 
 
-def test_medium_audit_fails_closed_without_operator_vectors():
+def test_medium_audit_fails_closed_without_reading_operator_vectors():
     audit = audit_subset_artifact(subset_name=FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME)
 
+    _assert_vector_artifact_absent_or_ignored_untracked(MEDIUM_VECTORS)
     assert audit["valid"] is False
-    assert "missing_vectors_file" in audit["errors"]
+    assert ({"missing_vectors_file", "vector_contents_not_read"} & set(audit["errors"]))
     assert audit["vocab"]["line_count"] == 30000
     assert audit["vectors"]["shape"] is None
+    assert audit["vector_contents_read"] is False
+    assert audit["runtime_loaded"] is False
 
 
 def test_small_5k_still_extracted():

@@ -118,7 +118,12 @@ def verify_operator_subset_artifact(
     }
     vector_info = _vector_shape_dtype(vectors_path)
     expected_shape = [int(entry.get("vocab_size")), int(entry.get("vector_dim"))] if entry else None
-    manifest_audit = audit_subset_artifact(manifest, subset_name=subset_name, subset_dir=base_dir)
+    manifest_audit = audit_subset_artifact(
+        manifest,
+        subset_name=subset_name,
+        subset_dir=base_dir,
+        allow_vector_content_read=True,
+    )
     git_status = _git_status_short((str(base_dir), "seeds/subsets")) if include_git_status else None
 
     missing = [name for name, report in files.items() if not report["exists"]]

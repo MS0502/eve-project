@@ -104,8 +104,10 @@ def test_round292_295_builds_split_validation_planner_without_enabling_persisten
     assert planner["enforcement_enabled"] is False
 
 
-def test_round296_300_manifest_records_local_artifacts_and_fails_closed_when_missing() -> None:
-    manifest = round291_305.build_guarded_artifact_staged_rehearsal_manifest()
+def test_round296_300_manifest_records_local_artifacts_and_fails_closed_when_missing(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    (tmp_path / ".gitignore").write_text("_operator_artifacts/\n", encoding="utf-8")
+    manifest = round291_305.build_guarded_artifact_staged_rehearsal_manifest(repo_root=tmp_path)
 
     assert manifest["version"] == "v3_round296_300_guarded_artifact_staged_rehearsal_manifest"
     assert manifest["rounds"] == [296, 297, 298, 299, 300]
@@ -120,6 +122,9 @@ def test_round296_300_manifest_records_local_artifacts_and_fails_closed_when_mis
     assert all(row["git_ignored"] is True for row in manifest["required_artifacts"])
     assert all(row["git_tracked"] is False for row in manifest["required_artifacts"])
     assert all(row["content_read"] is False for row in manifest["required_artifacts"])
+    assert all(row["vector_contents_read"] is False for row in manifest["required_artifacts"])
+    assert all(row["runtime_loaded"] is False for row in manifest["required_artifacts"])
+    assert all(row["artifact_safe_to_load"] is False for row in manifest["required_artifacts"])
 
 
 def test_round301_305_report_contains_delta_taxonomy_and_recommendation() -> None:

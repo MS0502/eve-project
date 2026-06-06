@@ -271,6 +271,7 @@ def build_guarded_artifact_staged_rehearsal_manifest(
         git_ignored = _path_is_git_ignored(relative_path, repo_root=root)
         git_tracked = _path_is_git_tracked(relative_path, repo_root=root)
         exists = path.exists()
+        safe_to_reference = local_only and git_ignored and not git_tracked
         rows.append(
             {
                 **artifact,
@@ -279,9 +280,14 @@ def build_guarded_artifact_staged_rehearsal_manifest(
                 "git_ignored": git_ignored,
                 "git_tracked": git_tracked,
                 "exists": exists,
-                "safe_to_reference": local_only and git_ignored and not git_tracked,
-                "safe_to_execute": local_only and git_ignored and not git_tracked and exists,
+                "artifact_present": exists,
+                "safe_to_reference": safe_to_reference,
+                "artifact_safe_to_reference": safe_to_reference,
+                "safe_to_execute": safe_to_reference and exists,
+                "artifact_safe_to_load": False,
                 "content_read": False,
+                "vector_contents_read": False,
+                "runtime_loaded": False,
                 "checksum_computed": False,
                 "placeholder_created": False,
             }

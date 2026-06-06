@@ -830,14 +830,20 @@ def audit_subset_artifact(
     *,
     subset_name: str = FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME,
     subset_dir: str | Path | None = None,
+    allow_vector_content_read: bool = False,
 ) -> dict[str, Any]:
     """Read-only audit for an extracted subset artifact.
 
     Round30 uses this as a pre-rewrite audit gate. It validates manifest linkage,
-    file presence, checksums, vocab size, vector shape/dtype, and corruption
+    metadata file presence, metadata checksums, vocab size, and corruption
     filtering without loading the subset into any runtime adapter and without
-    importing fastText. Missing files are reported as data instead of raising so
-    the base engine can still run without optional subset artifacts.
+    importing fastText. Vector artifacts are presence-only by default so
+    operator-local ignored ``vectors.npy`` files can be reported honestly without
+    reading vector contents or turning readiness green. Explicit runtime load
+    paths may opt into vector checksum/header validation with
+    ``allow_vector_content_read=True``. Missing files are reported as data
+    instead of raising so the base engine can still run without optional subset
+    artifacts.
     """
     manifest = deepcopy(manifest_data) if manifest_data is not None else load_manifest_file(SEED_MANIFEST_PATH)
     validation = validate_manifest(manifest)
@@ -872,6 +878,11 @@ def audit_subset_artifact(
     corrupted_words_count: int | None = None
     vector_shape: tuple[int, ...] | None = None
     vector_dtype: str | None = None
+    artifact_present = False
+    artifact_safe_to_reference = False
+    artifact_safe_to_load = False
+    vector_contents_read = False
+    runtime_loaded = False
 
     if entry is not None:
         for logical_name, filename_key, checksum_key in (
@@ -881,17 +892,24 @@ def audit_subset_artifact(
         ):
             path = base_dir / str(entry.get(filename_key, ""))
             exists = path.is_file()
-            actual_checksum = compute_seed_checksum(path) if exists else None
             expected_checksum = entry.get(checksum_key)
+            reads_vector_content = logical_name == "vectors" and not allow_vector_content_read
+            actual_checksum = None if reads_vector_content else (compute_seed_checksum(path) if exists else None)
+            checksum_match = None if reads_vector_content and exists else bool(exists and actual_checksum == expected_checksum)
             file_checks["files"][logical_name] = {
                 "path": str(path),
                 "exists": exists,
                 "checksum_expected": expected_checksum,
                 "checksum_actual": actual_checksum,
-                "checksum_match": bool(exists and actual_checksum == expected_checksum),
+                "checksum_match": checksum_match,
+                "content_read": bool(exists and not reads_vector_content),
             }
+            if logical_name == "vectors":
+                artifact_present = exists
             if not exists:
                 errors.append(f"missing_{logical_name}_file")
+            elif reads_vector_content:
+                errors.append("vector_contents_not_read")
             elif actual_checksum != expected_checksum:
                 errors.append(f"{logical_name}_checksum_mismatch")
 
@@ -906,11 +924,12 @@ def audit_subset_artifact(
                 errors.append("corrupted_vocab_word_present")
 
         vectors_path = base_dir / str(entry.get("vectors_file", ""))
-        if vectors_path.is_file():
+        if vectors_path.is_file() and allow_vector_content_read:
             try:
                 import numpy as _np
 
                 vectors = _np.load(vectors_path, mmap_mode="r")
+                vector_contents_read = True
                 vector_shape = tuple(int(x) for x in vectors.shape)
                 vector_dtype = str(vectors.dtype)
                 if vector_shape != (entry.get("vocab_size"), entry.get("vector_dim")):
@@ -919,6 +938,18 @@ def audit_subset_artifact(
                     errors.append("vectors_dtype_mismatch")
             except Exception as exc:  # pragma: no cover - defensive audit data
                 errors.append(f"vectors_load_failed:{type(exc).__name__}")
+
+        vector_blockers = {
+            "missing_vectors_file",
+            "vectors_checksum_mismatch",
+            "vectors_shape_mismatch",
+            "vectors_dtype_mismatch",
+            "vector_contents_not_read",
+        }
+        artifact_safe_to_reference = artifact_present
+        artifact_safe_to_load = artifact_present and allow_vector_content_read and not (vector_blockers & set(errors)) and not any(
+            str(error).startswith("vectors_load_failed:") for error in errors
+        )
 
     return {
         "version": SEED_POLICY_VERSION,
@@ -940,6 +971,11 @@ def audit_subset_artifact(
             "dtype": vector_dtype,
             "expected_dtype": "float32",
         },
+        "artifact_present": artifact_present,
+        "artifact_safe_to_reference": artifact_safe_to_reference,
+        "artifact_safe_to_load": artifact_safe_to_load,
+        "vector_contents_read": vector_contents_read,
+        "runtime_loaded": runtime_loaded,
         "runtime_used": False,
         "self_embedding_rewrite": False,
         "fasttext_runtime_imported": False,
@@ -982,6 +1018,11 @@ def assess_self_embedding_rewrite_readiness(
                 "state": subset_state(manifest, name),
                 "purpose": entry.get("purpose", SUBSET_PURPOSE_FIXTURE),
                 "audit_valid": bool(audit.get("valid")),
+                "artifact_present": bool(audit.get("artifact_present")),
+                "artifact_safe_to_reference": bool(audit.get("artifact_safe_to_reference")),
+                "artifact_safe_to_load": bool(audit.get("artifact_safe_to_load")),
+                "vector_contents_read": bool(audit.get("vector_contents_read")),
+                "runtime_loaded": bool(audit.get("runtime_loaded")),
                 "character": (
                     "production lexical seed candidate"
                     if entry.get("purpose") in {SUBSET_PURPOSE_PRODUCTION_LEXICAL_SEED, SUBSET_PURPOSE_PRODUCTION_LEXICAL_SEED_EXPANDED}
