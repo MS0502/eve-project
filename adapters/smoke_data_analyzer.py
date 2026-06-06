@@ -1055,6 +1055,13 @@ def _extract_telemetry_rates(data: Mapping[str, Any] | None) -> dict[str, float]
 def _post_medium_oov_words(post_medium_data: Mapping[str, Any] | None) -> list[str]:
     data = post_medium_data if isinstance(post_medium_data, Mapping) else {}
     telemetry = data.get("wrapper_telemetry") if isinstance(data.get("wrapper_telemetry"), Mapping) else {}
+    # In the guarded no-load runtime, primary coverage is intentionally absent.
+    # Treat sampled fixture tokens as unresolved lexical evidence instead of
+    # relying on the telemetry display's last-10 recent OOV window.
+    if isinstance(telemetry, Mapping) and telemetry.get("primary_loaded") is False:
+        sampled = data.get("sampled_tokens")
+        if isinstance(sampled, list):
+            return sorted(set(str(word) for word in sampled if str(word)))
     recent = telemetry.get("recent_oov_sample") if isinstance(telemetry, Mapping) else None
     if isinstance(recent, list):
         return sorted(set(_word_from_oov(row) for row in recent if _word_from_oov(row)))

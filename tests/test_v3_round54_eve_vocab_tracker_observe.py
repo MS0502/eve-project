@@ -6,6 +6,22 @@ from adapters.eve_vocab_tracker import EveVocabTracker
 from main import build_full_engine
 
 
+class _FakeFastText:
+    def __init__(self, known_words):
+        self.known_words = set(known_words)
+
+    def is_loaded(self):
+        return True
+
+    def get_vector(self, word):
+        return [1.0] if str(word) in self.known_words else None
+
+
+class _FakeEngine:
+    def __init__(self, known_words):
+        self.fasttext_embedding = _FakeFastText(known_words)
+
+
 def test_round54_observe_word_increments_count():
     tracker = EveVocabTracker()
     tracker.observe_word("EVE")
@@ -49,16 +65,14 @@ def test_round54_context_log_cap_1000():
     assert stats["context_snapshot"][-1]["context"] == {"i": 1004}
 
 
-def test_round54_is_eve_specific_unknown_in_fasttext():
-    engine = build_full_engine()
-    tracker = EveVocabTracker(engine=engine)
+def test_round54_is_eve_specific_unknown_in_explicit_loaded_fasttext():
+    tracker = EveVocabTracker(engine=_FakeEngine(known_words={"군대", "코딩"}))
     tracker.observe_word("민석")
     assert tracker.is_eve_specific("민석") is True
 
 
-def test_round54_is_eve_specific_known_in_fasttext():
-    engine = build_full_engine()
-    tracker = EveVocabTracker(engine=engine)
+def test_round54_is_eve_specific_known_in_explicit_loaded_fasttext():
+    tracker = EveVocabTracker(engine=_FakeEngine(known_words={"군대", "코딩"}))
     tracker.observe_word("군대")
     assert tracker.is_eve_specific("군대") is False
 
@@ -82,9 +96,8 @@ def test_round54_tracked_vocab_sorted_deterministic():
     assert tracker.tracked_vocab() == sorted(["민석", "EVE", "군대"])
 
 
-def test_round54_eve_specific_vocab_filter():
-    engine = build_full_engine()
-    tracker = EveVocabTracker(engine=engine)
+def test_round54_eve_specific_vocab_filter_with_explicit_loaded_fasttext():
+    tracker = EveVocabTracker(engine=_FakeEngine(known_words={"군대", "코딩"}))
     for word in ["EVE", "민석", "군대", "코딩"]:
         tracker.observe_word(word)
     assert tracker.eve_specific_vocab() == ["EVE", "민석"]
@@ -103,11 +116,12 @@ def test_round54_stats_returns_data_dict():
     assert stats["wrapper_integrated"] is False
 
 
-def test_round54_no_auto_observe_call_from_wrapper():
+def test_round54_no_auto_observe_call_from_wrapper_no_load_fallback():
     engine = build_full_engine()
     tracker = EveVocabTracker(engine=engine)
     before = tracker.stats()
-    assert engine.self_embedding.get_vector("군대") is not None  # wrapper primary serves known medium token
+    assert engine.fasttext_embedding.is_loaded() is False
+    engine.self_embedding.get_vector("군대")  # no-load runtime may honestly fall back/return None
     after = tracker.stats()
     assert after == before
     assert not hasattr(engine.self_embedding, "eve_vocab_tracker")

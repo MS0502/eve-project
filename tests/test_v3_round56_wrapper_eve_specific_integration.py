@@ -18,14 +18,12 @@ from main import build_full_engine
 def test_wrapper_eve_specific_priority_returns_eve_vector() -> None:
     """When a vector exists in the eve-specific store, wrapper should return it."""
     engine = build_full_engine()
-    # Prepare eve-specific vector for a word not present in fastText
+    # Prepare an explicit operator-authorized eve-specific vector for a word
+    # not present in the no-load fastText primary. This avoids default loading
+    # or fabricated setup-side commits.
     store = engine.eve_specific_vector_store
-    # Use a known fastText word as context to compute a deterministic 300d vector
-    context_word = "안녕"
-    assert engine.fasttext_embedding.get_vector(context_word) is not None
-    # Add vector for "민석" using the known context word
-    added = store.add_or_update_vector("민석", [context_word], engine=engine)
-    assert added is True
+    assert engine.fasttext_embedding.is_loaded() is False
+    store.add_vector("민석", np.ones(300, dtype=np.float32))
     wrapper = engine.self_embedding
     # Clear previous telemetry counters
     _ = wrapper.telemetry()

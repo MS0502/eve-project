@@ -48,12 +48,11 @@ def test_round57_wrapper_telemetry_includes_eve_specific_rate_and_hits() -> None
 def test_round57_drift_baseline_includes_eve_specific_substrate_and_rate() -> None:
     """Drift baseline must reflect the EveSpecificVectorStore once present."""
     engine = build_full_engine()
-    # Manually add an Eve-specific vector to ensure the store is non-empty
+    # Manually add an explicit Eve-specific vector to ensure the store is
+    # non-empty without loading fastText by default.
     store = engine.eve_specific_vector_store
-    context_word = "안녕"
-    assert engine.fasttext_embedding.get_vector(context_word) is not None
-    added = store.add_or_update_vector("민석", [context_word], engine=engine)
-    assert added is True
+    assert engine.fasttext_embedding.is_loaded() is False
+    store.add_vector("민석", np.ones(300, dtype=np.float32))
     # Use the round57 drift baseline to capture eve-specific substrate and rates
     report = measure_eve_specific_drift_baseline(engine)
     # After the eve-specific store is wired, the substrate should reference it
@@ -68,10 +67,11 @@ def test_round57_smoke_reports_eve_specific_hits_after_vector_added() -> None:
     """Smoke sampling should record eve-specific hits when vectors exist."""
     engine = build_full_engine()
     store = engine.eve_specific_vector_store
-    context_word = "안녕"
-    # Add deterministic Eve-specific vectors for both EVE-specific words used in fixtures
-    store.add_or_update_vector("민석", [context_word], engine=engine)
-    store.add_or_update_vector("EVE", [context_word], engine=engine)
+    assert engine.fasttext_embedding.is_loaded() is False
+    # Add deterministic Eve-specific vectors explicitly; smoke sampling should
+    # observe hits only because these vectors already exist.
+    store.add_vector("민석", np.ones(300, dtype=np.float32))
+    store.add_vector("EVE", np.full(300, 2.0, dtype=np.float32))
     result = run_conversation_smoke(engine, fixture_texts())
     telem = result.get("wrapper_telemetry", {})
     # At least one eve-specific hit is expected because the fixtures include "민석" and "EVE"
