@@ -546,6 +546,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--authorization-token", help="Required deterministic authorization token for artifact-dependent mode.")
     parser.add_argument("--execute-artifact-dependent", action="store_true", help="Actually run artifact-dependent commands after all fail-closed guards pass.")
     parser.add_argument("--output", help="Optional JSON output path, normally under ignored _operator_artifacts/.")
+    parser.add_argument(
+        "--repo-root",
+        default=str(REPO_ROOT),
+        help=(
+            "Repository/artifact guard root to inspect and run commands in. "
+            "Defaults to this script's repository root; tests may point it at an isolated temporary root so "
+            "operator-local artifacts in the real checkout cannot mask missing-artifact fail-closed behavior."
+        ),
+    )
     return parser
 
 
@@ -553,15 +562,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         source = _read_json(args.round291_305_json)
+        repo_root = Path(args.repo_root).resolve()
         if args.artifact_free:
-            report = run_artifact_free_validation_phase(source)
+            report = run_artifact_free_validation_phase(source, repo_root=repo_root)
         else:
             report = run_guarded_artifact_dependent_entrypoint(
                 source,
                 operator_authorized=args.operator_authorized,
                 authorization_token=args.authorization_token,
                 execute=args.execute_artifact_dependent,
+                repo_root=repo_root,
             )
+        report["artifact_guard_repo_root"] = str(repo_root)
         if args.output:
             out = Path(args.output)
             out.parent.mkdir(parents=True, exist_ok=True)
