@@ -78,7 +78,8 @@ def test_round261_275_authorized_rehearsal_rolls_back_and_keeps_no_persistence()
     assert report["status"] == "no_persistence_runtime_mapping_rehearsal_green"
     smoke = report["round268_271_rehearsal_smoke"]
     assert smoke["runtime_mapping_enabled_before"] is False
-    assert smoke["runtime_mapping_enabled_during_smoke"] is True
+    assert smoke["runtime_mapping_enabled_during_smoke"] is False
+    assert smoke["policy"]["guarded_rehearsal_only"] is True
     assert smoke["runtime_mapping_enabled_after_rollback"] is False
     assert smoke["enforcement_enabled_during_smoke"] is False
     assert smoke["enforcement_enabled_after_rollback"] is False
