@@ -18,18 +18,18 @@ from adapters.runtime_smoke_runner import (
 )
 
 
-def _prepare_engine_with_eve_specific_commit():
+def _prepare_engine_with_eve_specific_observations():
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="round78_test_a")
     learner.observe_text("민석 군대", source="round78_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
+    assert learner.commit_audit_records() == []
+    assert engine.eve_specific_vector_store.stats()["stored_count"] == 0
     return engine
 
 
 def test_round78_candidate_schema_dry_run_builds_rows_without_concept_mapping() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
 
     before_audit = len(engine.eve_self_learning.commit_audit_records())
     before_store = engine.eve_specific_vector_store.stats().copy()
@@ -45,7 +45,7 @@ def test_round78_candidate_schema_dry_run_builds_rows_without_concept_mapping() 
 
     rows = {row["lexical_token"]: row for row in report["candidate_rows"]}
     assert rows["민석"]["lexical_evidence_ready"] is True
-    assert rows["민석"]["lexical_evidence"]["eve_specific_vector_present"] is True
+    assert rows["민석"]["lexical_evidence"]["eve_specific_vector_present"] is False
     assert rows["민석"]["proposed_concept_category"] is None
     assert rows["민석"]["category_created"] is False
     assert rows["민석"]["agp_anchor_created"] is False
@@ -68,7 +68,7 @@ def test_round78_candidate_schema_dry_run_builds_rows_without_concept_mapping() 
 
 
 def test_round79_candidate_evidence_quality_report_remains_read_only() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
 
     before_audit = len(engine.eve_self_learning.commit_audit_records())
     before_store = engine.eve_specific_vector_store.stats().copy()
@@ -88,6 +88,8 @@ def test_round79_candidate_evidence_quality_report_remains_read_only() -> None:
     assert report["missing_explicit_concept_category_count"] == 2
     assert report["operator_recommendation"] == "proceed_to_concept_proposal_report"
     assert "민석" in report["ready_tokens"]
+    assert report["eve_specific_vector_present_count"] == 0
+    assert report["eve_specific_vector_present_tokens"] == []
     assert "EVE" in report["blocked_tokens"]
 
     checks = report["read_only_checks"]
@@ -103,7 +105,7 @@ def test_round79_candidate_evidence_quality_report_remains_read_only() -> None:
 
 
 def test_round78_79_exports_do_not_recompute_or_mutate(tmp_path) -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     dry_run = run_round78_lexical_concept_candidate_schema_dry_run(engine, planning_tokens=["민석"])
     quality = run_round79_lexical_concept_candidate_evidence_quality_report(engine, planning_tokens=["민석"])
 
