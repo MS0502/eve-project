@@ -18,18 +18,18 @@ from adapters.runtime_smoke_runner import (
 )
 
 
-def _prepare_engine_with_eve_specific_commit():
+def _prepare_engine_with_eve_specific_observations():
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="round89_test_a")
     learner.observe_text("민석 군대", source="round89_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
+    assert learner.commit_audit_records() == []
+    assert engine.eve_specific_vector_store.stats()["stored_count"] == 0
     return engine
 
 
 def test_round89_explicit_concept_commit_creates_minimal_category_and_agp_bridge() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     before_store = engine.eve_specific_vector_store.stats().copy()
     before_telemetry = engine.self_embedding.telemetry().copy()
 
@@ -66,7 +66,7 @@ def test_round89_explicit_concept_commit_creates_minimal_category_and_agp_bridge
 
 
 def test_round89_agp_still_fails_without_sa_activation_even_after_vector_and_category_exist() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     report = run_round89_explicit_concept_commit_smoke(engine)
     category_id = report["committed_rows"][0]["category_id"]
 
@@ -93,7 +93,7 @@ def test_round89_agp_still_fails_without_sa_activation_even_after_vector_and_cat
 
 
 def test_round89_state_debug_and_export_surface(tmp_path) -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     report = run_round89_explicit_concept_commit_smoke(engine)
     state = engine.state_debug.snapshot_state()
     lcm = state["lex_concept_mapping"]

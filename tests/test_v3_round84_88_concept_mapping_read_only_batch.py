@@ -21,13 +21,13 @@ from adapters.runtime_smoke_runner import (
 )
 
 
-def _prepare_engine_with_eve_specific_commit():
+def _prepare_engine_with_eve_specific_observations():
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="round84_88_test_a")
     learner.observe_text("민석 군대", source="round84_88_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
+    assert learner.commit_audit_records() == []
+    assert engine.eve_specific_vector_store.stats()["stored_count"] == 0
     return engine
 
 
@@ -51,7 +51,7 @@ def _assert_read_only_checks(report: dict, phase_key: str) -> None:
 
 
 def test_round84_concept_memory_frame_evidence_dry_run_is_read_only() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     before_audit = len(engine.eve_self_learning.commit_audit_records())
     before_store = engine.eve_specific_vector_store.stats().copy()
     before_telemetry = engine.self_embedding.telemetry().copy()
@@ -81,7 +81,7 @@ def test_round84_concept_memory_frame_evidence_dry_run_is_read_only() -> None:
 
 
 def test_round85_sa_activation_path_dry_run_is_read_only() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     report = run_round85_sa_activation_path_dry_run(engine)
 
     assert report["dry_run_version"] == "v3_round85_sa_activation_path_dry_run"
@@ -99,7 +99,7 @@ def test_round85_sa_activation_path_dry_run_is_read_only() -> None:
 
 
 def test_round86_agp_bridge_smoke_dry_run_never_calls_agp_verify() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     report = run_round86_agp_bridge_smoke_dry_run(engine)
 
     assert report["dry_run_version"] == "v3_round86_agp_bridge_smoke_dry_run"
@@ -122,7 +122,7 @@ def test_round86_agp_bridge_smoke_dry_run_never_calls_agp_verify() -> None:
 
 
 def test_round87_readiness_dashboard_and_round88_freeze_are_read_only() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     dashboard = run_round87_concept_mapping_readiness_dashboard(engine)
 
     assert dashboard["dashboard_version"] == "v3_round87_concept_mapping_readiness_dashboard"
@@ -153,7 +153,7 @@ def test_round87_readiness_dashboard_and_round88_freeze_are_read_only() -> None:
 
 
 def test_round88_export_does_not_recompute_or_mutate(tmp_path) -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     report = run_round88_concept_mapping_v0_proposal_freeze(engine)
     before_audit = len(engine.eve_self_learning.commit_audit_records())
     before_store = engine.eve_specific_vector_store.stats().copy()
@@ -175,7 +175,7 @@ def test_round88_export_does_not_recompute_or_mutate(tmp_path) -> None:
 
 
 def test_round88_state_debug_exposes_batch_versions() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     state = engine.state_debug.snapshot_state()
     lcm = state["lex_concept_mapping"]
     assert lcm["round"] == 94

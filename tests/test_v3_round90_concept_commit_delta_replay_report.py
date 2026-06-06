@@ -24,8 +24,8 @@ def _prepare_committed_engine():
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="round90_test_a")
     learner.observe_text("민석 군대", source="round90_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
+    assert learner.commit_audit_records() == []
+    assert engine.eve_specific_vector_store.stats()["stored_count"] == 0
     source_report = run_round89_explicit_concept_commit_smoke(engine)
     assert source_report["created_tokens"] == ["민석"]
     return engine, source_report

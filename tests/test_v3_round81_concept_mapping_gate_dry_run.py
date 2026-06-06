@@ -16,18 +16,18 @@ from adapters.runtime_smoke_runner import (
 )
 
 
-def _prepare_engine_with_eve_specific_commit():
+def _prepare_engine_with_eve_specific_observations():
     engine = build_full_engine()
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="round81_test_a")
     learner.observe_text("민석 군대", source="round81_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
+    assert learner.commit_audit_records() == []
+    assert engine.eve_specific_vector_store.stats()["stored_count"] == 0
     return engine
 
 
 def test_round81_concept_mapping_gate_dry_run_blocks_until_operator_and_concept_evidence() -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
 
     before_audit = len(engine.eve_self_learning.commit_audit_records())
     before_store = engine.eve_specific_vector_store.stats().copy()
@@ -106,7 +106,7 @@ def test_round81_concept_mapping_gate_dry_run_blocks_until_operator_and_concept_
 
 
 def test_round81_export_does_not_recompute_or_mutate(tmp_path) -> None:
-    engine = _prepare_engine_with_eve_specific_commit()
+    engine = _prepare_engine_with_eve_specific_observations()
     report = run_round81_concept_mapping_gate_dry_run(engine, planning_tokens=["민석"])
 
     before_audit = len(engine.eve_self_learning.commit_audit_records())

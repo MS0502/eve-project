@@ -26,8 +26,8 @@ def _prepare_round93_engine():
     learner = engine.eve_self_learning
     learner.observe_text("민석 오늘", source="round94_test_a")
     learner.observe_text("민석 군대", source="round94_test_b")
-    commit = learner.commit_eve_specific_vectors(["민석"], context_words=["오늘", "군대"])
-    assert "민석" in commit["created"]
+    assert learner.commit_audit_records() == []
+    assert engine.eve_specific_vector_store.stats()["stored_count"] == 0
     source_commit = run_round89_explicit_concept_commit_smoke(engine)
     source_replay = run_round90_concept_commit_delta_replay_report(engine, source_commit_report=source_commit)
     checkpoint = run_round91_concept_commit_replay_export_checkpoint(
