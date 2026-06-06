@@ -1,8 +1,9 @@
-"""EVE v3 round29 — mini 1k subset registration.
+"""EVE v3 round29 — mini 1k subset registration under no-vector policy.
 
-Round29 commits the operator-extracted mini subset as a fixture-level artifact.
-It validates provenance, checksums, shape, and parent linkage only. It must not
-rewrite self_embedding or mark the subset as runtime-used.
+The repository keeps provenance metadata and vocab/subset manifests, but the
+large ``vectors.npy`` artifact is operator-local and must not be fabricated or
+committed. Missing vectors must therefore be reported honestly as fail-closed
+audit data, not hidden by placeholder files.
 """
 
 from __future__ import annotations
@@ -10,8 +11,6 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-
-import numpy as np
 
 from adapters.external_seed_manifest import (
     FASTTEXT_KOREAN_SEED_NAME,
@@ -23,6 +22,7 @@ from adapters.external_seed_manifest import (
     SEED_MANIFEST_PATH,
     SEED_STATE_REGISTERED,
     SUBSET_STATE_EXTRACTED,
+    audit_subset_artifact,
     external_seed_state,
     fasttext_korean_subset_mini_1k_entry,
     load_manifest_file,
@@ -53,12 +53,12 @@ def _subset_entry_from_manifest():
     return manifest, matches[0]
 
 
-def test_subset_directory_and_files_exist():
-    """The operator-provided mini subset files must be committed under seeds/subsets."""
+def test_subset_directory_and_metadata_files_exist_but_vectors_are_not_committed():
+    """Mini metadata is committed; operator-local vectors stay absent."""
     assert SUBSET_DIR.is_dir()
     assert VOCAB.is_file()
-    assert VECTORS.is_file()
     assert SUBSET_MANIFEST.is_file()
+    assert not VECTORS.exists()
 
 
 def test_subset_manifest_entry_registered_and_valid():
@@ -82,17 +82,21 @@ def test_vocab_has_exactly_1000_lines_and_expected_checksum():
     assert _sha256(VOCAB) == FASTTEXT_KOREAN_SUBSET_MINI_1K_VOCAB_CHECKSUM
 
 
-def test_vectors_shape_dtype_and_checksum():
-    """The mini subset vector matrix must be 1000x300 float32."""
-    vectors = np.load(VECTORS)
+def test_vectors_checksum_is_manifest_only_until_operator_artifact_is_present():
+    """The recorded vectors checksum is provenance data, not a placeholder file."""
+    manifest, entry = _subset_entry_from_manifest()
+    audit = audit_subset_artifact(manifest, subset_name=FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME)
 
-    assert vectors.shape == (1000, 300)
-    assert vectors.dtype == np.float32
-    assert _sha256(VECTORS) == FASTTEXT_KOREAN_SUBSET_MINI_1K_VECTORS_CHECKSUM
+    assert entry["vectors_checksum"] == FASTTEXT_KOREAN_SUBSET_MINI_1K_VECTORS_CHECKSUM
+    assert not VECTORS.exists()
+    assert audit["valid"] is False
+    assert "missing_vectors_file" in audit["errors"]
+    assert audit["vectors"]["shape"] is None
+    assert audit["runtime_used"] is False
 
 
 def test_subset_manifest_json_matches_manifest_entry():
-    """The embedded subset manifest must match the repo manifest subset entry."""
+    """The embedded subset manifest preserves provenance from the repo manifest."""
     manifest, entry = _subset_entry_from_manifest()
     payload = json.loads(SUBSET_MANIFEST.read_text(encoding="utf-8"))
 
@@ -108,7 +112,7 @@ def test_subset_manifest_json_matches_manifest_entry():
 
 
 def test_parent_seed_reference_valid_and_state_ladder_unchanged():
-    """Subset extraction does not advance parent seed from registered to loaded/used."""
+    """Subset registration does not advance parent seed to loaded/used."""
     manifest, entry = _subset_entry_from_manifest()
     parent = [candidate for candidate in manifest["seeds"] if candidate.get("name") == FASTTEXT_KOREAN_SEED_NAME][0]
 
@@ -132,7 +136,7 @@ def test_subset_validation_rejects_parent_checksum_mismatch():
 
 
 def test_self_embedding_adapter_unchanged_and_subset_not_used():
-    """Round29 is extraction registration only, not the embedding rewrite."""
+    """Round29 is registration only, not the embedding rewrite."""
     text = SELF_EMBEDDING.read_text(encoding="utf-8")
 
     assert "vectors.npy" not in text

@@ -1,8 +1,8 @@
-"""EVE v3 round34 — state_debug fastText migration exposure.
+"""EVE v3 round34 — state_debug fastText no-load exposure.
 
-Round34 exposes the separate FasttextEmbeddingAdapter in debug state only. It
-must not load the small 5k subset, replace engine.self_embedding, or alter any
-runtime generation/decision path.
+State debug must expose the fastText adapter honestly without triggering a
+runtime vector load. The wrapper may point at fastText as primary, but default
+startup remains no-load unless operator-authorized artifacts are supplied.
 """
 
 from __future__ import annotations
@@ -21,11 +21,11 @@ def test_engine_has_fasttext_embedding_attribute_unloaded():
 
     assert hasattr(engine, "fasttext_embedding")
     assert engine.fasttext_embedding.__class__.__name__ == "FasttextEmbeddingAdapter"
-    assert engine.fasttext_embedding.is_loaded() is True
+    assert engine.fasttext_embedding.is_loaded() is False
     assert engine.fasttext_embedding.subset_name == FASTTEXT_EMBEDDING_DEFAULT_SUBSET
 
 
-def test_state_debug_includes_fasttext_section():
+def test_state_debug_includes_fasttext_section_without_loaded_vectors():
     engine = build_full_engine()
 
     state = engine.state_debug.snapshot_state()
@@ -35,20 +35,22 @@ def test_state_debug_includes_fasttext_section():
     assert section["method"] == "fasttext_extracted_subset"
     assert section["dimension"] == 300
     assert section["subset_name"] == FASTTEXT_EMBEDDING_DEFAULT_SUBSET
-    assert section["loaded"] is True
-    assert section["vocab_size"] == 30000
+    assert section["loaded"] is False
+    assert section["vocab_size"] == 0
+    assert section["vectors_shape"] is None
 
 
-def test_state_debug_fasttext_not_in_use_by_generation():
+def test_state_debug_fasttext_reports_wrapper_primary_but_no_load():
     engine = build_full_engine()
 
     state = engine.state_debug.snapshot_state()
 
     assert state["fasttext_embedding"]["in_use_by_generation"] == "wrapper_primary"
     assert state["fasttext_embedding"]["migration_stage"] == "final_swap_primary"
+    assert state["fasttext_embedding"]["loaded"] is False
 
 
-def test_state_debug_self_embedding_still_in_use():
+def test_state_debug_self_embedding_still_wrapper_with_pmi_svd_fallback():
     engine = build_full_engine()
 
     state = engine.state_debug.snapshot_state()
@@ -58,6 +60,7 @@ def test_state_debug_self_embedding_still_in_use():
     assert section["method"] == "fasttext_primary_pmi_svd_fallback"
     assert section["dimension"] == 300
     assert section["in_use_by_generation"] == "wrapper"
+    assert section["fallback_class"] == "SelfEmbeddingAdapter"
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
 
 
@@ -82,26 +85,24 @@ def test_state_debug_does_not_trigger_fasttext_load():
     engine.state_debug.snapshot_state()
     engine.state_debug.diagnose_text("오늘 날씨 좋다")
 
-    assert engine.fasttext_embedding.is_loaded() is True
-    assert engine.fasttext_embedding.stats()["vocab_size"] == 30000
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.fasttext_embedding.stats()["vocab_size"] == 0
 
 
-def test_generation_path_still_uses_pmi_svd_self_embedding():
+def test_generation_path_uses_wrapper_with_unloaded_fasttext_and_fallback_available():
     engine = build_full_engine()
 
     assert engine.self_embedding.__class__.__name__ == "EmbeddingWrapper"
     assert getattr(engine.self_embedding, "dim") == 300
-    assert engine.fasttext_embedding.is_loaded() is True
-    # No broad swap: the two adapters are separate attributes.
+    assert engine.fasttext_embedding.is_loaded() is False
+    assert engine.self_embedding.primary is engine.fasttext_embedding
+    assert engine.self_embedding.fallback is engine.self_embedding_backup
     assert engine.self_embedding is not engine.fasttext_embedding
 
 
 def test_concept_memory_adapter_not_rewritten_by_round34_state_debug_migration():
     text = CONCEPT_MEMORY.read_text(encoding="utf-8")
 
-    # Round37 legitimately adds concept-memory fastText observation.
-    # The invariant from round34 that still matters is no self_embedding rewrite
-    # and no hard-coded subset path in concept memory.
     assert "vectors.npy" not in text
     assert "cc.ko.300.subset" not in text
     assert "engine.self_embedding =" not in text
@@ -121,5 +122,5 @@ def test_round34_does_not_load_subset_or_change_migration_state():
 
     assert engine.fasttext_embedding.stats()["runtime_used"] is False
     assert engine.fasttext_embedding.stats()["self_embedding_rewrite"] is False
-    assert engine.fasttext_embedding.stats()["loaded"] is True
-    assert engine.state_debug.snapshot_state()["fasttext_embedding"]["loaded"] is True
+    assert engine.fasttext_embedding.stats()["loaded"] is False
+    assert engine.state_debug.snapshot_state()["fasttext_embedding"]["loaded"] is False

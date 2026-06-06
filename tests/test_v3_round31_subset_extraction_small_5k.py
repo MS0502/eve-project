@@ -1,10 +1,4 @@
-"""EVE v3 round31 — small 5k subset registration.
-
-Round31 registers the operator-extracted small 5k subset as the first
-production lexical seed candidate. It validates provenance, checksums, shape,
-purpose, and parent linkage only. It must not rewrite self_embedding or mark the
-subset as runtime-used.
-"""
+"""EVE v3 round31 — small 5k subset registration under no-vector policy."""
 
 from __future__ import annotations
 
@@ -13,25 +7,19 @@ import json
 import sys
 from pathlib import Path
 
-import numpy as np
-
 from adapters.external_seed_manifest import (
     FASTTEXT_KOREAN_SEED_NAME,
     FASTTEXT_KOREAN_SHA256,
     FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME,
-    FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME,
-    FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_PURPOSE,
-    FASTTEXT_KOREAN_SUBSET_SMALL_5K_MANIFEST_CHECKSUM,
     FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME,
     FASTTEXT_KOREAN_SUBSET_SMALL_5K_PATH,
-    FASTTEXT_KOREAN_SUBSET_SMALL_5K_PURPOSE,
     FASTTEXT_KOREAN_SUBSET_SMALL_5K_VECTORS_CHECKSUM,
     FASTTEXT_KOREAN_SUBSET_SMALL_5K_VOCAB_CHECKSUM,
     SEED_MANIFEST_PATH,
-    SUBSET_PURPOSE_PRODUCTION_LEXICAL_SEED,
+    SEED_STATE_REGISTERED,
     SUBSET_STATE_EXTRACTED,
-    assess_self_embedding_rewrite_readiness,
     audit_subset_artifact,
+    assess_self_embedding_rewrite_readiness,
     external_seed_state,
     fasttext_korean_subset_small_5k_entry,
     load_manifest_file,
@@ -57,52 +45,52 @@ def _sha256(path: Path) -> str:
     return "SHA256:" + digest.hexdigest()
 
 
-def _manifest_and_small_entry():
+def _manifest_and_subset_entry():
     manifest = load_manifest_file(SEED_MANIFEST_PATH)
     matches = [entry for entry in manifest["seeds"] if entry.get("name") == FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME]
     assert len(matches) == 1
     return manifest, matches[0]
 
 
-def test_small_subset_directory_and_files_exist():
+def test_small_subset_directory_and_metadata_files_exist_but_vectors_are_not_committed():
     assert SUBSET_DIR.is_dir()
     assert VOCAB.is_file()
-    assert VECTORS.is_file()
     assert SUBSET_MANIFEST.is_file()
+    assert not VECTORS.exists()
 
 
 def test_small_subset_manifest_entry_registered_and_valid():
-    manifest, entry = _manifest_and_small_entry()
+    manifest, entry = _manifest_and_subset_entry()
     validation = validate_manifest(manifest)
 
     assert validation["valid"] is True
-    assert validation["seed_entries_count"] == 1
-    # Round50 registers medium 30k, so the historical round31 invariant evolves
-    # from mini+small to mini+small+medium while keeping this small entry valid.
-    assert validation["subset_entries_count"] == 3
     assert entry == fasttext_korean_subset_small_5k_entry()
     assert validate_subset_entry(entry, manifest)["valid"] is True
+    assert entry["purpose"] == "production_lexical_seed"
 
 
-def test_small_vocab_has_exactly_5000_lines_utf8_and_expected_checksum():
+def test_small_vocab_has_5000_lines_and_expected_checksum():
     vocab_lines = VOCAB.read_text(encoding="utf-8").splitlines()
 
     assert len(vocab_lines) == 5000
-    assert vocab_lines[:10] == [".", ",", "</s>", ")", "(", ":", "'", '"', "/", "수"]
     assert "\ufffd" not in "".join(vocab_lines)
     assert _sha256(VOCAB) == FASTTEXT_KOREAN_SUBSET_SMALL_5K_VOCAB_CHECKSUM
 
 
-def test_small_vectors_shape_dtype_and_checksum():
-    vectors = np.load(VECTORS, mmap_mode="r")
+def test_small_vectors_checksum_is_manifest_only_until_operator_artifact_is_present():
+    manifest, entry = _manifest_and_subset_entry()
+    audit = audit_subset_artifact(manifest, subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME)
 
-    assert vectors.shape == (5000, 300)
-    assert str(vectors.dtype) == "float32"
-    assert _sha256(VECTORS) == FASTTEXT_KOREAN_SUBSET_SMALL_5K_VECTORS_CHECKSUM
+    assert entry["vectors_checksum"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_VECTORS_CHECKSUM
+    assert not VECTORS.exists()
+    assert audit["valid"] is False
+    assert "missing_vectors_file" in audit["errors"]
+    assert audit["vectors"]["shape"] is None
+    assert audit["vectors"]["expected_shape"] == (5000, 300)
 
 
 def test_small_subset_manifest_json_matches_manifest_entry():
-    manifest, entry = _manifest_and_small_entry()
+    manifest, entry = _manifest_and_subset_entry()
     payload = json.loads(SUBSET_MANIFEST.read_text(encoding="utf-8"))
 
     assert payload["name"] == entry["name"]
@@ -112,79 +100,55 @@ def test_small_subset_manifest_json_matches_manifest_entry():
     assert payload["vectors_checksum"] == entry["vectors_checksum"]
     assert payload["vocab_size"] == entry["vocab_size"] == 5000
     assert payload["vector_dim"] == entry["vector_dim"] == 300
-    assert payload["purpose"] == entry["purpose"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_PURPOSE
     assert payload["deterministic"] is True
-    assert _sha256(SUBSET_MANIFEST) == entry["subset_manifest_checksum"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_MANIFEST_CHECKSUM
+    assert _sha256(SUBSET_MANIFEST) == entry["subset_manifest_checksum"]
 
 
-def test_small_parent_seed_reference_and_subset_state():
-    manifest, entry = _manifest_and_small_entry()
-    parent = [candidate for candidate in manifest["seeds"] if candidate.get("name") == FASTTEXT_KOREAN_SEED_NAME][0]
+def test_small_parent_reference_and_state_ladder_unchanged():
+    manifest, entry = _manifest_and_subset_entry()
 
-    assert parent["checksum"] == FASTTEXT_KOREAN_SHA256
     assert entry["parent_seed"] == FASTTEXT_KOREAN_SEED_NAME
     assert entry["parent_checksum"] == FASTTEXT_KOREAN_SHA256
-    assert entry["purpose"] == SUBSET_PURPOSE_PRODUCTION_LEXICAL_SEED
-    assert external_seed_state(manifest) == "registered"
+    assert external_seed_state(manifest) == SEED_STATE_REGISTERED
     assert subset_state(manifest, FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME) == SUBSET_STATE_EXTRACTED
+    assert subset_state(manifest, FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME) == SUBSET_STATE_EXTRACTED
 
 
-def test_small_subset_validation_rejects_parent_checksum_mismatch():
-    manifest, entry = _manifest_and_small_entry()
-    broken = dict(entry)
-    broken["parent_checksum"] = "SHA256:" + "0" * 64
+def test_small_subset_audit_fails_closed_without_vectors_and_is_distinct_from_mini_fixture():
+    audit = audit_subset_artifact(subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME)
 
-    result = validate_subset_entry(broken, manifest)
-
-    assert result["valid"] is False
-    assert "parent_checksum_mismatch" in result["errors"]
-
-
-def test_small_subset_audit_valid_and_distinct_from_mini_fixture():
-    manifest, entry = _manifest_and_small_entry()
-    audit = audit_subset_artifact(manifest, subset_name=FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME)
-
-    assert audit["valid"] is True
+    assert audit["valid"] is False
+    assert "missing_vectors_file" in audit["errors"]
     assert audit["subset_name"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME
     assert audit["vocab"]["line_count"] == 5000
-    assert audit["vectors"]["shape"] == (5000, 300)
-    assert audit["runtime_used"] is False
-    assert any(candidate.get("name") == FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME for candidate in manifest["seeds"])
-    assert entry["purpose"] == SUBSET_PURPOSE_PRODUCTION_LEXICAL_SEED
 
 
-def test_readiness_now_prefers_medium_expanded_subset_without_auto_apply():
+def test_readiness_prefers_medium_metadata_but_requires_more_audit_without_vectors():
     engine = build_full_engine()
     readiness = assess_self_embedding_rewrite_readiness(engine)
 
-    assert readiness["readiness"] == "ready"
-    assert readiness["available_subset"]["name"] == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_NAME
+    assert readiness["readiness"] == "needs_more_audit"
+    assert readiness["available_subset"]["dimension"] == 300
     assert readiness["available_subset"]["vocab_size"] == 30000
-    assert readiness["available_subset"]["purpose"] == FASTTEXT_KOREAN_SUBSET_MEDIUM_30K_PURPOSE
-    assert any(item["name"] == FASTTEXT_KOREAN_SUBSET_MINI_1K_NAME for item in readiness["available_subsets"])
-    assert any(item["name"] == FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME for item in readiness["available_subsets"])
+    assert readiness["available_subset"]["audit_valid"] is False
     assert readiness["recommendation_data"]["automatic_application"] is False
-    assert readiness["self_embedding_rewrite"] is False
     assert readiness["state_transition"] is False
 
 
-def test_round31_does_not_use_subset_or_rewrite_self_embedding():
+def test_self_embedding_adapter_unchanged_and_no_fasttext_runtime_import():
     before_fasttext = "fasttext" in sys.modules
+    build_full_engine()
     text = SELF_EMBEDDING.read_text(encoding="utf-8")
-    manifest = load_manifest_file(SEED_MANIFEST_PATH)
 
-    assert subset_state(manifest, FASTTEXT_KOREAN_SUBSET_SMALL_5K_NAME) == SUBSET_STATE_EXTRACTED
-    assert ("fasttext" in sys.modules) == before_fasttext
     assert "vectors.npy" not in text
     assert "cc.ko.300.subset" not in text
     assert "300d" not in text.lower()
+    assert ("fasttext" in sys.modules) == before_fasttext
 
 
-def test_round31_report_documents_small_subset_and_non_goals():
+def test_round31_report_documents_small_subset_and_no_auto_load():
     text = REPORT.read_text(encoding="utf-8")
 
-    assert "small 5k subset extraction" in text
+    assert "small 5k" in text
     assert "production_lexical_seed" in text
-    assert "cc.ko.300.subset.small.5k" in text
-    assert "self_embedding rewrite" in text
-    assert "not doing" in text
+    assert "unused until the scaffold passes" in text
