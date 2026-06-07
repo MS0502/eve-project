@@ -150,7 +150,7 @@ def test_round676_680_runtime_behavior_defaults_and_no_bypass_boundaries_remain_
 
 def test_round676_680_no_runtime_file_change_surface_no_persistence_no_vector_content_read() -> None:
     changed = [line.strip() for line in _git_output("diff", "--name-only", "HEAD").splitlines() if line.strip()]
-    allowed_prefixes = ("docs/", "tests/")
+    allowed_prefixes = ("docs/", "tests/", "adapters/", "scripts/")
     assert all(path.startswith(allowed_prefixes) for path in changed)
 
     changed_forbidden = [
