@@ -233,6 +233,8 @@ def build_virtual_world_situation_temporal_context(temporal_type=None, situation
     anchor, anchor_error = _normalize_anchor(temporal_anchor)
     if anchor_error:
         return _reject(payload, anchor_error)
+    if reference_situation_id is not None and not _non_empty_string(reference_situation_id):
+        return _reject(payload, "malformed_reference_situation_id")
     if temporal_type in REFERENCE_REQUIRED_TYPES and not _non_empty_string(reference_situation_id):
         return _reject(payload, "missing_reference_situation_id")
     if temporal_type in {"situation_before_candidate", "situation_after_candidate"} and situation_id == reference_situation_id:
@@ -323,12 +325,37 @@ def validate_virtual_world_situation_temporal_context(temporal_context):
         return False
     temporal_type = temporal_context["temporal_type"]
     reference = temporal_context.get("reference_situation_id")
+    if reference is not None and not _non_empty_string(reference):
+        return False
     if temporal_type in REFERENCE_REQUIRED_TYPES and not _non_empty_string(reference):
         return False
     if temporal_type in {"situation_before_candidate", "situation_after_candidate"} and temporal_context["situation_id"] == reference:
         return False
     expected = _stable_temporal_context_id(_canonical_basis(temporal_type, temporal_context["situation_id"], reference, temporal_context["temporal_boundary_classification"], temporal_context["temporal_confidence_state"], anchor, temporal_context.get("metadata")))
-    return temporal_context.get("temporal_context_id") == expected
+    if temporal_context.get("temporal_context_id") != expected:
+        return False
+    expected_payload = build_virtual_world_situation_temporal_context(
+        temporal_type=temporal_type,
+        situation_id=temporal_context["situation_id"],
+        reference_situation_id=reference,
+        temporal_anchor=anchor,
+        metadata=temporal_context.get("metadata"),
+    )
+    protected_fields = (
+        "origin_summary",
+        "fact_status_summary",
+        "sequence_constraints",
+        "duration_candidate",
+        "uncertainty_flags",
+        "boundary_flags",
+        "temporal_integrity_flags",
+        "candidate_only_fields",
+        "warnings",
+    )
+    for field in protected_fields:
+        if temporal_context.get(field) != expected_payload.get(field):
+            return False
+    return True
 
 
 def _plan(temporal_context, plan_type):

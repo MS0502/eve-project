@@ -112,6 +112,83 @@ def test_deterministic_ids_stable_reordered_keys_and_semantic_changes():
     assert c1["temporal_context_id"] != changed["temporal_context_id"]
 
 
+def test_malformed_optional_reference_situation_id_fails_for_all_temporal_types():
+    non_reference = build(reference_situation_id=["not", "string"])
+    assert non_reference["blocked_reasons"] == ["malformed_reference_situation_id"]
+    assert validate_virtual_world_situation_temporal_context(non_reference) is False
+    dict_reference = build(reference_situation_id={"situation_id": "situation_b"})
+    assert dict_reference["blocked_reasons"] == ["malformed_reference_situation_id"]
+    assert validate_virtual_world_situation_temporal_context(dict_reference) is False
+
+
+def test_validator_rejects_tampered_fact_status_summary():
+    context = build()
+    tampered = copy.deepcopy(context)
+    tampered["fact_status_summary"] = dict(tampered["fact_status_summary"])
+    tampered["fact_status_summary"]["confirmed_external_time_fact"] = True
+    assert validate_virtual_world_situation_temporal_context(tampered) is False
+    tampered = copy.deepcopy(context)
+    tampered["fact_status_summary"] = dict(tampered["fact_status_summary"])
+    tampered["fact_status_summary"]["completed_external_event"] = True
+    assert validate_virtual_world_situation_temporal_context(tampered) is False
+
+
+def test_validator_rejects_tampered_duration_candidate_and_sequence_constraints():
+    duration = build(temporal_type="waiting_duration_candidate")
+    tampered_duration = copy.deepcopy(duration)
+    tampered_duration["duration_candidate"]["external_duration_asserted"] = True
+    assert validate_virtual_world_situation_temporal_context(tampered_duration) is False
+    tampered_duration = copy.deepcopy(duration)
+    tampered_duration["duration_candidate"]["duration_candidate_only"] = False
+    assert validate_virtual_world_situation_temporal_context(tampered_duration) is False
+
+    ordered = build(temporal_type="situation_before_candidate")
+    tampered_sequence = copy.deepcopy(ordered)
+    tampered_sequence["sequence_constraints"][0]["external_order_asserted"] = True
+    assert validate_virtual_world_situation_temporal_context(tampered_sequence) is False
+    tampered_sequence = copy.deepcopy(ordered)
+    tampered_sequence["sequence_constraints"][0]["candidate_only"] = False
+    assert validate_virtual_world_situation_temporal_context(tampered_sequence) is False
+
+
+def test_validator_rejects_removed_or_altered_required_temporal_flags():
+    before = build(temporal_type="situation_before_candidate")
+    missing_boundary = copy.deepcopy(before)
+    missing_boundary["boundary_flags"] = []
+    assert validate_virtual_world_situation_temporal_context(missing_boundary) is False
+    altered_boundary = copy.deepcopy(before)
+    altered_boundary["boundary_flags"] = ["unexpected_boundary_flag"]
+    assert validate_virtual_world_situation_temporal_context(altered_boundary) is False
+
+    future = build(temporal_type="situation_future_window_candidate")
+    missing_uncertainty = copy.deepcopy(future)
+    missing_uncertainty["uncertainty_flags"] = []
+    assert validate_virtual_world_situation_temporal_context(missing_uncertainty) is False
+    altered_uncertainty = copy.deepcopy(future)
+    altered_uncertainty["uncertainty_flags"] = ["future_outcome_asserted"]
+    assert validate_virtual_world_situation_temporal_context(altered_uncertainty) is False
+
+    high = build(metadata={"temporal_confidence_state": "temporal_high_confidence_but_not_fact"})
+    removed_warning = copy.deepcopy(high)
+    removed_warning["warnings"] = []
+    assert validate_virtual_world_situation_temporal_context(removed_warning) is False
+
+    conflict = build(metadata={"temporal_confidence_state": "temporal_conflict_detected"})
+    removed_integrity = copy.deepcopy(conflict)
+    removed_integrity["temporal_integrity_flags"] = []
+    assert validate_virtual_world_situation_temporal_context(removed_integrity) is False
+
+
+def test_validator_rejects_tampered_origin_summary_and_candidate_only_fields():
+    context = build()
+    tampered_origin = copy.deepcopy(context)
+    tampered_origin["origin_summary"]["external_origin_verified"] = True
+    assert validate_virtual_world_situation_temporal_context(tampered_origin) is False
+    tampered_fields = copy.deepcopy(context)
+    tampered_fields["candidate_only_fields"] = ["temporal_type"]
+    assert validate_virtual_world_situation_temporal_context(tampered_fields) is False
+
+
 def test_id_tampering_is_rejected():
     context = build()
     tampered = copy.deepcopy(context)
