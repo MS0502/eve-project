@@ -513,3 +513,161 @@ def test_schema_summary_alias():
     summary = build_virtual_world_situation_temporal_context_schema_summary()
     assert virtual_world_situation_temporal_context_schema_summary() == summary
     assert summary["recommended_next_implementation_step"] == "read_only_virtual_world_situation_causal_context_schema"
+
+MALFORMED_FALSEY_AND_CONTAINER_VALUES = ["", None, False, 0, [], {}]
+
+
+@pytest.mark.parametrize("value", MALFORMED_FALSEY_AND_CONTAINER_VALUES)
+def test_present_malformed_temporal_boundary_classification_fails_closed(value):
+    context = build(metadata={"temporal_boundary_classification": value})
+    assert context["situation_temporal_context_passed"] is False
+    assert context["blocked_reasons"] == ["malformed_temporal_boundary_class"]
+    assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+@pytest.mark.parametrize("value", MALFORMED_FALSEY_AND_CONTAINER_VALUES)
+def test_present_malformed_temporal_confidence_state_fails_closed(value):
+    context = build(metadata={"temporal_confidence_state": value})
+    assert context["situation_temporal_context_passed"] is False
+    assert context["blocked_reasons"] == ["malformed_temporal_confidence_state"]
+    assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+def test_absent_boundary_and_confidence_use_deterministic_defaults():
+    symbolic = build(temporal_type="symbolic_time_candidate", metadata={})
+    assert symbolic["temporal_boundary_classification"] == "symbolic_virtual_time"
+    assert symbolic["temporal_confidence_state"] == "temporal_unverified"
+    assert validate_virtual_world_situation_temporal_context(symbolic) is True
+
+
+@pytest.mark.parametrize("field", sorted(schema.FORBIDDEN_REQUEST_FIELDS))
+def test_recursive_forbidden_request_metadata_true_fails_closed(field):
+    for metadata in ({field: True}, {"nested": {field: True}}, {"items": [{"nested": {field: True}}]}):
+        context = build(metadata=metadata)
+        assert context["blocked_reasons"] == [field]
+        assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+@pytest.mark.parametrize("value", [1, "yes"])
+def test_forbidden_request_metadata_non_boolean_values_fail_closed(value):
+    context = build(metadata={"memory_write_requested": value})
+    assert context["blocked_reasons"] == ["malformed_forbidden_request_field"]
+    assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+@pytest.mark.parametrize("field", sorted(schema.FORBIDDEN_ANCHOR_REQUEST_FIELDS))
+def test_forbidden_anchor_alias_fields_fail_closed(field):
+    context = build(temporal_anchor={**ANCHOR, field: True})
+    assert context["blocked_reasons"] == [field]
+    assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+@pytest.mark.parametrize("field", sorted(schema.FORBIDDEN_ANCHOR_REQUEST_FIELDS))
+def test_nested_forbidden_anchor_alias_fields_fail_closed(field):
+    context = build(temporal_anchor={**ANCHOR, "preserved_unknown": [{"deep": {field: True}}]})
+    assert context["blocked_reasons"] == [field]
+    assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+def test_false_forbidden_fields_are_non_requesting_and_valid():
+    metadata = {field: False for field in schema.FORBIDDEN_REQUEST_FIELDS}
+    anchor = {**ANCHOR, **{field: False for field in schema.FORBIDDEN_ANCHOR_REQUEST_FIELDS}}
+    context = build(metadata=metadata, temporal_anchor=anchor)
+    assert context["situation_temporal_context_passed"] is True
+    assert validate_virtual_world_situation_temporal_context(context) is True
+
+
+class RaisesOnStr:
+    def __str__(self):
+        raise RuntimeError("str forbidden")
+
+
+class RaisesOnRepr:
+    def __repr__(self):
+        raise RuntimeError("repr forbidden")
+
+
+def deeply_nested_dict(depth):
+    root = {}
+    cursor = root
+    for index in range(depth):
+        child = {}
+        cursor[f"level_{index}"] = child
+        cursor = child
+    return root
+
+
+def test_deeply_nested_acyclic_metadata_and_anchor_fail_closed_exception_safe():
+    rejected_payloads = [
+        build(metadata=deeply_nested_dict(3000)),
+        build(temporal_anchor={**ANCHOR, "deep": deeply_nested_dict(3000)}),
+    ]
+    for payload in rejected_payloads:
+        assert payload["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+        assert validate_virtual_world_situation_temporal_context(payload) is False
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False)
+
+
+def test_objects_with_raising_str_or_repr_fail_closed_and_return_json_safe_payloads():
+    rejected_payloads = [
+        build(metadata={"bad": RaisesOnStr()}),
+        build(metadata={"bad": RaisesOnRepr()}),
+        build(temporal_anchor={**ANCHOR, "bad": RaisesOnStr()}),
+        build(temporal_anchor={**ANCHOR, "bad": RaisesOnRepr()}),
+    ]
+    for payload in rejected_payloads:
+        assert payload["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+        assert validate_virtual_world_situation_temporal_context(payload) is False
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False)
+
+
+def test_validator_exception_safe_for_deep_and_raising_objects():
+    valid = build()
+    for field, value in (
+        ("metadata", deeply_nested_dict(3000)),
+        ("temporal_anchor", {**ANCHOR, "deep": deeply_nested_dict(3000)}),
+        ("metadata", {"bad": RaisesOnStr()}),
+        ("metadata", {"bad": RaisesOnRepr()}),
+        ("temporal_anchor", {**ANCHOR, "bad": RaisesOnStr()}),
+        ("temporal_anchor", {**ANCHOR, "bad": RaisesOnRepr()}),
+    ):
+        tampered = copy.deepcopy(valid)
+        tampered[field] = value
+        assert validate_virtual_world_situation_temporal_context(tampered) is False
+
+
+def test_every_plan_builder_not_ready_for_new_malformed_and_tampered_sources():
+    sources = [
+        build(metadata={"temporal_boundary_classification": ""}),
+        build(metadata={"temporal_boundary_classification": None}),
+        build(metadata={"temporal_boundary_classification": False}),
+        build(metadata={"temporal_boundary_classification": 0}),
+        build(metadata={"temporal_boundary_classification": []}),
+        build(metadata={"temporal_boundary_classification": {}}),
+        build(metadata={"temporal_confidence_state": ""}),
+        build(metadata={"temporal_confidence_state": None}),
+        build(metadata={"temporal_confidence_state": False}),
+        build(metadata={"temporal_confidence_state": 0}),
+        build(metadata={"temporal_confidence_state": []}),
+        build(metadata={"temporal_confidence_state": {}}),
+        build(metadata={"nested": {"memory_write_requested": True}}),
+        build(metadata={"nested": [{"tool_execution_requested": True}]}),
+        build(metadata={"memory_write_requested": 1}),
+        build(metadata={"memory_write_requested": "yes"}),
+        build(temporal_anchor={**ANCHOR, "cron_requested": True}),
+        build(temporal_anchor={**ANCHOR, "nested": {"calendar_requested": True}}),
+        build(metadata=deeply_nested_dict(3000)),
+        build(temporal_anchor={**ANCHOR, "deep": deeply_nested_dict(3000)}),
+        build(metadata={"bad": RaisesOnStr()}),
+        build(metadata={"bad": RaisesOnRepr()}),
+    ]
+    for source in sources:
+        for builder in (
+            build_temporal_context_to_situation_plan,
+            build_temporal_context_to_snapshot_plan,
+            build_temporal_context_to_transition_preflight_plan,
+            build_temporal_context_to_memory_candidate_plan,
+            build_temporal_context_to_appraisal_plan,
+            build_temporal_context_to_agp_input_plan,
+        ):
+            assert builder(source)["ready"] is False
