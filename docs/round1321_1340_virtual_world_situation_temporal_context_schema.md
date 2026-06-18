@@ -39,11 +39,11 @@ Confidence states remain non-factual: `temporal_unverified`, `temporal_low_confi
 
 ## Fail-closed behavior
 
-The builder and validator fail closed for missing or unknown temporal types, missing or malformed situation IDs, malformed optional reference situation IDs, missing required reference situations, missing or malformed anchors, unknown boundary or confidence values, identical before/after situation IDs, invalid logical intervals, negative sequence indexes, forbidden external-time requests, scheduler/timer/alarm/calendar/reminder/deadline requests, and incoherent pass/reject statuses.
+The builder and validator fail closed for missing or unknown temporal types, missing or malformed situation IDs, malformed optional reference situation IDs, missing required reference situations, missing or malformed anchors, unknown boundary or confidence values, identical before/after situation IDs, invalid logical intervals, negative sequence indexes, forbidden external-time requests, scheduler/timer/alarm/calendar/reminder/deadline requests, non-JSON-serializable semantic input, and incoherent pass/reject statuses.
 
 ## Deterministic IDs
 
-`temporal_context_id` is computed from normalized semantic input using canonical JSON with sorted keys and SHA-256. Reordered dictionary keys do not change the ID, semantic changes do change it, and validator recomputation detects tampering. The validator also rebuilds the expected candidate payload from normalized semantic input and rejects tampering of protected derived fields such as origin/fact summaries, sequence constraints, duration candidates, uncertainty and boundary flags, temporal-integrity flags, candidate-only fields, and warnings. The schema does not use UUIDs, random sampling, process-local identity, filesystem state, or clock state.
+`temporal_context_id` is computed from normalized semantic input using canonical JSON with sorted keys and SHA-256. Reordered dictionary keys do not change the ID, semantic changes do change it, and validator recomputation detects tampering. A single canonical serialization helper catches `TypeError` and `ValueError` so non-JSON-serializable semantic input fails closed instead of raising. The validator also rebuilds the expected candidate payload from normalized semantic input and rejects tampering of protected derived fields such as origin/fact summaries, sequence constraints, duration candidates, uncertainty and boundary flags, temporal-integrity flags, candidate-only fields, and warnings. The schema does not use UUIDs, random sampling, process-local identity, filesystem state, or clock state.
 
 ## No clock, scheduler, timer, or activation access
 

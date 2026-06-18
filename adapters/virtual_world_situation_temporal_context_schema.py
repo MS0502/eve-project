@@ -174,9 +174,18 @@ def _canonical_basis(temporal_type, situation_id, reference_situation_id, bounda
     }
 
 
-def _stable_temporal_context_id(basis: Dict[str, Any]) -> str:
-    canonical_json = json.dumps(basis, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return "vw-situation-temporal-context-" + hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+def _canonical_json_dumps(value: Any) -> Tuple[Optional[str], Optional[str]]:
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")), None
+    except (TypeError, ValueError):
+        return None, "non_json_serializable_semantic_input"
+
+
+def _stable_temporal_context_id(basis: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    canonical_json, error = _canonical_json_dumps(basis)
+    if error is not None:
+        return None, error
+    return "vw-situation-temporal-context-" + hashlib.sha256(canonical_json.encode("utf-8")).hexdigest(), None
 
 
 def _base_payload(temporal_type, situation_id, reference_situation_id, temporal_anchor, metadata):
@@ -283,7 +292,10 @@ def build_virtual_world_situation_temporal_context(temporal_type=None, situation
         payload["uncertainty_flags"].append("temporal_origin_unknown")
 
     basis = _canonical_basis(temporal_type, situation_id, reference_situation_id, boundary, confidence, anchor, metadata)
-    payload["temporal_context_id"] = _stable_temporal_context_id(basis)
+    temporal_context_id, serialization_error = _stable_temporal_context_id(basis)
+    if serialization_error is not None:
+        return _reject(payload, serialization_error)
+    payload["temporal_context_id"] = temporal_context_id
     payload["canonical_id_algorithm"] = "json.dumps(sort_keys=True, ensure_ascii=False, separators)+sha256"
     payload["situation_temporal_context_passed"] = True
     payload["situation_temporal_context_status"] = "VALIDATED"
@@ -331,7 +343,9 @@ def validate_virtual_world_situation_temporal_context(temporal_context):
         return False
     if temporal_type in {"situation_before_candidate", "situation_after_candidate"} and temporal_context["situation_id"] == reference:
         return False
-    expected = _stable_temporal_context_id(_canonical_basis(temporal_type, temporal_context["situation_id"], reference, temporal_context["temporal_boundary_classification"], temporal_context["temporal_confidence_state"], anchor, temporal_context.get("metadata")))
+    expected, serialization_error = _stable_temporal_context_id(_canonical_basis(temporal_type, temporal_context["situation_id"], reference, temporal_context["temporal_boundary_classification"], temporal_context["temporal_confidence_state"], anchor, temporal_context.get("metadata")))
+    if serialization_error is not None:
+        return False
     if temporal_context.get("temporal_context_id") != expected:
         return False
     expected_payload = build_virtual_world_situation_temporal_context(

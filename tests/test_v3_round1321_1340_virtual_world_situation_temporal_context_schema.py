@@ -277,6 +277,88 @@ def test_every_plan_builder_candidate_only_and_read_only():
         assert plan["mutation_performed"] is False
 
 
+def test_non_json_serializable_semantic_input_fails_closed_without_raise():
+    cases = [
+        {"metadata": {"bad_set": {"x"}}},
+        {"metadata": {"bad_bytes": b"x"}},
+        {"metadata": {1: "int-key", "mixed": "string-key"}},
+        {"temporal_anchor": {**ANCHOR, "unknown_set": {"x"}}},
+        {"temporal_anchor": {**ANCHOR, "unknown_bytes": b"x"}},
+    ]
+    for kwargs in cases:
+        context = build(**kwargs)
+        assert context["situation_temporal_context_passed"] is False
+        assert context["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+        assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+def test_validator_returns_false_for_non_json_serializable_semantic_input_without_raise():
+    valid = build()
+    for field, value in (
+        ("metadata", {"bad_set": {"x"}}),
+        ("metadata", {"bad_bytes": b"x"}),
+        ("metadata", {1: "int-key", "mixed": "string-key"}),
+        ("temporal_anchor", {**ANCHOR, "unknown_set": {"x"}}),
+        ("temporal_anchor", {**ANCHOR, "unknown_bytes": b"x"}),
+    ):
+        tampered = copy.deepcopy(valid)
+        tampered[field] = value
+        assert validate_virtual_world_situation_temporal_context(tampered) is False
+
+
+REQUIRED_PUBLIC_OUTPUT_FIELDS = [
+    "situation_temporal_context_passed",
+    "situation_temporal_context_status",
+    "temporal_context_id",
+    "temporal_type",
+    "temporal_boundary_classification",
+    "temporal_confidence_state",
+    "situation_id",
+    "reference_situation_id",
+    "temporal_anchor",
+    "metadata",
+    "origin_summary",
+    "fact_status_summary",
+    "sequence_constraints",
+    "duration_candidate",
+    "uncertainty_flags",
+    "boundary_flags",
+    "temporal_integrity_flags",
+    "candidate_only_fields",
+    "blocked_reasons",
+    "warnings",
+]
+
+
+def test_all_required_public_output_fields_are_present_by_literal_name():
+    context = build()
+    for field in REQUIRED_PUBLIC_OUTPUT_FIELDS:
+        assert field in context
+
+
+def test_every_plan_builder_not_ready_for_adversarial_sources():
+    valid = build()
+    tampered_id = copy.deepcopy(valid)
+    tampered_id["temporal_context_id"] += "tampered"
+    tampered_fact = copy.deepcopy(valid)
+    tampered_fact["fact_status_summary"]["confirmed_external_time_fact"] = True
+    rejected = build(temporal_type="unknown")
+    non_dict = ["not", "dict"]
+    for source in (tampered_id, tampered_fact, rejected, non_dict):
+        for builder in (
+            build_temporal_context_to_situation_plan,
+            build_temporal_context_to_snapshot_plan,
+            build_temporal_context_to_transition_preflight_plan,
+            build_temporal_context_to_memory_candidate_plan,
+            build_temporal_context_to_appraisal_plan,
+            build_temporal_context_to_agp_input_plan,
+        ):
+            plan = builder(source)
+            assert plan["ready"] is False
+            assert plan["candidate_only"] is True
+            assert plan["read_only"] is True
+
+
 def test_no_clock_time_api_is_imported_or_called():
     source = inspect.getsource(schema)
     forbidden = ["import time", "from time", "datetime", "time.time", "monotonic", "perf_counter", "now()"]
