@@ -107,27 +107,45 @@ FORBIDDEN_REQUEST_FIELDS = {
     "fallback_bypass_requested",
 }
 
+FORBIDDEN_ANCHOR_REQUEST_FIELDS = {
+    "cron_requested", "cron_expression", "schedule_requested", "scheduler_requested",
+    "timer_requested", "alarm_requested", "reminder_requested", "calendar_requested",
+    "deadline_requested", "external_time_requested", "current_time_requested",
+    "system_clock_requested", "execution_requested",
+}
+
+FORBIDDEN_REQUEST_FIELD_NAMES = FORBIDDEN_REQUEST_FIELDS | FORBIDDEN_ANCHOR_REQUEST_FIELDS
+
 
 def _non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _forbidden_request_reason(value: Any) -> Optional[str]:
+    if isinstance(value, dict):
+        for key in sorted(value):
+            item = value[key]
+            if key in FORBIDDEN_REQUEST_FIELD_NAMES:
+                if item is True:
+                    return key
+                if item is not False:
+                    return "malformed_forbidden_request_field"
+            nested = _forbidden_request_reason(item)
+            if nested is not None:
+                return nested
+        return None
+    if isinstance(value, list):
+        for item in value:
+            nested = _forbidden_request_reason(item)
+            if nested is not None:
+                return nested
+    return None
+
+
 def _metadata_forbidden(metadata: Any) -> Optional[str]:
     if not isinstance(metadata, dict):
         return "invalid_metadata"
-    for field in sorted(FORBIDDEN_REQUEST_FIELDS):
-        if metadata.get(field) is True:
-            return field
-    return None
-
-
-def _contains_forbidden_anchor_request(anchor: Dict[str, Any]) -> Optional[str]:
-    forbidden_words = ("date" + "time", "time" + "stamp", "time" + "zone", "wall" + "_clock", "calendar", "schedule", "timer", "alarm", "deadline", "execute")
-    for key, value in anchor.items():
-        text = f"{key} {value}".lower()
-        if any(word in text for word in forbidden_words):
-            return "forbidden_external_time_or_execution_anchor_field"
-    return None
+    return _forbidden_request_reason(metadata)
 
 
 def _normalize_anchor(anchor: Any) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -137,7 +155,7 @@ def _normalize_anchor(anchor: Any) -> Tuple[Optional[Dict[str, Any]], Optional[s
         return None, "malformed_temporal_anchor"
     if anchor.get("anchor_kind") not in SUPPORTED_TEMPORAL_ANCHOR_KINDS:
         return None, "malformed_temporal_anchor"
-    blocked = _contains_forbidden_anchor_request(anchor)
+    blocked = _forbidden_request_reason(anchor)
     if blocked:
         return None, blocked
     normalized = dict(anchor)
@@ -154,12 +172,26 @@ def _normalize_anchor(anchor: Any) -> Tuple[Optional[Dict[str, Any]], Optional[s
     return normalized, None
 
 
-def _boundary_for_type(temporal_type: str, metadata: Dict[str, Any]) -> str:
-    return metadata.get("temporal_boundary_classification") or BOUNDARY_DEFAULTS.get(temporal_type, "internal_logical_time")
+def _boundary_for_type(temporal_type: str, metadata: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    if "temporal_boundary_classification" not in metadata:
+        return BOUNDARY_DEFAULTS.get(temporal_type, "internal_logical_time"), None
+    value = metadata["temporal_boundary_classification"]
+    if not _non_empty_string(value):
+        return None, "malformed_temporal_boundary_class"
+    if value not in SUPPORTED_TEMPORAL_BOUNDARY_CLASSES:
+        return value, "unknown_temporal_boundary_class"
+    return value, None
 
 
-def _confidence_for_metadata(metadata: Dict[str, Any]) -> str:
-    return metadata.get("temporal_confidence_state") or "temporal_unverified"
+def _confidence_for_metadata(metadata: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    if "temporal_confidence_state" not in metadata:
+        return "temporal_unverified", None
+    value = metadata["temporal_confidence_state"]
+    if not _non_empty_string(value):
+        return None, "malformed_temporal_confidence_state"
+    if value not in SUPPORTED_TEMPORAL_CONFIDENCE_STATES:
+        return value, "unknown_temporal_confidence_state"
+    return value, None
 
 
 def _canonical_basis(temporal_type, situation_id, reference_situation_id, boundary, confidence, anchor, metadata):
@@ -215,7 +247,10 @@ def _assert_json_native(value: Any, seen: Optional[set] = None) -> Optional[str]
 
 
 def _canonical_json_dumps(value: Any) -> Tuple[Optional[str], Optional[str]]:
-    native_error = _assert_json_native(value)
+    try:
+        native_error = _assert_json_native(value)
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        return None, "non_json_serializable_semantic_input"
     if native_error is not None:
         return None, native_error
     try:
@@ -285,7 +320,11 @@ def build_virtual_world_situation_temporal_context(temporal_type=None, situation
         "temporal_anchor": temporal_anchor,
         "metadata": metadata,
     }
-    if _assert_json_native(semantic_input) is not None:
+    try:
+        semantic_input_error = _assert_json_native(semantic_input)
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        semantic_input_error = "non_json_serializable_semantic_input"
+    if semantic_input_error is not None:
         return _reject_non_json_semantic_input(temporal_type, situation_id, reference_situation_id)
     payload = _base_payload(temporal_type, situation_id, reference_situation_id, temporal_anchor, metadata)
     if temporal_type is None:
@@ -308,14 +347,14 @@ def build_virtual_world_situation_temporal_context(temporal_type=None, situation
         return _reject(payload, "missing_reference_situation_id")
     if temporal_type in {"situation_before_candidate", "situation_after_candidate"} and situation_id == reference_situation_id:
         return _reject(payload, "same_situation_invalid_for_order_relation")
-    boundary = _boundary_for_type(temporal_type, metadata)
-    confidence = _confidence_for_metadata(metadata)
+    boundary, boundary_error = _boundary_for_type(temporal_type, metadata)
     payload["temporal_boundary_classification"] = boundary
+    if boundary_error is not None:
+        return _reject(payload, boundary_error)
+    confidence, confidence_error = _confidence_for_metadata(metadata)
     payload["temporal_confidence_state"] = confidence
-    if boundary not in SUPPORTED_TEMPORAL_BOUNDARY_CLASSES:
-        return _reject(payload, "unknown_temporal_boundary_class")
-    if confidence not in SUPPORTED_TEMPORAL_CONFIDENCE_STATES:
-        return _reject(payload, "unknown_temporal_confidence_state")
+    if confidence_error is not None:
+        return _reject(payload, confidence_error)
 
     payload["temporal_anchor"] = anchor
     payload["sequence_constraints"].append({"constraint_kind": temporal_type, "candidate_only": True, "external_order_asserted": False})
@@ -363,6 +402,15 @@ def build_virtual_world_situation_temporal_context(temporal_type=None, situation
 
 
 def validate_virtual_world_situation_temporal_context(temporal_context):
+    try:
+        if _assert_json_native(temporal_context) is not None:
+            return False
+        return _validate_virtual_world_situation_temporal_context_checked(temporal_context)
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        return False
+
+
+def _validate_virtual_world_situation_temporal_context_checked(temporal_context):
     if not isinstance(temporal_context, dict):
         return False
     passed = temporal_context.get("situation_temporal_context_passed")

@@ -42,6 +42,29 @@ def main():
         situation_id="operator_situation",
         temporal_anchor={**ANCHOR, "logical_start": 3, "logical_end": 2},
     )
+    malformed_boundary = build_virtual_world_situation_temporal_context(
+        temporal_type="situation_interval_candidate",
+        situation_id="operator_situation",
+        temporal_anchor=ANCHOR,
+        metadata={"temporal_boundary_classification": ""},
+    )
+    malformed_confidence = build_virtual_world_situation_temporal_context(
+        temporal_type="situation_interval_candidate",
+        situation_id="operator_situation",
+        temporal_anchor=ANCHOR,
+        metadata={"temporal_confidence_state": []},
+    )
+    forbidden_nested = build_virtual_world_situation_temporal_context(
+        temporal_type="situation_interval_candidate",
+        situation_id="operator_situation",
+        temporal_anchor=ANCHOR,
+        metadata={"nested": [{"memory_write_requested": True}]},
+    )
+    forbidden_anchor = build_virtual_world_situation_temporal_context(
+        temporal_type="situation_interval_candidate",
+        situation_id="operator_situation",
+        temporal_anchor={**ANCHOR, "preserved": {"timer_requested": True}},
+    )
     source = inspect.getsource(schema)
     forbidden_tokens = ["import time", "from time", "datetime", "time.time", "monotonic", "perf_counter", "now()"]
     report = {
@@ -50,6 +73,10 @@ def main():
         "deterministic_id_passed": stable_a["temporal_context_id"] == stable_b["temporal_context_id"],
         "tamper_detection_passed": validate_virtual_world_situation_temporal_context(tampered) is False,
         "logical_interval_validation_passed": logical_bad["blocked_reasons"] == ["logical_end_before_logical_start"],
+        "malformed_boundary_validation_passed": malformed_boundary["blocked_reasons"] == ["malformed_temporal_boundary_class"],
+        "malformed_confidence_validation_passed": malformed_confidence["blocked_reasons"] == ["malformed_temporal_confidence_state"],
+        "recursive_forbidden_metadata_passed": forbidden_nested["blocked_reasons"] == ["memory_write_requested"],
+        "recursive_forbidden_anchor_passed": forbidden_anchor["blocked_reasons"] == ["timer_requested"],
         "no_clock_access_passed": all(token not in source for token in forbidden_tokens),
         "schema_summary": build_virtual_world_situation_temporal_context_schema_summary(),
     }
