@@ -1,5 +1,6 @@
 import copy
 import inspect
+import json
 
 import pytest
 
@@ -357,6 +358,148 @@ def test_every_plan_builder_not_ready_for_adversarial_sources():
             assert plan["ready"] is False
             assert plan["candidate_only"] is True
             assert plan["read_only"] is True
+
+
+def test_strict_json_native_rejects_non_string_keys_and_preserves_string_keys():
+    int_key = build(metadata={1: "x"})
+    assert int_key["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+    assert int_key["metadata"] == {}
+    assert validate_virtual_world_situation_temporal_context(int_key) is False
+
+    string_key = build(metadata={"1": "x"})
+    assert string_key["situation_temporal_context_passed"] is True
+    assert validate_virtual_world_situation_temporal_context(string_key) is True
+    assert int_key["temporal_context_id"] != string_key["temporal_context_id"]
+
+
+@pytest.mark.parametrize("metadata", [
+    {"tuple_value": ("x", "y")},
+    {"nan_value": float("nan")},
+    {"positive_infinity": float("inf")},
+    {"negative_infinity": float("-inf")},
+])
+def test_strict_json_native_rejects_tuple_nan_and_infinities(metadata):
+    context = build(metadata=metadata)
+    assert context["situation_temporal_context_passed"] is False
+    assert context["metadata"] == {}
+    assert context["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+    assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+def test_circular_metadata_and_anchor_fail_closed_without_raising_and_return_safe_payloads():
+    circular_metadata = {}
+    circular_metadata["self"] = circular_metadata
+    circular_anchor = {**ANCHOR}
+    circular_anchor["self"] = circular_anchor
+    for kwargs in ({"metadata": circular_metadata}, {"temporal_anchor": circular_anchor}):
+        context = build(**kwargs)
+        assert context["situation_temporal_context_passed"] is False
+        assert context["temporal_anchor"] is None
+        assert context["metadata"] == {}
+        assert context["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+        assert validate_virtual_world_situation_temporal_context(context) is False
+
+
+class CustomSemanticObject:
+    pass
+
+
+def test_rejected_non_json_payloads_are_json_serializable():
+    circular_metadata = {}
+    circular_metadata["self"] = circular_metadata
+    circular_anchor = {**ANCHOR}
+    circular_anchor["self"] = circular_anchor
+    rejected_payloads = [
+        build(metadata={"bad_set": {"x"}}),
+        build(metadata={"bad_frozenset": frozenset({"x"})}),
+        build(metadata={"bad_bytes": b"x"}),
+        build(metadata={"bad_bytearray": bytearray(b"x")}),
+        build(metadata={"bad_tuple": ("x",)}),
+        build(metadata={"bad_object": CustomSemanticObject()}),
+        build(metadata={"bad_nan": float("nan")}),
+        build(metadata={"bad_inf": float("inf")}),
+        build(metadata={1: "x"}),
+        build(temporal_anchor={**ANCHOR, "bad_set": {"x"}}),
+        build(metadata=circular_metadata),
+        build(temporal_anchor=circular_anchor),
+    ]
+    for payload in rejected_payloads:
+        assert payload["blocked_reasons"] == ["non_json_serializable_semantic_input"]
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False)
+
+
+def test_validator_rejects_top_level_output_integrity_tampering():
+    valid = build()
+    tamper_cases = []
+    pass_tampered = copy.deepcopy(valid)
+    pass_tampered["situation_temporal_context_passed"] = False
+    tamper_cases.append(pass_tampered)
+    status_tampered = copy.deepcopy(valid)
+    status_tampered["situation_temporal_context_status"] = "REJECTED"
+    tamper_cases.append(status_tampered)
+    false_flag_tampered = copy.deepcopy(valid)
+    false_flag_tampered["memory_write_performed"] = True
+    tamper_cases.append(false_flag_tampered)
+    true_flag_tampered = copy.deepcopy(valid)
+    true_flag_tampered["temporal_candidate_only"] = False
+    tamper_cases.append(true_flag_tampered)
+    no_algorithm = copy.deepcopy(valid)
+    del no_algorithm["canonical_id_algorithm"]
+    tamper_cases.append(no_algorithm)
+    altered_algorithm = copy.deepcopy(valid)
+    altered_algorithm["canonical_id_algorithm"] = "different"
+    tamper_cases.append(altered_algorithm)
+    missing_required = copy.deepcopy(valid)
+    del missing_required["origin_summary"]
+    tamper_cases.append(missing_required)
+    arbitrary_extra = copy.deepcopy(valid)
+    arbitrary_extra["arbitrary_unknown_field"] = True
+    tamper_cases.append(arbitrary_extra)
+    runtime_extra = copy.deepcopy(valid)
+    runtime_extra["runtime_mutation_requested"] = True
+    tamper_cases.append(runtime_extra)
+    memory_extra = copy.deepcopy(valid)
+    memory_extra["memory_write_requested"] = True
+    tamper_cases.append(memory_extra)
+    external_time_extra = copy.deepcopy(valid)
+    external_time_extra["external_time_assertion_requested"] = True
+    tamper_cases.append(external_time_extra)
+
+    for candidate in tamper_cases:
+        assert validate_virtual_world_situation_temporal_context(candidate) is False
+
+
+def test_every_plan_builder_not_ready_for_top_level_integrity_tampering():
+    valid = build()
+    tampered_sources = []
+    for field, value in (
+        ("situation_temporal_context_passed", False),
+        ("situation_temporal_context_status", "REJECTED"),
+        ("memory_write_performed", True),
+        ("temporal_candidate_only", False),
+        ("canonical_id_algorithm", "different"),
+    ):
+        candidate = copy.deepcopy(valid)
+        candidate[field] = value
+        tampered_sources.append(candidate)
+    missing_field = copy.deepcopy(valid)
+    del missing_field["temporal_anchor"]
+    tampered_sources.append(missing_field)
+    for extra_field in ("arbitrary_unknown_field", "runtime_mutation_requested", "memory_write_requested", "external_time_assertion_requested"):
+        candidate = copy.deepcopy(valid)
+        candidate[extra_field] = True
+        tampered_sources.append(candidate)
+
+    for source in tampered_sources:
+        for builder in (
+            build_temporal_context_to_situation_plan,
+            build_temporal_context_to_snapshot_plan,
+            build_temporal_context_to_transition_preflight_plan,
+            build_temporal_context_to_memory_candidate_plan,
+            build_temporal_context_to_appraisal_plan,
+            build_temporal_context_to_agp_input_plan,
+        ):
+            assert builder(source)["ready"] is False
 
 
 def test_no_clock_time_api_is_imported_or_called():

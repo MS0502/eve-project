@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 from typing import Any, Dict, Optional, Tuple
 
 VERSION = "1.0.0-round1321-1340"
@@ -174,10 +175,52 @@ def _canonical_basis(temporal_type, situation_id, reference_situation_id, bounda
     }
 
 
+def _assert_json_native(value: Any, seen: Optional[set] = None) -> Optional[str]:
+    if seen is None:
+        seen = set()
+    if value is None or isinstance(value, (str, bool)):
+        return None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return None
+    if isinstance(value, float):
+        return None if math.isfinite(value) else "non_json_serializable_semantic_input"
+    if isinstance(value, dict):
+        object_id = id(value)
+        if object_id in seen:
+            return "non_json_serializable_semantic_input"
+        seen.add(object_id)
+        for key, item in value.items():
+            if not isinstance(key, str):
+                seen.remove(object_id)
+                return "non_json_serializable_semantic_input"
+            error = _assert_json_native(item, seen)
+            if error is not None:
+                seen.remove(object_id)
+                return error
+        seen.remove(object_id)
+        return None
+    if isinstance(value, list):
+        object_id = id(value)
+        if object_id in seen:
+            return "non_json_serializable_semantic_input"
+        seen.add(object_id)
+        for item in value:
+            error = _assert_json_native(item, seen)
+            if error is not None:
+                seen.remove(object_id)
+                return error
+        seen.remove(object_id)
+        return None
+    return "non_json_serializable_semantic_input"
+
+
 def _canonical_json_dumps(value: Any) -> Tuple[Optional[str], Optional[str]]:
+    native_error = _assert_json_native(value)
+    if native_error is not None:
+        return None, native_error
     try:
-        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")), None
-    except (TypeError, ValueError):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False), None
+    except (TypeError, ValueError, OverflowError, RecursionError):
         return None, "non_json_serializable_semantic_input"
 
 
@@ -224,9 +267,26 @@ def _reject(payload: Dict[str, Any], reason: str) -> Dict[str, Any]:
     return payload
 
 
+def _reject_non_json_semantic_input(temporal_type, situation_id, reference_situation_id) -> Dict[str, Any]:
+    safe_temporal_type = temporal_type if isinstance(temporal_type, str) else None
+    safe_situation_id = situation_id if isinstance(situation_id, str) else None
+    safe_reference = reference_situation_id if isinstance(reference_situation_id, str) else None
+    payload = _base_payload(safe_temporal_type, safe_situation_id, safe_reference, None, {})
+    return _reject(payload, "non_json_serializable_semantic_input")
+
+
 def build_virtual_world_situation_temporal_context(temporal_type=None, situation_id=None, reference_situation_id=None, temporal_anchor=None, metadata=None):
     if metadata is None:
         metadata = {}
+    semantic_input = {
+        "temporal_type": temporal_type,
+        "situation_id": situation_id,
+        "reference_situation_id": reference_situation_id,
+        "temporal_anchor": temporal_anchor,
+        "metadata": metadata,
+    }
+    if _assert_json_native(semantic_input) is not None:
+        return _reject_non_json_semantic_input(temporal_type, situation_id, reference_situation_id)
     payload = _base_payload(temporal_type, situation_id, reference_situation_id, temporal_anchor, metadata)
     if temporal_type is None:
         return _reject(payload, "missing_temporal_type")
@@ -355,21 +415,13 @@ def validate_virtual_world_situation_temporal_context(temporal_context):
         temporal_anchor=anchor,
         metadata=temporal_context.get("metadata"),
     )
-    protected_fields = (
-        "origin_summary",
-        "fact_status_summary",
-        "sequence_constraints",
-        "duration_candidate",
-        "uncertainty_flags",
-        "boundary_flags",
-        "temporal_integrity_flags",
-        "candidate_only_fields",
-        "warnings",
-    )
-    for field in protected_fields:
-        if temporal_context.get(field) != expected_payload.get(field):
-            return False
-    return True
+    if expected_payload.get("situation_temporal_context_passed") is not True:
+        return False
+    if set(temporal_context.keys()) != set(expected_payload.keys()):
+        return False
+    if temporal_context.get("canonical_id_algorithm") != "json.dumps(sort_keys=True, ensure_ascii=False, separators)+sha256":
+        return False
+    return temporal_context == expected_payload
 
 
 def _plan(temporal_context, plan_type):
