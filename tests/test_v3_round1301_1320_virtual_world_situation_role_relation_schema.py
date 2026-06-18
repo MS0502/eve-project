@@ -36,11 +36,38 @@ def test_every_supported_relation_type_builds_valid_read_only_candidate(relation
     assert validate_virtual_world_situation_role_relation(relation) is True
     assert relation["relation_candidate_only"] is True
     assert relation["situation_relation_only"] is True
+    assert relation["situation_role_relation_status"] == "VALIDATED"
+    assert relation["blocked_reasons"] == []
 
 
 def test_missing_and_unknown_relation_types_fail_closed():
-    assert build_virtual_world_situation_role_relation(relation_type=None)["blocked_reasons"] == ["missing_relation_type"]
-    assert build(relation_type="unknown_relation")["blocked_reasons"] == ["unknown_relation_type"]
+    relation = build(relation_type=None)
+    assert relation["situation_role_relation_passed"] is False
+    assert relation["blocked_reasons"] == ["missing_relation_type"]
+    assert validate_virtual_world_situation_role_relation(relation) is False
+    unknown = build(relation_type="unknown_relation")
+    assert unknown["blocked_reasons"] == ["unknown_relation_type"]
+    assert validate_virtual_world_situation_role_relation(unknown) is False
+
+
+@pytest.mark.parametrize("field, reason", [
+    ("subject_entity", "missing_subject_entity"),
+    ("object_entity", "missing_object_entity"),
+    ("situation_context", "missing_situation_context"),
+])
+def test_missing_required_entities_and_context_fail_closed(field, reason):
+    kwargs = {
+        "relation_type": "agent_performs_activity",
+        "subject_entity": SUBJECT,
+        "object_entity": OBJECT,
+        "situation_context": CONTEXT,
+    }
+    kwargs[field] = None
+    relation = build_virtual_world_situation_role_relation(**kwargs)
+    assert relation["situation_role_relation_passed"] is False
+    assert relation["situation_role_relation_status"] == "REJECTED"
+    assert relation["blocked_reasons"] == [reason]
+    assert validate_virtual_world_situation_role_relation(relation) is False
 
 
 @pytest.mark.parametrize("metadata, reason", [
@@ -75,6 +102,21 @@ def test_empty_or_malformed_situation_context_fails_closed(context):
     relation = build(relation_type="agent_performs_activity", situation_context=context)
     assert "malformed_situation_context" in relation["blocked_reasons"]
     assert validate_virtual_world_situation_role_relation(relation) is False
+
+
+def test_validator_rejects_incoherent_passed_or_rejected_status_and_blocked_reasons():
+    valid = build(relation_type="agent_performs_activity")
+    passed_with_block = copy.deepcopy(valid)
+    passed_with_block["blocked_reasons"] = ["should_not_be_present"]
+    assert validate_virtual_world_situation_role_relation(passed_with_block) is False
+
+    passed_wrong_status = copy.deepcopy(valid)
+    passed_wrong_status["situation_role_relation_status"] = "REJECTED"
+    assert validate_virtual_world_situation_role_relation(passed_wrong_status) is False
+
+    rejected_without_reason = build(relation_type="unknown_relation")
+    rejected_without_reason["blocked_reasons"] = []
+    assert validate_virtual_world_situation_role_relation(rejected_without_reason) is False
 
 
 def test_deterministic_ids_are_stable_and_reordered_keys_do_not_alter_ids():
@@ -141,7 +183,8 @@ def test_mixed_boundary_blocks_external_assertions():
     assert relation["relation_boundary_classification"] == "mixed_virtual_external_relation_boundary"
     assert relation["external_fact_asserted"] is False
     assert "mixed_external_assertion_blocked" in relation["boundary_flags"]
-    assert "external_assertions_blocked_for_mixed_boundary" in relation["blocked_reasons"]
+    assert "external_assertions_restricted_to_candidate_boundary" in relation["warnings"]
+    assert relation["blocked_reasons"] == []
     assert validate_virtual_world_situation_role_relation(relation) is True
 
 

@@ -134,8 +134,6 @@ FORBIDDEN_REQUEST_FIELDS = {
     "fallback_bypass_requested",
 }
 
-DEFAULT_ENTITY = {"entity_id": "candidate_entity", "entity_type": "candidate", "label": "candidate"}
-DEFAULT_CONTEXT = {"situation_id": "candidate_situation", "situation_type": "non_visual_virtual", "label": "candidate context"}
 
 
 def _non_empty_string(value: Any) -> bool:
@@ -239,16 +237,17 @@ def build_virtual_world_situation_role_relation(
     situation_context=None,
     metadata=None,
 ):
-    if subject_entity is None:
-        subject_entity = DEFAULT_ENTITY.copy()
-    if object_entity is None:
-        object_entity = {"entity_id": "candidate_object", "entity_type": "candidate", "label": "candidate object"}
-    if situation_context is None:
-        situation_context = DEFAULT_CONTEXT.copy()
     if metadata is None:
         metadata = {}
 
     payload = _base_payload(relation_type, subject_entity, object_entity, situation_context, metadata)
+
+    if subject_entity is None:
+        return _reject(payload, "missing_subject_entity")
+    if object_entity is None:
+        return _reject(payload, "missing_object_entity")
+    if situation_context is None:
+        return _reject(payload, "missing_situation_context")
 
     if relation_type is None:
         return _reject(payload, "missing_relation_type")
@@ -299,7 +298,7 @@ def build_virtual_world_situation_role_relation(
         payload["boundary_flags"].append("memory_write_blocked")
     if boundary == "mixed_virtual_external_relation_boundary":
         payload["boundary_flags"].append("mixed_external_assertion_blocked")
-        payload["blocked_reasons"].append("external_assertions_blocked_for_mixed_boundary")
+        payload["warnings"].append("external_assertions_restricted_to_candidate_boundary")
     if confidence == "relation_high_confidence_but_not_fact":
         payload["warnings"].append("high_confidence_remains_non_factual")
     if confidence == "relation_conflict_detected":
@@ -320,6 +319,20 @@ def build_virtual_world_situation_role_relation(
 
 def validate_virtual_world_situation_role_relation(relation):
     if not isinstance(relation, dict):
+        return False
+    passed = relation.get("situation_role_relation_passed")
+    blocked_reasons = relation.get("blocked_reasons")
+    if passed is True:
+        if relation.get("situation_role_relation_status") != "VALIDATED":
+            return False
+        if blocked_reasons != []:
+            return False
+    elif passed is False:
+        if relation.get("situation_role_relation_status") != "REJECTED":
+            return False
+        if not isinstance(blocked_reasons, list) or not blocked_reasons:
+            return False
+    else:
         return False
     if relation.get("situation_role_relation_passed") is not True:
         return False

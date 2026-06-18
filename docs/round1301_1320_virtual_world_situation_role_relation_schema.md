@@ -26,7 +26,7 @@ A temporary semantic relation is not a persistent relationship state. It is only
 - `dream_relation_candidate`
 - `mixed_unknown_relation_candidate`
 
-Symbolic, DMN, simulation, dream, and mixed relations remain candidate-only internal relations. Mixed virtual/external boundaries explicitly block external assertions.
+Symbolic, DMN, simulation, dream, and mixed relations remain candidate-only internal relations. Mixed virtual/external boundaries explicitly restrict external assertions through boundary flags and warnings while keeping valid candidate relations free of blocked reasons.
 
 ## Entity Structure
 
@@ -44,7 +44,7 @@ Literal Korean labels are preserved, including `민석`, but labels never become
 
 ## Fail-Closed Behavior
 
-The builder and validator fail closed for missing or unknown relation types, unknown boundary classes, unknown confidence states, malformed subject or object entities, malformed situation context, same-entity two-agent relations, and forbidden mutation or assertion requests.
+The builder and validator fail closed for missing or unknown relation types; missing subject entity, object entity, or situation context; unknown boundary classes; unknown confidence states; malformed subject or object entities; malformed situation context; same-entity two-agent relations; and forbidden mutation or assertion requests. Missing required inputs use explicit reasons: `missing_subject_entity`, `missing_object_entity`, and `missing_situation_context`.
 
 Waiting and searching never assert future outcomes. Observing never asserts that an external observation occurred. Communicating, cooperating, and competing never update persistent relationship state. Teaching never asserts completed knowledge transfer, and learning never writes memory.
 
