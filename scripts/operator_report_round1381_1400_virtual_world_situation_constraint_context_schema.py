@@ -53,12 +53,46 @@ def deep_list(depth):
         value = [value]
     return value
 
+
+PLAN_REQUIRED_FALSE_FIELDS = {
+    "external_constraint_asserted",
+    "constraint_fact_asserted",
+    "constraint_satisfied_asserted",
+    "constraint_violated_asserted",
+    "constraint_enforced",
+    "automatic_enforcement_performed",
+    "hard_block_applied",
+    "soft_penalty_applied",
+    "precondition_evaluated",
+    "postcondition_evaluated",
+    "invariant_evaluated",
+    "resource_reserved",
+    "resource_consumed",
+    "schedule_created",
+    "action_prevented",
+    "action_permitted",
+    "memory_write_performed",
+    "relationship_update_performed",
+    "self_model_update_performed",
+    "affect_transition_performed",
+    "hormone_transition_performed",
+    "world_state_mutation_performed",
+    "transition_applied",
+    "persistence_write_performed",
+    "vector_read_performed",
+    "vector_load_performed",
+    "model_loaded",
+    "device_activation_performed",
+    "network_action_performed",
+    "planning_execution_performed",
+    "tool_execution_performed",
+    "agp_bypass_allowed",
+    "fallback_bypass_allowed",
+}
+
+
 def plan_safe(plan):
-    return plan["ready"] is False and all(
-        value is False
-        for key, value in plan.items()
-        if key.endswith("_performed") or key.endswith("_allowed") or key in {"external_constraint_asserted", "constraint_fact_asserted", "constraint_satisfied_asserted", "constraint_violated_asserted", "constraint_enforced", "action_prevented", "action_permitted", "schedule_created", "resource_reserved", "resource_consumed"}
-    )
+    return plan["ready"] is False and all(plan.get(key) is False for key in PLAN_REQUIRED_FALSE_FIELDS)
 
 
 def main():
