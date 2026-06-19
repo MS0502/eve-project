@@ -23,11 +23,73 @@ from adapters.virtual_world_situation_causal_context_schema import (
 
 LINK = {"link_id": "l1", "source_situation_id": "s1", "target_situation_id": "s2", "link_kind": "cause_candidate"}
 EXPECTED_TOP_LEVEL = {
-    "situation_causal_context_passed", "situation_causal_context_status", "causal_context_id", "canonical_id_algorithm",
-    "causal_type", "causal_boundary_classification", "causal_confidence_state", "subject_situation_id", "object_situation_id",
-    "causal_links", "metadata", "origin_summary", "fact_status_summary", "causal_direction_summary", "causal_chain_summary",
-    "counterfactual_summary", "uncertainty_flags", "boundary_flags", "causal_integrity_flags", "candidate_only_fields",
-    "blocked_reasons", "warnings", *IMMUTABLE_FALSE_FLAGS, *IMMUTABLE_TRUE_FLAGS,
+    "situation_causal_context_passed",
+    "situation_causal_context_status",
+    "causal_context_id",
+    "canonical_id_algorithm",
+    "causal_type",
+    "causal_boundary_classification",
+    "causal_confidence_state",
+    "subject_situation_id",
+    "object_situation_id",
+    "causal_links",
+    "metadata",
+    "origin_summary",
+    "fact_status_summary",
+    "causal_direction_summary",
+    "causal_chain_summary",
+    "counterfactual_summary",
+    "uncertainty_flags",
+    "boundary_flags",
+    "causal_integrity_flags",
+    "candidate_only_fields",
+    "blocked_reasons",
+    "warnings",
+    "external_cause_asserted",
+    "external_consequence_asserted",
+    "external_causal_direction_asserted",
+    "external_causal_chain_asserted",
+    "causal_fact_asserted",
+    "external_fact_asserted",
+    "prediction_guaranteed",
+    "future_outcome_asserted",
+    "intervention_performed",
+    "counterfactual_execution_performed",
+    "event_completion_asserted",
+    "identity_asserted",
+    "memory_fact_asserted",
+    "memory_write_performed",
+    "memory_write_allowed",
+    "relationship_update_allowed",
+    "self_model_update_allowed",
+    "affect_transition_allowed",
+    "hormone_transition_allowed",
+    "world_state_mutation_performed",
+    "transition_applied",
+    "planning_execution_performed",
+    "tool_execution_performed",
+    "runtime_mutation_performed",
+    "persistence_write_performed",
+    "vector_read_performed",
+    "vector_load_performed",
+    "model_loaded",
+    "device_activation_performed",
+    "network_action_performed",
+    "artifact_created_or_staged",
+    "agp_bypass_allowed",
+    "fallback_bypass_allowed",
+    "causal_candidate_only",
+    "situation_causal_only",
+    "read_only",
+    "situation_review_required",
+    "snapshot_review_required",
+    "transition_review_required",
+    "memory_gate_required",
+    "quarantine_required",
+    "origin_fact_status_required",
+    "causal_integrity_review_required",
+    "appraisal_required",
+    "agp_input_required",
 }
 
 
@@ -37,12 +99,42 @@ def build(**kwargs):
     return build_virtual_world_situation_causal_context(**data)
 
 
+VALID_KIND_BY_TYPE = {
+    "direct_cause_candidate": "cause_candidate",
+    "indirect_cause_candidate": "cause_candidate",
+    "contributing_factor_candidate": "contributing_candidate",
+    "enabling_condition_candidate": "enabling_candidate",
+    "preventing_condition_candidate": "preventing_candidate",
+    "candidate_consequence": "consequence_candidate",
+    "common_cause_candidate": "common_cause_candidate",
+    "causal_chain_candidate": "cause_candidate",
+    "causal_direction_unknown_candidate": "unknown_direction_candidate",
+    "correlation_only_candidate": "correlation_candidate",
+    "counterfactual_cause_candidate": "counterfactual_candidate",
+    "simulation_cause_candidate": "cause_candidate",
+    "symbolic_cause_candidate": "cause_candidate",
+    "dmn_cause_candidate": "cause_candidate",
+    "dream_cause_candidate": "cause_candidate",
+    "mixed_unknown_causal_candidate": "unknown_direction_candidate",
+}
+
+
+def valid_links_for(causal_type):
+    if causal_type == "indirect_cause_candidate":
+        return [{**LINK, "sequence_index": 0}, {"link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3", "link_kind": "cause_candidate", "sequence_index": 1}]
+    if causal_type == "causal_chain_candidate":
+        return [{**LINK, "sequence_index": 0}, {"link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3", "link_kind": "consequence_candidate", "sequence_index": 1}]
+    if causal_type == "common_cause_candidate":
+        return [
+            {"link_id": "l1", "source_situation_id": "common", "target_situation_id": "s1", "link_kind": "common_cause_candidate"},
+            {"link_id": "l2", "source_situation_id": "common", "target_situation_id": "s2", "link_kind": "common_cause_candidate"},
+        ]
+    return [{**LINK, "link_kind": VALID_KIND_BY_TYPE[causal_type]}]
+
+
 @pytest.mark.parametrize("causal_type", SUPPORTED_CAUSAL_TYPES)
 def test_every_causal_type_builds_valid_candidate(causal_type):
-    links = [{**LINK, "link_kind": "correlation_candidate"}] if causal_type == "correlation_only_candidate" else [LINK]
-    if causal_type == "causal_chain_candidate":
-        links = [{**LINK, "sequence_index": 0}, {"link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3", "link_kind": "consequence_candidate", "sequence_index": 1}]
-    ctx = build(causal_type=causal_type, causal_links=links)
+    ctx = build(causal_type=causal_type, object_situation_id=("s3" if causal_type in {"indirect_cause_candidate", "causal_chain_candidate"} else "s2"), causal_links=valid_links_for(causal_type))
     assert ctx["situation_causal_context_passed"] is True
     assert ctx["situation_causal_context_status"] == "VALIDATED"
     assert ctx["blocked_reasons"] == []
@@ -78,12 +170,12 @@ def test_all_confidence_states(confidence):
 
 def test_directional_and_non_directional_behaviors():
     assert build(subject_situation_id="same", object_situation_id="same")["blocked_reasons"] == ["identical_directional_situation_ids"]
-    unknown = build(causal_type="causal_direction_unknown_candidate")
+    unknown = build(causal_type="causal_direction_unknown_candidate", causal_links=valid_links_for("causal_direction_unknown_candidate"))
     assert unknown["causal_direction_summary"]["direction_known"] is False
     corr = build(causal_type="correlation_only_candidate", causal_links=[{**LINK, "link_kind": "correlation_candidate"}])
     assert corr["causal_direction_summary"]["direction_known"] is False
     assert "correlation_is_not_causation" in corr["causal_integrity_flags"]
-    cf = build(causal_type="counterfactual_cause_candidate")
+    cf = build(causal_type="counterfactual_cause_candidate", causal_links=valid_links_for("counterfactual_cause_candidate"))
     assert cf["intervention_performed"] is False and "counterfactual_no_intervention" in cf["boundary_flags"]
     sim = build(causal_type="simulation_cause_candidate")
     assert "simulation_only" in sim["boundary_flags"]
@@ -125,15 +217,13 @@ def test_invalid_causal_chain_sequence(links, reason):
 
 
 def test_determinism_reordering_and_semantic_changes():
-    links_a = [{**LINK, "link_id": "b"}, {"link_id": "a", "source_situation_id": "s3", "target_situation_id": "s4", "link_kind": "consequence_candidate"}]
-    links_b = [links_a[1], links_a[0]]
-    c1 = build(causal_links=links_a, metadata={"z": [2, 1], "a": {"민석": True}})
-    c2 = build(causal_links=links_b, metadata={"a": {"민석": True}, "z": [2, 1]})
+    c1 = build(metadata={"z": [2, 1], "a": {"민석": True}})
+    c2 = build(metadata={"a": {"민석": True}, "z": [2, 1]})
     assert c1["causal_context_id"] == c2["causal_context_id"]
-    chain_a = build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 1, "link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3"}, {**LINK, "sequence_index": 0}])
-    chain_b = build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 0}, {**LINK, "sequence_index": 1, "link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3"}])
+    chain_a = build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=[{"link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3", "link_kind": "consequence_candidate", "sequence_index": 1}, {**LINK, "sequence_index": 0}])
+    chain_b = build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=[{**LINK, "sequence_index": 0}, {"link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3", "link_kind": "consequence_candidate", "sequence_index": 1}])
     assert chain_a["causal_context_id"] == chain_b["causal_context_id"]
-    assert c1["causal_context_id"] != build(causal_links=links_a, metadata={"z": [2, 1], "a": {"민석": False}})["causal_context_id"]
+    assert c1["causal_context_id"] != build(metadata={"z": [2, 1], "a": {"민석": False}})["causal_context_id"]
     tampered = copy.deepcopy(c1); tampered["causal_context_id"] += "x"
     assert validate_virtual_world_situation_causal_context(tampered) is False
     tampered = copy.deepcopy(c1); tampered.pop("canonical_id_algorithm")
@@ -218,6 +308,88 @@ def test_literal_top_level_required_field_set_and_nested_safety_values():
     for flag in IMMUTABLE_FALSE_FLAGS: assert ctx[flag] is False
     for flag in IMMUTABLE_TRUE_FLAGS: assert ctx[flag] is True
 
+@pytest.mark.parametrize("causal_type, valid_kind", sorted(VALID_KIND_BY_TYPE.items()))
+def test_causal_type_link_kind_compatibility_contract(causal_type, valid_kind):
+    valid = build(causal_type=causal_type, object_situation_id=("s3" if causal_type in {"indirect_cause_candidate", "causal_chain_candidate"} else "s2"), causal_links=valid_links_for(causal_type))
+    assert validate_virtual_world_situation_causal_context(valid) is True
+    bad_kind = "cause_candidate" if valid_kind != "cause_candidate" else "correlation_candidate"
+    bad_link = {**LINK, "link_kind": bad_kind}
+    if causal_type in {"indirect_cause_candidate", "causal_chain_candidate"}:
+        bad_links = [{**bad_link, "sequence_index": 0}, {"link_id": "l2", "source_situation_id": "s2", "target_situation_id": "s3", "link_kind": bad_kind, "sequence_index": 1}]
+        obj = "s3"
+    elif causal_type == "common_cause_candidate":
+        bad_links = [{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":bad_kind}, {"link_id":"l2","source_situation_id":"common","target_situation_id":"s2","link_kind":bad_kind}]
+        obj = "s2"
+    else:
+        bad_links = [bad_link]
+        obj = "s2"
+    invalid = build(causal_type=causal_type, object_situation_id=obj, causal_links=bad_links)
+    assert invalid["blocked_reasons"] == ["incompatible_causal_type_link_kind"]
+
+
+def test_explicit_incompatible_link_kind_controls():
+    assert build(causal_type="correlation_only_candidate", causal_links=[LINK])["blocked_reasons"] == ["incompatible_causal_type_link_kind"]
+    assert build(causal_type="causal_direction_unknown_candidate", causal_links=[LINK])["blocked_reasons"] == ["incompatible_causal_type_link_kind"]
+    assert build(causal_type="counterfactual_cause_candidate", causal_links=[LINK])["blocked_reasons"] == ["incompatible_causal_type_link_kind"]
+    non_common = [{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":"cause_candidate"}, {"link_id":"l2","source_situation_id":"common","target_situation_id":"s2","link_kind":"cause_candidate"}]
+    assert build(causal_type="common_cause_candidate", causal_links=non_common)["blocked_reasons"] == ["incompatible_causal_type_link_kind"]
+
+
+def test_context_endpoint_coherence_for_directional_and_unordered_types():
+    assert build(causal_links=[{"link_id":"l1","source_situation_id":"x","target_situation_id":"y","link_kind":"cause_candidate"}])["blocked_reasons"] == ["causal_link_context_endpoint_mismatch"]
+    assert build(causal_links=[{"link_id":"l1","source_situation_id":"s2","target_situation_id":"s1","link_kind":"cause_candidate"}])["blocked_reasons"] == ["causal_link_context_endpoint_mismatch"]
+    corr_bad = build(causal_type="correlation_only_candidate", causal_links=[{"link_id":"l1","source_situation_id":"s1","target_situation_id":"x","link_kind":"correlation_candidate"}])
+    assert corr_bad["blocked_reasons"] == ["causal_link_context_endpoint_mismatch"]
+    unknown_bad = build(causal_type="causal_direction_unknown_candidate", causal_links=[{"link_id":"l1","source_situation_id":"s1","target_situation_id":"x","link_kind":"unknown_direction_candidate"}])
+    assert unknown_bad["blocked_reasons"] == ["causal_link_context_endpoint_mismatch"]
+    corr_ok = build(causal_type="correlation_only_candidate", causal_links=[{"link_id":"l1","source_situation_id":"s2","target_situation_id":"s1","link_kind":"correlation_candidate"}])
+    assert validate_virtual_world_situation_causal_context(corr_ok) is True
+    assert corr_ok["causal_direction_summary"]["direction_known"] is False
+    unknown_ok = build(causal_type="causal_direction_unknown_candidate", causal_links=[{"link_id":"l1","source_situation_id":"s2","target_situation_id":"s1","link_kind":"unknown_direction_candidate"}])
+    assert validate_virtual_world_situation_causal_context(unknown_ok) is True
+    assert unknown_ok["causal_direction_summary"]["direction_known"] is False
+
+
+def test_indirect_cause_path_semantics():
+    valid = build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=valid_links_for("indirect_cause_candidate"))
+    assert validate_virtual_world_situation_causal_context(valid) is True
+    assert build(causal_type="indirect_cause_candidate", causal_links=[{**LINK, "sequence_index": 0}])["blocked_reasons"] == ["indirect_cause_requires_multiple_links"]
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=[LINK, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"cause_candidate"}])["blocked_reasons"] == ["indirect_cause_sequence_missing"]
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":0}])["blocked_reasons"] == ["indirect_cause_sequence_duplicated"]
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":2}])["blocked_reasons"] == ["indirect_cause_sequence_non_contiguous"]
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"x","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":1}])["blocked_reasons"] == ["indirect_cause_path_disconnected"]
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=[{"link_id":"l1","source_situation_id":"x","target_situation_id":"s2","link_kind":"cause_candidate","sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":1}])["blocked_reasons"] == ["indirect_cause_context_endpoint_mismatch"]
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s1","link_kind":"cause_candidate","sequence_index":1}, {"link_id":"l3","source_situation_id":"s1","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":2}])["blocked_reasons"] == ["indirect_cause_cycle_detected"]
+
+
+def test_causal_chain_path_semantics():
+    assert build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 0}])["blocked_reasons"] == ["causal_chain_requires_multiple_links"]
+    assert build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"x","target_situation_id":"s3","link_kind":"consequence_candidate","sequence_index":1}])["blocked_reasons"] == ["causal_chain_path_disconnected"]
+    assert build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=[{"link_id":"l1","source_situation_id":"x","target_situation_id":"s2","link_kind":"cause_candidate","sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"consequence_candidate","sequence_index":1}])["blocked_reasons"] == ["causal_chain_context_endpoint_mismatch"]
+    assert build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"x","link_kind":"consequence_candidate","sequence_index":1}])["blocked_reasons"] == ["causal_chain_context_endpoint_mismatch"]
+    assert build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=[{**LINK,"sequence_index":0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s1","link_kind":"consequence_candidate","sequence_index":1}, {"link_id":"l3","source_situation_id":"s1","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":2}])["blocked_reasons"] == ["causal_chain_cycle_detected"]
+    valid = build(causal_type="causal_chain_candidate", object_situation_id="s3", causal_links=valid_links_for("causal_chain_candidate"))
+    assert valid["causal_chain_summary"]["sequence_validated"] is True
+
+
+def test_common_cause_semantics():
+    valid = build(causal_type="common_cause_candidate", causal_links=valid_links_for("common_cause_candidate"))
+    assert validate_virtual_world_situation_causal_context(valid) is True
+    assert build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":"common_cause_candidate"}])["blocked_reasons"] == ["common_cause_requires_multiple_links"]
+    assert build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"common1","target_situation_id":"s1","link_kind":"common_cause_candidate"}, {"link_id":"l2","source_situation_id":"common2","target_situation_id":"s2","link_kind":"common_cause_candidate"}])["blocked_reasons"] == ["common_cause_source_mismatch"]
+    assert build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":"common_cause_candidate"}, {"link_id":"l2","source_situation_id":"common","target_situation_id":"x","link_kind":"common_cause_candidate"}])["blocked_reasons"] == ["common_cause_outcome_mismatch"]
+    assert build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"s1","target_situation_id":"x","link_kind":"common_cause_candidate"}, {"link_id":"l2","source_situation_id":"s1","target_situation_id":"s2","link_kind":"common_cause_candidate"}])["blocked_reasons"] == ["common_cause_source_equals_outcome"]
+
+
+@pytest.mark.parametrize("variant", [
+    lambda: [LINK, {**LINK, "link_id": "l2"}],
+    lambda: [LINK, {**LINK, "link_id": "l2", "label": "changed"}],
+    lambda: [LINK, {**LINK, "link_id": "l2", "weight_candidate": 0.5}],
+    lambda: [{**LINK, "sequence_index": 0}, {**LINK, "link_id": "l2", "sequence_index": 1}],
+])
+def test_duplicate_semantic_edges_ignore_non_semantic_fields(variant):
+    assert build(causal_type="indirect_cause_candidate", object_situation_id="s3", causal_links=variant())["blocked_reasons"] == ["duplicate_semantic_link"]
+
 
 @pytest.mark.parametrize("mutate", [
     lambda x: x.update({"situation_causal_context_passed": False}), lambda x: x.update({"situation_causal_context_status": "REJECTED"}),
@@ -250,7 +422,7 @@ def test_downstream_plans(builder):
     invalids = [build(causal_type=None), "x", {"x": object()}, {**valid, "causal_context_id": "x"}, {**valid, "extra": "x"}]
     nested = copy.deepcopy(valid); nested["origin_summary"]["external_origin_verified"] = True; invalids.append(nested)
     imm = copy.deepcopy(valid); imm["read_only"] = False; invalids.append(imm)
-    invalids.extend([build(metadata={"causal_boundary_classification": ""}), build(metadata={"causal_confidence_state": ""}), build(metadata={"memory_write_requested": True})])
+    invalids.extend([build(metadata={"causal_boundary_classification": ""}), build(metadata={"causal_confidence_state": ""}), build(metadata={"memory_write_requested": True}), build(causal_type="correlation_only_candidate", causal_links=[LINK]), build(causal_links=[{"link_id":"l1","source_situation_id":"x","target_situation_id":"y","link_kind":"cause_candidate"}]), build(causal_type="indirect_cause_candidate", causal_links=[{**LINK, "sequence_index": 0}]), build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 0}]), build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":"common_cause_candidate"}])])
     deep = {}; cur = deep
     for _ in range(1100): cur["x"] = {}; cur = cur["x"]
     invalids.append(build(metadata=deep))

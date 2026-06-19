@@ -30,6 +30,31 @@ SUPPORTED_LINK_KINDS = (
     "preventing_candidate", "common_cause_candidate", "correlation_candidate",
     "counterfactual_candidate", "unknown_direction_candidate",
 )
+
+CAUSAL_TYPE_LINK_KIND_COMPATIBILITY = {
+    "direct_cause_candidate": {"cause_candidate"},
+    "indirect_cause_candidate": {"cause_candidate"},
+    "contributing_factor_candidate": {"contributing_candidate"},
+    "enabling_condition_candidate": {"enabling_candidate"},
+    "preventing_condition_candidate": {"preventing_candidate"},
+    "candidate_consequence": {"consequence_candidate"},
+    "common_cause_candidate": {"common_cause_candidate"},
+    "causal_chain_candidate": {"cause_candidate", "consequence_candidate", "contributing_candidate", "enabling_candidate", "preventing_candidate"},
+    "causal_direction_unknown_candidate": {"unknown_direction_candidate"},
+    "correlation_only_candidate": {"correlation_candidate"},
+    "counterfactual_cause_candidate": {"counterfactual_candidate"},
+    "simulation_cause_candidate": {"cause_candidate"},
+    "symbolic_cause_candidate": {"cause_candidate"},
+    "dmn_cause_candidate": {"cause_candidate"},
+    "dream_cause_candidate": {"cause_candidate"},
+    "mixed_unknown_causal_candidate": {"unknown_direction_candidate"},
+}
+SINGLE_DIRECTION_CAUSAL_TYPES = {
+    "direct_cause_candidate", "contributing_factor_candidate", "enabling_condition_candidate",
+    "preventing_condition_candidate", "candidate_consequence", "counterfactual_cause_candidate",
+    "simulation_cause_candidate", "symbolic_cause_candidate", "dmn_cause_candidate", "dream_cause_candidate",
+}
+UNORDERED_ENDPOINT_CAUSAL_TYPES = {"correlation_only_candidate", "causal_direction_unknown_candidate", "mixed_unknown_causal_candidate"}
 DIRECTIONAL_CAUSAL_TYPES = {
     "direct_cause_candidate", "indirect_cause_candidate", "contributing_factor_candidate",
     "enabling_condition_candidate", "preventing_condition_candidate", "candidate_consequence",
@@ -214,22 +239,88 @@ def _normalize_links(links: Any, causal_type: Optional[str]) -> Tuple[Optional[l
                 return None, "weight_candidate_out_of_range"
         if "label" in item and not _non_empty_string(item["label"]):
             return None, "malformed_causal_link"
-        sem = (item["source_situation_id"], item["target_situation_id"], item["link_kind"], item.get("sequence_index"))
+        if causal_type in UNORDERED_ENDPOINT_CAUSAL_TYPES:
+            sem = (tuple(sorted((item["source_situation_id"], item["target_situation_id"]))), item["link_kind"])
+        else:
+            sem = (item["source_situation_id"], item["target_situation_id"], item["link_kind"])
         if sem in seen_sem:
             return None, "duplicate_semantic_link"
         seen_sem.add(sem)
         normalized.append(item)
-    if causal_type == "causal_chain_candidate":
+    if causal_type in {"causal_chain_candidate", "indirect_cause_candidate"}:
         if len(seqs) != len(normalized):
-            return None, "causal_chain_sequence_missing"
+            return None, ("indirect_cause_sequence_missing" if causal_type == "indirect_cause_candidate" else "causal_chain_sequence_missing")
         if len(set(seqs)) != len(seqs):
-            return None, "causal_chain_sequence_duplicated"
+            return None, ("indirect_cause_sequence_duplicated" if causal_type == "indirect_cause_candidate" else "causal_chain_sequence_duplicated")
         if sorted(seqs) != list(range(len(seqs))):
-            return None, "causal_chain_sequence_non_contiguous"
+            return None, ("indirect_cause_sequence_non_contiguous" if causal_type == "indirect_cause_candidate" else "causal_chain_sequence_non_contiguous")
         normalized.sort(key=lambda item: item["sequence_index"])
     else:
         normalized.sort(key=lambda item: _canonical_json_dumps(item)[0] or "")
     return normalized, None
+
+
+def _sequence_validated_path(links, subject_situation_id, object_situation_id, prefix):
+    if len(links) < 2:
+        return f"{prefix}_requires_multiple_links"
+    if links[0]["source_situation_id"] != subject_situation_id or links[-1]["target_situation_id"] != object_situation_id:
+        return f"{prefix}_context_endpoint_mismatch"
+    visited_sources = set()
+    for index, link in enumerate(links):
+        source = link["source_situation_id"]
+        target = link["target_situation_id"]
+        if source in visited_sources or target == subject_situation_id:
+            return f"{prefix}_cycle_detected"
+        visited_sources.add(source)
+        if index + 1 < len(links) and target != links[index + 1]["source_situation_id"]:
+            return f"{prefix}_path_disconnected"
+    if object_situation_id in visited_sources:
+        return f"{prefix}_cycle_detected"
+    return None
+
+
+def _validate_causal_semantics(causal_type, subject_situation_id, object_situation_id, links):
+    allowed = CAUSAL_TYPE_LINK_KIND_COMPATIBILITY.get(causal_type, set())
+    if any(link["link_kind"] not in allowed for link in links):
+        return "incompatible_causal_type_link_kind"
+
+    if causal_type in SINGLE_DIRECTION_CAUSAL_TYPES:
+        if len(links) != 1:
+            return "causal_link_context_endpoint_mismatch"
+        link = links[0]
+        if link["source_situation_id"] != subject_situation_id or link["target_situation_id"] != object_situation_id:
+            return "causal_link_context_endpoint_mismatch"
+        return None
+
+    if causal_type in UNORDERED_ENDPOINT_CAUSAL_TYPES:
+        if len(links) != 1:
+            return "causal_link_context_endpoint_mismatch"
+        endpoints = {links[0]["source_situation_id"], links[0]["target_situation_id"]}
+        if endpoints != {subject_situation_id, object_situation_id}:
+            return "causal_link_context_endpoint_mismatch"
+        return None
+
+    if causal_type == "indirect_cause_candidate":
+        return _sequence_validated_path(links, subject_situation_id, object_situation_id, "indirect_cause")
+
+    if causal_type == "causal_chain_candidate":
+        return _sequence_validated_path(links, subject_situation_id, object_situation_id, "causal_chain")
+
+    if causal_type == "common_cause_candidate":
+        if len(links) < 2:
+            return "common_cause_requires_multiple_links"
+        sources = {link["source_situation_id"] for link in links}
+        if len(sources) != 1:
+            return "common_cause_source_mismatch"
+        source = next(iter(sources))
+        if source in {subject_situation_id, object_situation_id}:
+            return "common_cause_source_equals_outcome"
+        targets = {link["target_situation_id"] for link in links}
+        if subject_situation_id not in targets or object_situation_id not in targets or len(targets) != 2:
+            return "common_cause_outcome_mismatch"
+        return None
+
+    return None
 
 
 def _base_payload(causal_type, subject_situation_id, object_situation_id, causal_links, metadata):
@@ -310,6 +401,9 @@ def build_virtual_world_situation_causal_context(causal_type=None, subject_situa
     links, reason = _normalize_links(causal_links, causal_type)
     if reason:
         return _reject(payload, reason)
+    semantic_reason = _validate_causal_semantics(causal_type, subject_situation_id, object_situation_id, links)
+    if semantic_reason:
+        return _reject(payload, semantic_reason)
     payload["causal_links"] = links
     boundary, reason = _boundary_for_type(causal_type, metadata)
     payload["causal_boundary_classification"] = boundary
@@ -434,6 +528,7 @@ def build_virtual_world_situation_causal_context_schema_summary():
         "supported_causal_boundary_classes": list(SUPPORTED_CAUSAL_BOUNDARY_CLASSES),
         "supported_causal_confidence_states": list(SUPPORTED_CAUSAL_CONFIDENCE_STATES),
         "supported_link_kinds": list(SUPPORTED_LINK_KINDS),
+        "causal_type_link_kind_compatibility": {key: sorted(value) for key, value in sorted(CAUSAL_TYPE_LINK_KIND_COMPATIBILITY.items())},
         "deterministic_id_algorithm": "canonical_json_sorted_keys_sha256",
         "candidate_only": True, "read_only": True,
         "prohibited_side_effects": list(IMMUTABLE_FALSE_FLAGS),
