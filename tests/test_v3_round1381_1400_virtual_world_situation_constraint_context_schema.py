@@ -179,7 +179,7 @@ def test_deterministic_ids_and_invalid_ordering():
     assert build()["constraint_context_id"] != build(constraint_clauses=[clause("c1", priority_candidate=5)])["constraint_context_id"]
     assert build()["constraint_context_id"] != build(constraint_clauses=[clause("c1", unknown={"x": 1})])["constraint_context_id"]
     pairs = [
-        ([clause("a", a_request=True), clause("b", z_request=True)], [clause("b", z_request=True), clause("a", a_request=True)]),
+        ([clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", memory_write_requested=True)]),
         ([clause("a", cron_expression="yes"), clause("b", "must_not_hold_candidate", memory_write_requested=True)], [clause("b", "must_not_hold_candidate", memory_write_requested=True), clause("a", cron_expression="yes")]),
         ([{"clause_id":"a"}, clause("b", memory_write_requested=True)], [clause("b", memory_write_requested=True), {"clause_id":"a"}]),
         (["x", {"clause_id":"a"}], [{"clause_id":"a"}, "x"]),
@@ -197,7 +197,6 @@ def test_strict_json_and_boundary_confidence_distinction():
     assert_reject(build(metadata=d), "non_json_serializable_semantic_input")
     l = []; l.append(l)
     assert_reject(build(metadata={"l": l}), "non_json_serializable_semantic_input")
-    assert_reject(build(metadata={"deep": [[[{"x": 1}]]]}), None) if False else None
     for key, malformed, unknown in [("constraint_boundary_classification", "malformed_constraint_boundary_class", "unknown_constraint_boundary_class"), ("constraint_confidence_state", "malformed_constraint_confidence_state", "unknown_constraint_confidence_state")]:
         for value in ["", None, False, 0, [], {}]:
             assert_reject(build(metadata={key: value}), malformed)
@@ -242,3 +241,157 @@ def test_full_payload_tampering_and_summary():
     summary = virtual_world_situation_constraint_context_schema_summary()
     assert summary["next_recommended_step"] == "read_only_virtual_world_situation_evidence_context_schema"
     assert summary["read_only"] is True and summary["candidate_only"] is True
+
+class RaisingDict(dict):
+    def keys(self):
+        raise RuntimeError("hostile")
+
+
+class RaisingList(list):
+    def __iter__(self):
+        raise RuntimeError("hostile")
+
+
+class PlainDictSubclass(dict):
+    pass
+
+
+class PlainListSubclass(list):
+    pass
+
+
+class RaisingStr:
+    def __str__(self):
+        raise RuntimeError("hostile str")
+
+
+class RaisingRepr:
+    def __repr__(self):
+        raise RuntimeError("hostile repr")
+
+
+def deep_list(depth):
+    value = "leaf"
+    for _ in range(depth):
+        value = [value]
+    return value
+
+
+def safe_rejected(payload, reason="non_json_serializable_semantic_input"):
+    assert_reject(payload, reason)
+    json.dumps(payload, allow_nan=False)
+
+
+def test_huge_integer_strength_validation_and_plan_rejection():
+    huge = 10**1000
+    safe_rejected(build(constraint_clauses=[clause("h", strength_candidate=huge)]), "strength_candidate_out_of_range")
+    safe_rejected(build(constraint_clauses=[clause("h", strength_candidate=-huge)]), "strength_candidate_out_of_range")
+    assert build(constraint_clauses=[clause("one", strength_candidate=1)])["situation_constraint_context_passed"]
+    assert build(constraint_clauses=[clause("onef", strength_candidate=1.0)])["situation_constraint_context_passed"]
+    for bad in [float("nan"), float("inf"), -float("inf")]:
+        safe_rejected(build(constraint_clauses=[clause("nan", strength_candidate=bad)]), "non_json_serializable_semantic_input")
+    invalid = build(constraint_clauses=[clause("h", strength_candidate=huge)])
+    for fn in [build_constraint_context_to_situation_plan, build_constraint_context_to_snapshot_plan, build_constraint_context_to_transition_preflight_plan, build_constraint_context_to_memory_candidate_plan, build_constraint_context_to_appraisal_plan, build_constraint_context_to_agp_input_plan]:
+        plan = fn(invalid)
+        assert plan["ready"] is False
+        assert_plan_side_effects_false(plan)
+
+
+def test_hostile_and_deep_json_sources_fail_closed_and_serialize():
+    cases = [
+        {"bad": deep_list(101)},
+        {"bad": PlainDictSubclass({"x": 1})},
+        {"bad": PlainListSubclass([1])},
+        RaisingDict({"x": 1}),
+        {"bad": RaisingList([1])},
+        {"bad": RaisingStr()},
+        {"bad": RaisingRepr()},
+    ]
+    circular_dict = {}; circular_dict["self"] = circular_dict
+    circular_list = []; circular_list.append(circular_list)
+    cases.extend([circular_dict, {"bad": circular_list}])
+    for metadata in cases:
+        safe_rejected(build(metadata=metadata))
+    safe_rejected(build(constraint_clauses=[clause("deep", unknown=deep_list(101))]))
+    safe_rejected(build(metadata={"bad": RaisingDict({"x": 1})}))
+    safe_rejected(build(constraint_clauses=RaisingList([clause()])))
+    for source in [RaisingDict({"x": 1}), RaisingList([1]), PlainDictSubclass({"x": 1}), PlainListSubclass([1]), {"bad": RaisingStr()}, {"bad": RaisingRepr()}]:
+        assert validate_virtual_world_situation_constraint_context(source) is False
+
+
+def test_invalid_order_uses_real_forbidden_fields():
+    pairs = [
+        ([clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", memory_write_requested=True)]),
+        ([clause("a", cron_expression="yes"), clause("b", memory_write_requested=True)], [clause("b", memory_write_requested=True), clause("a", cron_expression="yes")]),
+        ([{"clause_id": "bad"}, clause("v", tool_execution_requested=True)], [clause("v", tool_execution_requested=True), {"clause_id": "bad"}]),
+    ]
+    for left, right in pairs:
+        assert build(constraint_clauses=left) == build(constraint_clauses=right)
+
+
+def test_forbidden_fields_all_values_all_required_nesting_locations():
+    for field in sorted(FORBIDDEN_REQUEST_FIELDS):
+        for value, reason in [(True, field), (1, "malformed_forbidden_request_field"), ("yes", "malformed_forbidden_request_field")]:
+            safe_rejected(build(metadata={field: value}), reason)
+            safe_rejected(build(metadata={"outer": {field: value}}), reason)
+            safe_rejected(build(metadata={"outer": [{field: value}]}), reason)
+            safe_rejected(build(constraint_clauses=[clause("top", **{field: value})]), reason)
+            safe_rejected(build(constraint_clauses=[clause("nested", unknown={field: value})]), reason)
+            safe_rejected(build(constraint_clauses=[clause("list", unknown=[{field: value}])]), reason)
+        assert build(metadata={field: False})["situation_constraint_context_passed"]
+        assert build(metadata={"outer": {field: False}})["situation_constraint_context_passed"]
+        assert build(metadata={"outer": [{field: False}]} )["situation_constraint_context_passed"]
+        assert build(constraint_clauses=[clause("top", **{field: False})])["situation_constraint_context_passed"]
+        assert build(constraint_clauses=[clause("nested", unknown={field: False})])["situation_constraint_context_passed"]
+        assert build(constraint_clauses=[clause("list", unknown=[{field: False}])])["situation_constraint_context_passed"]
+
+
+def assert_plan_side_effects_false(plan):
+    assert plan["ready"] is False
+    for key, value in plan.items():
+        if key in {"ready", "candidate_only", "read_only", "constraint_candidate_only"}:
+            continue
+        if key.endswith("_performed") or key.endswith("_allowed") or key in {"external_constraint_asserted", "constraint_fact_asserted", "constraint_satisfied_asserted", "constraint_violated_asserted", "constraint_enforced", "hard_block_applied", "soft_penalty_applied", "precondition_evaluated", "postcondition_evaluated", "invariant_evaluated", "resource_reserved", "resource_consumed", "schedule_created", "action_prevented", "action_permitted"}:
+            assert value is False
+
+
+def test_downstream_plan_adversarial_coverage_complete():
+    valid_payload = build()
+    id_tamper = copy.deepcopy(valid_payload); id_tamper["constraint_context_id"] = "0" * 64
+    nested_tamper = copy.deepcopy(valid_payload); nested_tamper["constraint_scope_summary"]["unary_clause_count"] = True
+    extra = copy.deepcopy(valid_payload); extra["extra"] = 1
+    false_true = copy.deepcopy(valid_payload); false_true["constraint_enforced"] = True
+    true_false = copy.deepcopy(valid_payload); true_false["read_only"] = False
+    deep = build(metadata={"deep": deep_list(101)})
+    reordered = build(constraint_clauses=[clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)])
+    sources = [
+        build(constraint_type="bad"),
+        "not-a-dict",
+        {"bad": {"x"}},
+        RaisingDict({"x": 1}),
+        RaisingList([1]),
+        id_tamper,
+        nested_tamper,
+        extra,
+        false_true,
+        true_false,
+        build(metadata={"constraint_boundary_classification": None}),
+        build(metadata={"constraint_confidence_state": None}),
+        build(metadata={"memory_write_requested": True}),
+        build(constraint_clauses=[clause("x", tool_execution_requested=True)]),
+        build(constraint_clauses=[clause("x"), clause("x", "must_not_hold_candidate")]),
+        build(constraint_clauses=[clause("x"), clause("y")]),
+        build(constraint_clauses=[clause("x", sid="other")]),
+        build(constraint_type="precondition_constraint_candidate", constraint_clauses=[clause("r", "requires_candidate")]),
+        build(constraint_type="soft_constraint_candidate"),
+        build(constraint_clauses=[clause("a", "must_hold_candidate"), clause("b", "must_not_hold_candidate")]),
+        build(constraint_type="conflicting_constraint_candidate", constraint_clauses=[clause("x")]),
+        build(constraint_clauses=[clause("h", strength_candidate=10**1000)]),
+        deep,
+        reordered,
+    ]
+    builders = [build_constraint_context_to_situation_plan, build_constraint_context_to_snapshot_plan, build_constraint_context_to_transition_preflight_plan, build_constraint_context_to_memory_candidate_plan, build_constraint_context_to_appraisal_plan, build_constraint_context_to_agp_input_plan]
+    for fn in builders:
+        for source in sources:
+            plan = fn(source)
+            assert_plan_side_effects_false(plan)

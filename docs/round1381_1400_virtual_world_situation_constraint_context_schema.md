@@ -50,7 +50,7 @@ The output contains origin, fact-status, scope, conflict, and enforcement summar
 
 ## Strict JSON-native validation and deterministic invalid ordering
 
-Strict JSON-native validation runs first. Allowed values are dictionaries with string keys, lists, strings, integers, finite floats, booleans, and null. Non-string dictionary keys, tuples, sets, frozensets, bytes, bytearrays, NaN, infinities, custom objects, circular structures, recursion-hostile structures, and serialization exceptions fail closed with `non_json_serializable_semantic_input`. After strict JSON validation succeeds, raw clause-list entries are canonically sorted before per-clause validation so reordered invalid inputs fail deterministically.
+Strict JSON-native validation runs first. Allowed values are exact built-in dictionaries with string keys, exact built-in lists, strings, integers, finite floats, booleans, and null. Container or scalar subclasses, hostile containers, non-string dictionary keys, tuples, sets, frozensets, bytes, bytearrays, NaN, infinities, custom objects, circular structures, recursion-hostile structures, and serialization exceptions fail closed with `non_json_serializable_semantic_input`. `strength_candidate` validates booleans as malformed, integers by direct range check without `math.isfinite()`, floats by finite check then range check, and huge integers outside `[0.0, 1.0]` as `strength_candidate_out_of_range`. After strict JSON validation succeeds, raw clause-list entries are canonically sorted before per-clause validation so reordered invalid inputs fail deterministically.
 
 ## Recursive forbidden requests and validation precedence
 

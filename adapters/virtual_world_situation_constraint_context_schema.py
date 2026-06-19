@@ -113,41 +113,45 @@ def _non_empty_string(value: Any) -> bool:
 
 
 def _assert_json_native(value: Any, seen: Optional[set] = None, depth: int = 0) -> Optional[str]:
-    if depth > 100:
-        return "non_json_serializable_semantic_input"
-    if value is None or isinstance(value, (str, bool)):
-        return None
-    if isinstance(value, int) and not isinstance(value, bool):
-        return None
-    if isinstance(value, float):
-        return None if math.isfinite(value) else "non_json_serializable_semantic_input"
-    if seen is None:
-        seen = set()
-    if isinstance(value, dict):
-        oid = id(value)
-        if oid in seen:
+    try:
+        if depth > 100:
             return "non_json_serializable_semantic_input"
-        seen.add(oid)
-        for key in sorted(value.keys()) if all(isinstance(k, str) for k in value.keys()) else value.keys():
-            if not isinstance(key, str):
+        if value is None or type(value) in {str, bool}:
+            return None
+        if type(value) is int:
+            return None
+        if type(value) is float:
+            return None if math.isfinite(value) else "non_json_serializable_semantic_input"
+        if seen is None:
+            seen = set()
+        if type(value) is dict:
+            oid = id(value)
+            if oid in seen:
                 return "non_json_serializable_semantic_input"
-            reason = _assert_json_native(value[key], seen, depth + 1)
-            if reason:
-                return reason
-        seen.remove(oid)
-        return None
-    if isinstance(value, list):
-        oid = id(value)
-        if oid in seen:
-            return "non_json_serializable_semantic_input"
-        seen.add(oid)
-        for item in value:
-            reason = _assert_json_native(item, seen, depth + 1)
-            if reason:
-                return reason
-        seen.remove(oid)
-        return None
-    return "non_json_serializable_semantic_input"
+            seen.add(oid)
+            keys = list(value.keys())
+            if not all(type(key) is str for key in keys):
+                return "non_json_serializable_semantic_input"
+            for key in sorted(keys):
+                reason = _assert_json_native(value[key], seen, depth + 1)
+                if reason:
+                    return reason
+            seen.remove(oid)
+            return None
+        if type(value) is list:
+            oid = id(value)
+            if oid in seen:
+                return "non_json_serializable_semantic_input"
+            seen.add(oid)
+            for item in value:
+                reason = _assert_json_native(item, seen, depth + 1)
+                if reason:
+                    return reason
+            seen.remove(oid)
+            return None
+        return "non_json_serializable_semantic_input"
+    except Exception:
+        return "non_json_serializable_semantic_input"
 
 
 def _json_clone(value: Any) -> Any:
@@ -244,10 +248,18 @@ def _normalize_clauses(clauses: Any, situation_id: str):
             return None, "missing_or_malformed_subject_ref_id"
         if "strength_candidate" in clause:
             value = clause["strength_candidate"]
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            if type(value) is bool:
                 return None, "malformed_strength_candidate"
-            if value < 0.0 or value > 1.0:
-                return None, "strength_candidate_out_of_range"
+            if type(value) is int:
+                if value < 0 or value > 1:
+                    return None, "strength_candidate_out_of_range"
+            elif type(value) is float:
+                if not math.isfinite(value):
+                    return None, "malformed_strength_candidate"
+                if value < 0.0 or value > 1.0:
+                    return None, "strength_candidate_out_of_range"
+            else:
+                return None, "malformed_strength_candidate"
         if "priority_candidate" in clause:
             value = clause["priority_candidate"]
             if isinstance(value, bool) or not isinstance(value, int):
@@ -442,7 +454,7 @@ def build_virtual_world_situation_constraint_context(constraint_type=None, situa
         if reason:
             return _reject(reason)
         return _build_valid(constraint_type, situation_id, clauses, metadata, boundary, confidence, conflicts)
-    except (TypeError, ValueError, OverflowError, RecursionError):
+    except Exception:
         return _reject("non_json_serializable_semantic_input")
 
 
