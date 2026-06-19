@@ -98,7 +98,9 @@ FORBIDDEN_REQUEST_FIELDS = {
     "device_activation_requested", "network_action_requested", "artifact_creation_requested",
     "agp_bypass_requested", "fallback_bypass_requested", "act_requested", "execute_requested",
     "apply_requested", "intervene_requested", "simulate_and_apply_requested", "commit_outcome_requested",
-    "promote_to_fact_requested",
+    "promote_to_fact_requested", "schedule_requested", "scheduler_requested", "timer_requested",
+    "alarm_requested", "calendar_requested", "reminder_requested", "deadline_requested",
+    "cron_requested", "cron_expression", "scheduled_execution_requested", "delayed_execution_requested",
 }
 
 
@@ -248,6 +250,8 @@ def _normalize_links(links: Any, causal_type: Optional[str]) -> Tuple[Optional[l
         seen_sem.add(sem)
         normalized.append(item)
     if causal_type in {"causal_chain_candidate", "indirect_cause_candidate"}:
+        if len(normalized) < 2:
+            return None, ("indirect_cause_requires_multiple_links" if causal_type == "indirect_cause_candidate" else "causal_chain_requires_multiple_links")
         if len(seqs) != len(normalized):
             return None, ("indirect_cause_sequence_missing" if causal_type == "indirect_cause_candidate" else "causal_chain_sequence_missing")
         if len(set(seqs)) != len(seqs):

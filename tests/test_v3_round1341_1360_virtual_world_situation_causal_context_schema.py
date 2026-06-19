@@ -208,12 +208,18 @@ def test_input_failures(kwargs, reason):
 
 
 @pytest.mark.parametrize("links, reason", [
-    ([LINK], "causal_chain_sequence_missing"),
     ([{**LINK, "sequence_index": 0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":0}], "causal_chain_sequence_duplicated"),
-    ([{**LINK, "sequence_index": 1}], "causal_chain_sequence_non_contiguous"),
+    ([{**LINK, "sequence_index": 0}, {"link_id":"l2","source_situation_id":"s2","target_situation_id":"s3","link_kind":"cause_candidate","sequence_index":2}], "causal_chain_sequence_non_contiguous"),
 ])
 def test_invalid_causal_chain_sequence(links, reason):
     assert build(causal_type="causal_chain_candidate", causal_links=links)["blocked_reasons"] == [reason]
+
+
+def test_path_cardinality_precedes_sequence_validation_for_one_link_inputs():
+    assert build(causal_type="indirect_cause_candidate", causal_links=[LINK])["blocked_reasons"] == ["indirect_cause_requires_multiple_links"]
+    assert build(causal_type="indirect_cause_candidate", causal_links=[{**LINK, "sequence_index": 0}])["blocked_reasons"] == ["indirect_cause_requires_multiple_links"]
+    assert build(causal_type="causal_chain_candidate", causal_links=[LINK])["blocked_reasons"] == ["causal_chain_requires_multiple_links"]
+    assert build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 0}])["blocked_reasons"] == ["causal_chain_requires_multiple_links"]
 
 
 def test_determinism_reordering_and_semantic_changes():
@@ -285,6 +291,9 @@ def test_boundary_confidence_unknown_strings(key, reason, value):
     "model_load_requested", "device_activation_requested", "network_action_requested", "artifact_creation_requested",
     "agp_bypass_requested", "fallback_bypass_requested", "act_requested", "execute_requested", "apply_requested",
     "intervene_requested", "simulate_and_apply_requested", "commit_outcome_requested", "promote_to_fact_requested",
+    "schedule_requested", "scheduler_requested", "timer_requested", "alarm_requested", "calendar_requested",
+    "reminder_requested", "deadline_requested", "cron_requested", "cron_expression",
+    "scheduled_execution_requested", "delayed_execution_requested",
 ])
 def test_recursive_forbidden_requests_and_aliases(field):
     assert build(metadata={field: True})["blocked_reasons"] == [field]
@@ -297,6 +306,19 @@ def test_recursive_forbidden_requests_and_aliases(field):
 @pytest.mark.parametrize("bad", [1, "yes"])
 def test_forbidden_request_non_boolean_fails(bad):
     assert build(metadata={"memory_write_requested": bad})["blocked_reasons"] == ["malformed_forbidden_request_field"]
+
+
+def test_scheduling_alias_malformed_values_fail_closed():
+    assert build(metadata={"cron_expression": "* * * * *"})["blocked_reasons"] == ["malformed_forbidden_request_field"]
+    assert build(metadata={"schedule_requested": 1})["blocked_reasons"] == ["malformed_forbidden_request_field"]
+    link = {**LINK, "unknown": {"cron_expression": "* * * * *"}}
+    assert build(causal_links=[link])["blocked_reasons"] == ["malformed_forbidden_request_field"]
+
+
+def test_scheduling_aliases_inside_nested_lists_fail_closed():
+    assert build(metadata={"items": [{"deep": [{"timer_requested": True}]}]})["blocked_reasons"] == ["timer_requested"]
+    link = {**LINK, "unknown": [{"deep": {"scheduled_execution_requested": True}}]}
+    assert build(causal_links=[link])["blocked_reasons"] == ["scheduled_execution_requested"]
 
 
 def test_literal_top_level_required_field_set_and_nested_safety_values():
@@ -422,7 +444,7 @@ def test_downstream_plans(builder):
     invalids = [build(causal_type=None), "x", {"x": object()}, {**valid, "causal_context_id": "x"}, {**valid, "extra": "x"}]
     nested = copy.deepcopy(valid); nested["origin_summary"]["external_origin_verified"] = True; invalids.append(nested)
     imm = copy.deepcopy(valid); imm["read_only"] = False; invalids.append(imm)
-    invalids.extend([build(metadata={"causal_boundary_classification": ""}), build(metadata={"causal_confidence_state": ""}), build(metadata={"memory_write_requested": True}), build(causal_type="correlation_only_candidate", causal_links=[LINK]), build(causal_links=[{"link_id":"l1","source_situation_id":"x","target_situation_id":"y","link_kind":"cause_candidate"}]), build(causal_type="indirect_cause_candidate", causal_links=[{**LINK, "sequence_index": 0}]), build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 0}]), build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":"common_cause_candidate"}])])
+    invalids.extend([build(metadata={"causal_boundary_classification": ""}), build(metadata={"causal_confidence_state": ""}), build(metadata={"memory_write_requested": True}), build(metadata={"schedule_requested": True}), build(metadata={"nested": [{"cron_expression": "* * * * *"}]}), build(causal_links=[{**LINK, "unknown": {"timer_requested": True}}]), build(causal_type="correlation_only_candidate", causal_links=[LINK]), build(causal_links=[{"link_id":"l1","source_situation_id":"x","target_situation_id":"y","link_kind":"cause_candidate"}]), build(causal_type="indirect_cause_candidate", causal_links=[{**LINK, "sequence_index": 0}]), build(causal_type="causal_chain_candidate", causal_links=[{**LINK, "sequence_index": 0}]), build(causal_type="common_cause_candidate", causal_links=[{"link_id":"l1","source_situation_id":"common","target_situation_id":"s1","link_kind":"common_cause_candidate"}])])
     deep = {}; cur = deep
     for _ in range(1100): cur["x"] = {}; cur = cur["x"]
     invalids.append(build(metadata=deep))

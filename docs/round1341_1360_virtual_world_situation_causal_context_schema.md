@@ -53,9 +53,9 @@ Single-direction contexts require exactly one link whose source equals `subject_
 
 Directional candidate types require distinct subject/object situations. Correlation-only and unknown-direction candidates keep `direction_known=false`; correlation-only explicitly records that correlation is not causation.
 
-Indirect cause candidates require at least two `cause_candidate` links, unique contiguous sequence indexes from zero, first source equal to the subject, last target equal to the object, and a connected non-cyclic path where each target equals the next source. Disconnected, cyclic, orphaned, branched, or endpoint-mismatched paths fail closed with explicit indirect-cause reasons.
+Indirect cause candidates require at least two `cause_candidate` links before any sequence validation occurs. After cardinality passes, they require unique contiguous sequence indexes from zero, first source equal to the subject, last target equal to the object, and a connected non-cyclic path where each target equals the next source. Disconnected, cyclic, orphaned, branched, or endpoint-mismatched paths fail closed with explicit indirect-cause reasons.
 
-Causal chains validate internal sequence only. They require at least two compatible links, unique contiguous `sequence_index` values beginning at zero, connected path semantics, subject/object endpoint coherence, and no cycles. Chain order is normalized by sequence index for deterministic IDs, and `causal_chain_summary.sequence_validated` is true only after sequence, connectivity, endpoint, and cycle checks pass.
+Causal chains validate internal sequence only. They require at least two compatible links before any sequence validation occurs, then require unique contiguous `sequence_index` values beginning at zero, connected path semantics, subject/object endpoint coherence, and no cycles. Chain order is normalized by sequence index for deterministic IDs, and `causal_chain_summary.sequence_validated` is true only after sequence, connectivity, endpoint, and cycle checks pass.
 
 Common-cause candidates require at least two `common_cause_candidate` links sharing one candidate common-cause source. One target must equal the subject and one target must equal the object; unrelated targets, mismatched common-cause sources, duplicate semantic edges, or a common-cause source equal to either declared outcome fail closed. Common-cause candidates do not verify a shared external origin.
 
@@ -65,7 +65,7 @@ Counterfactual candidates never perform interventions or counterfactual executio
 
 Semantic input is validated before metadata, enum, string, causal-link, or nested-field inspection. Allowed values are JSON-native dictionaries with string keys, lists, strings, integers, finite floats, booleans, and null. Tuples, sets, frozensets, bytes, bytearrays, NaN, infinities, custom objects, non-string dictionary keys, circular structures, and recursion-hostile structures fail closed with exactly `non_json_serializable_semantic_input`. Rejected payloads remain JSON-serializable.
 
-One recursive typed validator is shared for metadata and causal-link fields. Forbidden request fields such as memory writes, fact promotion, causal verification, intervention, execution, persistence, vector/model/device/network activation, AGP bypass, and fallback bypass fail closed when `true`. A forbidden field set to `false` is allowed. Any non-boolean forbidden field value fails with `malformed_forbidden_request_field`.
+One recursive typed validator is shared for metadata and causal-link fields. Forbidden request fields such as memory writes, fact promotion, causal verification, intervention, execution, scheduling aliases (`schedule_requested`, `timer_requested`, `cron_expression`, and related scheduler/alarm/calendar/reminder/deadline fields), persistence, vector/model/device/network activation, AGP bypass, and fallback bypass fail closed when `true`. A forbidden field set to `false` is allowed. Any non-boolean forbidden field value fails with `malformed_forbidden_request_field`.
 
 ## Deterministic ID and exact payload integrity
 
