@@ -172,6 +172,15 @@ def _canonical_sort_key(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
 
 
+def _semantic_clause_key(clause: Dict[str, Any]) -> str:
+    return _canonical_sort_key({
+        "situation_id": clause["situation_id"],
+        "clause_kind": clause["clause_kind"],
+        "subject_ref_id": clause["subject_ref_id"],
+        "object_ref_id": clause["object_ref_id"] if "object_ref_id" in clause else None,
+    })
+
+
 def _forbidden_reason(value: Any) -> Optional[str]:
     if isinstance(value, dict):
         for key in sorted(value.keys()):
@@ -277,7 +286,7 @@ def _normalize_clauses(clauses: Any, situation_id: str):
         return None, "duplicate_clause_id"
     seen_sem = set()
     for c in normalized:
-        sem = (c["situation_id"], c["clause_kind"], c["subject_ref_id"], c.get("object_ref_id"))
+        sem = _semantic_clause_key(c)
         if sem in seen_sem:
             return None, "duplicate_semantic_constraint_clause"
         seen_sem.add(sem)
