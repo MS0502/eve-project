@@ -143,6 +143,24 @@ def _json_clone(value: Any) -> Any:
     return json.loads(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
 
 
+def _type_exact_equal(expected: Any, actual: Any) -> bool:
+    if type(expected) is not type(actual):
+        return False
+    if isinstance(expected, dict):
+        if set(expected.keys()) != set(actual.keys()):
+            return False
+        return all(_type_exact_equal(expected[key], actual[key]) for key in expected)
+    if isinstance(expected, list):
+        if len(expected) != len(actual):
+            return False
+        return all(_type_exact_equal(left, right) for left, right in zip(expected, actual))
+    return expected == actual
+
+
+def _canonical_sort_key(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
 def _forbidden_reason(value: Any) -> Optional[str]:
     if isinstance(value, dict):
         for key, item in value.items():
@@ -189,6 +207,8 @@ def _normalize_factors(factors: Any, situation_id: str):
         return None, "uncertainty_factors_not_non_empty_list"
     if not factors:
         return None, "empty_uncertainty_factors"
+    if all(isinstance(factor, dict) for factor in factors):
+        factors = sorted(factors, key=_canonical_sort_key)
     normalized = []
     for factor in factors:
         if not isinstance(factor, dict):
@@ -255,18 +275,24 @@ def _composition_reason(uncertainty_type: str, factors: list) -> Optional[str]:
 
 
 def _validate_boundary(metadata: dict, uncertainty_type: str):
-    value = metadata.get("uncertainty_boundary_classification", BOUNDARY_DEFAULTS.get(uncertainty_type, "internal_epistemic_uncertainty"))
-    if not _non_empty_string(value) or value in {"None", "False", "0", "[]", "{}"}:
-        return None, "malformed_uncertainty_boundary_class"
+    if "uncertainty_boundary_classification" in metadata:
+        value = metadata["uncertainty_boundary_classification"]
+        if not _non_empty_string(value):
+            return None, "malformed_uncertainty_boundary_class"
+    else:
+        value = BOUNDARY_DEFAULTS.get(uncertainty_type, "internal_epistemic_uncertainty")
     if value not in SUPPORTED_BOUNDARIES:
         return None, "unknown_uncertainty_boundary_class"
     return value, None
 
 
 def _validate_confidence(metadata: dict):
-    value = metadata.get("uncertainty_confidence_state", "uncertainty_unverified")
-    if not _non_empty_string(value) or value in {"None", "False", "0", "[]", "{}"}:
-        return None, "malformed_uncertainty_confidence_state"
+    if "uncertainty_confidence_state" in metadata:
+        value = metadata["uncertainty_confidence_state"]
+        if not _non_empty_string(value):
+            return None, "malformed_uncertainty_confidence_state"
+    else:
+        value = "uncertainty_unverified"
     if value not in SUPPORTED_CONFIDENCE:
         return None, "unknown_uncertainty_confidence_state"
     return value, None
@@ -355,7 +381,7 @@ def validate_virtual_world_situation_uncertainty_context(uncertainty_context) ->
             uncertainty_context.get("uncertainty_type"), uncertainty_context.get("situation_id"),
             uncertainty_context.get("uncertainty_factors"), uncertainty_context.get("metadata"),
         )
-        return expected == uncertainty_context
+        return _type_exact_equal(expected, uncertainty_context)
     except Exception:
         return False
 

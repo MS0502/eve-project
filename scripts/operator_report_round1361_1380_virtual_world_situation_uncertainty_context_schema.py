@@ -26,11 +26,19 @@ def main():
     conflict = build_virtual_world_situation_uncertainty_context("conflicting_evidence_candidate", "sit-민석", [factor("f1", "supporting_evidence", "support_candidate"), factor("f2", "challenging_evidence", "challenge_candidate")], {})
     ambiguity = build_virtual_world_situation_uncertainty_context("ambiguity_candidate", "sit-민석", [factor("f1", "neutral_unknown"), factor("f2", "temporal_ambiguity")], {})
     mixed = build_virtual_world_situation_uncertainty_context("mixed_unknown_uncertainty_candidate", "sit-민석", [factor("f1", "missing_information"), factor("f2", "unknown_origin")], {})
+    type_tampered = copy.deepcopy(valid); type_tampered["read_only"] = 1
+    enum_malformed = build_virtual_world_situation_uncertainty_context("missing_information_candidate", "sit-민석", [factor()], {"uncertainty_boundary_classification": None})
+    enum_unknown = build_virtual_world_situation_uncertainty_context("missing_information_candidate", "sit-민석", [factor()], {"uncertainty_boundary_classification": "None"})
+    reordered_a = build_virtual_world_situation_uncertainty_context("missing_information_candidate", "sit-민석", [factor("f1", memory_write_requested=True), factor("f2", timer_requested=True)], {})
+    reordered_b = build_virtual_world_situation_uncertainty_context("missing_information_candidate", "sit-민석", [factor("f2", timer_requested=True), factor("f1", memory_write_requested=True)], {})
     checks = {
         "valid_case_passed": validate_virtual_world_situation_uncertainty_context(valid),
         "invalid_case_passed": invalid["blocked_reasons"] == ["unknown_uncertainty_type"] and not validate_virtual_world_situation_uncertainty_context(invalid),
         "deterministic_id_passed": same_a["uncertainty_context_id"] == same_b["uncertainty_context_id"],
         "tamper_detection_passed": not validate_virtual_world_situation_uncertainty_context(tampered),
+        "type_exact_tamper_detection_passed": not validate_virtual_world_situation_uncertainty_context(type_tampered),
+        "malformed_unknown_enum_distinction_passed": enum_malformed["blocked_reasons"] == ["malformed_uncertainty_boundary_class"] and enum_unknown["blocked_reasons"] == ["unknown_uncertainty_boundary_class"],
+        "invalid_factor_reordering_deterministic_passed": reordered_a == reordered_b and reordered_a["blocked_reasons"] == reordered_b["blocked_reasons"] and reordered_a["situation_uncertainty_context_passed"] is False,
         "factor_compatibility_passed": build_virtual_world_situation_uncertainty_context("temporal_uncertainty_candidate", "sit-민석", [factor("f1", "causal_ambiguity")], {})["blocked_reasons"] == ["incompatible_uncertainty_type_factor_kind"],
         "polarity_compatibility_passed": build_virtual_world_situation_uncertainty_context("missing_information_candidate", "sit-민석", [factor("f1", "missing_information", "support_candidate")], {})["blocked_reasons"] == ["incompatible_factor_kind_polarity"],
         "factor_situation_coherence_passed": build_virtual_world_situation_uncertainty_context("missing_information_candidate", "sit-민석", [factor(sid="other")], {})["blocked_reasons"] == ["uncertainty_factor_situation_mismatch"],

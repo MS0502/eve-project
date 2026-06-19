@@ -172,7 +172,7 @@ def test_strict_json_and_forbidden_requests_and_plans():
     deep = cur = {}
     for i in range(1002): cur["x"] = {}; cur = cur["x"]
     assert_reject(valid_case(metadata=deep), "non_json_serializable_semantic_input")
-    for bad in ["", "None", "False", "0", "[]", "{}"]:
+    for bad in [""]:
         assert_reject(valid_case(metadata={"uncertainty_boundary_classification": bad}), "malformed_uncertainty_boundary_class")
         assert_reject(valid_case(metadata={"uncertainty_confidence_state": bad}), "malformed_uncertainty_confidence_state")
     for field in FORBIDDEN_REQUEST_FIELDS:
@@ -196,6 +196,64 @@ def test_strict_json_and_forbidden_requests_and_plans():
             for key, value in plan.items():
                 if key.endswith("_performed") or key.endswith("_allowed") or key.endswith("_loaded") or key.endswith("_asserted") or key.endswith("_guaranteed"):
                     assert value is False
+
+
+def test_type_exact_payload_tamper_rejects_bool_int_confusion_and_numeric_type_changes():
+    base = valid_case(uncertainty_factors=[factor("f1", weight_candidate=1.0)])
+    mutations = [
+        ("situation_uncertainty_context_passed", 1),
+        ("read_only", 1),
+        ("memory_write_performed", 0),
+        ("automatic_resolution_allowed", 0),
+    ]
+    for key, value in mutations:
+        p = copy.deepcopy(base); p[key] = value
+        assert not validate_virtual_world_situation_uncertainty_context(p), key
+    nested = [
+        (("resolution_summary", "resolved"), 0),
+        (("fact_status_summary", "uncertainty_fact_asserted"), 0),
+        (("evidence_balance_summary", "conflict_present"), 1),
+        (("origin_summary", "external_origin_verified"), 0),
+        (("evidence_balance_summary", "supporting_factor_count"), False),
+        (("uncertainty_factors", 0, "weight_candidate"), 1),
+    ]
+    for path, value in nested:
+        p = copy.deepcopy(base)
+        target = p
+        for part in path[:-1]:
+            target = target[part]
+        target[path[-1]] = value
+        assert not validate_virtual_world_situation_uncertainty_context(p), path
+
+
+def test_malformed_unknown_enum_distinction_for_boundary_and_confidence():
+    actual_malformed = ["", None, False, 0, [], {}]
+    unsupported_strings = ["None", "False", "0", "[]", "{}", "unsupported"]
+    for value in actual_malformed:
+        assert_reject(valid_case(metadata={"uncertainty_boundary_classification": value}), "malformed_uncertainty_boundary_class")
+        assert_reject(valid_case(metadata={"uncertainty_confidence_state": value}), "malformed_uncertainty_confidence_state")
+    for value in unsupported_strings:
+        assert_reject(valid_case(metadata={"uncertainty_boundary_classification": value}), "unknown_uncertainty_boundary_class")
+        assert_reject(valid_case(metadata={"uncertainty_confidence_state": value}), "unknown_uncertainty_confidence_state")
+
+
+def test_reordered_invalid_factors_are_deterministic_and_plan_blocked():
+    cases = [
+        ([factor("f1", memory_write_requested=True), factor("f2", timer_requested=True)], [factor("f2", timer_requested=True), factor("f1", memory_write_requested=True)]),
+        ([factor("f1", schedule_requested=1), factor("f2", memory_write_requested=True)], [factor("f2", memory_write_requested=True), factor("f1", schedule_requested=1)]),
+        ([factor("", related_context_id="a"), factor("f2", memory_write_requested=True)], [factor("f2", memory_write_requested=True), factor("", related_context_id="a")]),
+    ]
+    builders = [build_uncertainty_context_to_situation_plan, build_uncertainty_context_to_snapshot_plan, build_uncertainty_context_to_transition_preflight_plan, build_uncertainty_context_to_memory_candidate_plan, build_uncertainty_context_to_appraisal_plan, build_uncertainty_context_to_agp_input_plan]
+    for left, right in cases:
+        a = valid_case(uncertainty_factors=left)
+        b = valid_case(uncertainty_factors=right)
+        assert a == b
+        assert a["blocked_reasons"] == b["blocked_reasons"]
+        assert a["situation_uncertainty_context_status"] == b["situation_uncertainty_context_status"] == "REJECTED"
+        assert a["situation_uncertainty_context_passed"] is b["situation_uncertainty_context_passed"] is False
+        for builder in builders:
+            assert builder(a)["ready"] is False
+            assert builder(b)["ready"] is False
 
 
 def test_summary_contains_next_step():
