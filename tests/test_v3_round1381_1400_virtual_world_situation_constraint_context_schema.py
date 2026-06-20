@@ -36,6 +36,17 @@ def build(**kw):
     return build_virtual_world_situation_constraint_context(**args)
 
 
+def all_plan_builders():
+    return [
+        build_constraint_context_to_situation_plan,
+        build_constraint_context_to_snapshot_plan,
+        build_constraint_context_to_transition_preflight_plan,
+        build_constraint_context_to_memory_candidate_plan,
+        build_constraint_context_to_appraisal_plan,
+        build_constraint_context_to_agp_input_plan,
+    ]
+
+
 def assert_reject(payload, reason):
     assert payload["situation_constraint_context_passed"] is False
     assert payload["situation_constraint_context_status"] == "REJECTED"
@@ -169,6 +180,63 @@ def test_conflict_semantics_and_determinism():
     assert unrelated["constraint_conflict_summary"]["conflict_pairs"] == []
 
 
+def test_unhashable_json_native_object_ref_validation_precedence():
+    for value in [None, False, 0, [], {}]:
+        assert_reject(build(constraint_clauses=[clause("r", "requires_candidate", **{"object_ref_id": value})]), "malformed_object_ref_id")
+    for value in [None, False, 0, [], {}, "object"]:
+        assert_reject(build(constraint_clauses=[clause("u", "must_hold_candidate", **{"object_ref_id": value})]), "unexpected_object_ref_id_for_unary_clause")
+    for value in ([], {}):
+        assert_reject(
+            build(constraint_clauses=[
+                clause("a", "requires_candidate", **{"object_ref_id": value}),
+                clause("b", "requires_candidate", **{"object_ref_id": value}),
+            ]),
+            "duplicate_semantic_constraint_clause",
+        )
+
+
+def test_reordered_invalid_unhashable_object_refs_are_deterministic():
+    for object_ref in ([], {}):
+        original = [
+            clause("a", "requires_candidate", **{"object_ref_id": object_ref}),
+            clause("b", "requires_candidate", **{"object_ref_id": object_ref}),
+        ]
+        left = build(constraint_clauses=original)
+        right = build(constraint_clauses=list(reversed(original)))
+        assert left == right
+        assert_reject(left, "duplicate_semantic_constraint_clause")
+
+    pairs = [
+        (
+            [clause("list", "requires_candidate", **{"object_ref_id": []}), clause("forbidden", memory_write_requested=True)],
+            "memory_write_requested",
+        ),
+        (
+            [clause("dict", "requires_candidate", **{"object_ref_id": {}}), clause("forbidden", tool_execution_requested=True)],
+            "tool_execution_requested",
+        ),
+    ]
+    for clauses, reason in pairs:
+        left = build(constraint_clauses=clauses)
+        right = build(constraint_clauses=list(reversed(clauses)))
+        assert left == right
+        assert_reject(left, reason)
+
+
+def test_downstream_plans_reject_unhashable_object_ref_sources():
+    sources = [
+        build(constraint_clauses=[clause("r", "requires_candidate", **{"object_ref_id": []})]),
+        build(constraint_clauses=[clause("r", "requires_candidate", **{"object_ref_id": {}})]),
+        build(constraint_clauses=[clause("u", "must_hold_candidate", **{"object_ref_id": []})]),
+        build(constraint_clauses=[clause("u", "must_hold_candidate", **{"object_ref_id": {}})]),
+        build(constraint_clauses=[clause("a", "requires_candidate", **{"object_ref_id": []}), clause("b", "requires_candidate", **{"object_ref_id": []})]),
+        build(constraint_clauses=[clause("a", "requires_candidate", **{"object_ref_id": {}}), clause("b", "requires_candidate", **{"object_ref_id": {}})]),
+    ]
+    for source in sources:
+        for fn in all_plan_builders():
+            assert_plan_side_effects_false(fn(source))
+
+
 def test_deterministic_ids_and_invalid_ordering():
     a = build(metadata={"b": 2, "a": 1}, constraint_clauses=[clause("b", "must_not_hold_candidate", subj="x"), clause("a")])
     b = build(metadata={"a": 1, "b": 2}, constraint_clauses=[{"subject_ref_id":"subj", "clause_kind":"must_hold_candidate", "situation_id":"sit-민석", "clause_id":"a"}, clause("b", "must_not_hold_candidate", subj="x")])
@@ -179,14 +247,15 @@ def test_deterministic_ids_and_invalid_ordering():
     assert build()["constraint_context_id"] != build(constraint_clauses=[clause("c1", priority_candidate=5)])["constraint_context_id"]
     assert build()["constraint_context_id"] != build(constraint_clauses=[clause("c1", unknown={"x": 1})])["constraint_context_id"]
     pairs = [
-        ([clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", memory_write_requested=True)]),
-        ([clause("a", cron_expression="yes"), clause("b", "must_not_hold_candidate", memory_write_requested=True)], [clause("b", "must_not_hold_candidate", memory_write_requested=True), clause("a", cron_expression="yes")]),
-        ([{"clause_id":"a"}, clause("b", memory_write_requested=True)], [clause("b", memory_write_requested=True), {"clause_id":"a"}]),
-        (["x", {"clause_id":"a"}], [{"clause_id":"a"}, "x"]),
-        ([clause("x"), clause("x", "must_not_hold_candidate"), clause("y", "must_hold_candidate", sid="other")], [clause("y", "must_hold_candidate", sid="other"), clause("x", "must_not_hold_candidate"), clause("x")]),
+        ([clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", memory_write_requested=True)], "memory_write_requested"),
+        ([clause("a", cron_expression="yes"), clause("b", "must_not_hold_candidate", memory_write_requested=True)], [clause("b", "must_not_hold_candidate", memory_write_requested=True), clause("a", cron_expression="yes")], "malformed_forbidden_request_field"),
+        ([clause("a", schedule_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", schedule_requested=True)], "schedule_requested"),
     ]
-    for left, right in pairs:
-        assert build(constraint_clauses=left) == build(constraint_clauses=right)
+    for left, right, reason in pairs:
+        left_payload = build(constraint_clauses=left)
+        right_payload = build(constraint_clauses=right)
+        assert left_payload == right_payload
+        assert_reject(left_payload, reason)
 
 
 def test_strict_json_and_boundary_confidence_distinction():
@@ -214,8 +283,7 @@ def test_recursive_forbidden_requests_and_plans():
         assert_reject(build(constraint_clauses=[clause("x", **{field: True})]), field)
         assert_reject(build(constraint_clauses=[clause("x", unknown={"nested": [{field: True}]})]), field)
     p = build()
-    builders = [build_constraint_context_to_situation_plan, build_constraint_context_to_snapshot_plan, build_constraint_context_to_transition_preflight_plan, build_constraint_context_to_memory_candidate_plan, build_constraint_context_to_appraisal_plan, build_constraint_context_to_agp_input_plan]
-    for fn in builders:
+    for fn in all_plan_builders():
         plan = fn(p)
         assert plan["ready"] is True and plan["candidate_only"] is True and plan["read_only"] is True and plan["constraint_candidate_only"] is True
         for key, value in plan.items():
@@ -291,7 +359,7 @@ def test_huge_integer_strength_validation_and_plan_rejection():
     for bad in [float("nan"), float("inf"), -float("inf")]:
         safe_rejected(build(constraint_clauses=[clause("nan", strength_candidate=bad)]), "non_json_serializable_semantic_input")
     invalid = build(constraint_clauses=[clause("h", strength_candidate=huge)])
-    for fn in [build_constraint_context_to_situation_plan, build_constraint_context_to_snapshot_plan, build_constraint_context_to_transition_preflight_plan, build_constraint_context_to_memory_candidate_plan, build_constraint_context_to_appraisal_plan, build_constraint_context_to_agp_input_plan]:
+    for fn in all_plan_builders():
         plan = fn(invalid)
         assert plan["ready"] is False
         assert_plan_side_effects_false(plan)
@@ -321,12 +389,15 @@ def test_hostile_and_deep_json_sources_fail_closed_and_serialize():
 
 def test_invalid_order_uses_real_forbidden_fields():
     pairs = [
-        ([clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", memory_write_requested=True)]),
-        ([clause("a", cron_expression="yes"), clause("b", memory_write_requested=True)], [clause("b", memory_write_requested=True), clause("a", cron_expression="yes")]),
-        ([{"clause_id": "bad"}, clause("v", tool_execution_requested=True)], [clause("v", tool_execution_requested=True), {"clause_id": "bad"}]),
+        ([clause("a", memory_write_requested=True), clause("b", tool_execution_requested=True)], [clause("b", tool_execution_requested=True), clause("a", memory_write_requested=True)], "memory_write_requested"),
+        ([clause("a", cron_expression="yes"), clause("b", memory_write_requested=True)], [clause("b", memory_write_requested=True), clause("a", cron_expression="yes")], "malformed_forbidden_request_field"),
+        ([clause("a", schedule_requested=True), clause("v", tool_execution_requested=True)], [clause("v", tool_execution_requested=True), clause("a", schedule_requested=True)], "schedule_requested"),
     ]
-    for left, right in pairs:
-        assert build(constraint_clauses=left) == build(constraint_clauses=right)
+    for left, right, reason in pairs:
+        left_payload = build(constraint_clauses=left)
+        right_payload = build(constraint_clauses=right)
+        assert left_payload == right_payload
+        assert_reject(left_payload, reason)
 
 
 def test_forbidden_fields_all_values_all_required_nesting_locations():
@@ -383,6 +454,11 @@ def test_downstream_plan_adversarial_coverage_complete():
         build(constraint_clauses=[clause("x"), clause("y")]),
         build(constraint_clauses=[clause("x", sid="other")]),
         build(constraint_type="precondition_constraint_candidate", constraint_clauses=[clause("r", "requires_candidate")]),
+        build(constraint_clauses=[clause("r", "requires_candidate", **{"object_ref_id": []})]),
+        build(constraint_clauses=[clause("r", "requires_candidate", **{"object_ref_id": {}})]),
+        build(constraint_clauses=[clause("u", "must_hold_candidate", **{"object_ref_id": []})]),
+        build(constraint_clauses=[clause("u", "must_hold_candidate", **{"object_ref_id": {}})]),
+        build(constraint_clauses=[clause("a", "requires_candidate", **{"object_ref_id": []}), clause("b", "requires_candidate", **{"object_ref_id": []})]),
         build(constraint_type="soft_constraint_candidate"),
         build(constraint_clauses=[clause("a", "must_hold_candidate"), clause("b", "must_not_hold_candidate")]),
         build(constraint_type="conflicting_constraint_candidate", constraint_clauses=[clause("x")]),
@@ -390,8 +466,7 @@ def test_downstream_plan_adversarial_coverage_complete():
         deep,
         reordered,
     ]
-    builders = [build_constraint_context_to_situation_plan, build_constraint_context_to_snapshot_plan, build_constraint_context_to_transition_preflight_plan, build_constraint_context_to_memory_candidate_plan, build_constraint_context_to_appraisal_plan, build_constraint_context_to_agp_input_plan]
-    for fn in builders:
+    for fn in all_plan_builders():
         for source in sources:
             plan = fn(source)
             assert_plan_side_effects_false(plan)
