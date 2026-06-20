@@ -170,24 +170,27 @@ def _semantic_item_key(item: Dict[str, Any]) -> str:
     return _canonical_sort_key({"situation_id": item["situation_id"], "evidence_kind": item["evidence_kind"], "stance": item["stance"], "source_class": item["source_class"], "source_ref_id": item["source_ref_id"], "claim_ref_id": item["claim_ref_id"], "related_context_id": item.get("related_context_id")})
 
 
-def _forbidden_reason(value: Any) -> Optional[str]:
+def _collect_forbidden_reasons(value: Any, reasons: list) -> None:
     if isinstance(value, dict):
         for key in sorted(value.keys()):
             item = value[key]
             if key in FORBIDDEN_REQUEST_FIELDS:
                 if item is True:
-                    return key
-                if item is not False:
-                    return "malformed_forbidden_request_field"
-            reason = _forbidden_reason(item)
-            if reason:
-                return reason
+                    reasons.append(key)
+                elif item is not False:
+                    reasons.append("malformed_forbidden_request_field")
+            _collect_forbidden_reasons(item, reasons)
     elif isinstance(value, list):
         for item in sorted(value, key=_canonical_sort_key):
-            reason = _forbidden_reason(item)
-            if reason:
-                return reason
-    return None
+            _collect_forbidden_reasons(item, reasons)
+
+
+def _forbidden_reason(value: Any) -> Optional[str]:
+    reasons = []
+    _collect_forbidden_reasons(value, reasons)
+    if "malformed_forbidden_request_field" in reasons:
+        return "malformed_forbidden_request_field"
+    return sorted(reasons)[0] if reasons else None
 
 
 def _base_payload() -> Dict[str, Any]:
