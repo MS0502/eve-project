@@ -59,7 +59,7 @@ Metadata and item payloads are recursively inspected in deterministic order for 
 
 ## Validation precedence and deterministic invalid ordering
 
-Validation follows the fixed order required by the round: strict JSON, type, situation, metadata, forbidden metadata, item list, canonical raw item ordering, item fields, forbidden item fields, unique IDs, basis references, semantic duplicates, situation coherence, reference shape, role compatibility, type compatibility, composition, boundary, confidence, summaries, and canonical ID. Invalid-list ordering is deterministic because raw items and recursive list entries use canonical JSON ordering before semantic checks.
+Validation follows the fixed order required by the round: strict JSON-native validation; hypothesis type; top-level situation ID; metadata shape; recursive forbidden metadata; hypothesis-item-list shape; deterministic raw item ordering; per-item required fields and basic scalar/type validation; per-item recursive forbidden validation; duplicate hypothesis item ID; basis-evidence-reference validation and normalization; semantic duplicate detection; item situation coherence; relational/unary reference shape; kind/role compatibility; type/kind compatibility; cardinality; composition; boundary; confidence; derived summaries; and canonical ID. The required-field stage only verifies that `basis_evidence_ref_ids` exists; list shape, element validation, duplicate detection, and sorting occur later at the basis-reference stage, after recursive item-forbidden validation and duplicate item-ID validation. Invalid-list ordering is deterministic because raw items and recursive list entries use canonical JSON ordering before semantic checks.
 
 ## Canonical ID and recursive type-exact integrity
 

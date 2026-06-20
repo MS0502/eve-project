@@ -184,13 +184,14 @@ def _reject(reason: str) -> Dict[str, Any]:
 def _normalize_items(items: Any, situation_id: str):
     if items is None:
         return None, "missing_hypothesis_items"
-    if not isinstance(items, list):
+    if type(items) is not list:
         return None, "hypothesis_items_not_non_empty_list"
     if not items:
         return None, "empty_hypothesis_items"
-    normalized = []
-    for item in sorted(items, key=_canonical_sort_key):
-        if not isinstance(item, dict):
+    raw_ordered = sorted(items, key=_canonical_sort_key)
+    staged = []
+    for item in raw_ordered:
+        if type(item) is not dict:
             return None, "malformed_hypothesis_item"
         for req, reason in (("hypothesis_item_id", "missing_or_empty_hypothesis_item_id"), ("situation_id", "malformed_hypothesis_item_situation_id"), ("hypothesis_kind", "unknown_hypothesis_kind"), ("candidate_role", "unknown_candidate_role"), ("subject_ref_id", "missing_or_malformed_subject_ref_id"), ("claim_ref_id", "missing_or_malformed_claim_ref_id"), ("basis_evidence_ref_ids", "missing_or_malformed_basis_evidence_ref_ids")):
             if req not in item:
@@ -201,11 +202,6 @@ def _normalize_items(items: Any, situation_id: str):
         if item["candidate_role"] not in SUPPORTED_CANDIDATE_ROLES: return None, "unknown_candidate_role"
         if not _non_empty_string(item["subject_ref_id"]): return None, "missing_or_malformed_subject_ref_id"
         if not _non_empty_string(item["claim_ref_id"]): return None, "missing_or_malformed_claim_ref_id"
-        refs = item["basis_evidence_ref_ids"]
-        if type(refs) is not list or not refs or any(not _non_empty_string(ref) for ref in refs):
-            return None, "missing_or_malformed_basis_evidence_ref_ids"
-        if len(refs) != len(set(refs)):
-            return None, "duplicate_basis_evidence_ref_id"
         if "related_context_id" in item and not _non_empty_string(item["related_context_id"]): return None, "malformed_related_context_id"
         for field, malformed, out_range in (("confidence_candidate", "malformed_confidence_candidate", "confidence_candidate_out_of_range"), ("plausibility_candidate", "malformed_plausibility_candidate", "plausibility_candidate_out_of_range")):
             if field in item:
@@ -217,15 +213,23 @@ def _normalize_items(items: Any, situation_id: str):
                 if value < 0 or value > 1:
                     return None, out_range
         if "label" in item and not _non_empty_string(item["label"]): return None, "malformed_hypothesis_item_label"
+        staged.append(_json_clone(item))
+    reason = _forbidden_reason(staged)
+    if reason:
+        return None, reason
+    ids = [i["hypothesis_item_id"] for i in staged]
+    if len(ids) != len(set(ids)):
+        return None, "duplicate_hypothesis_item_id"
+    normalized = []
+    for item in staged:
+        refs = item["basis_evidence_ref_ids"]
+        if type(refs) is not list or not refs or any(not _non_empty_string(ref) for ref in refs):
+            return None, "missing_or_malformed_basis_evidence_ref_ids"
+        if len(refs) != len(set(refs)):
+            return None, "duplicate_basis_evidence_ref_id"
         clone = _json_clone(item)
         clone["basis_evidence_ref_ids"] = sorted(clone["basis_evidence_ref_ids"])
         normalized.append(clone)
-    reason = _forbidden_reason(normalized)
-    if reason:
-        return None, reason
-    ids = [i["hypothesis_item_id"] for i in normalized]
-    if len(ids) != len(set(ids)):
-        return None, "duplicate_hypothesis_item_id"
     seen = set()
     for item in normalized:
         key = _semantic_item_key(item)
@@ -248,7 +252,6 @@ def _normalize_items(items: Any, situation_id: str):
         if item["candidate_role"] not in KIND_ROLE_COMPATIBILITY[item["hypothesis_kind"]]:
             return None, "incompatible_hypothesis_kind_candidate_role"
     return sorted(normalized, key=_canonical_sort_key), None
-
 
 def _type_reason(hypothesis_type: str, items: list) -> Optional[str]:
     if any(i["hypothesis_kind"] not in TYPE_KIND_COMPATIBILITY[hypothesis_type] for i in items):
