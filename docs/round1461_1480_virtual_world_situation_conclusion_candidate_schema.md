@@ -6,7 +6,7 @@ Conclusion candidates are candidate-only, unresolved, unaccepted, unrejected, no
 
 ## Source contract
 
-`build_virtual_world_situation_conclusion_candidate(...)` first requires its `inference_context` input to pass `validate_virtual_world_situation_inference_context(...)`. Invalid, hostile, tampered, rejected, or non-JSON sources fail closed as rejected conclusion-candidate payloads. By default, conclusion items are deterministically derived from source inference items while preserving source inference item IDs, source conclusion references, premise references, hypothesis-context references, evidence references, subject/object references, role, confidence candidate, and coherence candidate.
+`build_virtual_world_situation_conclusion_candidate(...)` first requires its `inference_context` input to pass `validate_virtual_world_situation_inference_context(...)`. Invalid, hostile, tampered, rejected, or non-JSON sources fail closed as rejected conclusion-candidate payloads. The complete validated source inference context is embedded as a protected top-level field, revalidated by the public validator, matched against `source_inference_context_id`, included in the canonical ID basis, and used to rebuild the full expected conclusion payload. By default, conclusion items are deterministically derived from source inference items while preserving source inference item IDs, source conclusion references, premise references, hypothesis-context references, evidence references, subject/object references, role, confidence candidate, and coherence candidate. A source ID alone is never sufficient for validation.
 
 ## Strict JSON and hostile inputs
 
@@ -14,7 +14,7 @@ The adapter accepts only exact built-in JSON-native values: dicts with string ke
 
 ## Validation precedence
 
-Validation precedence is deterministic: JSON-native validation; validated source inference-context validation; conclusion type; metadata shape; recursive forbidden metadata fields; conclusion item list shape; canonical item ordering; required item fields and basic scalar checks; recursive forbidden item fields; item ID uniqueness; source-reference membership; situation coherence; reference-list shape; numeric candidate shape/range; semantic duplicate detection; kind-role compatibility; conclusion type-kind compatibility; composition checks for competing and mixed candidates; boundary classification; confidence state; summary derivation; canonical ID generation; recursive type-exact integrity validation.
+Validation precedence is deterministic and identical in implementation and tests: strict JSON-native validation; source inference-context validation; conclusion type validation; metadata shape validation; recursive forbidden metadata validation; conclusion-item list shape; canonical raw-item ordering; required item fields and basic scalar types; recursive forbidden item validation; duplicate conclusion-item ID; source-item linkage and source-pair coherence; situation coherence; premise-reference validation and normalization; hypothesis-context-reference validation and normalization; evidence-reference validation and normalization; relational/unary object-reference shape; semantic duplicate validation; kind-role compatibility; conclusion type-kind compatibility; cardinality and composition; boundary validation; confidence validation; summary derivation; canonical ID generation. Later failures must not mask earlier failures.
 
 ## Deterministic canonical ID
 
@@ -26,7 +26,7 @@ Metadata and conclusion items are recursively inspected for forbidden request fi
 
 ## Downstream plans
 
-The six downstream plan builders validate their source conclusion candidate before reporting readiness. Valid source candidates can produce read-only review plans; invalid, rejected, hostile, tampered, or malformed sources produce `ready: false` while preserving candidate-only/read-only flags and all side-effect fields as `False`.
+The six downstream plan builders call the complete public validator, including embedded source revalidation and type-exact payload rebuild, before reporting readiness. Valid source candidates can produce read-only review plans; invalid, rejected, hostile, tampered, or malformed sources produce `ready: false` while preserving candidate-only/read-only flags and all side-effect fields as `False`.
 
 ## Operator report
 

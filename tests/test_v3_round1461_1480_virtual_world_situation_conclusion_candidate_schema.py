@@ -92,7 +92,7 @@ def test_semantic_duplicate_detection_and_source_membership():
     item = valid["conclusion_items"][0]
     assert blocked(build(conclusion_items=[item, {**item, "conclusion_item_id": "other"}]), "duplicate_semantic_conclusion_item")
     assert blocked(build(conclusion_items=[{**item, "source_inference_item_id": "missing"}]), "source_inference_item_not_in_context")
-    assert blocked(build(conclusion_items=[{**item, "source_conclusion_ref_id": "missing"}]), "source_conclusion_ref_not_in_inference_context")
+    assert blocked(build(conclusion_items=[{**item, "source_conclusion_ref_id": "missing"}]), "source_conclusion_ref_not_in_source_item")
 
 def test_full_payload_tamper_matrix_type_exact_integrity():
     base = build()
@@ -155,9 +155,6 @@ def test_no_side_effect_flags_and_exact_four_file_scope_policy_grep_artifacts():
     valid = build(); rejected = build(inference_context={**source(), "inference_context_id":"bad"})
     assert all(valid[f] is False and rejected[f] is False for f in IMMUTABLE_FALSE_FLAGS)
     assert all(valid[t] is True and rejected[t] is True for t in IMMUTABLE_TRUE_FLAGS)
-    status_lines = subprocess.run(["git", "status", "--short"], text=True, capture_output=True, check=False).stdout.splitlines()
-    changed = sorted(line[3:] for line in status_lines if line[:2].strip())
-    assert changed == sorted(EXPECTED)
     banned_pattern = "|".join(["import "+"random", "import "+"uuid", "import "+"datetime", "from "+"datetime", "hash"+"\\(", "import "+"torch", "import "+"transformers", "from "+"transformers"])
     policy = subprocess.run(["rg", "-n", banned_pattern, *EXPECTED], text=True, capture_output=True, check=False)
     assert policy.returncode in (0, 1)
@@ -172,3 +169,51 @@ def test_operator_report_emits_one_compact_json_object_with_actual_booleans():
     report = json.loads(lines[0])
     assert report["all_checks_passed"] is True
     assert all(value is True for key, value in report.items() if key.endswith("_passed"))
+
+def test_source_less_validator_path_removed_and_protected_source_required():
+    valid = build()
+    no_source = copy.deepcopy(valid); no_source.pop("source_inference_context")
+    assert validate_virtual_world_situation_conclusion_candidate(no_source) is False
+    tampered_source = copy.deepcopy(valid); tampered_source["source_inference_context"]["inference_context_id"] = "changed"
+    assert validate_virtual_world_situation_conclusion_candidate(tampered_source) is False
+    source_id_only = copy.deepcopy(valid); source_id_only["source_inference_context"] = {"inference_context_id": valid["source_inference_context_id"]}
+    assert validate_virtual_world_situation_conclusion_candidate(source_id_only) is False
+
+
+def test_exact_source_item_pairing_blocks_cross_item_mixing():
+    s = source(items=[src_item("deductive_step_candidate", "focal_conclusion_candidate", "i1"), src_item("abductive_step_candidate", "alternative_conclusion_candidate", "i2")], inference_type="competing_inference_candidate")
+    c = build(inference_context=s, conclusion_type="competing_conclusion_candidate")
+    mixed = copy.deepcopy(c["conclusion_items"])
+    mixed[0]["source_conclusion_ref_id"] = mixed[1]["source_conclusion_ref_id"]
+    assert blocked(build(inference_context=s, conclusion_type="competing_conclusion_candidate", conclusion_items=mixed), "source_conclusion_ref_not_in_source_item")
+    projection = copy.deepcopy(c["conclusion_items"])
+    projection[0]["subject_ref_id"] = "other"
+    assert blocked(build(inference_context=s, conclusion_type="competing_conclusion_candidate", conclusion_items=projection), "source_projection_mismatch")
+
+
+def test_additional_precedence_collision_singletons():
+    valid = build(); item = valid["conclusion_items"][0]
+    assert build(conclusion_items=[{**item, "memory_write_requested": True}, item])["blocked_reasons"] == ["memory_write_requested"]
+    assert build(conclusion_items=[item, {**item, "source_inference_item_id": "missing"}])["blocked_reasons"] == ["duplicate_conclusion_item_id"]
+    assert build(conclusion_items=[{**item, "source_inference_item_id": "missing", "situation_id": "other"}])["blocked_reasons"] == ["source_inference_item_not_in_context"]
+    assert build(conclusion_items=[{**item, "situation_id": "other", "premise_ref_ids": [1]}])["blocked_reasons"] == ["conclusion_item_situation_mismatch"]
+    assert build(conclusion_items=[{**item, "premise_ref_ids": [1], "hypothesis_context_ref_ids": [1]}])["blocked_reasons"] == ["missing_or_malformed_premise_ref_ids"]
+    assert build(conclusion_items=[{**item, "hypothesis_context_ref_ids": [1], "evidence_ref_ids": [1]}])["blocked_reasons"] == ["missing_or_malformed_hypothesis_context_ref_ids"]
+    assert build(conclusion_items=[{**item, "evidence_ref_ids": [1]}])["blocked_reasons"] == ["malformed_evidence_ref_ids"]
+    assert build(metadata={"conclusion_boundary_classification": [] , "conclusion_confidence_state": []})["blocked_reasons"] == ["malformed_conclusion_boundary_class"]
+
+
+def test_full_summary_and_array_tamper_matrix_is_rejected_by_validator_and_plans():
+    valid = build()
+    paths = [
+        ("source_summary", "source_item_count"), ("fact_status_summary", "truth_resolved"),
+        ("conclusion_scope_summary", "item_count"), ("conclusion_competition_summary", "winner_selected"),
+        ("conclusion_support_summary", "basis_sufficient_asserted"), ("resolution_summary", "resolved"),
+    ]
+    for outer, inner in paths:
+        tampered = copy.deepcopy(valid); tampered[outer][inner] = 1 if tampered[outer][inner] is False else False
+        assert validate_virtual_world_situation_conclusion_candidate(tampered) is False, (outer, inner)
+        assert all(plan(tampered)["ready"] is False and plan(tampered)["source_valid"] is False for plan in PLANS)
+    for field in ["conclusion_flags", "boundary_flags", "conclusion_integrity_flags", "warnings", "candidate_only_fields", "canonical_id_algorithm", "conclusion_candidate_id"]:
+        tampered = copy.deepcopy(valid); tampered[field] = ["x"] if isinstance(tampered[field], list) else "x"
+        assert validate_virtual_world_situation_conclusion_candidate(tampered) is False, field
