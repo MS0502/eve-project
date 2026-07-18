@@ -16,11 +16,47 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      - name: Checkout exact PR 114 head
+        uses: actions/checkout@v4
+        with:
+          ref: c007ba68526a9bb491491ba10af6452ef7acdeee
+          fetch-depth: 1
+      - name: Verify exact revision
+        run: |
+          test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee
+          test -z "$(git status --short)"
+          echo EXACT_SHA_OK
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Diagnose exact full-suite result
-        shell: bash
+      - name: Install dependencies
         run: |
-          echo 'c2V0IC1ldW8gcGlwZWZhaWwKcm0gLXJmIC90bXAvZXZlLXByMTE0CmdpdCBjbG9uZSAtcSBodHRwczovL2dpdGh1Yi5jb20vTVMwNTAyL2V2ZS1wcm9qZWN0LmdpdCAvdG1wL2V2ZS1wcjExNApjZCAvdG1wL2V2ZS1wcjExNApnaXQgY2hlY2tvdXQgLXEgYzAwN2JhNjg1MjZhOWJiNDkxNDkxYmExMGFmNjQ1MmVmN2FjZGVlZQp0ZXN0ICIkKGdpdCByZXYtcGFyc2UgSEVBRCkiID0gYzAwN2JhNjg1MjZhOWJiNDkxNDkxYmExMGFmNjQ1MmVmN2FjZGVlZQp0ZXN0IC16ICIkKGdpdCBzdGF0dXMgLS1zaG9ydCkiCmVjaG8gRVhBQ1RfU0hBX09LCnB5dGhvbiAtbSBwaXAgaW5zdGFsbCAtcSAtLXVwZ3JhZGUgcGlwCnB5dGhvbiAtbSBwaXAgaW5zdGFsbCAtcSAiaHR0cHM6Ly9maWxlcy5weXRob25ob3N0ZWQub3JnL3BhY2thZ2VzLzcyL2QyL2VmNjVkMGYzYzE1MGJmYzk5ZjVjNGE1MTZhZTU3ZTdjM2FjZGRmYWFjYzExOTZkZDI5NmIxMjk5ZWE3Zi9tYXJrZG93bl9zdHJpbmdzLTMuNC4wLnRhci5neiNzaGEyNTY9NzU3NGRlMDYwNjE2MGQ3MjkxYWMyZTE5MzNhOGVkNDdkMzFmMGI0OWI2NzRmMTI4ZGExZjU0ODkzMGM4NTc4YiIKcHl0aG9uIC1tIHBpcCBpbnN0YWxsIC1xIC1yIHJlcXVpcmVtZW50cy50eHQKcHl0aG9uIC1tIHBpcCBjaGVjawplY2hvIERFUEVOREVOQ0lFU19PSwpweXRob24gLW0gY29tcGlsZWFsbCAtcSBhZGFwdGVycyBjb3JlIGNvZ25pdGlvbiB0ZXN0cyBtYWluLnB5IHNjcmlwdHMKZWNobyBDT01QSUxFX09LCnB5dGhvbiAtbSBweXRlc3QgLS1jb2xsZWN0LW9ubHkgLXEgPiAvdG1wL2NvbGxlY3QubG9nIDI+JjEKdGFpbCAtbiAyIC90bXAvY29sbGVjdC5sb2cKZWNobyBDT0xMRUNUSU9OX09LCnNldCArZQpweXRob24gLW0gcHl0ZXN0IC1xID4gL3RtcC9weXRlc3QubG9nIDI+JjEKcmM9JD8Kc2V0IC1lCmdyZXAgLUUgIl4oRkFJTEVEfEVSUk9SKSAiIC90bXAvcHl0ZXN0LmxvZyB8IGhlYWQgLW4gMTIwIHx8IHRydWUKdGFpbCAtbiAzNSAvdG1wL3B5dGVzdC5sb2cKZWNobyBGVUxMX1NVSVRFX1JDPSRyYwpleGl0ICIkcmMiCg==' | base64 -d > /tmp/validate-pr114.sh
-          bash /tmp/validate-pr114.sh
+          python -m pip install -q --upgrade pip
+          python -m pip install -q "https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz#sha256=7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
+          python -m pip install -q -r requirements.txt
+          python -m pip check
+          echo DEPENDENCIES_OK
+      - name: Compile
+        run: |
+          python -m compileall -q adapters core cognition tests main.py scripts
+          echo COMPILE_OK
+      - name: Collect tests
+        run: |
+          python -m pytest --collect-only -q > /tmp/collect.log 2>&1
+          tail -n 2 /tmp/collect.log
+          echo COLLECTION_OK
+      - name: Run full suite
+        continue-on-error: true
+        run: |
+          set +e
+          python -m pytest -q > /tmp/pytest.log 2>&1
+          echo $? > /tmp/pytest.rc
+          exit 0
+      - name: Report exact result
+        if: always()
+        run: |
+          rc=$(cat /tmp/pytest.rc)
+          grep -E '^(FAILED|ERROR) ' /tmp/pytest.log | head -n 120 || true
+          tail -n 40 /tmp/pytest.log
+          echo FULL_SUITE_RC=$rc
+          exit "$rc"
