@@ -26,6 +26,7 @@ jobs:
           rm -rf /tmp/eve-pr114 && git clone -q https://github.com/MS0502/eve-project.git /tmp/eve-pr114 && cd /tmp/eve-pr114 && git checkout -q c007ba68526a9bb491491ba10af6452ef7acdeee && test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee && test -z "$(git status --short)"
           echo EXACT_SHA_OK=c007ba68526a9bb491491ba10af6452ef7acdeee
           python -m pip install -q --upgrade pip
+          python -m pip install -q "https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz#sha256=7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
           python -m pip install -q -r requirements.txt
           python -m pip check
           python - <<'PY'
