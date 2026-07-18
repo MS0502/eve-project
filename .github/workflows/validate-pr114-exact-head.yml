@@ -1,6 +1,9 @@
 name: Validate PR 114 exact head
 
 on:
+  push:
+    branches:
+      - validation/pr114-c007ba6
   pull_request:
     branches:
       - main
