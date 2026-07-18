@@ -1,3 +1,5 @@
+SUPERSEDED — HISTORICAL REFERENCE ONLY
+
 # EVE DESIGN v3.1 — Deterministic Multimodal Digital Being Constitution
 
 작성일: 2026-06-07  
