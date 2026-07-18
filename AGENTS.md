@@ -20,7 +20,7 @@ No local general-purpose LLM may be used as cognition, identity, language organ,
 
 ## Allowed learned subsystems
 
-Non-LLM learned models may be used for STT, TTS, OCR, vision, audio and music analysis, sensor processing, motor control, lexical and perceptual representations, temporal prediction, and EVE-trained neural modules or approved learned weights. They require provenance, confidence, capability, evaluation, versioning, and rollback controls. These subsystems are not EVE's whole identity, and no model may become a hidden direct speech generator.
+Non-LLM learned models may be used for STT, TTS, OCR, vision, audio and music analysis, sensor processing, motor control, lexical and perceptual representations, temporal prediction, and EVE-trained neural modules or approved learned weights. They require provenance, confidence, capability, evaluation, versioning, and rollback controls. These subsystems are not EVE's whole identity, and no model may become a hidden direct speech generator. The default runtime remains no-load unless a later evidence-backed activation explicitly authorizes a bounded model or vector load.
 
 ## Observation and claim boundary
 
