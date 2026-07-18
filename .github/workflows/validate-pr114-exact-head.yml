@@ -35,16 +35,10 @@ jobs:
           python -m pip install -q "https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz#sha256=7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
           python -m pip install -q -r requirements.txt
           python -m pip check
-          echo DEPENDENCIES_OK
       - name: Compile
-        run: |
-          python -m compileall -q adapters core cognition tests main.py scripts
-          echo COMPILE_OK
+        run: python -m compileall -q adapters core cognition tests main.py scripts
       - name: Collect tests
-        run: |
-          python -m pytest --collect-only -q > /tmp/collect.log 2>&1
-          tail -n 2 /tmp/collect.log
-          echo COLLECTION_OK
+        run: python -m pytest --collect-only -q > /tmp/collect.log 2>&1
       - name: Run full suite
         continue-on-error: true
         run: |
@@ -52,11 +46,16 @@ jobs:
           python -m pytest -q > /tmp/pytest.log 2>&1
           echo $? > /tmp/pytest.rc
           exit 0
-      - name: Report exact result
+      - name: Preserve validation logs
         if: always()
-        run: |
-          rc=$(cat /tmp/pytest.rc)
-          grep -E '^(FAILED|ERROR) ' /tmp/pytest.log | head -n 120 || true
-          tail -n 40 /tmp/pytest.log
-          echo FULL_SUITE_RC=$rc
-          exit "$rc"
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr114-exact-head-validation
+          path: |
+            /tmp/collect.log
+            /tmp/pytest.log
+            /tmp/pytest.rc
+          if-no-files-found: error
+      - name: Enforce full-suite result
+        if: always()
+        run: exit "$(cat /tmp/pytest.rc)"
