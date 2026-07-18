@@ -19,11 +19,11 @@ jobs:
       - name: Checkout exact PR 114 head
         uses: actions/checkout@v4
         with:
-          ref: c007ba68526a9bb491491ba10af6452ef7acdeee
+          ref: 527c8cbeb35364b82543b7ff3700f83db3bc9f06
           fetch-depth: 1
       - name: Verify exact revision
         run: |
-          test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee
+          test "$(git rev-parse HEAD)" = 527c8cbeb35364b82543b7ff3700f83db3bc9f06
           test -z "$(git status --short)"
           echo EXACT_SHA_OK
       - uses: actions/setup-python@v5
