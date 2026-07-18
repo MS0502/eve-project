@@ -19,28 +19,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate exact PR 114 head
+      - name: Diagnose exact full-suite result
         shell: bash
         run: |
-          set -euo pipefail
-          rm -rf /tmp/eve-pr114 && git clone -q https://github.com/MS0502/eve-project.git /tmp/eve-pr114 && cd /tmp/eve-pr114 && git checkout -q c007ba68526a9bb491491ba10af6452ef7acdeee && test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee && test -z "$(git status --short)"
-          echo EXACT_SHA_OK=c007ba68526a9bb491491ba10af6452ef7acdeee
-          python -m pip install -q --upgrade pip
-          python -m pip install -q "https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz#sha256=7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
-          python -m pip install -q -r requirements.txt
-          python -m pip check
-          python - <<'PY'
-          import numpy
-          import pytest
-          print(f"numpy={numpy.__version__}")
-          print(f"pytest={pytest.__version__}")
-          PY
-          echo DEPENDENCIES_OK
-          python -m compileall -q adapters core cognition tests main.py scripts
-          echo COMPILE_OK
-          python -m pytest --collect-only -q > /tmp/collect.log 2>&1 || { tail -n 100 /tmp/collect.log | fold -w 110; exit 1; }
-          tail -n 10 /tmp/collect.log | fold -w 110
-          echo COLLECTION_OK
-          python -m pytest -q > /tmp/pytest.log 2>&1 || { tail -n 160 /tmp/pytest.log | fold -w 110; exit 1; }
-          tail -n 30 /tmp/pytest.log | fold -w 110
-          echo FULL_SUITE_OK
+          echo 'c2V0IC1ldW8gcGlwZWZhaWwKcm0gLXJmIC90bXAvZXZlLXByMTE0CmdpdCBjbG9uZSAtcSBodHRwczovL2dpdGh1Yi5jb20vTVMwNTAyL2V2ZS1wcm9qZWN0LmdpdCAvdG1wL2V2ZS1wcjExNApjZCAvdG1wL2V2ZS1wcjExNApnaXQgY2hlY2tvdXQgLXEgYzAwN2JhNjg1MjZhOWJiNDkxNDkxYmExMGFmNjQ1MmVmN2FjZGVlZQp0ZXN0ICIkKGdpdCByZXYtcGFyc2UgSEVBRCkiID0gYzAwN2JhNjg1MjZhOWJiNDkxNDkxYmExMGFmNjQ1MmVmN2FjZGVlZQp0ZXN0IC16ICIkKGdpdCBzdGF0dXMgLS1zaG9ydCkiCmVjaG8gRVhBQ1RfU0hBX09LCnB5dGhvbiAtbSBwaXAgaW5zdGFsbCAtcSAtLXVwZ3JhZGUgcGlwCnB5dGhvbiAtbSBwaXAgaW5zdGFsbCAtcSAiaHR0cHM6Ly9maWxlcy5weXRob25ob3N0ZWQub3JnL3BhY2thZ2VzLzcyL2QyL2VmNjVkMGYzYzE1MGJmYzk5ZjVjNGE1MTZhZTU3ZTdjM2FjZGRmYWFjYzExOTZkZDI5NmIxMjk5ZWE3Zi9tYXJrZG93bl9zdHJpbmdzLTMuNC4wLnRhci5neiNzaGEyNTY9NzU3NGRlMDYwNjE2MGQ3MjkxYWMyZTE5MzNhOGVkNDdkMzFmMGI0OWI2NzRmMTI4ZGExZjU0ODkzMGM4NTc4YiIKcHl0aG9uIC1tIHBpcCBpbnN0YWxsIC1xIC1yIHJlcXVpcmVtZW50cy50eHQKcHl0aG9uIC1tIHBpcCBjaGVjawplY2hvIERFUEVOREVOQ0lFU19PSwpweXRob24gLW0gY29tcGlsZWFsbCAtcSBhZGFwdGVycyBjb3JlIGNvZ25pdGlvbiB0ZXN0cyBtYWluLnB5IHNjcmlwdHMKZWNobyBDT01QSUxFX09LCnB5dGhvbiAtbSBweXRlc3QgLS1jb2xsZWN0LW9ubHkgLXEgPiAvdG1wL2NvbGxlY3QubG9nIDI+JjEKdGFpbCAtbiAyIC90bXAvY29sbGVjdC5sb2cKZWNobyBDT0xMRUNUSU9OX09LCnNldCArZQpweXRob24gLW0gcHl0ZXN0IC1xID4gL3RtcC9weXRlc3QubG9nIDI+JjEKcmM9JD8Kc2V0IC1lCmdyZXAgLUUgIl4oRkFJTEVEfEVSUk9SKSAiIC90bXAvcHl0ZXN0LmxvZyB8IGhlYWQgLW4gMTIwIHx8IHRydWUKdGFpbCAtbiAzNSAvdG1wL3B5dGVzdC5sb2cKZWNobyBGVUxMX1NVSVRFX1JDPSRyYwpleGl0ICIkcmMiCg==' | base64 -d > /tmp/validate-pr114.sh
+          bash /tmp/validate-pr114.sh
