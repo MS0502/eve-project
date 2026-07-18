@@ -1,3 +1,5 @@
+SUPERSEDED — HISTORICAL REFERENCE ONLY
+
 # EVE v3 Constitution and Design
 
 ## Scope
