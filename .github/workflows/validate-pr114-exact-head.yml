@@ -10,16 +10,27 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Diagnose exact-head dependency install
+      - name: Validate exact PR 114 head
         shell: bash
         run: |
-          set -o pipefail
-          rm -rf /tmp/eve-pr114 && git clone -q https://github.com/MS0502/eve-project.git /tmp/eve-pr114 && cd /tmp/eve-pr114 && git checkout -q c007ba68526a9bb491491ba10af6452ef7acdeee && test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee
+          set -euo pipefail
+          rm -rf /tmp/eve-pr114 && git clone -q https://github.com/MS0502/eve-project.git /tmp/eve-pr114 && cd /tmp/eve-pr114 && git checkout -q c007ba68526a9bb491491ba10af6452ef7acdeee && test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee && test -z "$(git status --short)"
           echo EXACT_SHA_OK=c007ba68526a9bb491491ba10af6452ef7acdeee
           python -m pip install -q --upgrade pip
-          python -m pip install -q -r requirements.txt 2>&1 | fold -w 110
+          python -m pip install -q "markdown-strings==3.4.0"
+          python -m pip install -q -r requirements.txt
+          python -m pip check
+          echo DEPENDENCIES_OK
+          python -m compileall -q adapters core cognition tests main.py scripts
+          echo COMPILE_OK
+          python -m pytest --collect-only -q > /tmp/collect.log 2>&1 || { tail -n 80 /tmp/collect.log | fold -w 110; exit 1; }
+          tail -n 5 /tmp/collect.log | fold -w 110
+          echo COLLECTION_OK
+          python -m pytest -q > /tmp/pytest.log 2>&1 || { tail -n 120 /tmp/pytest.log | fold -w 110; exit 1; }
+          tail -n 20 /tmp/pytest.log | fold -w 110
+          echo FULL_SUITE_OK
