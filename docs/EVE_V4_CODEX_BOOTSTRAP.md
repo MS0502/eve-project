@@ -2,7 +2,7 @@
 
 Read this file first, then read `.codex/EVE_V4_CONSTITUTION_REBASELINE_TASK.md` from the same local checkout.
 
-This file overrides the detailed task's baseline, current-branch, repository-coordinate, branch-creation, dependency-environment setup order, and final diff-base instructions. All other requirements remain unchanged.
+This file overrides the detailed task's baseline, current-branch, repository-coordinate, branch-creation, dependency-environment setup order, local-validation fallback, PR-creation mode, and final diff-base instructions. All other requirements remain unchanged.
 
 Historical parent:
 
@@ -80,7 +80,7 @@ Do not fail merely because:
 
 The detailed task's pre-edit validation assumes the repository's declared development dependencies are installed. Missing packages declared in `requirements.txt` are an environment-preparation issue, not a repository compatibility failure.
 
-Before the first `pytest --collect-only -q` or `python -m pytest -q`, run:
+Before the first `pytest --collect-only -q` or `python -m pytest -q`, attempt:
 
 ```bash
 test -f requirements.txt
@@ -99,10 +99,58 @@ Rules:
 - Installing packages already declared in `requirements.txt` is allowed as isolated development-environment setup.
 - Do not modify `requirements.txt`, add dependencies, change lock files, or commit environment artifacts.
 - The no-network instruction applies to GitHub repository and remote fetching. It does not prohibit package installation through the Codex environment's configured Python package index.
-- Do not classify `ModuleNotFoundError` for a declared dependency as a v4 test failure before attempting this bootstrap.
-- After installation, run the exact compile and test commands required by the detailed task.
-- If installation fails, stop and report the exact command, package, and installer error. Do not edit repository files and do not open the constitution PR.
-- If collection or tests still fail after successful installation, follow the detailed task's fail-closed reporting rules.
+- Do not classify `ModuleNotFoundError` for a declared dependency as a v4 repository failure before attempting this bootstrap.
+- After successful installation, run the exact compile and test commands required by the detailed task.
+- If collection or tests fail after successful dependency installation, follow the detailed task's fail-closed reporting rules.
+
+## Network-blocked dependency fallback
+
+This fallback applies only when all of the following are true:
+
+1. `python -m pip install -r requirements.txt` was attempted.
+2. Installation failed because the configured package index or network tunnel was unavailable, blocked, or returned an access error.
+3. The missing import is declared in `requirements.txt`.
+4. The repository worktree is still clean before constitution editing.
+5. No repository dependency file was modified.
+
+Examples of qualifying installer evidence include:
+
+```text
+Tunnel connection failed: 403 Forbidden
+package index unavailable
+connection refused
+connection timed out
+proxy or DNS failure
+```
+
+A normal package resolution conflict, invalid requirement, unsupported Python version, or repository-caused import failure does **not** qualify.
+
+When the fallback qualifies:
+
+```bash
+LOCAL_VALIDATION_MODE=environment_blocked
+```
+
+The agent may continue the documentation-only constitution work, but the following stricter rules replace the detailed task's local PR-creation gate:
+
+- Local full-suite validation is **not** considered passed.
+- Run `python -m compileall -q adapters core cognition tests main.py scripts` before and after editing.
+- Attempt both `pytest --collect-only -q` and `python -m pytest -q` before and after editing, capture the exact missing-dependency errors, and do not misreport them as repository regressions.
+- Perform every test-reference search, exact changed-file check, diff-stat check, historical-document preservation check, and prohibited-path check required by the detailed task.
+- Modify only the eight allowed constitution/governance files.
+- Do not modify tests, runtime code, scripts, data, dependencies, models, vectors, persistence, or generated artifacts.
+- Commit the documentation changes only after all environment-independent checks pass.
+- Open the constitution PR as a **draft**, not ready for review.
+- Use the exact title `EVE v4 Constitution Rebaseline`.
+- The PR body must prominently state `LOCAL FULL SUITE BLOCKED BY CODEX PACKAGE-INDEX ACCESS`.
+- The PR body must include the exact installer error, missing declared package, failed local test commands, compile results, changed files, diff stat, baseline SHA, and head SHA.
+- The PR body must state that the draft must not be merged or marked ready until an independent environment installs `requirements.txt` and reports a green full suite.
+- Do not claim that tests passed.
+- Do not weaken, delete, skip, or xfail tests to obtain a green result.
+
+This fallback changes only whether a reviewable **draft** may be opened. It does not weaken the merge gate. A green independent full suite remains mandatory before merge.
+
+If any failure is unrelated to unavailable declared dependencies, stop and do not open the constitution PR.
 
 ## Create implementation branch
 
