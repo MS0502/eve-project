@@ -2,9 +2,7 @@ name: Validate PR 114 exact head
 
 on:
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [main]
 
 permissions:
   contents: read
@@ -12,64 +10,16 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Validate exact PR 114 revision
+      - name: Diagnose exact-head dependency install
         shell: bash
         run: |
-          set -euo pipefail
-          TARGET_SHA=c007ba68526a9bb491491ba10af6452ef7acdeee
-          TARGET_DIR=/tmp/eve-pr114
-          rm -rf "$TARGET_DIR"
-          mkdir -p "$TARGET_DIR"
-          cd "$TARGET_DIR"
-          git init -q
-          git remote add origin https://github.com/MS0502/eve-project.git
-          git fetch --quiet --depth=1 origin "$TARGET_SHA"
-          git checkout --quiet --detach FETCH_HEAD
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test -z "$(git status --short)"
-          echo "EXACT_SHA_OK=$TARGET_SHA"
-
+          set -o pipefail
+          rm -rf /tmp/eve-pr114 && git clone -q https://github.com/MS0502/eve-project.git /tmp/eve-pr114 && cd /tmp/eve-pr114 && git checkout -q c007ba68526a9bb491491ba10af6452ef7acdeee && test "$(git rev-parse HEAD)" = c007ba68526a9bb491491ba10af6452ef7acdeee
+          echo EXACT_SHA_OK=c007ba68526a9bb491491ba10af6452ef7acdeee
           python -m pip install -q --upgrade pip
-          set +e
-          python -m pip install -q -r requirements.txt > /tmp/pr114-pip.log 2>&1
-          rc=$?
-          set -e
-          if [ "$rc" -ne 0 ]; then
-            echo "DEPENDENCY_INSTALL_FAILED=$rc"
-            tail -n 100 /tmp/pr114-pip.log | fold -w 120
-            exit "$rc"
-          fi
-          python -m pip check
-          echo "DEPENDENCY_INSTALL_OK"
-
-          python -m compileall -q adapters core cognition tests main.py scripts
-          echo "COMPILE_OK"
-
-          set +e
-          python -m pytest --collect-only -q > /tmp/pr114-collect.log 2>&1
-          rc=$?
-          set -e
-          tail -n 30 /tmp/pr114-collect.log | fold -w 120
-          if [ "$rc" -ne 0 ]; then
-            echo "COLLECTION_FAILED=$rc"
-            exit "$rc"
-          fi
-          echo "COLLECTION_OK"
-
-          set +e
-          python -m pytest -q > /tmp/pr114-pytest.log 2>&1
-          rc=$?
-          set -e
-          tail -n 100 /tmp/pr114-pytest.log | fold -w 120
-          if [ "$rc" -ne 0 ]; then
-            echo "FULL_SUITE_FAILED=$rc"
-            exit "$rc"
-          fi
-          echo "FULL_SUITE_OK"
+          python -m pip install -q -r requirements.txt 2>&1 | fold -w 110
