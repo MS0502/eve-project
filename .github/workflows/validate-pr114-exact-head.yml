@@ -43,7 +43,7 @@ jobs:
           set -e
           if [ "$rc" -ne 0 ]; then
             echo "DEPENDENCY_INSTALL_FAILED=$rc"
-            tail -n 100 /tmp/pr114-pip.log
+            tail -n 100 /tmp/pr114-pip.log | fold -w 120
             exit "$rc"
           fi
           python -m pip check
@@ -56,7 +56,7 @@ jobs:
           python -m pytest --collect-only -q > /tmp/pr114-collect.log 2>&1
           rc=$?
           set -e
-          tail -n 30 /tmp/pr114-collect.log
+          tail -n 30 /tmp/pr114-collect.log | fold -w 120
           if [ "$rc" -ne 0 ]; then
             echo "COLLECTION_FAILED=$rc"
             exit "$rc"
@@ -67,7 +67,7 @@ jobs:
           python -m pytest -q > /tmp/pr114-pytest.log 2>&1
           rc=$?
           set -e
-          tail -n 100 /tmp/pr114-pytest.log
+          tail -n 100 /tmp/pr114-pytest.log | fold -w 120
           if [ "$rc" -ne 0 ]; then
             echo "FULL_SUITE_FAILED=$rc"
             exit "$rc"
