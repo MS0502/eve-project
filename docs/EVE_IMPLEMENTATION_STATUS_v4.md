@@ -1,36 +1,37 @@
 # EVE v4 Implementation Status
 
 Active constitution: EVE v4.0
-Constitution status: provisional pending the Affect Migration Plan and human-reviewed v4.1 revision
+Constitution status: provisional pending completion and reviewer ruling of the Affect Migration Plan, then human-reviewed v4.1 revision
 Previous v3/v3.1 documents: historical reference only
-Frozen work: open implementation PRs #109, #97, #86, #84, #82, #11, #7, #4, and #1
-Completed audit milestones: M0-A, M0-B, and M0-C merged; M0-D reviewer rulings recorded in PR #125
-Current milestone: M0-D component inventory, life-loop assessment, module disposition, integrated conclusions, and frozen-PR recommendations
-M0-D baseline: `fe10cd954bdf445400ea6aa9708dd214ed761114`
-Planned revision: v4.1 only after M0-D and reviewer rulings
+Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
+Completed audit milestones: M0-A, M0-B, M0-C, and reviewer-ruled M0-D merged
+Current milestone: M0-C Supplement — Affect Migration Plan
+Affect-plan baseline: `28ec113a8ee371fdc6ac13341c0d70e00db26ce4`
+Planned revision: v4.1 only after the Affect Migration Plan is reviewer-ruled and merged
 
 EVE v4.0 remains provisional. Evidence-based revision to v4.1 is part of the process and is not a project failure.
 
 ## Current state
 
-The v4 runtime is not claimed as implemented. M0-A, M0-B, and M0-C are evidence-only audits. M0-D is also audit and recommendation only. No production persistence, enforcement, runtime-mapping default, model activation, vector loading, database, checkpoint, module retirement, or generated artifact is enabled by these milestones.
+The v4 runtime is not claimed as implemented. M0-A through M0-D are evidence and governance work. The Affect Migration Plan is design-only and does not implement projection, migration, persistence, state conversion, or runtime behavior. No production persistence, enforcement, runtime-mapping default, model activation, vector loading, database, checkpoint, module retirement, or generated artifact is enabled.
 
 ## Merged M0 evidence
 
 - M0-A inventories runtime entrypoints, dependency construction, mutation, direct writes, and tests.
 - M0-B inventories gates, bypass candidates, outputs, exceptions, clocks, queues, concurrency, and nondeterminism.
 - M0-C inventories persistence and persistence-intended state, including hormone/affect, drive/need, and hormone-to-drive bridge candidates.
+- M0-D inventories neural/vector/adaptive components and life loops, records reviewer-ruled module dispositions, and closes the M0 audit inventory.
 
-## Open M0 governance defect
+## Affect migration correction
 
-EVE v4 requires M0 to propose migration from the current hormone architecture toward core drives, appraisal, and derived emotion while preserving historical memory and identity continuity. The merged M0-C document contains an inventory of hormone, drive, and bridge candidates but no concrete migration plan, compatibility projection, persistence/event migration, rollback design, or acceptance criteria.
+The merged M0-C inventory did not include the concrete migration plan required by EVE v4. M0-D recorded `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT` and assigned the correction to this separate design-only supplement.
 
-M0-D records this as `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT`. The reviewer assigns the correction to the separate Affect Migration Plan task before v4.1 drafting. M0-D does not silently fill the gap or change affect implementation.
+The supplement mechanically distinguishes the 26 mutable legacy hormone channels from the 37 read-only conceptual registry axes, requires one reviewer-ruled mapping state per found axis, and defines phased projection, compatibility, event/snapshot, rollback, identity, memory-continuity, and acceptance contracts. It changes no affect implementation.
 
 ## Freeze
 
-The frozen implementation PRs remain untouched during M0-D. M0-D may recommend a future disposition but must not close, comment on, rebase, modify, merge, or reuse those branches. Any actual close action occurs separately after M0-D merge and reviewer approval.
+The seven open implementation PRs remain untouched: #109, #86, #84, #82, #11, #7, and #4. No production code, existing tests, data, models, vectors, configuration, persistence state, defaults, or frozen branch may be modified by the Affect Migration Plan.
 
 ## Current next step
 
-Merge M0-D after independent exact-head validation, execute the separately approved frozen-PR closures, complete the Affect Migration Plan, and then draft v4.1 through human-reviewed triangular revision. `REMOVE` remains empty; the six `REWRITE` and two `DEPRECATE` planning labels are reviewer-confirmed.
+Complete the deterministic checker and reviewer rulings for every found axis, independently validate the exact final head, merge the four-file Affect Migration Plan supplement, and then begin the human-reviewed v4.1 triangular revision using the seven conflict inputs.
