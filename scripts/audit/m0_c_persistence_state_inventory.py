@@ -383,9 +383,41 @@ def _path_like(value: str) -> bool:
         return False
     if any(character.isspace() for character in candidate):
         return False
-    if candidate.startswith(("~/", "./", "../", "/")):
-        return True
-    return "/" in candidate or "\\" in candidate
+    if "/" not in candidate and "\\" not in candidate:
+        return False
+    persistence_path_tokens = {
+        "artifact",
+        "artifacts",
+        "autosave",
+        "cache",
+        "checkpoint",
+        "checkpoints",
+        "ckpt",
+        "database",
+        "db",
+        "debug",
+        "embedding",
+        "embeddings",
+        "export",
+        "manifest",
+        "memory",
+        "model",
+        "operator",
+        "report",
+        "seed",
+        "seeds",
+        "sidecar",
+        "snapshot",
+        "state",
+        "store",
+        "subset",
+        "validation",
+        "vector",
+        "vectors",
+        "vocab",
+        "vocabulary",
+    }
+    return bool(_symbol_tokens(candidate) & persistence_path_tokens)
 
 
 def _write_mode_from_open(call: ast.Call) -> str | None:

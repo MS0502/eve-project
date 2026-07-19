@@ -273,3 +273,15 @@ def test_path_like_rejects_labels_commands_and_root():
     assert module._path_like("checkpoint_created") is False
     assert module._path_like("python scripts/operator_report.py") is False
     assert module._path_like("/") is False
+
+
+def test_path_like_requires_persistence_directory_markers():
+    module = _load_module()
+    assert module._path_like("_operator_artifacts/run") is True
+    assert module._path_like("seeds/subsets") is True
+    assert module._path_like("state/checkpoints/current") is True
+    assert module._path_like("/save") is False
+    assert module._path_like("language/streaming") is False
+    assert module._path_like("tests/test_file.py::test_case") is False
+    assert module._path_like(r"^foo\s+/bar$") is False
+    assert module._path_like("/nonexistent.wav") is False
