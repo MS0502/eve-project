@@ -1,39 +1,127 @@
-name: Run M0-D reviewer ruling on command
+name: Validate M0-D exact final head on command
 
 on:
   issue_comment:
     types: [created]
 
 permissions:
-  contents: write
+  contents: read
+  issues: write
 
 jobs:
-  apply:
-    if: github.event.issue.number == 125 && github.event.comment.body == '/apply-m0-d-reviewer-ruling'
+  validate:
+    if: github.event.issue.number == 125 && github.event.comment.body == '/validate-m0-d-final-head'
     runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      TARGET_SHA: 62287a793bc593dd4804f5643ecc6554884ad46b
+      BASE_SHA: fe10cd954bdf445400ea6aa9708dd214ed761114
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact M0-D final head
+        uses: actions/checkout@v4
         with:
-          ref: claude/eve-m0-d-disposition-audit
+          ref: 62287a793bc593dd4804f5643ecc6554884ad46b
           fetch-depth: 0
-      - name: Verify and load patcher
+
+      - name: Verify exact revision
         run: |
-          test "$(git rev-parse HEAD)" = "c6ccfc109b09fb234a040cbd374e640e0d06c658"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test -z "$(git status --short)"
-          git fetch origin validation/m0-d-reviewer-ruling
-          git show origin/validation/m0-d-reviewer-ruling:scripts/tmp_apply_m0_d_reviewer_ruling.py > /tmp/apply_ruling.py
-      - name: Apply and verify rulings
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare evidence
+        run: mkdir -p /tmp/m0-d-final-evidence
+
+      - name: Install markdown-strings compatibility dependency
+        run: python -m pip install --no-deps 'markdown-strings==3.4.0' --index-url https://pypi.org/simple
+
+      - name: Install declared dependencies
         run: |
-          python /tmp/apply_ruling.py
-          python -m py_compile scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
-          git diff --check
-          changed="$(git diff --name-only | sort)"
-          expected="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_D_MODULE_DISPOSITION.md docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
-          test "$changed" = "$expected"
-      - name: Commit target branch
+          python -m pip install -r requirements.txt
+          python -m pip check | tee /tmp/m0-d-final-evidence/pip-check.txt
+
+      - name: Compile required surface
+        run: python -m compileall -q adapters core cognition tests main.py scripts
+
+      - name: Generate deterministic inventory
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_D_MODULE_DISPOSITION.md docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
-          git commit -m "Apply reviewer rulings to M0-D dispositions"
-          git push origin HEAD:claude/eve-m0-d-disposition-audit
+          python scripts/audit/m0_d_component_inventory.py > /tmp/m0-d-final-evidence/d1.json
+          python scripts/audit/m0_d_component_inventory.py > /tmp/m0-d-final-evidence/d2.json
+          diff /tmp/m0-d-final-evidence/d1.json /tmp/m0-d-final-evidence/d2.json
+          python - <<'PY' | tee /tmp/m0-d-final-evidence/ruling-summary.txt
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/m0-d-final-evidence/d1.json').read_text())
+          summary = data['summary']
+          assert summary['unresolved_module_dispositions'] == 0
+          assert summary['unresolved_items'] == 0
+          assert summary['module_disposition_counts']['REWRITE'] == 6
+          assert summary['module_disposition_counts']['DEPRECATE'] == 2
+          assert summary['module_disposition_counts']['REMOVE'] == 0
+          assert all(x['detection'] == 'manual' and x['decided_by'] == 'reviewer' and not x['unresolved'] for x in data['module_dispositions'])
+          print(json.dumps({
+              'dispositions': summary['module_disposition_counts'],
+              'unresolved_module_dispositions': summary['unresolved_module_dispositions'],
+              'unresolved_items': summary['unresolved_items'],
+          }, sort_keys=True))
+          PY
+
+      - name: Run focused tests
+        run: python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/m0-d-final-evidence/focused.txt
+
+      - name: Collect full suite
+        run: pytest --collect-only -q | tee /tmp/m0-d-final-evidence/collect.txt
+
+      - name: Run full suite
+        run: python -m pytest -q | tee /tmp/m0-d-final-evidence/full.txt
+
+      - name: Verify exact final scope and clean state
+        run: |
+          git diff --name-only "$BASE_SHA...HEAD" | sort | tee /tmp/m0-d-final-evidence/changed-files.txt
+          cat > /tmp/expected-files.txt <<'EOF'
+          docs/EVE_IMPLEMENTATION_STATUS_v4.md
+          docs/audit/M0_D_MODULE_DISPOSITION.md
+          docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md
+          scripts/audit/m0_d_component_inventory.py
+          tests/audit/test_m0_d_component_inventory.py
+          EOF
+          diff /tmp/expected-files.txt /tmp/m0-d-final-evidence/changed-files.txt
+          test -z "$(git status --short)"
+          git rev-parse HEAD | tee /tmp/m0-d-final-evidence/head-sha.txt
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-d-reviewer-ruled-exact-head-validation
+          path: /tmp/m0-d-final-evidence
+          if-no-files-found: error
+
+      - name: Publish validation result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          focused="$(tail -n 1 /tmp/m0-d-final-evidence/focused.txt)"
+          collected="$(tail -n 1 /tmp/m0-d-final-evidence/collect.txt)"
+          full="$(tail -n 1 /tmp/m0-d-final-evidence/full.txt)"
+          body=$(cat <<EOF
+          M0-D exact-head validation passed.
+
+          - exact head: \`$TARGET_SHA\`
+          - deterministic double-run: byte-identical
+          - focused: \`$focused\`
+          - collection: \`$collected\`
+          - full suite: \`$full\`
+          - exact five-file scope: PASS
+          - unresolved module dispositions: 0
+          - unresolved standalone items: 0
+          - REWRITE / DEPRECATE / REMOVE: 6 / 2 / 0
+          - workflow run: \`$GITHUB_RUN_ID\`
+          - artifact: \`m0-d-reviewer-ruled-exact-head-validation\`
+          EOF
+          )
+          gh api repos/${{ github.repository }}/issues/125/comments -f body="$body"
