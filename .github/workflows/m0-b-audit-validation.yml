@@ -28,39 +28,23 @@ jobs:
       - name: Prepare validation artifacts
         run: mkdir -p validation-artifacts
 
-      - name: Install verified markdown-strings compatibility wheel
+      - name: Install pinned markdown-strings compatibility package
+        shell: bash
         run: |
-          python - <<'PY'
-          import hashlib
-          import json
-          import pathlib
-          import urllib.request
-
-          metadata_url = 'https://pypi.org/pypi/markdown-strings/3.4.0/json'
-          expected = '1a7e2a575b2af27482ccbe6a0efc3407f678ac5cece8654c36fd827ac540a631'
-          with urllib.request.urlopen(metadata_url, timeout=60) as response:
-              metadata = json.load(response)
-          wheels = [
-              item for item in metadata['urls']
-              if item['filename'] == 'markdown_strings-3.4.0-py2.py3-none-any.whl'
-          ]
-          if len(wheels) != 1:
-              raise SystemExit(f'expected one wheel, found {len(wheels)}')
-          item = wheels[0]
-          if item['digests']['sha256'] != expected:
-              raise SystemExit('PyPI metadata digest mismatch')
-          destination = pathlib.Path('/tmp/markdown_strings-3.4.0-py2.py3-none-any.whl')
-          with urllib.request.urlopen(item['url'], timeout=120) as response:
-              payload = response.read()
-          actual = hashlib.sha256(payload).hexdigest()
-          if actual != expected:
-              raise SystemExit(f'download digest mismatch: {actual}')
-          destination.write_bytes(payload)
-          print(f'verified {destination.name} sha256={actual}')
-          PY
-          python -m pip install --no-deps \
-            /tmp/markdown_strings-3.4.0-py2.py3-none-any.whl \
+          set -euo pipefail
+          REPOSITORY=https://github.com/awesmubarak/markdown_strings.git
+          TAG_SHA=$(git ls-remote "$REPOSITORY" refs/tags/3.4.0 | awk '{print $1}')
+          test "${#TAG_SHA}" -eq 40
+          printf '%s\n' "$TAG_SHA" | tee validation-artifacts/markdown-strings-tag-sha.txt
+          python -m pip install --no-deps "git+${REPOSITORY}@${TAG_SHA}" \
             2>&1 | tee validation-artifacts/pip-bootstrap.txt
+          python - <<'PY'
+          import importlib.metadata
+          version = importlib.metadata.version('markdown-strings')
+          if version != '3.4.0':
+              raise SystemExit(f'unexpected markdown-strings version: {version}')
+          print(f'markdown-strings version={version}')
+          PY
 
       - name: Install declared dependencies
         run: |
