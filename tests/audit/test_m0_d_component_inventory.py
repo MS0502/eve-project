@@ -159,19 +159,56 @@ def test_frozen_pr_recommendations_are_complete_and_non_mutating(report):
     assert report["scope"]["frozen_pr_mutation_performed"] is False
 
 
-def test_m0_c_migration_plan_gap_is_prominent(report):
-    gaps = [
-        entry
-        for entry in report["unresolved_items"]
-        if entry["classification"] == "M0_C_REQUIRED_MIGRATION_PLAN_ABSENT"
-    ]
+def test_m0_c_migration_plan_gap_is_prominent_and_reviewer_ruled(report):
+    gaps = [entry for entry in report["unresolved_items"] if entry["classification"] == "M0_C_REQUIRED_MIGRATION_PLAN_ABSENT"]
     assert len(gaps) == 1
     gap = gaps[0]
     assert gap["confidence"] == "high"
-    assert gap["unresolved"] is True
+    assert gap["unresolved"] is False
     assert gap["manual_only"] is True
+    assert gap["detection"] == "manual"
+    assert gap["decided_by"] == "reviewer"
+    assert gap["reviewer_ruling"] == "DEFER_TO_AFFECT_MIGRATION_PLAN_TASK"
     conflicts = {entry["id"]: entry for entry in report["v4_runtime_conflicts"]}
-    assert conflicts["affect-migration-plan-missing"]["unresolved"] is True
+    affect = conflicts["affect-migration-plan-missing"]
+    assert affect["unresolved"] is False
+    assert affect["decided_by"] == "reviewer"
+    assert affect["reviewer_ruling"] == "ACCEPT_AS_V4_1_INPUT"
+
+
+def test_reviewer_ruling_resolves_every_module_recommendation(report):
+    entries = report["module_dispositions"]
+    assert entries
+    assert report["summary"]["unresolved_module_dispositions"] == 0
+    assert report["summary"]["unresolved_items"] == 0
+    assert report["summary"]["reviewer_resolved_items"] == 3
+    for entry in entries:
+        assert entry["unresolved"] is False
+        assert entry["manual_only"] is True
+        assert entry["detection"] == "manual"
+        assert entry["decided_by"] == "reviewer"
+        assert entry["reviewer_ruling"] == "ACCEPT_M0_D_RECOMMENDATION"
+        assert "mechanical_detection" in entry
+        assert "pre_ruling_unresolved" in entry
+
+
+def test_rewrite_deprecate_and_remove_rulings_are_exact(report):
+    by_category = {}
+    for entry in report["module_dispositions"]:
+        by_category.setdefault(entry["classification"], []).append(entry["path"])
+    assert sorted(by_category["REWRITE"]) == [
+        "adapters/hormone_adapter.py",
+        "adapters/live_loop.py",
+        "adapters/persistence_adapter.py",
+        "core/autonomous.py",
+        "language/streaming.py",
+        "main.py",
+    ]
+    assert sorted(by_category["DEPRECATE"]) == [
+        "eve_foundation_v10_2.py",
+        "eve_foundation_v12_0.py",
+    ]
+    assert by_category.get("REMOVE", []) == []
 
 
 def test_hormone_coupling_defaults_to_wrap_not_automatic_rewrite():

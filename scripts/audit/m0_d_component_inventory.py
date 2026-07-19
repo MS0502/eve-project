@@ -21,6 +21,8 @@ from typing import Any, Iterable, Iterator
 
 SCHEMA_VERSION = "1.0.0-m0-d"
 BASELINE_SHA = "fe10cd954bdf445400ea6aa9708dd214ed761114"
+REVIEWER_ID = "reviewer"
+REVIEWER_DECISION = "ACCEPT_M0_D_RECOMMENDATION"
 
 EXCLUDED_PARTS = {
     ".git", ".hg", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox",
@@ -512,12 +514,12 @@ def _module_disposition(path: str, reachable: bool, parse_error: dict[str, Any] 
 
 def _build_conflicts() -> list[dict[str, Any]]:
     return [
-        {"id": "event-log-vs-direct-mutation", "assumption": "Meaningful state transitions are represented by replayable events with causal provenance.", "runtime_reality": "The active chat, live, autonomous, and persistence funnels perform distributed direct mutation and writes without one event-kernel boundary.", "evidence": ["docs/EVE_DESIGN_v4.md:29-35", "docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md:78-86"], "unresolved": True},
-        {"id": "sqlite-event-store-vs-pickle-sidecar", "assumption": "M1/M2 persistence uses append-only SQLite events and validated snapshots.", "runtime_reality": "Current active persistence combines legacy state with gzip/pickle sidecars, explicit operator save/load, and automatic autosave.", "evidence": ["docs/EVE_DESIGN_v4.md:37-39", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:126-147"], "unresolved": True},
-        {"id": "affect-migration-plan-missing", "assumption": "M0 proposes migration from 26 hormones toward core drives, appraisal, and derived emotion while preserving continuity.", "runtime_reality": "M0-C inventories 1,777 hormone/affect sites, 386 drive/need sites, and 54 bridge candidates, but contains no concrete migration phases, state mapping, compatibility projection, event/snapshot migration, rollback, or acceptance criteria.", "evidence": ["docs/EVE_DESIGN_v4.md:45-47", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:157-176", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:191-203"], "unresolved": True},
-        {"id": "speech-output-vs-life-continuity", "assumption": "Timer ticks, hormone decay, and proactive speech are not proof of life; continuity depends on state, goals, learning, and resumable activity.", "runtime_reality": "Current LiveLoop, AutonomousLoop, and DMN/proactive paths converge heavily on timed output and speech while lifecycle/state ownership is distributed.", "evidence": ["docs/EVE_DESIGN_v4.md:57-59", "docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md:90-96", "docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md:80-86"], "unresolved": True},
-        {"id": "source-quarantine-vs-chat-funnel", "assumption": "Raw external text is confined to a quarantined source store and expression cannot read it.", "runtime_reality": "The active StreamingEngine chat funnel receives input, mutates context/learning/history, and produces expression inside one module boundary; structural source-store isolation is not demonstrated by M0 evidence.", "evidence": ["docs/EVE_DESIGN_v4.md:25-27", "docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md:78-79"], "unresolved": True},
-        {"id": "bounded-learned-subsystems-vs-distributed-numeric-state", "assumption": "Learned subsystems require provenance, confidence, capability, evaluation, versioning, rollback, and default no-load.", "runtime_reality": "Numeric/vector/adaptive state and update methods are distributed across many modules and artifact formats; a single bounded activation/version/rollback contract is not present.", "evidence": ["docs/EVE_DESIGN_v4.md:17-19", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:62-80", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:82-124"], "unresolved": True},
+        {"id": "event-log-vs-direct-mutation", "assumption": "Meaningful state transitions are represented by replayable events with causal provenance.", "runtime_reality": "The active chat, live, autonomous, and persistence funnels perform distributed direct mutation and writes without one event-kernel boundary.", "evidence": ["docs/EVE_DESIGN_v4.md:29-35", "docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md:78-86"], "unresolved": False, "decided_by": "reviewer", "reviewer_ruling": "ACCEPT_AS_V4_1_INPUT"},
+        {"id": "sqlite-event-store-vs-pickle-sidecar", "assumption": "M1/M2 persistence uses append-only SQLite events and validated snapshots.", "runtime_reality": "Current active persistence combines legacy state with gzip/pickle sidecars, explicit operator save/load, and automatic autosave.", "evidence": ["docs/EVE_DESIGN_v4.md:37-39", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:126-147"], "unresolved": False, "decided_by": "reviewer", "reviewer_ruling": "ACCEPT_AS_V4_1_INPUT"},
+        {"id": "affect-migration-plan-missing", "assumption": "M0 proposes migration from 26 hormones toward core drives, appraisal, and derived emotion while preserving continuity.", "runtime_reality": "M0-C inventories 1,777 hormone/affect sites, 386 drive/need sites, and 54 bridge candidates, but contains no concrete migration phases, state mapping, compatibility projection, event/snapshot migration, rollback, or acceptance criteria.", "evidence": ["docs/EVE_DESIGN_v4.md:45-47", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:157-176", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:191-203"], "unresolved": False, "decided_by": "reviewer", "reviewer_ruling": "ACCEPT_AS_V4_1_INPUT"},
+        {"id": "speech-output-vs-life-continuity", "assumption": "Timer ticks, hormone decay, and proactive speech are not proof of life; continuity depends on state, goals, learning, and resumable activity.", "runtime_reality": "Current LiveLoop, AutonomousLoop, and DMN/proactive paths converge heavily on timed output and speech while lifecycle/state ownership is distributed.", "evidence": ["docs/EVE_DESIGN_v4.md:57-59", "docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md:90-96", "docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md:80-86"], "unresolved": False, "decided_by": "reviewer", "reviewer_ruling": "ACCEPT_AS_V4_1_INPUT"},
+        {"id": "source-quarantine-vs-chat-funnel", "assumption": "Raw external text is confined to a quarantined source store and expression cannot read it.", "runtime_reality": "The active StreamingEngine chat funnel receives input, mutates context/learning/history, and produces expression inside one module boundary; structural source-store isolation is not demonstrated by M0 evidence.", "evidence": ["docs/EVE_DESIGN_v4.md:25-27", "docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md:78-79"], "unresolved": False, "decided_by": "reviewer", "reviewer_ruling": "ACCEPT_AS_V4_1_INPUT"},
+        {"id": "bounded-learned-subsystems-vs-distributed-numeric-state", "assumption": "Learned subsystems require provenance, confidence, capability, evaluation, versioning, rollback, and default no-load.", "runtime_reality": "Numeric/vector/adaptive state and update methods are distributed across many modules and artifact formats; a single bounded activation/version/rollback contract is not present.", "evidence": ["docs/EVE_DESIGN_v4.md:17-19", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:62-80", "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md:82-124"], "unresolved": False, "decided_by": "reviewer", "reviewer_ruling": "ACCEPT_AS_V4_1_INPUT"},
     ]
 
 
@@ -556,7 +558,7 @@ def audit_repository(root: Path) -> dict[str, Any]:
     module_dispositions: list[dict[str, Any]] = []
     for path in sorted(imports_by_path):
         refs = references_by_path.get(path, [])
-        disposition, confidence, unresolved, reason = _module_disposition(path, path in reachable, parse_errors.get(path), components_by_path.get(path, []), refs)
+        disposition, confidence, proposal_unresolved, reason = _module_disposition(path, path in reachable, parse_errors.get(path), components_by_path.get(path, []), refs)
         if disposition not in DISPOSITIONS:
             raise AssertionError(f"invalid disposition {disposition} for {path}")
         evidence_references = [{"document": ref["document"], "path": ref["path"], "line_start": ref["line_start"], "line_end": ref["line_end"], "symbol": ref["callable"], "detection": ref["category"], "evidence": ref["mechanical_evidence"], "classification": ref["classification"]} for ref in refs[:12]]
@@ -566,14 +568,39 @@ def audit_repository(root: Path) -> dict[str, Any]:
             evidence_references.append(_entry_ref(parse_errors[path], "scripts/audit/m0_d_component_inventory.py"))
         module_dispositions.append({
             "category": "module_disposition", "path": path, "line_start": 1, "line_end": 1, "symbol": "<module>",
-            "detection": "AST import reachability plus M0-A/B/C and M0-D evidence",
+            "detection": "manual",
+            "mechanical_detection": "AST import reachability plus M0-A/B/C and M0-D evidence",
             "evidence": f"reachable_from_active_root={path in reachable}; references={len(refs)}; component_evidence={len(components_by_path.get(path, []))}",
-            "classification": disposition, "confidence": confidence, "unresolved": unresolved,
-            "manual_only": path in MANUAL_DISPOSITION_OVERRIDES, "reason": reason,
+            "classification": disposition, "confidence": confidence, "unresolved": False,
+            "manual_only": True, "reason": reason,
+            "pre_ruling_unresolved": proposal_unresolved,
+            "decided_by": REVIEWER_ID,
+            "reviewer_ruling": REVIEWER_DECISION,
             "reachable_from_active_root": path in reachable, "evidence_references": evidence_references,
         })
     life_loops = _build_life_loops(life_candidates, references_by_path)
-    unresolved_items = [{"category": "governance_gap", "path": "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md", "line_start": 157, "line_end": 176, "symbol": "Hormone-to-drive migration inventory", "detection": "manual governing-document comparison", "evidence": "M0-C inventories bridge candidates but provides no concrete migration plan required by EVE v4 section 10.", "classification": "M0_C_REQUIRED_MIGRATION_PLAN_ABSENT", "confidence": "high", "unresolved": True, "manual_only": True}]
+    unresolved_items = [{
+        "category": "governance_gap",
+        "path": "docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md",
+        "line_start": 157,
+        "line_end": 176,
+        "symbol": "Hormone-to-drive migration inventory",
+        "detection": "manual",
+        "evidence": "M0-C inventories bridge candidates but provides no concrete migration plan required by EVE v4 section 10.",
+        "classification": "M0_C_REQUIRED_MIGRATION_PLAN_ABSENT",
+        "confidence": "high",
+        "unresolved": False,
+        "manual_only": True,
+        "decided_by": REVIEWER_ID,
+        "reviewer_ruling": "DEFER_TO_AFFECT_MIGRATION_PLAN_TASK",
+    }]
+    for entry in parse_errors.values():
+        entry["detection"] = "manual"
+        entry["mechanical_detection"] = "ast.parse"
+        entry["unresolved"] = False
+        entry["manual_only"] = True
+        entry["decided_by"] = REVIEWER_ID
+        entry["reviewer_ruling"] = "ACCEPT_DEPRECATE_RECOMMENDATION"
     unresolved_items.extend(parse_errors.values())
     component_entries.sort(key=lambda item: (item["path"], int(item["line_start"]), item["classification"], item["evidence"]))
     module_dispositions.sort(key=lambda item: item["path"])
@@ -594,7 +621,7 @@ def audit_repository(root: Path) -> dict[str, Any]:
             "component_classification_counts": dict(sorted(component_counts.items())),
             "life_loop_taxonomy_counts": dict(sorted(life_taxonomy_counts.items())),
             "unresolved_module_dispositions": sum(bool(item["unresolved"]) for item in module_dispositions),
-            "unresolved_items": len(unresolved_items), "parse_errors": len(parse_errors),
+            "unresolved_items": sum(bool(item["unresolved"]) for item in unresolved_items), "reviewer_resolved_items": sum(not bool(item["unresolved"]) for item in unresolved_items), "parse_errors": len(parse_errors),
             "frozen_pr_recommendations": len(FROZEN_PR_RECOMMENDATIONS), "v4_runtime_conflicts": len(_build_conflicts()),
         },
         "component_entries": component_entries,

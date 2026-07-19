@@ -24,8 +24,8 @@ runtime modules classified: 288
 component evidence entries: 1225
 life-loop entries: 75
 parse errors: 2
-unresolved module dispositions: 278
-standalone unresolved items: 3
+unresolved module dispositions: 0
+standalone unresolved items: 0
 ```
 
 Component evidence:
@@ -84,7 +84,7 @@ The complete life-loop list, including legacy and versioned surfaces, is emitted
 - `train`, `observe`, `learn`, `update`, `consolidate`, and related method names are candidates only.
 - Vector/vocabulary path and call evidence is cross-referenced with M0-C; it does not authorize artifact loading.
 - Reachable learned/numeric modules default to `EXPERIMENTAL` or `WRAP` unless a stronger manual disposition is evidence-backed.
-- Legacy hormone coupling does not automatically justify `REWRITE`. The conservative automatic result is `WRAP/unresolved`; only six manually evidenced architecture conflicts remain `REWRITE`.
+- Legacy hormone coupling does not automatically justify `REWRITE`. The conservative automatic proposal is `WRAP`; the reviewer accepted that rule. Only six manually evidenced architecture conflicts are approved as `REWRITE`.
 - No module is automatically classified `REMOVE`.
 
 ## A/B/C retrospective verification
@@ -124,7 +124,7 @@ artifact SHA-256: 4b7db261834f2a81342d4ae627366cc2d164d0a0f1422a1e98b3b8df4c78d3
 
 EVE v4 requires M0 to propose migration from the current hormone architecture toward core drives, appraisal, and derived emotion. The merged M0-C document inventories `1,777` hormone/affect sites, `386` drive/need sites, and `54` bridge candidates, but it does not provide migration phases, state mapping, compatibility projection, persistence/event migration, rollback, or acceptance criteria.
 
-M0-D records `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT` as a high-confidence unresolved governance blocker. M0-D does not repair M0-C or invent constitutional migration policy outside its allowed scope.
+M0-D records `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT` as a high-confidence governance defect. The reviewer assigns it to the separate Affect Migration Plan task before v4.1 drafting; M0-D does not repair M0-C or invent migration policy outside scope.
 
 ## Validation
 
@@ -141,4 +141,4 @@ Validation run `29680825833`, artifact `eve-m0-d-validation`, SHA-256 `c9fbec7a0
 
 ## Scope boundary
 
-M0-D does not modify production code, existing tests outside its new audit test, data, models, vectors, configuration, persistence, defaults, or frozen PRs. It does not close any frozen PR and does not implement a disposition recommendation.
+M0-D does not modify production code, existing tests outside its new audit test, data, models, vectors, configuration, persistence, or defaults. Reviewer rulings approve planning labels only and do not implement a disposition recommendation. Frozen-PR close actions remain separate post-merge operations.

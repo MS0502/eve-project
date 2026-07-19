@@ -1,10 +1,10 @@
 # EVE v4 Implementation Status
 
 Active constitution: EVE v4.0
-Constitution status: provisional pending completion and reviewer ruling of M0
+Constitution status: provisional pending the Affect Migration Plan and human-reviewed v4.1 revision
 Previous v3/v3.1 documents: historical reference only
 Frozen work: open implementation PRs #109, #97, #86, #84, #82, #11, #7, #4, and #1
-Completed audit milestones: M0-A, M0-B, and M0-C merged
+Completed audit milestones: M0-A, M0-B, and M0-C merged; M0-D reviewer rulings recorded in PR #125
 Current milestone: M0-D component inventory, life-loop assessment, module disposition, integrated conclusions, and frozen-PR recommendations
 M0-D baseline: `fe10cd954bdf445400ea6aa9708dd214ed761114`
 Planned revision: v4.1 only after M0-D and reviewer rulings
@@ -25,7 +25,7 @@ The v4 runtime is not claimed as implemented. M0-A, M0-B, and M0-C are evidence-
 
 EVE v4 requires M0 to propose migration from the current hormone architecture toward core drives, appraisal, and derived emotion while preserving historical memory and identity continuity. The merged M0-C document contains an inventory of hormone, drive, and bridge candidates but no concrete migration plan, compatibility projection, persistence/event migration, rollback design, or acceptance criteria.
 
-M0-D records this as `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT`. It remains unresolved for reviewer ruling and a separate scope-compliant correction. M0-D does not silently fill the gap or change affect implementation.
+M0-D records this as `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT`. The reviewer assigns the correction to the separate Affect Migration Plan task before v4.1 drafting. M0-D does not silently fill the gap or change affect implementation.
 
 ## Freeze
 
@@ -33,4 +33,4 @@ The frozen implementation PRs remain untouched during M0-D. M0-D may recommend a
 
 ## Current next step
 
-Complete M0-D static analysis and independent exact-head validation. Review all unresolved rulings, the complete `REMOVE` and `DEPRECATE` recommendations, and the `v4.0 assumptions vs runtime reality` conflict list before any Ready or merge decision. v4.1 constitutional drafting remains a separate human-reviewed milestone.
+Merge M0-D after independent exact-head validation, execute the separately approved frozen-PR closures, complete the Affect Migration Plan, and then draft v4.1 through human-reviewed triangular revision. `REMOVE` remains empty; the six `REWRITE` and two `DEPRECATE` planning labels are reviewer-confirmed.
