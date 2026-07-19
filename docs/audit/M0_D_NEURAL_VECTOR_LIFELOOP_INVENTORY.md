@@ -131,13 +131,13 @@ M0-D records `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT` as a high-confidence unresolv
 ```text
 compileall: PASS
 deterministic double-run: byte-identical
-focused M0-D tests: 11 passed in 42.37s
-collection: 2,584 tests collected in 5.16s
-full suite: 2,584 passed in 84.66s
+focused M0-D tests: 12 passed in 25.12s
+collection: 2,585 tests collected in 3.01s
+full suite: 2,585 passed in 50.14s
 temporary six-file scope: PASS
 ```
 
-Validation run `29680010246`, artifact `eve-m0-d-validation`, SHA-256 `7aca00e64dd30151044131f1726dfa28461ea7ae99698bcf7a789fe09f36c9d1`.
+Validation run `29680825833`, artifact `eve-m0-d-validation`, SHA-256 `c9fbec7a0635173b487ab15cc712d73f5509bd7fb63dfbee85adfa2db1ee21f3`.
 
 ## Scope boundary
 
