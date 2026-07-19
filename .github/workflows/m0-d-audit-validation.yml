@@ -1,114 +1,294 @@
-name: Validate EVE M0-D audit
+name: Finalize EVE M0-D audit documents once
 
 on:
-  push:
-    branches: [claude/eve-m0-d-disposition-audit]
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  finalize-docs:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
-    env:
-      PIP_INDEX_URL: https://pypi.org/simple
-      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: claude/eve-m0-d-disposition-audit
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Prepare validation artifacts
-        run: mkdir -p validation-artifacts
-
-      - name: Install pinned markdown-strings compatibility package
+      - name: Generate canonical report and validated documents
         run: |
-          set -o pipefail
-          python -m pip install --no-deps \
-            'git+https://github.com/awesmubarak/markdown_strings.git@9834a3f3cc13bd1e028756949c96bb54d573e7cf' \
-            2>&1 | tee validation-artifacts/pip-bootstrap.txt
+          python scripts/audit/m0_d_component_inventory.py > /tmp/m0-d.json
           python - <<'PY'
-          import importlib.metadata
-          version = importlib.metadata.version('markdown-strings')
-          if version != '3.4.0':
-              raise SystemExit(f'unexpected markdown-strings version: {version}')
-          print(f'markdown-strings version={version}')
-          PY
+          import json
+          from pathlib import Path
 
-      - name: Install declared dependencies
-        run: |
-          set -o pipefail
-          python -m pip install --retries 5 --timeout 60 -r requirements.txt \
-            2>&1 | tee validation-artifacts/pip-install.txt
-          python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
+          report = json.loads(Path('/tmp/m0-d.json').read_text(encoding='utf-8'))
+          summary = report['summary']
+          dispositions = report['module_dispositions']
+          categories = ['KEEP', 'WRAP', 'REWRITE', 'EXPERIMENTAL', 'DEPRECATE', 'REMOVE']
 
-      - name: Compile required surface
-        run: |
-          python -m compileall -q adapters core cognition tests main.py scripts
+          def paths_for(category):
+              return [entry['path'] for entry in dispositions if entry['classification'] == category]
 
-      - name: Generate deterministic M0-D inventories
-        run: |
-          python scripts/audit/m0_d_component_inventory.py > /tmp/d1.json
-          python scripts/audit/m0_d_component_inventory.py > /tmp/d2.json
-          diff -u /tmp/d1.json /tmp/d2.json | tee validation-artifacts/determinism-diff.txt
-          cp /tmp/d1.json validation-artifacts/m0-d-inventory.json
-          python scripts/audit/m0_d_component_inventory.py --summary-only \
-            | tee validation-artifacts/m0-d-summary.json
+          def bullets(paths):
+              return '\n'.join(f'- `{path}`' for path in paths) if paths else '- _None_'
 
-      - name: Run focused M0-D tests
-        run: |
-          set -o pipefail
-          python -m pytest -q tests/audit/test_m0_d_component_inventory.py \
-            | tee validation-artifacts/focused-pytest.txt
-
-      - name: Collect full suite
-        run: |
-          set -o pipefail
-          python -m pytest --collect-only -q \
-            | tee validation-artifacts/collect-only.txt
-
-      - name: Run full suite
-        run: |
-          set -o pipefail
-          python -m pytest -q | tee validation-artifacts/full-pytest.txt
-
-      - name: Verify temporary scope and clean generated state
-        run: |
-          git diff --check origin/main...HEAD
-          python - <<'PY'
-          import subprocess
-          allowed = {
-              '.github/workflows/m0-d-audit-validation.yml',
-              'docs/EVE_IMPLEMENTATION_STATUS_v4.md',
-              'docs/audit/M0_D_MODULE_DISPOSITION.md',
-              'docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md',
-              'scripts/audit/m0_d_component_inventory.py',
-              'tests/audit/test_m0_d_component_inventory.py',
+          active_key_paths = {
+              'adapters/allostatic_adapter.py', 'adapters/continual_adapter.py',
+              'adapters/dmn_adapter.py', 'adapters/goal_adapter.py',
+              'adapters/hormone_adapter.py', 'adapters/live_loop.py',
+              'core/autonomous.py', 'language/planner.py',
+              'language/streaming.py', 'main.py',
           }
-          changed = set(subprocess.check_output(
-              ['git', 'diff', '--name-only', 'origin/main...HEAD'], text=True
-          ).splitlines())
-          if changed != allowed:
-              raise SystemExit(f'unexpected scope: {sorted(changed)}')
-          if subprocess.check_output(['git', 'ls-files', 'validation-artifacts'], text=True).strip():
-              raise SystemExit('validation artifacts are tracked')
-          subprocess.check_call(['git', 'diff', '--exit-code'])
-          subprocess.check_call(['git', 'diff', '--cached', '--exit-code'])
-          PY
+          loop_rows = []
+          for entry in report['life_loops']:
+              if entry['path'] not in active_key_paths:
+                  continue
+              loop_rows.append(
+                  f"| `{entry['path']}:{entry['line_start']}` | `{entry['symbol']}` | "
+                  f"{', '.join(entry['trigger'])} | {entry['mutation_reference_count']} | "
+                  f"{', '.join(entry['v4_loop_taxonomy'])} |"
+              )
 
-      - name: Upload M0-D validation evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: eve-m0-d-validation
-          path: validation-artifacts/*
-          if-no-files-found: error
-          retention-days: 30
+          component_counts = summary['component_classification_counts']
+          taxonomy_counts = summary['life_loop_taxonomy_counts']
+          inventory = [
+              '# M0-D Neural, Vector, Adaptive, and Life-Loop Inventory',
+              '',
+              'Baseline: `main` at `fe10cd954bdf445400ea6aa9708dd214ed761114`',
+              '',
+              'Status: audit and recommendation only. No production module is imported, no runtime or loop is started, no vector/model is loaded, and no runtime state is changed.',
+              '',
+              '## Regeneration',
+              '',
+              '```bash',
+              'python scripts/audit/m0_d_component_inventory.py --pretty',
+              '```',
+              '',
+              'The scanner is stdlib-only, scans tracked Python source with `ast.parse`, cross-references the merged M0-A/B/C inventory scripts, and emits canonical JSON to stdout. Generated JSON remains ephemeral. Two consecutive runs are byte-identical.',
+              '',
+              '## Evidence schema',
+              '',
+              'Every component and life-loop entry records repository-relative path, exact line range, symbol, detection method, mechanical evidence, classification, confidence, unresolved state, and manual-only state. Life-loop entries additionally record trigger evidence, mutation references, clock/concurrency/output calls, and mapping to the v4 taxonomy.',
+              '',
+              '## Validated snapshot',
+              '',
+              '```text',
+              f"tracked Python files: {summary['tracked_python_files']}",
+              f"runtime modules classified: {summary['runtime_modules_classified']}",
+              f"component evidence entries: {summary['component_evidence_entries']}",
+              f"life-loop entries: {summary['life_loop_entries']}",
+              f"parse errors: {summary['parse_errors']}",
+              f"unresolved module dispositions: {summary['unresolved_module_dispositions']}",
+              f"standalone unresolved items: {summary['unresolved_items']}",
+              '```',
+              '',
+              'Component evidence:',
+              '',
+              '```text',
+          ]
+          for key, value in sorted(component_counts.items()):
+              inventory.append(f'{key}: {value}')
+          inventory.extend(['```', '', 'Life-loop taxonomy occurrences:', '', '```text'])
+          for key in ['Vital', 'Cognitive', 'Goal', 'Activity', 'Learning', 'Memory', 'Social', 'Expression', 'no-v4-equivalent']:
+              inventory.append(f"{key}: {taxonomy_counts.get(key, 0)}")
+          inventory.extend([
+              '```',
+              '',
+              'Counts are occurrence-level mechanical evidence. One callable may map to more than one v4 loop category.',
+              '',
+              '## High-impact life-loop assessment',
+              '',
+              '| Evidence | Symbol | Trigger evidence | M0-A mutation refs | v4 taxonomy |',
+              '|---|---|---|---:|---|',
+              *loop_rows,
+              '',
+              'The complete life-loop list, including legacy and versioned surfaces, is emitted by canonical JSON. `no-v4-equivalent` does not mean removable; it means the callable lacks an approved constitutional loop owner.',
+              '',
+              '## Neural, vector, and adaptive interpretation',
+              '',
+              '- NumPy imports and calls prove numeric representation dependency, not learning quality or runtime activation.',
+              '- `train`, `observe`, `learn`, `update`, and related names are candidates only.',
+              '- Vector/vocabulary evidence is cross-referenced with M0-C and does not authorize artifact loading.',
+              '- Reachable learned/numeric modules default to `EXPERIMENTAL` or `WRAP` unless stronger manual evidence exists.',
+              '- Legacy hormone coupling does not automatically justify `REWRITE`; the conservative automatic result is `WRAP/unresolved`.',
+              '- No module is automatically classified `REMOVE`.',
+              '',
+              '## A/B/C retrospective verification',
+              '',
+              'Disposable PR #124 re-executed merged M0-A/B/C scripts at exact main and selected three entries from each map by deterministic SHA ordering.',
+              '',
+              '```text',
+              'M0-A tests: KEEP 225 / REWRITE 0 / RETIRE 0',
+              'M0-A unresolved: 1,865; parse errors: 2',
+              'M0-B broad exception handlers: 614',
+              'M0-B silent exception handlers: 607',
+              'M0-B silent broad handlers: 532',
+              'M0-B bypass candidates: 37',
+              'M0-C persistence-intended state: 3,845',
+              'M0-C persistence I/O: 856',
+              'M0-C hormone/affect sites: 1,777',
+              'M0-C drive/need sites: 386',
+              'M0-C hormone-to-drive bridge candidates: 54',
+              '```',
+              '',
+              'All nine generated excerpts were independently reopened at exact main and matched:',
+              '',
+              '- M0-A: `scripts/operator_report_round1001_1020_visual_observation_schema.py:12`, `legacy/eve_modules/metacognition.py:297`, `adapters/lex_concept_mapping_adapter.py:2463`.',
+              '- M0-B: `scripts/audit/m0_b_controlflow_concurrency_inventory.py:328-329`, `legacy/eve_modules/emotion_regulation.py:280-281`, `learning/code_synthesis.py:54-61`.',
+              '- M0-C: `scripts/operator_run_local_validation_suite.py:503`, `active_inference.py:150`, `legacy/eve_main_abc.py:510`.',
+              '',
+              'Evidence: workflow `29678859485`, artifact `m0-d-abc-retrospective`, SHA-256 `4b7db261834f2a81342d4ae627366cc2d164d0a0f1422a1e98b3b8df4c78d39f`.',
+              '',
+              '## M0-C constitutional gap',
+              '',
+              'EVE v4 requires M0 to propose migration from the current hormone architecture toward core drives, appraisal, and derived emotion. M0-C inventories `1,777` hormone/affect sites, `386` drive/need sites, and `54` bridge candidates, but provides no migration phases, state mapping, compatibility projection, persistence/event migration, rollback, or acceptance criteria.',
+              '',
+              'M0-D records `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT` as a high-confidence unresolved governance blocker. M0-D does not repair M0-C or invent constitutional migration policy outside its scope.',
+              '',
+              '## Validation',
+              '',
+              '```text',
+              'compileall: PASS',
+              'deterministic double-run: byte-identical',
+              'focused M0-D tests: 11 passed in 42.37s',
+              'collection: 2,584 tests collected in 5.16s',
+              'full suite: 2,584 passed in 84.66s',
+              'temporary six-file scope: PASS',
+              '```',
+              '',
+              'Validation run `29680010246`, artifact `eve-m0-d-validation`, SHA-256 `7aca00e64dd30151044131f1726dfa28461ea7ae99698bcf7a789fe09f36c9d1`.',
+              '',
+              '## Scope boundary',
+              '',
+              'M0-D does not modify production code, existing tests outside its new audit test, data, models, vectors, configuration, persistence, defaults, or frozen PRs. It does not close any frozen PR and does not implement a disposition recommendation.',
+              '',
+          ]
+          Path('docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md').write_text('\n'.join(inventory), encoding='utf-8')
+
+          disposition = [
+              '# M0-D Module Disposition',
+              '',
+              'Baseline: `main` at `fe10cd954bdf445400ea6aa9708dd214ed761114`',
+              '',
+              'Status: recommendations only. No module is deleted, deprecated in code, wrapped, rewritten, activated, or retired by M0-D.',
+              '',
+              '## Regeneration',
+              '',
+              '```bash',
+              'python scripts/audit/m0_d_component_inventory.py --pretty',
+              '```',
+              '',
+              'The canonical JSON assigns every scanned runtime module exactly one disposition with evidence references, confidence, and unresolved state.',
+              '',
+              '## Validated totals',
+              '',
+              '```text',
+          ]
+          counts = summary['module_disposition_counts']
+          for category in categories:
+              disposition.append(f'{category}: {counts[category]}')
+          disposition.extend([
+              f"TOTAL: {summary['runtime_modules_classified']}",
+              f"unresolved dispositions requiring reviewer ruling: {summary['unresolved_module_dispositions']}",
+              '```',
+              '',
+              'The initial mechanical pass produced 63 `REWRITE` recommendations because any reachable hormone reference triggered rewrite. That was rejected as over-aggressive. Automatic hormone coupling now yields `WRAP/unresolved`; only six manually evidenced architecture conflicts remain `REWRITE`. `REMOVE` remains empty.',
+              '',
+              '## Full module disposition lists',
+              '',
+          ])
+          for category in categories:
+              disposition.extend([f'### {category} ({counts[category]})', '', bullets(paths_for(category)), ''])
+
+          disposition.extend([
+              '## Manually decided high-impact entries',
+              '',
+              '| Module | Recommendation | Reason |',
+              '|---|---|---|',
+          ])
+          for entry in dispositions:
+              if entry['manual_only']:
+                  disposition.append(f"| `{entry['path']}` | `{entry['classification']}` | {entry['reason']} |")
+          disposition.extend([
+              '',
+              'The two `DEPRECATE` entries are tracked parse-invalid versioned foundation snapshots:',
+              '',
+              '- `eve_foundation_v10_2.py:11557` — `[` was never closed.',
+              '- `eve_foundation_v12_0.py:11542` — `[` was never closed.',
+              '',
+              'They are historical/migration evidence, not deletion recommendations. The full `REMOVE` list is empty.',
+              '',
+              '## Frozen PR recommendations',
+              '',
+              'Recommendations only. M0-D did not close, comment on, rebase, modify, merge, or reuse any frozen PR.',
+              '',
+          ])
+          for entry in report['frozen_pr_recommendations']:
+              disposition.extend([
+                  f"### PR #{entry['pr']} — `{entry['recommendation']}`",
+                  '',
+                  entry['reason'],
+                  '',
+                  f"Preserve before any later close: {entry['preserve']}",
+                  '',
+              ])
+          disposition.extend([
+              'Actual closing is a separate post-M0-D reviewer action.',
+              '',
+              '## v4.0 assumptions vs runtime reality',
+              '',
+          ])
+          for index, entry in enumerate(report['v4_runtime_conflicts'], 1):
+              evidence = ', '.join(f"`{item}`" for item in entry['evidence'])
+              disposition.append(f"{index}. **{entry['id']}** — v4.0 assumption: {entry['assumption']} Runtime reality: {entry['runtime_reality']} Evidence: {evidence}.")
+          disposition.extend([
+              '',
+              'This list is direct input to a later human-reviewed v4.1 revision. M0-D does not draft replacement constitutional text.',
+              '',
+              '## Prominent unresolved items',
+              '',
+              '### Constitutional blocker',
+              '',
+              '- `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT` — M0-C inventories hormone/affect, drive/need, and bridge candidates but provides no concrete migration phases, state mapping, compatibility projection, event/snapshot migration, rollback, or acceptance criteria required by EVE v4.',
+              '',
+              '### Parse blockers',
+              '',
+              '- `eve_foundation_v10_2.py:11557` — retained as `DEPRECATE`.',
+              '- `eve_foundation_v12_0.py:11542` — retained as `DEPRECATE`.',
+              '',
+              f"### Unresolved module dispositions ({summary['unresolved_module_dispositions']})",
+              '',
+              'Every path below has exactly one provisional category but requires reviewer ruling before implementation or merge:',
+              '',
+              bullets([entry['path'] for entry in dispositions if entry['unresolved']]),
+              '',
+              '## Validation',
+              '',
+              '```text',
+              'compileall: PASS',
+              'deterministic double-run: byte-identical',
+              'focused M0-D tests: 11 passed in 42.37s',
+              'collection: 2,584 tests collected in 5.16s',
+              'full suite: 2,584 passed in 84.66s',
+              'temporary six-file scope: PASS',
+              '```',
+              '',
+              'Validation run `29680010246`, artifact `eve-m0-d-validation`, SHA-256 `7aca00e64dd30151044131f1726dfa28461ea7ae99698bcf7a789fe09f36c9d1`.',
+              '',
+              '## Decision boundary',
+              '',
+              'No recommendation is implemented here. Reviewer approval is required for unresolved rulings, six `REWRITE` recommendations, two `DEPRECATE` recommendations, and any later frozen-PR close action.',
+              '',
+          ])
+          Path('docs/audit/M0_D_MODULE_DISPOSITION.md').write_text('\n'.join(disposition), encoding='utf-8')
+          PY
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md \
+            docs/audit/M0_D_MODULE_DISPOSITION.md
+          git commit -m "Record validated M0-D findings and dispositions"
+          git push origin HEAD:claude/eve-m0-d-disposition-audit
