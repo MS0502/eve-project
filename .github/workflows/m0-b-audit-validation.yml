@@ -1,0 +1,89 @@
+name: Validate EVE M0-B audit
+
+on:
+  push:
+    branches: [audit/m0-b-controlflow-concurrency]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install declared dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Compile audit surface
+        run: |
+          python -m py_compile scripts/audit/m0_b_controlflow_concurrency_inventory.py
+          python -m py_compile tests/audit/test_m0_b_controlflow_concurrency_inventory.py
+
+      - name: Generate ephemeral M0-B inventory
+        run: |
+          mkdir -p validation-artifacts
+          python scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+            --output validation-artifacts/m0-b-inventory.json
+          python scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+            --summary-only | tee validation-artifacts/m0-b-summary.json
+
+      - name: Run focused M0-B tests
+        run: |
+          python -m pytest -q tests/audit/test_m0_b_controlflow_concurrency_inventory.py \
+            | tee validation-artifacts/focused-pytest.txt
+
+      - name: Collect full suite
+        run: |
+          python -m pytest --collect-only -q \
+            | tee validation-artifacts/collect-only.txt
+
+      - name: Run full suite
+        run: |
+          python -m pytest -q | tee validation-artifacts/full-pytest.txt
+
+      - name: Verify branch scope and generated state
+        run: |
+          git diff --check main...HEAD
+          python - <<'PY'
+          import subprocess
+          allowed = {
+              '.github/workflows/m0-b-audit-validation.yml',
+              'docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md',
+              'docs/audit/M0_B_TEST_CLASSIFICATION.md',
+              'scripts/audit/m0_b_controlflow_concurrency_inventory.py',
+              'tests/audit/test_m0_b_controlflow_concurrency_inventory.py',
+          }
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only', 'main...HEAD'], text=True
+          ).splitlines())
+          if changed != allowed:
+              raise SystemExit(f'unexpected scope: {sorted(changed)}')
+          status = subprocess.check_output(['git', 'status', '--porcelain'], text=True)
+          if status.strip():
+              raise SystemExit(f'generated source-tree state:\n{status}')
+          PY
+
+      - name: Upload M0-B validation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: eve-m0-b-validation
+          path: validation-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
