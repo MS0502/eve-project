@@ -32,8 +32,18 @@ jobs:
           git fetch origin main
           git show origin/main:scripts/tmp_apply_m0_d_baseline_scope.py > /tmp/apply.py
           git show origin/main:scripts/tmp_install_m0_c_validation_dependency.py > /tmp/install_compat.py
-      - name: Apply baseline-scope correction
-        run: python /tmp/apply.py
+      - name: Apply and locally commit baseline-scope correction
+        run: |
+          python /tmp/apply.py
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
+          test "$changed" = "$expected"
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
+          git commit -m "Pin M0-D Python path scope to audit baseline"
+          test -z "$(git status --short)"
       - name: Install dependencies
         run: |
           python /tmp/install_compat.py
@@ -55,34 +65,21 @@ jobs:
         run: |
           set -o pipefail
           python -m pytest --collect-only -q | tee /tmp/collect.txt
-      - name: Diagnose full suite
+      - name: Run full suite
+        shell: bash
         run: |
-          set +e
-          python -m pytest -q > /tmp/full.txt 2>&1
-          code=$?
-          set -e
-          cat /tmp/full.txt
-          if [ "$code" -ne 0 ]; then
-            grep -E '^(FAILED|ERROR)|AssertionError|short test summary' /tmp/full.txt | tail -n 30 > /tmp/failure-summary.txt || true
-            gh pr comment 135 --repo MS0502/eve-project --body "M0-D full-suite concise failure summary:\n\n\`\`\`text\n$(cat /tmp/failure-summary.txt)\n\`\`\`"
-            exit "$code"
-          fi
-      - name: Verify exact correction scope
+          set -o pipefail
+          python -m pytest -q | tee /tmp/full.txt
+      - name: Verify exact committed correction scope
         run: |
-          changed="$(git diff --name-only | sort)"
+          changed="$(git diff --name-only "$EXPECTED_HEAD"...HEAD | sort)"
           expected="$(printf '%s\n' docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
           test "$changed" = "$expected"
-          git diff --check
-      - name: Commit correction
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
-          git commit -m "Pin M0-D Python path scope to audit baseline"
-          git push origin HEAD:"$TARGET_BRANCH"
+          test -z "$(git status --short)"
           git rev-parse HEAD | tee /tmp/final-head.txt
+      - name: Push validated correction
+        run: git push origin HEAD:"$TARGET_BRANCH"
       - name: Upload validation evidence
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m0-d-baseline-path-scope-validation
@@ -92,6 +89,5 @@ jobs:
             /tmp/focused.txt
             /tmp/collect.txt
             /tmp/full.txt
-            /tmp/failure-summary.txt
             /tmp/final-head.txt
-          if-no-files-found: warn
+          if-no-files-found: error
