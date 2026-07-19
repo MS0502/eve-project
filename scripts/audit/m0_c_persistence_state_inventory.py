@@ -300,7 +300,6 @@ DRIVE_TOKENS = {
 
 LEGACY_TEST_FORMAT_MARKERS = {
     "sidecar",
-    "sqlite",
     "eve.ckpt",
     ".ckpt",
     ".pickle",
