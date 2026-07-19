@@ -35,8 +35,28 @@ jobs:
       - name: Prepare evidence
         run: mkdir -p /tmp/m0-d-final-evidence
 
-      - name: Install markdown-strings compatibility dependency
-        run: python -m pip install --no-deps 'markdown-strings==3.4.0' --index-url https://pypi.org/simple
+      - name: Install SHA-pinned markdown-strings compatibility dependency
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          with urllib.request.urlopen('https://pypi.org/pypi/markdown-strings/3.4.0/json') as response:
+              metadata = json.load(response)
+          candidates = [item for item in metadata['urls'] if item['filename'] == 'markdown_strings-3.4.0.tar.gz']
+          assert len(candidates) == 1
+          item = candidates[0]
+          assert item['digests']['sha256'] == expected
+          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          urllib.request.urlretrieve(item['url'], target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
 
       - name: Install declared dependencies
         run: |
