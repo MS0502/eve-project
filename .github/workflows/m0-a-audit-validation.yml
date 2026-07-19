@@ -24,23 +24,31 @@ jobs:
           fetch-depth: 0
       - name: Complete write and mutation call classification once
         run: |
+          set -euo pipefail
+          git pull --ff-only origin audit/m0-a-runtime-inventory
           python3 - <<'PY'
           from pathlib import Path
           path = Path('scripts/audit/m0_a_runtime_inventory.py')
-          text = path.read_text(encoding='utf-8')
-          old = '''        else:
-              leaf = target.rsplit(".", 1)[-1] if target else ""
-              if leaf in WRITE_METHOD_NAMES:
-                  self.add(
-                      "direct_write",
-                      node,
-                      f"write_like_method={target}",
-                      "ast.Call write method heuristic",
-                      details={"target": target},
-                  )
-
-          '''
-          new = '''        else:
+          lines = path.read_text(encoding='utf-8').splitlines()
+          if any('elif leaf in MUTATION_METHOD_NAMES:' in line for line in lines):
+              raise SystemExit(0)
+          start = None
+          end = None
+          for index, line in enumerate(lines):
+              if line == '        else:' and index + 2 < len(lines):
+                  window = '\n'.join(lines[index:index + 16])
+                  if 'leaf = target.rsplit' in window and 'if leaf in WRITE_METHOD_NAMES:' in window:
+                      start = index
+                      break
+          if start is None:
+              raise SystemExit('visit_Call legacy classification block not found')
+          for index in range(start + 1, len(lines)):
+              if lines[index].startswith('        if target in EXECUTION_BOUNDARY_CALLS'):
+                  end = index
+                  break
+          if end is None:
+              raise SystemExit('visit_Call execution-boundary anchor not found')
+          replacement = '''        else:
               leaf = target.rsplit(".", 1)[-1] if target else ""
               receiver = target.rsplit(".", 1)[0].lower() if "." in target else ""
               db_write = leaf in DB_WRITE_METHOD_NAMES and any(
@@ -63,11 +71,9 @@ jobs:
                       details={"target": target},
                   )
 
-          '''
-          if old in text:
-              path.write_text(text.replace(old, new, 1), encoding='utf-8')
-          elif 'elif leaf in MUTATION_METHOD_NAMES:' not in text:
-              raise SystemExit('M0-A visit_Call refinement anchor not found')
+          '''.splitlines()
+          lines[start:end] = replacement
+          path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
           if ! git diff --quiet -- scripts/audit/m0_a_runtime_inventory.py; then
             python -m py_compile scripts/audit/m0_a_runtime_inventory.py
