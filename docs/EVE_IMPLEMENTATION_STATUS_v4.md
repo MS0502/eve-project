@@ -1,11 +1,11 @@
 # EVE v4 Implementation Status
 
 Active constitution: EVE v4.0
-Constitution status: provisional pending completion and reviewer ruling of the Affect Migration Plan, then human-reviewed v4.1 revision
+Constitution status: provisional pending merge of the reviewer-ruled Affect Migration Plan, then human-reviewed v4.1 revision
 Previous v3/v3.1 documents: historical reference only
 Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
 Completed audit milestones: M0-A, M0-B, M0-C, and reviewer-ruled M0-D merged
-Current milestone: M0-C Supplement — Affect Migration Plan
+Current milestone: reviewer-ruled M0-C Supplement — Affect Migration Plan
 Affect-plan baseline: `28ec113a8ee371fdc6ac13341c0d70e00db26ce4`
 Planned revision: v4.1 only after the Affect Migration Plan is reviewer-ruled and merged
 
@@ -34,4 +34,4 @@ The seven open implementation PRs remain untouched: #109, #86, #84, #82, #11, #7
 
 ## Current next step
 
-Complete the deterministic checker and reviewer rulings for every found axis, independently validate the exact final head, merge the four-file Affect Migration Plan supplement, and then begin the human-reviewed v4.1 triangular revision using the seven conflict inputs.
+Independently validate the exact reviewer-ruled head, merge the four-file Affect Migration Plan supplement, and then begin the human-reviewed v4.1 triangular revision using the seven conflict inputs.
