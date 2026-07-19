@@ -1,0 +1,38 @@
+name: Run M0-D reviewer ruling patcher
+
+on:
+  push:
+    branches: [validation/m0-d-reviewer-ruling-trigger]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/eve-m0-d-disposition-audit
+          fetch-depth: 0
+      - name: Verify and load patcher
+        run: |
+          test "$(git rev-parse HEAD)" = "c6ccfc109b09fb234a040cbd374e640e0d06c658"
+          test -z "$(git status --short)"
+          git fetch origin validation/m0-d-reviewer-ruling
+          git show origin/validation/m0-d-reviewer-ruling:scripts/tmp_apply_m0_d_reviewer_ruling.py > /tmp/apply_ruling.py
+      - name: Apply and verify rulings
+        run: |
+          python /tmp/apply_ruling.py
+          python -m py_compile scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
+          git diff --check
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_D_MODULE_DISPOSITION.md docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
+          test "$changed" = "$expected"
+      - name: Commit target branch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_D_MODULE_DISPOSITION.md docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
+          git commit -m "Apply reviewer rulings to M0-D dispositions"
+          git push origin HEAD:claude/eve-m0-d-disposition-audit
