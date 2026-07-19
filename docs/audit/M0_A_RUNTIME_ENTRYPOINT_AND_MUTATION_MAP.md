@@ -25,7 +25,42 @@ Every emitted map entry contains:
 - `unresolved`;
 - `manual_only`.
 
-The detectors cover module main guards, callable entrypoint candidates, imports, class-like dependency construction, attribute/subscript mutation, filesystem or persistence writes, and thread/process/server execution boundaries. Grep is not used as the sole evidence source.
+The detectors cover module main guards, callable entrypoint candidates, imports, class-like dependency construction, attribute/subscript and collection mutation, filesystem or persistence writes, and thread/process/server execution boundaries. Grep is not used as the sole evidence source.
+
+## Validated inventory result
+
+Independent GitHub Actions run `29674646193` executed the inventory against head `2534241e61a848acee7448b2bd4280abbad60408` and produced artifact `eve-m0-a-validation` with SHA-256 digest:
+
+```text
+2270dc3ce787d7277ddb375066e626381a9d24b81c05e6883f171feb9991730a
+```
+
+Measured result:
+
+| Measure | Count |
+|---|---:|
+| Tracked Python files scanned | 578 |
+| Total evidence entries | 13,341 |
+| Imports | 2,934 |
+| Dependency-construction candidates | 1,854 |
+| Entrypoints and entrypoint candidates | 196 |
+| In-memory mutation sites | 7,842 |
+| Filesystem or persistence direct-write sites | 283 |
+| Thread/process/server boundaries | 7 |
+| Test files classified | 223 |
+| Parse errors retained as unresolved evidence | 2 |
+| Total unresolved entries | 1,842 |
+
+`unresolved_entries` includes mechanically discovered entrypoint and dependency-construction candidates that require later manual disposition. It is not a test-failure count. The two parse errors are separately identified below and are not suppressed.
+
+## Unresolved parse evidence
+
+| Path and line | Mechanical evidence | Classification | Confidence | Unresolved |
+|---|---|---|---|---|
+| `eve_foundation_v10_2.py:11557` | `'[' was never closed` | `UNRESOLVED_PARSE_ERROR` | high | yes |
+| `eve_foundation_v12_0.py:11542` | `'[' was never closed` | `UNRESOLVED_PARSE_ERROR` | high | yes |
+
+These tracked legacy foundation snapshots are preserved as evidence. M0-A does not repair or exclude them. Their import reachability and final disposition must be resolved through the later integrated audit rather than hidden by the scanner.
 
 ## Manually confirmed high-impact map
 
@@ -34,7 +69,7 @@ The detectors cover module main guards, callable entrypoint candidates, imports,
 | `main.py:22-356` | `build_full_engine` | Constructs and connects the full adapter, engine, loop, store, server, sensory, learning, and diagnostic graph. | `ACTIVE_RUNTIME_COMPOSITION_ROOT` | high | no |
 | `main.py:359-361` | `build_minimal_engine` | Constructs a bare `StreamingEngine`. | `ACTIVE_MINIMAL_RUNTIME_COMPOSITION_ROOT` | high | no |
 | `main.py:270-279` | `build_full_engine` | Calls guarded medium30k load integration; default remains no-load unless explicit validation and authorization are supplied. | `EXPLICIT_GUARDED_MODEL_LOAD_BOUNDARY` | high | no |
-| `main.py:374-741` | `repl` | Creates the full engine and exposes chat, autonomous, sensory, web, server, live-loop, save, and load commands. | `ACTIVE_INTERACTIVE_ENTRYPOINT` | high | no |
+| `main.py:374-732` | `repl` | Creates the full engine and exposes chat, autonomous, sensory, web, server, live-loop, save, and load commands. | `ACTIVE_INTERACTIVE_ENTRYPOINT` | high | no |
 | `main.py:419-426` | `repl` | Assigns `~/eve.ckpt` and starts `LiveLoop` automatically for the interactive REPL. | `ACTIVE_DEFAULT_BACKGROUND_START_AND_AUTOSAVE_CONFIGURATION` | high | no |
 | `main.py:714-725` | `repl` | `/save` and `/load` instantiate `PersistenceAdapter` and invoke persistence operations. | `EXPLICIT_OPERATOR_PERSISTENCE_BOUNDARY` | high | no |
 | `main.py:735-741` | `<module>` | `if __name__ == "__main__"` selects minimal stdin mode or the full REPL. | `ACTIVE_MODULE_ENTRYPOINT` | high | no |
@@ -42,11 +77,11 @@ The detectors cover module main guards, callable entrypoint candidates, imports,
 | `language/streaming.py:177-362` | `StreamingEngine.chat_stream` | Mutates input, context, attention, learning, history, and adapter state while producing output. | `ACTIVE_CHAT_STATE_TRANSITION_PATH` | high | no |
 | `adapters/live_loop.py:115-203` | `LiveLoop._run` | Repeated time-based hormone, salience, autonomy, proactive-output, and autosave cycle. | `ACTIVE_BACKGROUND_STATE_MUTATION_LOOP` | high | no |
 | `adapters/live_loop.py:205-212` | `LiveLoop._do_autosave` | Creates `PersistenceAdapter` and calls `save`. | `ACTIVE_AUTOSAVE_WRITE_PATH` | high | no |
-| `adapters/live_loop.py:216-237` | `LiveLoop.start` | Sets running state and starts a daemon `threading.Thread`. | `ACTIVE_BACKGROUND_THREAD_START` | high | no |
-| `adapters/persistence_adapter.py:54-80` | `PersistenceAdapter.save` | Calls legacy persistence and writes a gzip/pickle sidecar. | `ACTIVE_PERSISTENCE_WRITE_PATH` | high | no |
-| `adapters/persistence_adapter.py:84-101` | `PersistenceAdapter.load` | Loads and applies legacy state, then attempts sidecar restoration. | `ACTIVE_PERSISTENCE_RESTORE_PATH` | high | no |
+| `adapters/live_loop.py:214-229` | `LiveLoop.start` | Sets running state and starts a daemon `threading.Thread`. | `ACTIVE_BACKGROUND_THREAD_START` | high | no |
+| `adapters/persistence_adapter.py:52-78` | `PersistenceAdapter.save` | Calls legacy persistence and writes a gzip/pickle sidecar. | `ACTIVE_PERSISTENCE_WRITE_PATH` | high | no |
+| `adapters/persistence_adapter.py:82-99` | `PersistenceAdapter.load` | Loads and applies legacy state, then attempts sidecar restoration. | `ACTIVE_PERSISTENCE_RESTORE_PATH` | high | no |
 | `adapters/persistence_adapter.py:130-151` | `PersistenceAdapter._load_sidecar` | Reads pickle data and clears engine history when a sidecar is found. | `ACTIVE_RESTORE_MUTATION_SITE` | high | no |
-| `core/autonomous.py:70-176` | `AutonomousLoop.step` | Advances internal state, may mutate environment, attribute agency, perform curiosity work, append history, and emit proactive speech. | `ACTIVE_AUTONOMOUS_STATE_TRANSITION_PATH` | high | no |
+| `core/autonomous.py:68-174` | `AutonomousLoop.step` | Advances internal state, may mutate environment, attribute agency, perform curiosity work, append history, and emit proactive speech. | `ACTIVE_AUTONOMOUS_STATE_TRANSITION_PATH` | high | no |
 
 ## Initial architectural findings
 
@@ -63,8 +98,8 @@ The detectors cover module main guards, callable entrypoint candidates, imports,
 - Module main guards are active entrypoints.
 - Other `main`, `repl`, `run`, `start`, `step`, stream, save, and load callables are entrypoint candidates unless manually confirmed.
 - Class-like calls are dependency-construction candidates until reviewed.
-- Attribute and subscript assignments are in-memory mutation sites.
-- Write-capable `open`, serialization, path, filesystem, and persistence-like calls are direct-write sites.
+- Attribute assignments, subscript assignments, and collection mutation methods are in-memory mutation sites.
+- Write-capable `open`, serialization, path, filesystem, persistence, and database calls are direct-write sites.
 - Thread, process, async runner, and server startup calls are execution boundaries.
 - Parse failures remain unresolved and are never silently dropped.
 
