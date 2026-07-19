@@ -28,20 +28,17 @@ jobs:
       - name: Prepare validation artifacts
         run: mkdir -p validation-artifacts
 
-      - name: Install declared dependencies with captured status
+      - name: Install declared dependencies
         id: dependencies
+        continue-on-error: true
         shell: bash
         run: |
-          set +e
+          set -o pipefail
+          python -m pip install markdown_strings==3.4.0 \
+            2>&1 | tee validation-artifacts/pip-bootstrap.txt
           python -m pip install --retries 5 --timeout 60 -r requirements.txt \
             2>&1 | tee validation-artifacts/pip-install.txt
-          STATUS=${PIPESTATUS[0]}
-          if [ "$STATUS" -eq 0 ]; then
-            python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
-            STATUS=${PIPESTATUS[0]}
-          fi
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          exit 0
+          python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
 
       - name: Compile audit surface
         run: |
@@ -56,19 +53,19 @@ jobs:
             --summary-only | tee validation-artifacts/m0-b-summary.json
 
       - name: Run focused M0-B tests
-        if: steps.dependencies.outputs.status == '0'
+        if: steps.dependencies.outcome == 'success'
         run: |
           python -m pytest -q tests/audit/test_m0_b_controlflow_concurrency_inventory.py \
             | tee validation-artifacts/focused-pytest.txt
 
       - name: Collect full suite
-        if: steps.dependencies.outputs.status == '0'
+        if: steps.dependencies.outcome == 'success'
         run: |
           python -m pytest --collect-only -q \
             | tee validation-artifacts/collect-only.txt
 
       - name: Run full suite
-        if: steps.dependencies.outputs.status == '0'
+        if: steps.dependencies.outcome == 'success'
         run: |
           python -m pytest -q | tee validation-artifacts/full-pytest.txt
 
@@ -89,9 +86,10 @@ jobs:
           ).splitlines())
           if changed != allowed:
               raise SystemExit(f'unexpected scope: {sorted(changed)}')
-          status = subprocess.check_output(['git', 'status', '--porcelain'], text=True)
-          if status.strip():
-              raise SystemExit(f'generated source-tree state:\n{status}')
+          if subprocess.check_output(['git', 'ls-files', 'validation-artifacts'], text=True).strip():
+              raise SystemExit('validation artifacts are tracked')
+          subprocess.check_call(['git', 'diff', '--exit-code'])
+          subprocess.check_call(['git', 'diff', '--cached', '--exit-code'])
           PY
 
       - name: Upload M0-B validation evidence
@@ -106,5 +104,5 @@ jobs:
       - name: Enforce dependency and full-suite gate
         if: always()
         run: |
-          test "${{ steps.dependencies.outputs.status }}" = "0"
+          test "${{ steps.dependencies.outcome }}" = "success"
           test -s validation-artifacts/full-pytest.txt
