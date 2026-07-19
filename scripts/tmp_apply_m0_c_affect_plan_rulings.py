@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 plan_path = Path("docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md")
 text = plan_path.read_text(encoding="utf-8")
@@ -24,6 +25,15 @@ for line in lines:
                     "Preserve the registry definition and any observed source value "
                     "with provenance; do not assume current persistence authority."
                 )
+            # The initial draft copied the connector display line, which includes two
+            # metadata rows before source content. Convert those citations to actual
+            # repository source lines; the AST checker independently verifies them.
+            if family in {"legacy_mutable_hormone", "read_only_affect_registry"}:
+                cells[9] = re.sub(
+                    r"(?P<prefix>(?:hormone_system\.py|adapters/affect_hormone_neural_rhythm_registry\.py):)(?P<line>\d+)",
+                    lambda match: f"{match.group('prefix')}{int(match.group('line')) - 2}",
+                    cells[9],
+                )
             line = "| " + " | ".join(cells) + " |"
     output.append(line)
 text = "\n".join(output) + "\n"
@@ -35,6 +45,12 @@ text = text.replace(
     "identity projection; new energy = clamp(axis)",
     "direct projection; new energy = clamp(axis)",
 )
+text = text.replace("hormone_system.py:126-163", "hormone_system.py:124-161")
+text = text.replace(
+    "adapters/affect_hormone_neural_rhythm_registry.py:19-69",
+    "adapters/affect_hormone_neural_rhythm_registry.py:17-67",
+)
+text = text.replace("adapters/hormone_adapter.py:31-39", "adapters/hormone_adapter.py:29-37")
 marker = "## Reviewer questions\n"
 assert marker in text
 text = text.split(marker, 1)[0] + """## Reviewer rulings
