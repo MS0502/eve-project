@@ -208,6 +208,9 @@ def test_markdown_counts_and_module_matrix_match_report(report):
     disposition = (
         REPO_ROOT / "docs/audit/M0_D_MODULE_DISPOSITION.md"
     ).read_text(encoding="utf-8")
+    matrix = disposition.split("## Complete evidence matrix", 1)[1].split(
+        "## Full REMOVE and DEPRECATE lists", 1
+    )[0]
     summary = report["summary"]
 
     assert f"tracked Python files: {summary['tracked_python_files']}" in inventory
@@ -220,7 +223,7 @@ def test_markdown_counts_and_module_matrix_match_report(report):
 
     for entry in report["module_dispositions"]:
         row_prefix = f"| `{entry['path']}` | `{entry['classification']}` |"
-        assert disposition.count(row_prefix) == 1
+        assert matrix.count(row_prefix) == 1
 
 
 def test_cli_output_is_byte_identical(tmp_path):
