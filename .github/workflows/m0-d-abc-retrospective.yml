@@ -1,0 +1,130 @@
+name: M0-D A-B-C retrospective verification
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fe10cd954bdf445400ea6aa9708dd214ed761114
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate A B C inventories and deterministic samples
+        run: |
+          mkdir -p validation-artifacts
+          python scripts/audit/m0_a_runtime_inventory.py > validation-artifacts/m0-a.json
+          python scripts/audit/m0_b_controlflow_concurrency_inventory.py > validation-artifacts/m0-b.json
+          python scripts/audit/m0_c_persistence_state_inventory.py > validation-artifacts/m0-c.json
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path('.')
+          reports = {
+              'M0-A': json.loads(Path('validation-artifacts/m0-a.json').read_text()),
+              'M0-B': json.loads(Path('validation-artifacts/m0-b.json').read_text()),
+              'M0-C': json.loads(Path('validation-artifacts/m0-c.json').read_text()),
+          }
+
+          def stable_sample(label, entries, count=3):
+              eligible = [
+                  e for e in entries
+                  if e.get('category') not in {'test_classification', 'parse_error'}
+                  and not str(e.get('path', '')).startswith('tests/')
+              ]
+              ranked = sorted(
+                  eligible,
+                  key=lambda e: hashlib.sha256(
+                      (
+                          label + '|' + str(e.get('path')) + '|' +
+                          str(e.get('line_start')) + '|' + str(e.get('category')) + '|' +
+                          str(e.get('mechanical_evidence'))
+                      ).encode('utf-8')
+                  ).hexdigest(),
+              )
+              out = []
+              for entry in ranked[:count]:
+                  path = root / entry['path']
+                  lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+                  start = max(1, int(entry['line_start']) - 2)
+                  end = min(len(lines), int(entry['line_end']) + 2)
+                  item = dict(entry)
+                  item['source_excerpt'] = [
+                      {'line': i, 'text': lines[i - 1]}
+                      for i in range(start, end + 1)
+                  ]
+                  out.append(item)
+              return out
+
+          a = reports['M0-A']
+          b = reports['M0-B']
+          c = reports['M0-C']
+
+          test_counts = {}
+          for entry in a['entries']:
+              if entry.get('category') == 'test_classification':
+                  key = entry.get('manual_classification')
+                  test_counts[key] = test_counts.get(key, 0) + 1
+
+          broad = silent = silent_broad = 0
+          for entry in b['entries']:
+              if entry.get('category') != 'exception':
+                  continue
+              details = entry.get('details') or {}
+              is_broad = bool(details.get('broad'))
+              is_silent = bool(details.get('silent'))
+              broad += is_broad
+              silent += is_silent
+              silent_broad += is_broad and is_silent
+
+          state_items = sum(e.get('category') == 'state_domain' for e in c['entries'])
+          result = {
+              'baseline_sha': 'fe10cd954bdf445400ea6aa9708dd214ed761114',
+              'm0_a': {
+                  'test_classification_counts': dict(sorted(test_counts.items())),
+                  'unresolved_entries': a['summary']['unresolved_entries'],
+                  'parse_errors': a['summary']['parse_errors'],
+                  'samples': stable_sample('M0-A', a['entries']),
+              },
+              'm0_b': {
+                  'broad_exception_handlers': broad,
+                  'silent_exception_handlers': silent,
+                  'silent_broad_exception_handlers': silent_broad,
+                  'bypass_candidates': sum(e.get('category') == 'bypass' for e in b['entries']),
+                  'samples': stable_sample('M0-B', b['entries']),
+              },
+              'm0_c': {
+                  'persistence_intended_state_items': state_items,
+                  'persistence_io_items': sum(e.get('category') == 'persistence_io' for e in c['entries']),
+                  'hormone_state_items': sum(e.get('category') == 'hormone_state' for e in c['entries']),
+                  'drive_state_items': sum(e.get('category') == 'drive_state' for e in c['entries']),
+                  'hormone_drive_bridge_candidates': sum(e.get('category') == 'hormone_drive_bridge' for e in c['entries']),
+                  'samples': stable_sample('M0-C', c['entries']),
+              },
+          }
+          Path('validation-artifacts/abc-retrospective.json').write_text(
+              json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+          PY
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-d-abc-retrospective
+          path: validation-artifacts/*
+          retention-days: 30
