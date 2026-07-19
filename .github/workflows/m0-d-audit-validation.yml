@@ -1,8 +1,8 @@
 name: Refine EVE M0-D audit once
 
 on:
-  push:
-    branches: [claude/eve-m0-d-disposition-audit]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
