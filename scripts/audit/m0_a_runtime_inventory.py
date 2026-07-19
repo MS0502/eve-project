@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""M0-A runtime, dependency, mutation, and test inventory.
+"""Generate the EVE M0-A runtime, dependency, mutation, and test inventory.
 
-The audit is read-only by default. It scans tracked Python files, emits a
-canonical JSON document to stdout, and never commits or creates generated
-artifacts. Operators may use --output for an ephemeral CI artifact only.
+The command is read-only unless ``--output`` is explicitly supplied. JSON is
+intended for stdout or an ephemeral CI artifact and must not be committed.
 """
 from __future__ import annotations
 
@@ -18,6 +17,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 SCHEMA_VERSION = "1.0.0-m0-a"
+
 EXCLUDED_PARTS = {
     ".git",
     ".hg",
@@ -32,6 +32,7 @@ EXCLUDED_PARTS = {
     "node_modules",
     "venv",
 }
+
 TOP_LEVEL_ENTRYPOINT_NAMES = {
     "main",
     "repl",
@@ -42,6 +43,7 @@ TOP_LEVEL_ENTRYPOINT_NAMES = {
     "build_full_engine",
     "build_minimal_engine",
 }
+
 METHOD_ENTRYPOINT_NAMES = {
     "run",
     "start",
@@ -53,6 +55,7 @@ METHOD_ENTRYPOINT_NAMES = {
     "save",
     "load",
 }
+
 CONSTRUCTOR_SUFFIXES = (
     "Adapter",
     "Client",
@@ -69,27 +72,18 @@ CONSTRUCTOR_SUFFIXES = (
     "Tracker",
     "Wrapper",
 )
-WRITE_CALL_SUFFIXES = {
-    "Path.write_bytes",
-    "Path.write_text",
-    "gzip.open",
+
+EXACT_WRITE_TARGETS = {
     "json.dump",
-    "os.makedirs",
-    "os.mkdir",
-    "os.remove",
-    "os.rename",
-    "os.replace",
-    "os.rmdir",
-    "os.unlink",
     "pickle.dump",
     "shutil.copy",
     "shutil.copy2",
     "shutil.copyfile",
     "shutil.copytree",
     "shutil.move",
-    "sqlite3.connect",
     "yaml.dump",
 }
+
 WRITE_METHOD_NAMES = {
     "commit",
     "dump",
@@ -105,8 +99,10 @@ WRITE_METHOD_NAMES = {
     "write_bytes",
     "write_text",
 }
+
 DB_WRITE_METHOD_NAMES = {"execute", "executemany"}
 DB_RECEIVER_HINTS = ("conn", "connection", "cursor", "database", "db", "sqlite")
+
 MUTATION_METHOD_NAMES = {
     "add",
     "append",
@@ -121,13 +117,16 @@ MUTATION_METHOD_NAMES = {
     "setdefault",
     "update",
 }
-EXECUTION_BOUNDARY_CALLS = {
+
+EXECUTION_TARGETS = {
     "asyncio.run",
     "multiprocessing.Process",
     "subprocess.Popen",
     "threading.Thread",
     "uvicorn.run",
 }
+EXECUTION_LEAVES = {"Process", "Popen", "Thread"}
+
 LEGACY_AUTHORITY_MARKERS = (
     "docs/EVE_DESIGN_v3.md",
     "docs/EVE_DESIGN_v3_1.md",
@@ -217,6 +216,23 @@ def _constant_string(node: ast.AST | None) -> str | None:
     return None
 
 
+def _is_main_guard(node: ast.If) -> bool:
+    test = node.test
+    if not isinstance(test, ast.Compare):
+        return False
+    if len(test.ops) != 1 or len(test.comparators) != 1:
+        return False
+    if not isinstance(test.ops[0], ast.Eq):
+        return False
+    left_name = _dotted_name(test.left)
+    right_string = _constant_string(test.comparators[0])
+    right_name = _dotted_name(test.comparators[0])
+    left_string = _constant_string(test.left)
+    return (left_name == "__name__" and right_string == "__main__") or (
+        right_name == "__name__" and left_string == "__main__"
+    )
+
+
 def _target_kind(node: ast.AST) -> str | None:
     if isinstance(node, ast.Attribute):
         return "attribute_assignment"
@@ -225,29 +241,21 @@ def _target_kind(node: ast.AST) -> str | None:
     if isinstance(node, (ast.Tuple, ast.List)):
         kinds = {_target_kind(item) for item in node.elts}
         kinds.discard(None)
-        if kinds:
-            return "+".join(sorted(kinds))
+        return "+".join(sorted(kinds)) if kinds else None
     return None
 
 
-def _is_main_guard(node: ast.If) -> bool:
-    test = node.test
-    if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
-        return False
-    if not isinstance(test.ops[0], ast.Eq):
-        return False
-    left = _dotted_name(test.left)
-    right = _constant_string(test.comparators[0])
-    reverse_left = _dotted_name(test.comparators[0])
-    reverse_right = _constant_string(test.left)
-    return (left == "__name__" and right == "__main__") or (
-        reverse_left == "__name__" and reverse_right == "__main__"
+def _looks_like_constructor(target: str) -> bool:
+    leaf = target.rsplit(".", 1)[-1]
+    return bool(leaf) and (
+        leaf[0].isupper() or any(leaf.endswith(suffix) for suffix in CONSTRUCTOR_SUFFIXES)
     )
 
 
-def _write_mode_from_open(call: ast.Call) -> str | None:
+def _open_write_mode(call: ast.Call) -> str | None:
     target = _dotted_name(call.func)
-    if target not in {"open", "builtins.open", "gzip.open", "Path.open"} and not target.endswith(".open"):
+    leaf = target.rsplit(".", 1)[-1] if target else ""
+    if leaf != "open":
         return None
     mode_node: ast.AST | None = call.args[1] if len(call.args) >= 2 else None
     for keyword in call.keywords:
@@ -255,11 +263,6 @@ def _write_mode_from_open(call: ast.Call) -> str | None:
             mode_node = keyword.value
     mode = _constant_string(mode_node) or "r"
     return mode if any(flag in mode for flag in "wax+") else None
-
-
-def _looks_like_constructor(target: str) -> bool:
-    leaf = target.rsplit(".", 1)[-1]
-    return bool(leaf) and (leaf[0].isupper() or leaf.endswith(CONSTRUCTOR_SUFFIXES))
 
 
 def _git_tracked_python_files(root: Path) -> list[Path]:
@@ -275,8 +278,9 @@ def _git_tracked_python_files(root: Path) -> list[Path]:
         if not value:
             continue
         relative = Path(os.fsdecode(value))
-        if not any(part in EXCLUDED_PARTS for part in relative.parts):
-            paths.append(root / relative)
+        if any(part in EXCLUDED_PARTS for part in relative.parts):
+            continue
+        paths.append(root / relative)
     return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
 
 
@@ -296,10 +300,7 @@ def _local_import_roots(root: Path, paths: Iterable[Path]) -> set[str]:
     roots: set[str] = set()
     for path in paths:
         relative = path.relative_to(root)
-        if len(relative.parts) == 1:
-            roots.add(relative.stem)
-        else:
-            roots.add(relative.parts[0])
+        roots.add(relative.stem if len(relative.parts) == 1 else relative.parts[0])
     return roots
 
 
@@ -352,7 +353,10 @@ class InventoryVisitor(ast.NodeVisitor):
         details: dict[str, Any] | None = None,
     ) -> None:
         classification, confidence, unresolved = _classification_for(
-            category, self.path, self.callable_name, evidence
+            category,
+            self.path,
+            self.callable_name,
+            evidence,
         )
         finding: dict[str, Any] = {
             "category": category,
@@ -403,9 +407,12 @@ class InventoryVisitor(ast.NodeVisitor):
 
     def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         is_top_level = not self.scope
-        if (is_top_level and node.name in TOP_LEVEL_ENTRYPOINT_NAMES) or (
+        is_entrypoint = (
+            is_top_level and node.name in TOP_LEVEL_ENTRYPOINT_NAMES
+        ) or (
             not is_top_level and node.name in METHOD_ENTRYPOINT_NAMES
-        ):
+        )
+        if is_entrypoint:
             self.scope.append(node.name)
             self.add(
                 "entrypoint",
@@ -442,6 +449,9 @@ class InventoryVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         target = _dotted_name(node.func)
+        leaf = target.rsplit(".", 1)[-1] if target else ""
+        receiver = target.rsplit(".", 1)[0].lower() if "." in target else ""
+
         if target and _looks_like_constructor(target):
             self.add(
                 "dependency_construction",
@@ -451,37 +461,36 @@ class InventoryVisitor(ast.NodeVisitor):
                 details={"target": target},
             )
 
-        write_mode = _write_mode_from_open(node)
-        if write_mode is not None:
+        mode = _open_write_mode(node)
+        db_write = leaf in DB_WRITE_METHOD_NAMES and any(
+            hint in receiver for hint in DB_RECEIVER_HINTS
+        )
+        if mode is not None:
             self.add(
                 "direct_write",
                 node,
-                f"open_write_mode={write_mode}",
+                f"open_write_mode={mode}",
                 "ast.Call open mode",
-                details={"target": target, "mode": write_mode},
+                details={"target": target, "mode": mode},
             )
-        elif target in WRITE_CALL_SUFFIXES or any(target.endswith(f".{suffix}") for suffix in WRITE_CALL_SUFFIXES):
+        elif target in EXACT_WRITE_TARGETS or leaf in WRITE_METHOD_NAMES or db_write:
             self.add(
                 "direct_write",
                 node,
                 f"write_call={target}",
-                "ast.Call exact write target",
+                "ast.Call write target",
+                details={"target": target, "database_receiver_match": db_write},
+            )
+        elif leaf in MUTATION_METHOD_NAMES:
+            self.add(
+                "mutation",
+                node,
+                f"mutation_method={target}",
+                "ast.Call in-memory mutation method heuristic",
                 details={"target": target},
             )
-        else:
-            leaf = target.rsplit(".", 1)[-1] if target else ""
-            if leaf in WRITE_METHOD_NAMES:
-                self.add(
-                    "direct_write",
-                    node,
-                    f"write_like_method={target}",
-                    "ast.Call write method heuristic",
-                    details={"target": target},
-                )
 
-        if target in EXECUTION_BOUNDARY_CALLS or any(
-            target.endswith(f".{name}") for name in EXECUTION_BOUNDARY_CALLS
-        ):
+        if target in EXECUTION_TARGETS or leaf in EXECUTION_LEAVES:
             self.add(
                 "execution_boundary",
                 node,
@@ -491,17 +500,22 @@ class InventoryVisitor(ast.NodeVisitor):
             )
         self.generic_visit(node)
 
-    def _record_assignment_targets(self, node: ast.AST, targets: Iterable[ast.AST]) -> None:
+    def _record_assignment_targets(
+        self,
+        node: ast.AST,
+        targets: Iterable[ast.AST],
+    ) -> None:
         for target in targets:
             kind = _target_kind(target)
-            if kind:
-                self.add(
-                    "mutation",
-                    node,
-                    kind,
-                    type(node).__name__,
-                    details={"target": _dotted_name(target)},
-                )
+            if kind is None:
+                continue
+            self.add(
+                "mutation",
+                node,
+                kind,
+                type(node).__name__,
+                details={"target": _dotted_name(target)},
+            )
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self._record_assignment_targets(node, node.targets)
@@ -520,7 +534,10 @@ class InventoryVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def _first_matching_line(source: str, markers: Iterable[str]) -> tuple[int, str] | None:
+def _first_matching_line(
+    source: str,
+    markers: Iterable[str],
+) -> tuple[int, str] | None:
     for line_number, line in enumerate(source.splitlines(), start=1):
         for marker in markers:
             if marker in line:
@@ -530,24 +547,26 @@ def _first_matching_line(source: str, markers: Iterable[str]) -> tuple[int, str]
 
 def classify_test(path: str, source: str) -> dict[str, Any]:
     legacy_match = _first_matching_line(source, LEGACY_AUTHORITY_MARKERS)
-    if legacy_match is not None:
-        line, marker = legacy_match
-        classification = "REWRITE"
-        reason = (
-            "The test references a superseded v3/v3.1 authority document and must be "
-            "rewritten against active v4 authority without weakening the behavioral assertion."
-        )
-        confidence = "high"
-        evidence = f"superseded_authority_reference={marker}"
-    else:
+    if legacy_match is None:
         line = 1
         classification = "KEEP"
         reason = (
-            "Conservative M0-A preservation rule: retain executable behavioral evidence until a "
-            "later milestone supplies file:line evidence for rewrite or retirement."
+            "Conservative M0-A preservation rule: retain executable behavioral "
+            "evidence until a later milestone supplies file:line evidence for "
+            "rewrite or retirement."
         )
         confidence = "medium"
         evidence = "no_superseded_authority_reference_detected"
+    else:
+        line, marker = legacy_match
+        classification = "REWRITE"
+        reason = (
+            "The test references a superseded v3/v3.1 authority document and "
+            "must be rewritten against active v4 authority without weakening "
+            "the behavioral assertion."
+        )
+        confidence = "high"
+        evidence = f"superseded_authority_reference={marker}"
     return {
         "category": "test_classification",
         "path": path,
@@ -565,10 +584,10 @@ def classify_test(path: str, source: str) -> dict[str, Any]:
 
 
 def _is_test_path(relative: Path) -> bool:
-    name = relative.name
-    return (
-        "tests" in relative.parts
-        and (name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py")
+    return "tests" in relative.parts and (
+        relative.name.startswith("test_")
+        or relative.name.endswith("_test.py")
+        or relative.name == "conftest.py"
     )
 
 
@@ -587,14 +606,19 @@ def audit_repository(root: Path) -> dict[str, Any]:
             source = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             source = path.read_text(encoding="utf-8", errors="replace")
+
         if _is_test_path(relative):
             tests.append(classify_test(relative_text, source))
+
         try:
             tree = ast.parse(source, filename=relative_text, type_comments=True)
         except (SyntaxError, ValueError) as exc:
             line = int(getattr(exc, "lineno", 1) or 1)
             classification, confidence, unresolved = _classification_for(
-                "parse_error", relative_text, "<module>", str(exc)
+                "parse_error",
+                relative_text,
+                "<module>",
+                str(exc),
             )
             parse_errors.append(
                 {
@@ -612,12 +636,13 @@ def audit_repository(root: Path) -> dict[str, Any]:
                 }
             )
             continue
+
         visitor = InventoryVisitor(relative_text, local_roots)
         visitor.visit(tree)
         findings.extend(visitor.findings)
 
-    all_entries = findings + tests + parse_errors
-    all_entries.sort(
+    entries = findings + tests + parse_errors
+    entries.sort(
         key=lambda item: (
             item["path"],
             int(item["line_start"]),
@@ -625,9 +650,10 @@ def audit_repository(root: Path) -> dict[str, Any]:
             item["mechanical_evidence"],
         )
     )
-    category_counts = Counter(entry["category"] for entry in all_entries)
-    classification_counts = Counter(entry["manual_classification"] for entry in all_entries)
-    unresolved_count = sum(bool(entry["unresolved"]) for entry in all_entries)
+    category_counts = Counter(entry["category"] for entry in entries)
+    classification_counts = Counter(
+        entry["manual_classification"] for entry in entries
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "root": root.as_posix(),
@@ -639,20 +665,24 @@ def audit_repository(root: Path) -> dict[str, Any]:
         },
         "summary": {
             "python_files_scanned": len(paths),
-            "entries": len(all_entries),
+            "entries": len(entries),
             "test_files_classified": len(tests),
             "parse_errors": len(parse_errors),
-            "unresolved_entries": unresolved_count,
+            "unresolved_entries": sum(bool(entry["unresolved"]) for entry in entries),
             "category_counts": dict(sorted(category_counts.items())),
             "classification_counts": dict(sorted(classification_counts.items())),
         },
-        "entries": all_entries,
+        "entries": entries,
     }
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=Path(__file__).resolve().parents[2],
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--pretty", action="store_true")
     parser.add_argument("--summary-only", action="store_true")
@@ -671,11 +701,11 @@ def main(argv: list[str] | None = None) -> int:
         indent=2 if args.pretty else None,
         separators=None if args.pretty else (",", ":"),
     ) + "\n"
-    if args.output is not None:
+    if args.output is None:
+        sys.stdout.write(text)
+    else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text, encoding="utf-8")
-    else:
-        sys.stdout.write(text)
     if args.fail_on_parse_error and report["summary"]["parse_errors"]:
         return 1
     return 0
