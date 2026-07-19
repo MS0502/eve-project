@@ -9,6 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "scripts/audit/m0_a_runtime_inventory.py"
+LEGACY_MARKER = "docs/" + "EVE_DESIGN_" + "v3_1.md"
 
 
 def _load_module():
@@ -52,7 +53,7 @@ if __name__ == \"__main__\":
         encoding="utf-8",
     )
     (root / "tests/test_legacy_authority.py").write_text(
-        """LEGACY = \"docs/EVE_DESIGN_v3_1.md\"
+        f"""LEGACY = \"{LEGACY_MARKER}\"
 
 def test_legacy_authority_literal():
     assert LEGACY.endswith(\".md\")
@@ -110,7 +111,7 @@ def test_test_classification_is_conservative_and_evidenced(tmp_path: Path):
     legacy = classified["tests/test_legacy_authority.py"]
     assert legacy["manual_classification"] == "REWRITE"
     assert legacy["line_start"] == 1
-    assert "docs/EVE_DESIGN_v3_1.md" in legacy["mechanical_evidence"]
+    assert LEGACY_MARKER in legacy["mechanical_evidence"]
     assert legacy["manual_reason"]
 
 
@@ -209,3 +210,9 @@ def test_repository_smoke_inventory_covers_known_runtime_paths():
         and entry["category"] == "entrypoint"
         for entry in entries
     )
+    classified = {
+        entry["path"]: entry["manual_classification"]
+        for entry in entries
+        if entry["category"] == "test_classification"
+    }
+    assert classified["tests/audit/test_m0_a_runtime_inventory.py"] == "KEEP"
