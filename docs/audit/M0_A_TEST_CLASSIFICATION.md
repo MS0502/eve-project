@@ -10,6 +10,26 @@ python scripts/audit/m0_a_runtime_inventory.py --pretty
 
 Generated JSON is an ephemeral audit artifact and must not be committed.
 
+## Validated classification result
+
+Independent GitHub Actions run `29674646193` validated head `2534241e61a848acee7448b2bd4280abbad60408`.
+
+| Classification | Test files |
+|---|---:|
+| `KEEP` | 223 |
+| `REWRITE` | 0 |
+| `RETIRE` | 0 |
+
+Validation results:
+
+```text
+focused M0-A tests: 5 passed in 2.59s
+full collection: 2557 tests collected in 5.77s
+full suite: 2557 passed in 25.36s
+```
+
+The absence of current `REWRITE` or `RETIRE` entries is an evidence result, not a permanent guarantee. The rerunnable classifier continues to detect direct superseded-authority references, and later M0 stages may reclassify individual tests only with exact file:line evidence and a reason.
+
 ## Allowed classifications
 
 ### KEEP
