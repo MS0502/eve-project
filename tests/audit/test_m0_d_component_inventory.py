@@ -174,6 +174,33 @@ def test_m0_c_migration_plan_gap_is_prominent(report):
     assert conflicts["affect-migration-plan-missing"]["unresolved"] is True
 
 
+def test_hormone_coupling_defaults_to_wrap_not_automatic_rewrite():
+    module = _load_module()
+    disposition, confidence, unresolved, reason = module._module_disposition(
+        "example_runtime_module.py",
+        True,
+        None,
+        [],
+        [{"category": "hormone_state", "classification": "ACTIVE_RUNTIME_STATE"}],
+    )
+    assert disposition == "WRAP"
+    assert confidence == "medium"
+    assert unresolved is True
+    assert "compatibility projection" in reason
+
+
+def test_adapter_path_does_not_imply_learning_taxonomy():
+    module = _load_module()
+    assert module._taxonomy_for(
+        "adapters/activation_adapter.py",
+        "ActivationAdapter.tick",
+    ) == ["no-v4-equivalent"]
+    assert module._taxonomy_for(
+        "adapters/continual_adapter.py",
+        "ContinualAdapter.tick",
+    ) == ["Learning"]
+
+
 def test_cli_output_is_byte_identical(tmp_path):
     first = tmp_path / "d1.json"
     second = tmp_path / "d2.json"
