@@ -11,6 +11,7 @@ import argparse
 import ast
 import json
 import os
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -576,9 +577,13 @@ class ControlFlowVisitor(ast.NodeVisitor):
                 external_order=external_order,
             )
 
-        bypass_hits = {
-            token for token in BYPASS_TOKENS if token in lower_target.replace("-", "_")
-        }
+        target_tokens = set(
+            re.findall(
+                r"[a-z0-9]+",
+                lower_target.replace("-", "_").replace(".", "_"),
+            )
+        )
+        bypass_hits = target_tokens & BYPASS_TOKENS
         keyword_hits: list[str] = []
         for keyword in node.keywords:
             if keyword.arg and keyword.arg.lower() in BYPASS_TOKENS:

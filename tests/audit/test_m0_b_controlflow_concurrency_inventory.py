@@ -202,3 +202,23 @@ def test_repository_smoke_covers_known_runtime_paths():
         and entry["category"] == "output"
         for entry in entries
     )
+
+
+def test_bypass_detection_uses_symbol_tokens(tmp_path: Path):
+    module = _load_module()
+    (tmp_path / "runtime.py").write_text(
+        "def run(enforcement_rows, teacher, safety):\n"
+        "    enforcement_rows.append(1)\n"
+        "    teacher.reinforce_if_no_correction()\n"
+        "    safety.force_alternative()\n",
+        encoding="utf-8",
+    )
+    report = module.audit_repository(tmp_path)
+    evidence = {
+        entry["mechanical_evidence"]
+        for entry in report["entries"]
+        if entry["category"] == "bypass"
+    }
+    assert "bypass_call=safety.force_alternative" in evidence
+    assert "bypass_call=enforcement_rows.append" not in evidence
+    assert "bypass_call=teacher.reinforce_if_no_correction" not in evidence
