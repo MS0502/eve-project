@@ -3,6 +3,8 @@ name: Validate EVE M0-A audit
 on:
   push:
     branches: [audit/m0-a-runtime-inventory]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
