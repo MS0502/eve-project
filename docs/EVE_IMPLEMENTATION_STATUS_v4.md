@@ -1,23 +1,36 @@
 # EVE v4 Implementation Status
 
 Active constitution: EVE v4.0
-Constitution status: provisional pending M0
+Constitution status: provisional pending completion and reviewer ruling of M0
 Previous v3/v3.1 documents: historical reference only
-Frozen work: all open implementation PRs
-Next milestone: M0-A runtime entrypoint, mutation, import, and test audit
-Required next baseline: exact main SHA after constitution merge
-Planned revision: v4.1 after evidence from M0-A through M0-D
+Frozen work: open implementation PRs #109, #97, #86, #84, #82, #11, #7, #4, and #1
+Completed audit milestones: M0-A, M0-B, and M0-C merged
+Current milestone: M0-D component inventory, life-loop assessment, module disposition, integrated conclusions, and frozen-PR recommendations
+M0-D baseline: `fe10cd954bdf445400ea6aa9708dd214ed761114`
+Planned revision: v4.1 only after M0-D and reviewer rulings
 
-EVE v4.0 is provisional pending M0. It may be revised to v4.1 after evidence from M0. Evidence-based revision is part of the process and is not a project failure.
+EVE v4.0 remains provisional. Evidence-based revision to v4.1 is part of the process and is not a project failure.
 
 ## Current state
 
-This rebaseline is documentation and governance only. The v4 runtime is not claimed as implemented. No production persistence, enforcement, runtime mapping default, model activation, vector loading, database, checkpoint, or generated artifact is enabled here.
+The v4 runtime is not claimed as implemented. M0-A, M0-B, and M0-C are evidence-only audits. M0-D is also audit and recommendation only. No production persistence, enforcement, runtime-mapping default, model activation, vector loading, database, checkpoint, module retirement, or generated artifact is enabled by these milestones.
+
+## Merged M0 evidence
+
+- M0-A inventories runtime entrypoints, dependency construction, mutation, direct writes, and tests.
+- M0-B inventories gates, bypass candidates, outputs, exceptions, clocks, queues, concurrency, and nondeterminism.
+- M0-C inventories persistence and persistence-intended state, including hormone/affect, drive/need, and hormone-to-drive bridge candidates.
+
+## Open M0 governance defect
+
+EVE v4 requires M0 to propose migration from the current hormone architecture toward core drives, appraisal, and derived emotion while preserving historical memory and identity continuity. The merged M0-C document contains an inventory of hormone, drive, and bridge candidates but no concrete migration plan, compatibility projection, persistence/event migration, rollback design, or acceptance criteria.
+
+M0-D records this as `M0_C_REQUIRED_MIGRATION_PLAN_ABSENT`. It remains unresolved for reviewer ruling and a separate scope-compliant correction. M0-D does not silently fill the gap or change affect implementation.
 
 ## Freeze
 
-All existing implementation work remains frozen through M0, including open PRs #109, #97, #86, #84, #82, #11, #7, #4, and #1. Do not modify, rebase, merge, extend, or reuse those branches during M0.
+The frozen implementation PRs remain untouched during M0-D. M0-D may recommend a future disposition but must not close, comment on, rebase, modify, merge, or reuse those branches. Any actual close action occurs separately after M0-D merge and reviewer approval.
 
-## Next milestone
+## Current next step
 
-M0-A must audit runtime entrypoints, imports and dependency construction, mutation and direct-write sites, and test inventory with KEEP/RETIRE/REWRITE classification. The audit must separate mechanical evidence from manual classification, produce rerunnable evidence, and avoid runtime activation.
+Complete M0-D static analysis and independent exact-head validation. Review all unresolved rulings, the complete `REMOVE` and `DEPRECATE` recommendations, and the `v4.0 assumptions vs runtime reality` conflict list before any Ready or merge decision. v4.1 constitutional drafting remains a separate human-reviewed milestone.
