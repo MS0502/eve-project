@@ -262,7 +262,12 @@ class ComponentVisitor(ast.NodeVisitor):
 
     def _life_candidate(self, node: ast.AST, name: str, kind: str) -> tuple[str, int] | None:
         tokens = _symbol_tokens(name)
-        if not (tokens & LOOP_NAME_TOKENS or name.lower() in {"run", "_run", "step", "tick"}):
+        context_tokens = _symbol_tokens(f"{self.path} {self.symbol}")
+        generic_step = name.lower() in {"run", "_run", "step"}
+        is_candidate = bool(tokens & LOOP_NAME_TOKENS) or name.lower() == "tick" or (
+            generic_step and bool(context_tokens & LOOP_NAME_TOKENS)
+        )
+        if not is_candidate:
             return None
         key = (self.symbol, int(getattr(node, "lineno", 1)))
         self.life_candidates.setdefault(key, {
@@ -418,28 +423,27 @@ def _reachable_modules(module_paths: dict[str, str], imports_by_path: dict[str, 
 
 
 def _taxonomy_for(path: str, symbol: str) -> list[str]:
-    value = f"{path} {symbol}".lower()
+    tokens = _symbol_tokens(f"{path} {symbol}")
     categories: list[str] = []
-    if any(token in value for token in ("hormone", "allostat", "homeostat", "vital", "live_loop")):
+    if tokens & {"hormone", "allostatic", "allostasis", "homeostatic", "homeostasis", "vital"} or {"live", "loop"} <= tokens:
         categories.append("Vital")
-    if any(token in value for token in ("dmn", "reason", "cognit", "think", "workspace")):
+    if tokens & {"dmn", "reason", "reasoning", "cognitive", "cognition", "think", "workspace", "inference"}:
         categories.append("Cognitive")
-    if any(token in value for token in ("goal", "intent", "plan", "urge", "need")):
+    if tokens & {"goal", "intent", "plan", "planning", "urge", "need"}:
         categories.append("Goal")
-    if any(token in value for token in ("autonomous", "activity", "action", "outing", "live_loop")):
+    if tokens & {"autonomous", "autonomy", "activity", "action", "outing"} or {"live", "loop"} <= tokens:
         categories.append("Activity")
-    if any(token in value for token in ("learn", "adapt", "train", "curiosity", "stabil")):
+    if tokens & {"learn", "learning", "adaptive", "training", "train", "curiosity", "stabilize", "continual", "corpus"}:
         categories.append("Learning")
-    if any(token in value for token in ("memory", "consolid", "replay")):
+    if tokens & {"memory", "consolidate", "consolidation", "replay", "recall"}:
         categories.append("Memory")
-    if any(token in value for token in ("social", "relationship", "user_presence")):
+    if tokens & {"social", "relationship", "presence"}:
         categories.append("Social")
-    if any(token in value for token in ("speech", "proactive", "spontaneous", "stream", "expression", "dmn")):
+    if tokens & {"speech", "proactive", "spontaneous", "stream", "streaming", "expression", "generator", "dmn"}:
         categories.append("Expression")
     if not categories:
         categories.append("no-v4-equivalent")
     return [category for category in LOOP_TAXONOMY_ORDER if category in categories]
-
 
 def _entry_ref(entry: dict[str, Any], document: str) -> dict[str, Any]:
     return {"document": document, "path": entry.get("path"), "line_start": entry.get("line_start"), "line_end": entry.get("line_end"), "symbol": entry.get("callable", entry.get("symbol", "<module>")), "detection": entry.get("detector", entry.get("detection")), "evidence": entry.get("mechanical_evidence", entry.get("evidence")), "classification": entry.get("manual_classification", entry.get("classification"))}
@@ -496,7 +500,7 @@ def _module_disposition(path: str, reachable: bool, parse_error: dict[str, Any] 
     if reachable and (has_concurrency or has_external_boundary or has_persistence):
         return "WRAP", "medium", True, "Reachable module crosses persistence, concurrency, device/network, or observable-effect boundaries; retain behavior only behind explicit v4 capability, lifecycle, provenance, and rollback wrappers pending M1 design."
     if reachable and has_hormone:
-        return "REWRITE", "medium", True, "Reachable module is coupled to legacy hormone/affect state; v4 requires drive/appraisal/derived-emotion semantics and a continuity-preserving migration contract."
+        return "WRAP", "medium", True, "Reachable module is coupled to legacy hormone/affect state; preserve behavior behind an explicit compatibility projection until the required drive/appraisal/derived-emotion migration contract is reviewed."
     if reachable and (has_adaptive or has_numeric):
         return "EXPERIMENTAL", "medium", True, "Reachable learned or numeric representation component lacks a complete v4 bounded-subsystem provenance/evaluation/version/rollback decision; preserve as experimental evidence with default no-load."
     if reachable or has_active:
