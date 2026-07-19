@@ -15,145 +15,27 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      BASE_SHA: 28ec113a8ee371fdc6ac13341c0d70e00db26ce4
       EXPECTED_HEAD: f1f58ecf929287ca46273078baf8e09537455cdc
       TARGET_BRANCH: claude/eve-m0-c-affect-migration-plan
+      GH_TOKEN: ${{ github.token }}
       PIP_INDEX_URL: https://pypi.org/simple
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
-      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout exact task branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
-
-      - name: Verify exact pre-ruling head
+      - name: Verify and load temporary validators
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           test -z "$(git status --short)"
-
+          git fetch origin main
+          git show origin/main:scripts/tmp_apply_m0_c_affect_plan_rulings.py > /tmp/apply.py
+          git show origin/main:scripts/tmp_validate_m0_c_affect_plan.py > /tmp/validate.py
       - name: Apply reviewer rulings
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          plan_path = Path('docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md')
-          text = plan_path.read_text(encoding='utf-8')
-          lines = text.splitlines()
-          drop_axes = {'estrogen', 'testosterone', 'prolactin', 'progesterone'}
-          output = []
-          for line in lines:
-              if line.startswith('| `'):
-                  cells = [cell.strip() for cell in line.strip('|').split('|')]
-                  if len(cells) == 12:
-                      axis = cells[0].strip('`')
-                      family = cells[1].strip('`')
-                      if axis in drop_axes:
-                          cells[2] = '`PROPOSED-DROP`'
-                          cells[3] = '—'
-                          cells[4] = '—'
-                          cells[5] = '—'
-                          cells[6] = '—'
-                          cells[11] = '—'
-                      if family == 'read_only_affect_registry':
-                          cells[10] = 'Preserve the registry definition and any observed source value with provenance; do not assume current persistence authority.'
-                      line = '| ' + ' | '.join(cells) + ' |'
-              output.append(line)
-          text = '\n'.join(output) + '\n'
-          text = text.replace(
-              'Status: design-only migration contract and reviewer input.',
-              'Status: reviewer-ruled design-only migration contract.',
-          )
-          text = text.replace(
-              'identity projection; new energy = clamp(axis)',
-              'direct projection; new energy = clamp(axis)',
-          )
-          marker = '## Reviewer questions\n'
-          assert marker in text
-          text = text.split(marker, 1)[0] + '''## Reviewer rulings
-
-The reviewer ruled all four initially unresolved endocrine-labelled axes as `PROPOSED-DROP`:
-
-- `estrogen`
-- `testosterone`
-- `prolactin`
-- `progesterone`
-
-Reason: the current scalar labels do not provide sufficiently specific, EVE-grounded evidence for stable psychological or behavioral projection, and direct mappings would risk importing gendered, dominance, or caregiving stereotypes. Their original values, baselines, tier/phase metadata where present, and provenance remain preserved for historical replay. They receive no future drive, appraisal, emotion, speech, goal, identity, or agency authority.
-
-Final mapping totals:
-
-```text
-MAPPED: 59
-PROPOSED-DROP: 4
-UNRESOLVED: 0
-TOTAL: 63
-```
-'''
-          plan_path.write_text(text, encoding='utf-8')
-
-          status_path = Path('docs/EVE_IMPLEMENTATION_STATUS_v4.md')
-          status = status_path.read_text(encoding='utf-8')
-          status = status.replace(
-              'Constitution status: provisional pending completion and reviewer ruling of the Affect Migration Plan, then human-reviewed v4.1 revision',
-              'Constitution status: provisional pending merge of the reviewer-ruled Affect Migration Plan, then human-reviewed v4.1 revision',
-          )
-          status = status.replace(
-              'Current milestone: M0-C Supplement — Affect Migration Plan',
-              'Current milestone: reviewer-ruled M0-C Supplement — Affect Migration Plan',
-          )
-          status = status.replace(
-              'Complete the deterministic checker and reviewer rulings for every found axis, independently validate the exact final head, merge the four-file Affect Migration Plan supplement, and then begin the human-reviewed v4.1 triangular revision using the seven conflict inputs.',
-              'Independently validate the exact reviewer-ruled head, merge the four-file Affect Migration Plan supplement, and then begin the human-reviewed v4.1 triangular revision using the seven conflict inputs.',
-          )
-          status_path.write_text(status, encoding='utf-8')
-          PY
-
-      - name: Install SHA-pinned compatibility dependency
-        run: |
-          python - <<'PY'
-          import hashlib
-          import pathlib
-          import subprocess
-          import sys
-          import urllib.request
-
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
-          PY
-
-      - name: Install declared dependencies
-        run: |
-          python -m pip install -r requirements.txt
-          python -m pip check
-
-      - name: Compile and deterministic audit
-        run: |
-          python -m compileall -q scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py
-          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-1.json
-          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-2.json
-          diff -u /tmp/affect-plan-1.json /tmp/affect-plan-2.json
-          python scripts/audit/m0_c_affect_migration_check.py --fail-on-unresolved --summary-only | tee /tmp/summary.json
-
-      - name: Run focused and full tests
-        run: |
-          python -m pytest -q tests/audit/test_m0_c_affect_migration_check.py | tee /tmp/focused.txt
-          python -m pytest --collect-only -q | tee /tmp/collect.txt
-          python -m pytest -q | tee /tmp/full.txt
-
-      - name: Verify exact four-file scope
-        run: |
-          changed="$(git diff --name-only "$BASE_SHA"...HEAD | sort)"
-          expected="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py | sort)"
-          test "$changed" = "$expected"
-          test "$(git diff --name-only | sort)" = "$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md | sort)"
-          git diff --check
-
+        run: python /tmp/apply.py
+      - name: Validate exact working tree
+        run: python /tmp/validate.py
       - name: Commit reviewer rulings
         run: |
           git config user.name github-actions[bot]
@@ -162,7 +44,6 @@ TOTAL: 63
           git commit -m "Apply reviewer rulings to affect migration plan"
           git push origin HEAD:"$TARGET_BRANCH"
           git rev-parse HEAD | tee /tmp/final-head.txt
-
       - name: Upload validation evidence
         uses: actions/upload-artifact@v4
         with:
@@ -174,9 +55,9 @@ TOTAL: 63
             /tmp/focused.txt
             /tmp/collect.txt
             /tmp/full.txt
+            /tmp/validation-result.json
             /tmp/final-head.txt
           if-no-files-found: error
-
       - name: Publish result comment
         run: |
           head="$(cat /tmp/final-head.txt)"
