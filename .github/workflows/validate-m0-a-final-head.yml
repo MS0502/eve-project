@@ -1,0 +1,62 @@
+name: Validate M0-A exact final head
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact M0-A final head
+        uses: actions/checkout@v4
+        with:
+          ref: 5cbcf25fd7172bbad1edc9fafaa37975da0a5668
+          fetch-depth: 0
+      - name: Verify exact revision
+        run: test "$(git rev-parse HEAD)" = "5cbcf25fd7172bbad1edc9fafaa37975da0a5668"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q "https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz#sha256=7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
+          python -m pip install -q -r requirements.txt
+          python -m pip check
+      - name: Compile
+        run: python -m compileall -q scripts/audit tests/audit
+      - name: Generate inventory
+        run: |
+          python scripts/audit/m0_a_runtime_inventory.py --summary-only | tee /tmp/summary.json
+      - name: Focused tests
+        run: python -m pytest -q tests/audit/test_m0_a_runtime_inventory.py | tee /tmp/focused.log
+      - name: Collect
+        run: python -m pytest --collect-only -q > /tmp/collect.log 2>&1
+      - name: Full suite
+        run: python -m pytest -q | tee /tmp/pytest.log
+      - name: Verify final scope
+        run: |
+          git diff --name-only 2064448f3b64edaaf6b21a4b6e5e5063a2040593...HEAD | sort | tee /tmp/changed-files.txt
+          test "$(wc -l < /tmp/changed-files.txt)" -eq 4
+          test -z "$(git status --short)"
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-a-final-exact-head-validation
+          path: |
+            /tmp/summary.json
+            /tmp/focused.log
+            /tmp/collect.log
+            /tmp/pytest.log
+            /tmp/changed-files.txt
+          retention-days: 30
