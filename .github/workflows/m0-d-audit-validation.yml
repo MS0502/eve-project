@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -21,36 +21,6 @@ jobs:
         with:
           ref: claude/eve-m0-d-disposition-audit
           fetch-depth: 0
-
-      - name: Expand disposition scope to every non-audit Python module once
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/audit/m0_d_component_inventory.py')
-          text = path.read_text(encoding='utf-8')
-          top_level = '        return relative.name in TOP_LEVEL_RUNTIME_FILES or relative.name.startswith("eve_")'
-          nested = '    return relative.parts[0] in RUNTIME_PACKAGE_ROOTS'
-          changed = False
-          if top_level in text:
-              text = text.replace(top_level, '        return True', 1)
-              changed = True
-          if nested in text:
-              text = text.replace(nested, '    return True', 1)
-              changed = True
-          if changed:
-              path.write_text(text, encoding='utf-8')
-          elif text.count('return True') < 2:
-              raise SystemExit('runtime module scope lines not found')
-          PY
-          python -m py_compile scripts/audit/m0_d_component_inventory.py
-          git diff --check
-          if ! git diff --quiet; then
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add scripts/audit/m0_d_component_inventory.py
-            git commit -m "Classify every non-audit Python module in M0-D"
-            git push origin HEAD:claude/eve-m0-d-disposition-audit
-          fi
 
       - uses: actions/setup-python@v5
         with:
