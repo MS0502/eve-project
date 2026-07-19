@@ -22,7 +22,7 @@ jobs:
           ref: audit/m0-b-controlflow-concurrency
           fetch-depth: 0
 
-      - name: Refine M0-B detector once
+      - name: Refine M0-B bypass detector once
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -35,158 +35,53 @@ jobs:
               text = text.replace('\nimport os\n', '\nimport os\nimport re\n', 1)
               changed = True
 
-          if 'MANUAL_OVERRIDES:' in text:
-              start = text.index('MANUAL_OVERRIDES:')
-              end = text.index('\n\n\ndef _node_end', start)
-              manual = '''MANUAL_ENTRIES: tuple[dict[str, Any], ...] = (
-              {
-                  "category": "gate",
-                  "path": "main.py",
-                  "line_start": 22,
-                  "line_end": 356,
-                  "callable": "build_full_engine",
-                  "mechanical_evidence": "M0-A confirmed runtime composition range",
-                  "detector": "manual M0-B high-impact review",
-                  "manual_classification": "ACTIVE_RUNTIME_COMPOSITION_GATE",
-                  "manual_reason": "Optional capabilities and guarded model integration are composed in this callable.",
-                  "confidence": "high",
-                  "unresolved": False,
-                  "manual_only": True,
-              },
-              {
-                  "category": "output",
-                  "path": "main.py",
-                  "line_start": 374,
-                  "line_end": 732,
-                  "callable": "repl",
-                  "mechanical_evidence": "M0-A confirmed interactive entrypoint range",
-                  "detector": "manual M0-B high-impact review",
-                  "manual_classification": "ACTIVE_INTERACTIVE_OUTPUT_SURFACE",
-                  "manual_reason": "Operator commands and visible interactive responses converge in the REPL.",
-                  "confidence": "high",
-                  "unresolved": False,
-                  "manual_only": True,
-              },
-              {
-                  "category": "clock",
-                  "path": "adapters/live_loop.py",
-                  "line_start": 115,
-                  "line_end": 203,
-                  "callable": "LiveLoop._run",
-                  "mechanical_evidence": "M0-A confirmed background loop range",
-                  "detector": "manual M0-B high-impact review",
-                  "manual_classification": "ACTIVE_BACKGROUND_CLOCK_DEPENDENCY",
-                  "manual_reason": "The continuous loop is driven by elapsed time and delays.",
-                  "confidence": "high",
-                  "unresolved": False,
-                  "manual_only": True,
-              },
-              {
-                  "category": "concurrency",
-                  "path": "adapters/live_loop.py",
-                  "line_start": 214,
-                  "line_end": 229,
-                  "callable": "LiveLoop.start",
-                  "mechanical_evidence": "M0-A confirmed daemon thread start range",
-                  "detector": "manual M0-B high-impact review",
-                  "manual_classification": "ACTIVE_DAEMON_THREAD_BOUNDARY",
-                  "manual_reason": "This callable owns the live-loop daemon thread start boundary.",
-                  "confidence": "high",
-                  "unresolved": False,
-                  "manual_only": True,
-              },
-              {
-                  "category": "exception",
-                  "path": "language/streaming.py",
-                  "line_start": 177,
-                  "line_end": 362,
-                  "callable": "StreamingEngine.chat_stream",
-                  "mechanical_evidence": "M0-A confirmed chat state-transition range",
-                  "detector": "manual M0-B high-impact review",
-                  "manual_classification": "ACTIVE_CHAT_FAILURE_HANDLING_PATH",
-                  "manual_reason": "Failure handling inside the chat mutation funnel requires later manual disposition.",
-                  "confidence": "high",
-                  "unresolved": True,
-                  "manual_only": True,
-              },
-              {
-                  "category": "output",
-                  "path": "core/autonomous.py",
-                  "line_start": 68,
-                  "line_end": 174,
-                  "callable": "AutonomousLoop.step",
-                  "mechanical_evidence": "M0-A confirmed autonomous transition range",
-                  "detector": "manual M0-B high-impact review",
-                  "manual_classification": "ACTIVE_AUTONOMOUS_OUTPUT_SURFACE",
-                  "manual_reason": "Autonomous transitions may emit proactive speech or actions.",
-                  "confidence": "high",
-                  "unresolved": False,
-                  "manual_only": True,
-              },
-          )'''
-              text = text[:start] + manual + text[end:]
-              changed = True
-
-          override = '''    override = MANUAL_OVERRIDES.get((path, callable_name, category))
-              if override is not None:
-                  return override
-          '''
-          if override in text:
-              text = text.replace(override, '', 1)
-              changed = True
-
-          old_bypass = '''        bypass_hits = {
-              token for token in BYPASS_TOKENS if token in lower_target.replace("-", "_")
-          }
-          '''
-          new_bypass = '''        target_tokens = set(
-              re.findall(r"[a-z0-9]+", lower_target.replace("-", "_").replace(".", "_"))
+          old = (
+              '        bypass_hits = {\n'
+              '            token for token in BYPASS_TOKENS '
+              'if token in lower_target.replace("-", "_")\n'
+              '        }\n'
           )
-              bypass_hits = target_tokens & BYPASS_TOKENS
-          '''
-          if old_bypass in text:
-              text = text.replace(old_bypass, new_bypass, 1)
+          new = (
+              '        target_tokens = set(\n'
+              '            re.findall(\n'
+              '                r"[a-z0-9]+",\n'
+              '                lower_target.replace("-", "_").replace(".", "_"),\n'
+              '            )\n'
+              '        )\n'
+              '        bypass_hits = target_tokens & BYPASS_TOKENS\n'
+          )
+          if old in text:
+              text = text.replace(old, new, 1)
               changed = True
-
-          sort_marker = '    entries.sort(\n'
-          manual_insertion = '''    available_paths = {path.relative_to(root).as_posix() for path in paths}
-              entries.extend(
-                  dict(entry)
-                  for entry in MANUAL_ENTRIES
-                  if entry["path"] in available_paths
-              )
-
-          '''
-          if manual_insertion not in text:
-              text = text.replace(sort_marker, manual_insertion + sort_marker, 1)
-              changed = True
+          elif 'target_tokens = set(' not in text:
+              raise SystemExit('M0-B bypass detector anchor not found')
 
           if changed:
               script.write_text(text, encoding='utf-8')
 
           test_path = Path('tests/audit/test_m0_b_controlflow_concurrency_inventory.py')
           tests = test_path.read_text(encoding='utf-8')
-          marker = 'def test_bypass_detection_uses_symbol_tokens'
-          if marker not in tests:
-              tests += '''\n\ndef test_bypass_detection_uses_symbol_tokens(tmp_path: Path):
-              module = _load_module()
-              (tmp_path / "runtime.py").write_text(
-                  """def run(enforcement_rows, teacher, safety):\n"
-                  "    enforcement_rows.append(1)\n"
-                  "    teacher.reinforce_if_no_correction()\n"
-                  "    safety.force_alternative()\n",
-                  encoding="utf-8",
+          if 'def test_bypass_detection_uses_symbol_tokens' not in tests:
+              tests += (
+                  '\n\ndef test_bypass_detection_uses_symbol_tokens(tmp_path: Path):\n'
+                  '    module = _load_module()\n'
+                  '    (tmp_path / "runtime.py").write_text(\n'
+                  '        "def run(enforcement_rows, teacher, safety):\\n"\n'
+                  '        "    enforcement_rows.append(1)\\n"\n'
+                  '        "    teacher.reinforce_if_no_correction()\\n"\n'
+                  '        "    safety.force_alternative()\\n",\n'
+                  '        encoding="utf-8",\n'
+                  '    )\n'
+                  '    report = module.audit_repository(tmp_path)\n'
+                  '    evidence = {\n'
+                  '        entry["mechanical_evidence"]\n'
+                  '        for entry in report["entries"]\n'
+                  '        if entry["category"] == "bypass"\n'
+                  '    }\n'
+                  '    assert "bypass_call=safety.force_alternative" in evidence\n'
+                  '    assert "bypass_call=enforcement_rows.append" not in evidence\n'
+                  '    assert "bypass_call=teacher.reinforce_if_no_correction" not in evidence\n'
               )
-              report = module.audit_repository(tmp_path)
-              evidence = {
-                  entry["mechanical_evidence"]
-                  for entry in report["entries"]
-                  if entry["category"] == "bypass"
-              }
-              assert "bypass_call=safety.force_alternative" in evidence
-              assert "bypass_call=enforcement_rows.append" not in evidence
-              assert "bypass_call=teacher.reinforce_if_no_correction" not in evidence
-          '''
               test_path.write_text(tests, encoding='utf-8')
 
           PY
@@ -198,7 +93,7 @@ jobs:
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
             git add scripts/audit/m0_b_controlflow_concurrency_inventory.py \
               tests/audit/test_m0_b_controlflow_concurrency_inventory.py
-            git commit -m "Refine M0-B bypass and manual evidence classification"
+            git commit -m "Refine M0-B bypass symbol detection"
             git push origin HEAD:audit/m0-b-controlflow-concurrency
           fi
 
