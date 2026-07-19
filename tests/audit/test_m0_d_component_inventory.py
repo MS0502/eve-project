@@ -271,3 +271,27 @@ def test_cli_output_is_byte_identical(tmp_path):
     assert first.read_bytes() == second.read_bytes()
     payload = json.loads(first.read_text(encoding="utf-8"))
     assert payload["scope"]["runtime_execution_performed"] is False
+
+
+
+def test_python_path_universe_is_pinned_to_m0_d_baseline(tmp_path):
+    module = _load_module()
+    subprocess.check_call(["git", "init", "-q"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.email", "audit@example.invalid"], cwd=tmp_path)
+    subprocess.check_call(["git", "config", "user.name", "Audit Test"], cwd=tmp_path)
+    (tmp_path / "baseline.py").write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.check_call(["git", "add", "baseline.py"], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "baseline"], cwd=tmp_path)
+    baseline = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    (tmp_path / "post_baseline.py").write_text("VALUE = 2\n", encoding="utf-8")
+    subprocess.check_call(["git", "add", "post_baseline.py"], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "post baseline"], cwd=tmp_path)
+
+    original = module.BASELINE_SHA
+    module.BASELINE_SHA = baseline
+    try:
+        relative = [path.relative_to(tmp_path).as_posix() for path in module._git_tracked_python_files(tmp_path)]
+    finally:
+        module.BASELINE_SHA = original
+
+    assert relative == ["baseline.py"]
