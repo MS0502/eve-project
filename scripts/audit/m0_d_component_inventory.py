@@ -142,19 +142,39 @@ def _symbol_tokens(value: str) -> set[str]:
 
 
 def _git_tracked_python_files(root: Path) -> list[Path]:
+    """Return the frozen Python path universe of the completed M0-D audit.
+
+    The universe is the pre-M0-D baseline tree plus M0-D's own audit script and
+    focused test. Later audit/support Python files must not retroactively alter
+    M0-D counts or its module matrix.
+    """
     try:
-        raw = subprocess.check_output(["git", "-C", str(root), "ls-files", "-z", "--", "*.py"], stderr=subprocess.DEVNULL)
+        raw = subprocess.check_output(
+            ["git", "-C", str(root), "ls-tree", "-r", "-z", "--name-only", BASELINE_SHA],
+            stderr=subprocess.DEVNULL,
+        )
     except (OSError, subprocess.CalledProcessError):
         return []
+    relative_paths = {
+        Path(os.fsdecode(value))
+        for value in raw.split(b"\0")
+        if value and Path(os.fsdecode(value)).suffix == ".py"
+    }
+    relative_paths.update(
+        {
+            Path("scripts/audit/m0_d_component_inventory.py"),
+            Path("tests/audit/test_m0_d_component_inventory.py"),
+        }
+    )
     paths: list[Path] = []
-    for value in raw.split(b"\0"):
-        if not value:
-            continue
-        relative = Path(os.fsdecode(value))
+    for relative in sorted(relative_paths, key=lambda path: path.as_posix()):
         if any(part in EXCLUDED_PARTS for part in relative.parts):
             continue
-        paths.append(root / relative)
-    return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
+        path = root / relative
+        if not path.is_file():
+            continue
+        paths.append(path)
+    return paths
 
 
 def iter_python_files(root: Path) -> Iterator[Path]:

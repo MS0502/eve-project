@@ -12,6 +12,8 @@ python scripts/audit/m0_d_component_inventory.py --pretty
 
 The scanner is stdlib-only, scans tracked Python source with `ast.parse`, cross-references the merged M0-A/B/C inventory scripts, and emits canonical JSON to stdout. Generated JSON must remain ephemeral. Two consecutive runs are byte-identical.
 
+The Python path universe is frozen to the M0-D baseline tree plus M0-D's own audit script and focused test. Python audit or support files added after M0-D do not retroactively change its historical counts or module matrix.
+
 ## Evidence schema
 
 Every component and life-loop entry records repository-relative path, exact line range, symbol, detection method, mechanical evidence, classification, confidence, unresolved state, and manual-only state. Life-loop entries additionally record trigger evidence, mutation references, clock/concurrency/output calls, and mapping to the v4 taxonomy: Vital, Cognitive, Goal, Activity, Learning, Memory, Social, Expression, or `no-v4-equivalent`.
