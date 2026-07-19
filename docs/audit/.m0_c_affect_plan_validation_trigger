@@ -1,2 +1,2 @@
 Disposable trigger for reviewer-ruling and exact-head validation of PR #132.
-Synchronize after workflow registration on main.
+Synchronize after minimal workflow installation on main.
