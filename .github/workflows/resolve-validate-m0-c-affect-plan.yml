@@ -43,9 +43,19 @@ jobs:
           python -m pip check
       - name: Compile audit surface
         run: python -m compileall -q scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py
-      - name: Generate and verify deterministic audit
+      - name: Diagnose deterministic audit
         run: |
-          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-1.json
+          set +e
+          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-1.json > /tmp/checker-stdout.txt 2> /tmp/checker-stderr.txt
+          code=$?
+          set -e
+          cat /tmp/checker-stdout.txt
+          cat /tmp/checker-stderr.txt
+          if [ "$code" -ne 0 ]; then
+            body="Checker failed with exit $code.\n\n\`\`\`text\n$(cat /tmp/checker-stderr.txt)\n\`\`\`"
+            gh pr comment 132 --repo MS0502/eve-project --body "$body"
+            exit "$code"
+          fi
           python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-2.json
           diff -u /tmp/affect-plan-1.json /tmp/affect-plan-2.json
           python scripts/audit/m0_c_affect_migration_check.py --fail-on-unresolved --summary-only | tee /tmp/summary.json
