@@ -173,8 +173,8 @@ def _is_runtime_module(relative: Path) -> bool:
     if relative.name.startswith("test_") or relative.name.endswith("_test.py"):
         return False
     if len(relative.parts) == 1:
-        return relative.name in TOP_LEVEL_RUNTIME_FILES or relative.name.startswith("eve_")
-    return relative.parts[0] in RUNTIME_PACKAGE_ROOTS
+        return True
+    return True
 
 
 def _module_name(relative: Path) -> str:
