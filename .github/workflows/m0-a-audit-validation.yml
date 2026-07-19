@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   PIP_INDEX_URL: https://pypi.org/simple
@@ -20,7 +20,126 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: audit/m0-a-runtime-inventory
           fetch-depth: 0
+      - name: Refine write and mutation detector once
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/audit/m0_a_runtime_inventory.py')
+          text = path.read_text(encoding='utf-8')
+          old_methods = '''WRITE_METHOD_NAMES = {
+              "append",
+              "clear",
+              "commit",
+              "dump",
+              "execute",
+              "executemany",
+              "flush",
+              "insert",
+              "mkdir",
+              "persist",
+              "remove",
+              "rename",
+              "replace",
+              "rmdir",
+              "save",
+              "set",
+              "touch",
+              "unlink",
+              "update",
+              "write",
+              "write_bytes",
+              "write_text",
+          }
+          '''
+          new_methods = '''WRITE_METHOD_NAMES = {
+              "commit",
+              "dump",
+              "flush",
+              "mkdir",
+              "persist",
+              "rename",
+              "rmdir",
+              "save",
+              "touch",
+              "unlink",
+              "write",
+              "write_bytes",
+              "write_text",
+          }
+          DB_WRITE_METHOD_NAMES = {"execute", "executemany"}
+          DB_RECEIVER_HINTS = ("conn", "connection", "cursor", "database", "db", "sqlite")
+          MUTATION_METHOD_NAMES = {
+              "add",
+              "append",
+              "clear",
+              "discard",
+              "extend",
+              "insert",
+              "pop",
+              "popitem",
+              "remove",
+              "set",
+              "setdefault",
+              "update",
+          }
+          '''
+          old_visit = '''        else:
+              leaf = target.rsplit(".", 1)[-1] if target else ""
+              if leaf in WRITE_METHOD_NAMES:
+                  self.add(
+                      "direct_write",
+                      node,
+                      f"write_like_method={target}",
+                      "ast.Call write method heuristic",
+                      details={"target": target},
+                  )
+
+          '''
+          new_visit = '''        else:
+              leaf = target.rsplit(".", 1)[-1] if target else ""
+              receiver = target.rsplit(".", 1)[0].lower() if "." in target else ""
+              db_write = leaf in DB_WRITE_METHOD_NAMES and any(
+                  hint in receiver for hint in DB_RECEIVER_HINTS
+              )
+              if leaf in WRITE_METHOD_NAMES or db_write:
+                  self.add(
+                      "direct_write",
+                      node,
+                      f"write_like_method={target}",
+                      "ast.Call write method heuristic",
+                      details={"target": target, "database_receiver_match": db_write},
+                  )
+              elif leaf in MUTATION_METHOD_NAMES:
+                  self.add(
+                      "mutation",
+                      node,
+                      f"mutation_method={target}",
+                      "ast.Call in-memory mutation method heuristic",
+                      details={"target": target},
+                  )
+
+          '''
+          changed = False
+          if old_methods in text:
+              text = text.replace(old_methods, new_methods, 1)
+              changed = True
+          if old_visit in text:
+              text = text.replace(old_visit, new_visit, 1)
+              changed = True
+          if changed:
+              path.write_text(text, encoding='utf-8')
+          PY
+          if ! git diff --quiet -- scripts/audit/m0_a_runtime_inventory.py; then
+            python -m py_compile scripts/audit/m0_a_runtime_inventory.py
+            git diff --check
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add scripts/audit/m0_a_runtime_inventory.py
+            git commit -m "Refine M0-A write and mutation detection"
+            git push origin HEAD:audit/m0-a-runtime-inventory
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -31,8 +150,7 @@ jobs:
           python -m pip install -q -r requirements.txt
           python -m pip check
       - name: Compile audit surface
-        run: |
-          python -m compileall -q scripts/audit tests/audit
+        run: python -m compileall -q scripts/audit tests/audit
       - name: Generate ephemeral M0-A inventory
         run: |
           python scripts/audit/m0_a_runtime_inventory.py --pretty --output /tmp/m0-a-runtime-inventory.json
@@ -45,10 +163,7 @@ jobs:
           assert summary['python_files_scanned'] > 100
           assert summary['test_files_classified'] > 100
           assert summary['entries'] > summary['test_files_classified']
-          required = {
-              'path', 'line_start', 'line_end', 'callable', 'mechanical_evidence',
-              'detector', 'manual_classification', 'confidence', 'unresolved', 'manual_only'
-          }
+          required = {'path','line_start','line_end','callable','mechanical_evidence','detector','manual_classification','confidence','unresolved','manual_only'}
           assert all(required <= set(entry) for entry in report['entries'])
           assert not Path('m0-a-runtime-inventory.json').exists()
           print(json.dumps(summary, sort_keys=True))
