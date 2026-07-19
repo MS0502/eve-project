@@ -19,12 +19,11 @@ old = '''def _git_tracked_python_files(root: Path) -> list[Path]:
     return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
 '''
 new = '''def _git_tracked_python_files(root: Path) -> list[Path]:
-    """Return the Python path universe recorded at the M0-D baseline.
+    """Return the frozen Python path universe of the completed M0-D audit.
 
-    M0-D is a merged historical audit. Later audit/support Python files must not
-    retroactively alter its counts or module matrix. Current content is read only
-    for paths that existed at BASELINE_SHA; missing baseline paths remain an
-    explicit future compatibility concern rather than silently expanding scope.
+    The universe is the pre-M0-D baseline tree plus M0-D's own audit script and
+    focused test. Later audit/support Python files must not retroactively alter
+    M0-D counts or its module matrix.
     """
     try:
         raw = subprocess.check_output(
@@ -33,20 +32,26 @@ new = '''def _git_tracked_python_files(root: Path) -> list[Path]:
         )
     except (OSError, subprocess.CalledProcessError):
         return []
+    relative_paths = {
+        Path(os.fsdecode(value))
+        for value in raw.split(b"\\0")
+        if value and Path(os.fsdecode(value)).suffix == ".py"
+    }
+    relative_paths.update(
+        {
+            Path("scripts/audit/m0_d_component_inventory.py"),
+            Path("tests/audit/test_m0_d_component_inventory.py"),
+        }
+    )
     paths: list[Path] = []
-    for value in raw.split(b"\\0"):
-        if not value:
-            continue
-        relative = Path(os.fsdecode(value))
-        if relative.suffix != ".py":
-            continue
+    for relative in sorted(relative_paths, key=lambda path: path.as_posix()):
         if any(part in EXCLUDED_PARTS for part in relative.parts):
             continue
         path = root / relative
         if not path.is_file():
             continue
         paths.append(path)
-    return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
+    return paths
 '''
 assert old in text
 script_path.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -84,7 +89,7 @@ test_path.write_text(test + addition, encoding="utf-8")
 doc_path = Path("docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md")
 doc = doc_path.read_text(encoding="utf-8")
 needle = "The scanner is stdlib-only, scans tracked Python source with `ast.parse`, cross-references the merged M0-A/B/C inventory scripts, and emits canonical JSON to stdout. Generated JSON must remain ephemeral. Two consecutive runs are byte-identical."
-replacement = needle + "\n\nThe Python path universe is pinned to the M0-D baseline SHA through `git ls-tree`. Python audit or support files added after M0-D do not retroactively change its historical counts or module matrix."
+replacement = needle + "\n\nThe Python path universe is frozen to the M0-D baseline tree plus M0-D's own audit script and focused test. Python audit or support files added after M0-D do not retroactively change its historical counts or module matrix."
 assert needle in doc
-assert "path universe is pinned" not in doc
+assert "path universe is frozen" not in doc
 doc_path.write_text(doc.replace(needle, replacement, 1), encoding="utf-8")
