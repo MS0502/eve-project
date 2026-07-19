@@ -43,6 +43,7 @@ class StateStore:
         self.vector_store = {}
         self.vocabulary = {}
         self.autosave_path = Path("state/eve.ckpt")
+        self.checkpoint_path = Path("state/manual.checkpoint")
         self.debug_export_path = "state/debug.jsonl"
 
     def save(self):
@@ -263,3 +264,12 @@ def test_repository_smoke_covers_known_persistence_paths():
         and "eve.ckpt" in entry["mechanical_evidence"]
         for entry in entries
     )
+
+
+def test_path_like_rejects_labels_commands_and_root():
+    module = _load_module()
+    assert module._path_like("state/eve.ckpt") is True
+    assert module._path_like("state/debug.jsonl") is True
+    assert module._path_like("checkpoint_created") is False
+    assert module._path_like("python scripts/operator_report.py") is False
+    assert module._path_like("/") is False

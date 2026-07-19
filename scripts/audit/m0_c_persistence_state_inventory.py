@@ -372,15 +372,20 @@ def _format_for_path(value: str) -> str | None:
 
 
 def _path_like(value: str) -> bool:
-    if _format_for_path(value) is not None:
+    candidate = value.strip()
+    if not candidate or len(candidate) > 512:
+        return False
+    if "\n" in candidate or "\r" in candidate:
+        return False
+    if _format_for_path(candidate) is not None:
         return True
-    lowered = value.lower()
-    return (
-        "/" in value
-        or "\\" in value
-        or value.startswith("~")
-        or any(marker in lowered for marker in ("checkpoint", "autosave", "sidecar"))
-    )
+    if candidate in {"/", "\\"} or "://" in candidate:
+        return False
+    if any(character.isspace() for character in candidate):
+        return False
+    if candidate.startswith(("~/", "./", "../", "/")):
+        return True
+    return "/" in candidate or "\\" in candidate
 
 
 def _write_mode_from_open(call: ast.Call) -> str | None:
