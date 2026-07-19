@@ -1,16 +1,17 @@
 name: Resolve and validate M0-C affect plan
 
 on:
-  issue_comment:
-    types: [created]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
   issues: write
+  pull-requests: write
 
 jobs:
   resolve-validate:
-    if: github.event.issue.number == 132 && github.event.comment.body == '/resolve-and-validate-affect-plan'
+    if: github.event.pull_request.head.ref == 'validation/m0-c-affect-plan-trigger'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
