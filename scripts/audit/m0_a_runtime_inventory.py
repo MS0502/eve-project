@@ -91,28 +91,35 @@ WRITE_CALL_SUFFIXES = {
     "yaml.dump",
 }
 WRITE_METHOD_NAMES = {
-    "append",
-    "clear",
     "commit",
     "dump",
-    "execute",
-    "executemany",
     "flush",
-    "insert",
     "mkdir",
     "persist",
-    "remove",
     "rename",
-    "replace",
     "rmdir",
     "save",
-    "set",
     "touch",
     "unlink",
-    "update",
     "write",
     "write_bytes",
     "write_text",
+}
+DB_WRITE_METHOD_NAMES = {"execute", "executemany"}
+DB_RECEIVER_HINTS = ("conn", "connection", "cursor", "database", "db", "sqlite")
+MUTATION_METHOD_NAMES = {
+    "add",
+    "append",
+    "clear",
+    "discard",
+    "extend",
+    "insert",
+    "pop",
+    "popitem",
+    "remove",
+    "set",
+    "setdefault",
+    "update",
 }
 EXECUTION_BOUNDARY_CALLS = {
     "asyncio.run",
