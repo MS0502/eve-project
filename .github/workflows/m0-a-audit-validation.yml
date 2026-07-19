@@ -1,0 +1,87 @@
+name: Validate EVE M0-A audit
+
+on:
+  push:
+    branches: [audit/m0-a-runtime-inventory]
+
+permissions:
+  contents: read
+
+env:
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install declared dependencies
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q "https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz#sha256=7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
+          python -m pip install -q -r requirements.txt
+          python -m pip check
+      - name: Compile audit surface
+        run: |
+          python -m compileall -q scripts/audit tests/audit
+      - name: Generate ephemeral M0-A inventory
+        run: |
+          python scripts/audit/m0_a_runtime_inventory.py --pretty --output /tmp/m0-a-runtime-inventory.json
+          python scripts/audit/m0_a_runtime_inventory.py --summary-only | tee /tmp/m0-a-summary.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('/tmp/m0-a-runtime-inventory.json').read_text(encoding='utf-8'))
+          summary = report['summary']
+          assert summary['python_files_scanned'] > 100
+          assert summary['test_files_classified'] > 100
+          assert summary['entries'] > summary['test_files_classified']
+          required = {
+              'path', 'line_start', 'line_end', 'callable', 'mechanical_evidence',
+              'detector', 'manual_classification', 'confidence', 'unresolved', 'manual_only'
+          }
+          assert all(required <= set(entry) for entry in report['entries'])
+          assert not Path('m0-a-runtime-inventory.json').exists()
+          print(json.dumps(summary, sort_keys=True))
+          PY
+      - name: Run focused M0-A tests
+        run: python -m pytest -q tests/audit/test_m0_a_runtime_inventory.py | tee /tmp/focused.log
+      - name: Collect full suite
+        run: python -m pytest --collect-only -q > /tmp/collect.log 2>&1
+      - name: Run full suite
+        continue-on-error: true
+        run: |
+          set +e
+          python -m pytest -q > /tmp/pytest.log 2>&1
+          echo $? > /tmp/pytest.rc
+          exit 0
+      - name: Verify branch scope and clean generated state
+        if: always()
+        run: |
+          git diff --name-only 2064448f3b64edaaf6b21a4b6e5e5063a2040593...HEAD | sort | tee /tmp/changed-files.txt
+          test -z "$(git status --short)"
+      - name: Preserve M0-A validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eve-m0-a-validation
+          path: |
+            /tmp/m0-a-runtime-inventory.json
+            /tmp/m0-a-summary.json
+            /tmp/focused.log
+            /tmp/collect.log
+            /tmp/pytest.log
+            /tmp/pytest.rc
+            /tmp/changed-files.txt
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Enforce full-suite result
+        if: always()
+        run: exit "$(cat /tmp/pytest.rc)"
