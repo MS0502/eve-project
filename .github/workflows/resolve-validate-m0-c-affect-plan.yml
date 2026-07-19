@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   validate:
@@ -15,6 +17,7 @@ jobs:
     env:
       EXPECTED_HEAD: 223c680cb404ebec305fda39825a80616ceccbc5
       TARGET_BRANCH: fix/m0-d-baseline-path-scope
+      GH_TOKEN: ${{ github.token }}
       PIP_INDEX_URL: https://pypi.org/simple
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
@@ -42,11 +45,17 @@ jobs:
           python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-1.json
           python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-2.json
           diff -u /tmp/m0-d-1.json /tmp/m0-d-2.json
-      - name: Run focused M0-D tests
-        shell: bash
+      - name: Diagnose focused M0-D tests
         run: |
-          set -o pipefail
-          python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/focused.txt
+          set +e
+          python -m pytest -q tests/audit/test_m0_d_component_inventory.py > /tmp/focused.txt 2>&1
+          code=$?
+          set -e
+          cat /tmp/focused.txt
+          if [ "$code" -ne 0 ]; then
+            gh pr comment 135 --repo MS0502/eve-project --body "Focused M0-D validation failed.\n\n\`\`\`text\n$(tail -n 80 /tmp/focused.txt)\n\`\`\`"
+            exit "$code"
+          fi
       - name: Collect full suite
         shell: bash
         run: |
