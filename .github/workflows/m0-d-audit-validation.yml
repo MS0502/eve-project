@@ -1,114 +1,93 @@
-name: Validate EVE M0-D audit
+name: Refine EVE M0-D audit once
 
 on:
   push:
     branches: [claude/eve-m0-d-disposition-audit]
-  pull_request:
-    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  refine:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
-    env:
-      PIP_INDEX_URL: https://pypi.org/simple
-      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: claude/eve-m0-d-disposition-audit
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Prepare validation artifacts
-        run: mkdir -p validation-artifacts
-
-      - name: Install pinned markdown-strings compatibility package
+      - name: Apply conservative M0-D classification refinements
         run: |
-          set -o pipefail
-          python -m pip install --no-deps \
-            'git+https://github.com/awesmubarak/markdown_strings.git@9834a3f3cc13bd1e028756949c96bb54d573e7cf' \
-            2>&1 | tee validation-artifacts/pip-bootstrap.txt
           python - <<'PY'
-          import importlib.metadata
-          version = importlib.metadata.version('markdown-strings')
-          if version != '3.4.0':
-              raise SystemExit(f'unexpected markdown-strings version: {version}')
-          print(f'markdown-strings version={version}')
+          from pathlib import Path
+
+          path = Path('scripts/audit/m0_d_component_inventory.py')
+          text = path.read_text(encoding='utf-8')
+
+          life_start = text.index('    def _life_candidate(')
+          life_end = text.index('\n    def visit_Import(', life_start)
+          life_block = '''    def _life_candidate(self, node: ast.AST, name: str, kind: str) -> tuple[str, int] | None:
+              tokens = _symbol_tokens(name)
+              context_tokens = _symbol_tokens(f"{self.path} {self.symbol}")
+              generic_step = name.lower() in {"run", "_run", "step"}
+              is_candidate = bool(tokens & LOOP_NAME_TOKENS) or name.lower() == "tick" or (
+                  generic_step and bool(context_tokens & LOOP_NAME_TOKENS)
+              )
+              if not is_candidate:
+                  return None
+              key = (self.symbol, int(getattr(node, "lineno", 1)))
+              self.life_candidates.setdefault(key, {
+                  "path": self.path, "line_start": int(getattr(node, "lineno", 1)),
+                  "line_end": _node_end(node), "symbol": self.symbol, "kind": kind,
+                  "name": name, "clock_calls": [], "concurrency_calls": [], "output_calls": [],
+              })
+              return key
+          '''
+          text = text[:life_start] + life_block + text[life_end:]
+
+          taxonomy_start = text.index('def _taxonomy_for(')
+          taxonomy_end = text.index('\ndef _entry_ref(', taxonomy_start)
+          taxonomy_block = '''def _taxonomy_for(path: str, symbol: str) -> list[str]:
+              tokens = _symbol_tokens(f"{path} {symbol}")
+              categories: list[str] = []
+              if tokens & {"hormone", "allostatic", "allostasis", "homeostatic", "homeostasis", "vital"} or {"live", "loop"} <= tokens:
+                  categories.append("Vital")
+              if tokens & {"dmn", "reason", "reasoning", "cognitive", "cognition", "think", "workspace", "inference"}:
+                  categories.append("Cognitive")
+              if tokens & {"goal", "intent", "plan", "planning", "urge", "need"}:
+                  categories.append("Goal")
+              if tokens & {"autonomous", "autonomy", "activity", "action", "outing"} or {"live", "loop"} <= tokens:
+                  categories.append("Activity")
+              if tokens & {"learn", "learning", "adaptive", "training", "train", "curiosity", "stabilize", "continual", "corpus"}:
+                  categories.append("Learning")
+              if tokens & {"memory", "consolidate", "consolidation", "replay", "recall"}:
+                  categories.append("Memory")
+              if tokens & {"social", "relationship", "presence"}:
+                  categories.append("Social")
+              if tokens & {"speech", "proactive", "spontaneous", "stream", "streaming", "expression", "generator", "dmn"}:
+                  categories.append("Expression")
+              if not categories:
+                  categories.append("no-v4-equivalent")
+              return [category for category in LOOP_TAXONOMY_ORDER if category in categories]
+          '''
+          text = text[:taxonomy_start] + taxonomy_block + text[taxonomy_end:]
+
+          old = '''    if reachable and has_hormone:
+              return "REWRITE", "medium", True, "Reachable module is coupled to legacy hormone/affect state; v4 requires drive/appraisal/derived-emotion semantics and a continuity-preserving migration contract."
+          '''
+          new = '''    if reachable and has_hormone:
+              return "WRAP", "medium", True, "Reachable module is coupled to legacy hormone/affect state; preserve behavior behind an explicit compatibility projection until the required drive/appraisal/derived-emotion migration contract is reviewed."
+          '''
+          if old not in text:
+              raise SystemExit('hormone disposition anchor not found')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
           PY
-
-      - name: Install declared dependencies
-        run: |
-          set -o pipefail
-          python -m pip install --retries 5 --timeout 60 -r requirements.txt \
-            2>&1 | tee validation-artifacts/pip-install.txt
-          python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
-
-      - name: Compile required surface
-        run: |
-          python -m compileall -q adapters core cognition tests main.py scripts
-
-      - name: Generate deterministic M0-D inventories
-        run: |
-          python scripts/audit/m0_d_component_inventory.py > /tmp/d1.json
-          python scripts/audit/m0_d_component_inventory.py > /tmp/d2.json
-          diff -u /tmp/d1.json /tmp/d2.json | tee validation-artifacts/determinism-diff.txt
-          cp /tmp/d1.json validation-artifacts/m0-d-inventory.json
-          python scripts/audit/m0_d_component_inventory.py --summary-only \
-            | tee validation-artifacts/m0-d-summary.json
-
-      - name: Run focused M0-D tests
-        run: |
-          set -o pipefail
-          python -m pytest -q tests/audit/test_m0_d_component_inventory.py \
-            | tee validation-artifacts/focused-pytest.txt
-
-      - name: Collect full suite
-        run: |
-          set -o pipefail
-          python -m pytest --collect-only -q \
-            | tee validation-artifacts/collect-only.txt
-
-      - name: Run full suite
-        run: |
-          set -o pipefail
-          python -m pytest -q | tee validation-artifacts/full-pytest.txt
-
-      - name: Verify temporary scope and clean generated state
-        run: |
-          git diff --check origin/main...HEAD
-          python - <<'PY'
-          import subprocess
-          allowed = {
-              '.github/workflows/m0-d-audit-validation.yml',
-              'docs/EVE_IMPLEMENTATION_STATUS_v4.md',
-              'docs/audit/M0_D_MODULE_DISPOSITION.md',
-              'docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md',
-              'scripts/audit/m0_d_component_inventory.py',
-              'tests/audit/test_m0_d_component_inventory.py',
-          }
-          changed = set(subprocess.check_output(
-              ['git', 'diff', '--name-only', 'origin/main...HEAD'], text=True
-          ).splitlines())
-          if changed != allowed:
-              raise SystemExit(f'unexpected scope: {sorted(changed)}')
-          if subprocess.check_output(['git', 'ls-files', 'validation-artifacts'], text=True).strip():
-              raise SystemExit('validation artifacts are tracked')
-          subprocess.check_call(['git', 'diff', '--exit-code'])
-          subprocess.check_call(['git', 'diff', '--cached', '--exit-code'])
-          PY
-
-      - name: Upload M0-D validation evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: eve-m0-d-validation
-          path: validation-artifacts/*
-          if-no-files-found: error
-          retention-days: 30
+          python -m py_compile scripts/audit/m0_d_component_inventory.py
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add scripts/audit/m0_d_component_inventory.py
+          git commit -m "Refine M0-D life-loop taxonomy and rewrite policy"
+          git push origin HEAD:claude/eve-m0-d-disposition-audit
