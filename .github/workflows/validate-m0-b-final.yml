@@ -1,0 +1,112 @@
+name: Validate M0-B exact final head
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      TARGET_SHA: 4feab47c6920fe8e88d982d2d246282ced28504c
+      BASE_SHA: 78544d74af84afed450014d599b360c9b4af4f03
+    steps:
+      - name: Checkout exact M0-B final head
+        uses: actions/checkout@v4
+        with:
+          ref: 4feab47c6920fe8e88d982d2d246282ced28504c
+          fetch-depth: 0
+
+      - name: Verify exact revision
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare evidence directory
+        run: mkdir -p validation-artifacts
+
+      - name: Install pinned markdown-strings compatibility package
+        run: |
+          set -o pipefail
+          python -m pip install --no-deps \
+            'git+https://github.com/awesmubarak/markdown_strings.git@9834a3f3cc13bd1e028756949c96bb54d573e7cf' \
+            2>&1 | tee validation-artifacts/pip-bootstrap.txt
+          python - <<'PY'
+          import importlib.metadata
+          version = importlib.metadata.version('markdown-strings')
+          if version != '3.4.0':
+              raise SystemExit(f'unexpected markdown-strings version: {version}')
+          print(f'markdown-strings version={version}')
+          PY
+
+      - name: Install dependencies
+        run: |
+          set -o pipefail
+          python -m pip install --retries 5 --timeout 60 -r requirements.txt \
+            2>&1 | tee validation-artifacts/pip-install.txt
+          python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
+
+      - name: Compile
+        run: |
+          python -m py_compile scripts/audit/m0_b_controlflow_concurrency_inventory.py
+          python -m py_compile tests/audit/test_m0_b_controlflow_concurrency_inventory.py
+
+      - name: Generate inventory
+        run: |
+          python scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+            --output validation-artifacts/m0-b-inventory.json
+          python scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+            --summary-only | tee validation-artifacts/m0-b-summary.json
+
+      - name: Focused tests
+        run: |
+          python -m pytest -q tests/audit/test_m0_b_controlflow_concurrency_inventory.py \
+            | tee validation-artifacts/focused-pytest.txt
+
+      - name: Collect
+        run: |
+          python -m pytest --collect-only -q \
+            | tee validation-artifacts/collect-only.txt
+
+      - name: Full suite
+        run: |
+          python -m pytest -q | tee validation-artifacts/full-pytest.txt
+
+      - name: Verify final scope
+        run: |
+          python - <<'PY'
+          import subprocess
+          expected = {
+              'docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md',
+              'docs/audit/M0_B_TEST_CLASSIFICATION.md',
+              'scripts/audit/m0_b_controlflow_concurrency_inventory.py',
+              'tests/audit/test_m0_b_controlflow_concurrency_inventory.py',
+          }
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only', '78544d74af84afed450014d599b360c9b4af4f03...HEAD'],
+              text=True,
+          ).splitlines())
+          if changed != expected:
+              raise SystemExit(f'unexpected final scope: {sorted(changed)}')
+          subprocess.check_call(['git', 'diff', '--check', '78544d74af84afed450014d599b360c9b4af4f03...HEAD'])
+          if subprocess.check_output(['git', 'ls-files', 'validation-artifacts'], text=True).strip():
+              raise SystemExit('validation artifacts are tracked')
+          subprocess.check_call(['git', 'diff', '--exit-code'])
+          subprocess.check_call(['git', 'diff', '--cached', '--exit-code'])
+          PY
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-b-final-exact-head-validation
+          path: validation-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
