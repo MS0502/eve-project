@@ -22,7 +22,7 @@ jobs:
           ref: audit/m0-c-persistence-state
           fetch-depth: 0
 
-      - name: Refine M0-C persistence directory evidence once
+      - name: Refine M0-C source and fixture evidence once
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -30,93 +30,104 @@ jobs:
           script = Path('scripts/audit/m0_c_persistence_state_inventory.py')
           text = script.read_text(encoding='utf-8')
           changed = False
-          old = '''def _path_like(value: str) -> bool:
-              candidate = value.strip()
-              if not candidate or len(candidate) > 512:
-                  return False
-              if "\\n" in candidate or "\\r" in candidate:
-                  return False
-              if _format_for_path(candidate) is not None:
-                  return True
-              if candidate in {"/", "\\\\"} or "://" in candidate:
-                  return False
-              if any(character.isspace() for character in candidate):
-                  return False
-              if candidate.startswith(("~/", "./", "../", "/")):
-                  return True
-              return "/" in candidate or "\\\\" in candidate
+
+          old_markers = '''LEGACY_TEST_FORMAT_MARKERS = {
+              "pickle",
+              "sidecar",
+              "sqlite",
+              "eve.ckpt",
+              ".ckpt",
+              ".pickle",
+              ".pkl",
+          }
           '''
-          new = '''def _path_like(value: str) -> bool:
-              candidate = value.strip()
-              if not candidate or len(candidate) > 512:
-                  return False
-              if "\\n" in candidate or "\\r" in candidate:
-                  return False
-              if _format_for_path(candidate) is not None:
-                  return True
-              if candidate in {"/", "\\\\"} or "://" in candidate:
-                  return False
-              if any(character.isspace() for character in candidate):
-                  return False
-              if "/" not in candidate and "\\\\" not in candidate:
-                  return False
-              persistence_path_tokens = {
-                  "artifact",
-                  "artifacts",
-                  "autosave",
-                  "cache",
-                  "checkpoint",
-                  "checkpoints",
-                  "ckpt",
-                  "database",
-                  "db",
-                  "debug",
-                  "embedding",
-                  "embeddings",
-                  "export",
-                  "manifest",
-                  "memory",
-                  "model",
-                  "operator",
-                  "report",
-                  "seed",
-                  "seeds",
-                  "sidecar",
-                  "snapshot",
-                  "state",
-                  "store",
-                  "subset",
-                  "validation",
-                  "vector",
-                  "vectors",
-                  "vocab",
-                  "vocabulary",
-              }
-              return bool(_symbol_tokens(candidate) & persistence_path_tokens)
+          new_markers = '''LEGACY_TEST_FORMAT_MARKERS = {
+              "sidecar",
+              "sqlite",
+              "eve.ckpt",
+              ".ckpt",
+              ".pickle",
+              ".pkl",
+          }
           '''
-          if old in text:
-              text = text.replace(old, new, 1)
+          if old_markers in text:
+              text = text.replace(old_markers, new_markers, 1)
               changed = True
-          elif 'persistence_path_tokens = {' not in text:
-              raise SystemExit('refined M0-C path predicate anchor not found')
+          elif 'LEGACY_TEST_FORMAT_MARKERS' in text and '    "pickle",\n' in text:
+              raise SystemExit('legacy test marker block changed unexpectedly')
+
+          old_path_fragment = '''    if _format_for_path(candidate) is not None:
+              return True
+              if candidate in {"/", "\\\\"} or "://" in candidate:
+              return False
+          '''
+          new_path_fragment = '''    if _format_for_path(candidate) is not None:
+              return True
+              if "::" in candidate or candidate.lower().endswith(
+                  (".py", ".pyi", ".md", ".rst", ".sh")
+              ):
+                  return False
+              if candidate in {"/", "\\\\"} or "://" in candidate:
+              return False
+          '''
+          if old_path_fragment in text:
+              text = text.replace(old_path_fragment, new_path_fragment, 1)
+              changed = True
+          elif 'if "::" in candidate' not in text:
+              raise SystemExit('M0-C source path exclusion anchor not found')
+
+          old_constant = '''    def visit_Constant(self, node: ast.Constant) -> None:
+              if isinstance(node.value, str):
+                  lowered = node.value.lower()
+                  for marker in sorted(LEGACY_TEST_FORMAT_MARKERS):
+                      if marker in lowered:
+                          self.signals.append((int(getattr(node, "lineno", 1)), f"legacy_format={marker}", True))
+                          break
+              self.generic_visit(node)
+          '''
+          new_constant = '''    def visit_Constant(self, node: ast.Constant) -> None:
+              if isinstance(node.value, str) and "\\n" not in node.value and "\\r" not in node.value:
+                  lowered = node.value.lower()
+                  for marker in sorted(LEGACY_TEST_FORMAT_MARKERS):
+                      if marker in lowered:
+                          self.signals.append((int(getattr(node, "lineno", 1)), f"legacy_format={marker}", True))
+                          break
+              self.generic_visit(node)
+          '''
+          if old_constant in text:
+              text = text.replace(old_constant, new_constant, 1)
+              changed = True
+          elif 'and "\\n" not in node.value' not in text:
+              raise SystemExit('M0-C test constant visitor anchor not found')
+
           if changed:
               script.write_text(text, encoding='utf-8')
 
           test_path = Path('tests/audit/test_m0_c_persistence_state_inventory.py')
           tests = test_path.read_text(encoding='utf-8')
-          if 'def test_path_like_requires_persistence_directory_markers' not in tests:
-              tests += '''\n\ndef test_path_like_requires_persistence_directory_markers():
+          if 'def test_repository_policy_does_not_flag_embedded_fixture_source' not in tests:
+              tests += '''\n\ndef test_repository_policy_does_not_flag_embedded_fixture_source():
               module = _load_module()
-              assert module._path_like("_operator_artifacts/run") is True
-              assert module._path_like("seeds/subsets") is True
-              assert module._path_like("state/checkpoints/current") is True
-              assert module._path_like("/save") is False
-              assert module._path_like("language/streaming") is False
-              assert module._path_like("tests/test_file.py::test_case") is False
-              assert module._path_like(r"^foo\\s+/bar$") is False
-              assert module._path_like("/nonexistent.wav") is False
+              report = module.audit_repository(REPO_ROOT)
+              own = next(
+                  entry
+                  for entry in report["entries"]
+                  if entry["category"] == "test_classification"
+                  and entry["path"] == "tests/audit/test_m0_c_persistence_state_inventory.py"
+              )
+              assert own["manual_classification"] == "KEEP"
+              assert own["confidence"] == "high"
+              assert own["unresolved"] is False
           '''
-              test_path.write_text(tests, encoding='utf-8')
+          if 'assert module._path_like("adapters/self_embedding_adapter.py") is False' not in tests:
+              tests = tests.replace(
+                  '    assert module._path_like("/nonexistent.wav") is False\n',
+                  '    assert module._path_like("/nonexistent.wav") is False\n'
+                  '    assert module._path_like("adapters/self_embedding_adapter.py") is False\n'
+                  '    assert module._path_like("docs/STATE_REPORT.md") is False\n',
+                  1,
+              )
+          test_path.write_text(tests, encoding='utf-8')
           PY
           python -m py_compile scripts/audit/m0_c_persistence_state_inventory.py
           python -m py_compile tests/audit/test_m0_c_persistence_state_inventory.py
@@ -126,7 +137,7 @@ jobs:
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
             git add scripts/audit/m0_c_persistence_state_inventory.py \
               tests/audit/test_m0_c_persistence_state_inventory.py
-            git commit -m "Refine M0-C persistence directory evidence"
+            git commit -m "Refine M0-C source and fixture evidence"
             git push origin HEAD:audit/m0-c-persistence-state
           fi
 
