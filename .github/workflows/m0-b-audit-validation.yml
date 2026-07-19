@@ -28,14 +28,43 @@ jobs:
       - name: Prepare validation artifacts
         run: mkdir -p validation-artifacts
 
+      - name: Install verified markdown-strings compatibility wheel
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import urllib.request
+
+          metadata_url = 'https://pypi.org/pypi/markdown-strings/3.4.0/json'
+          expected = '1a7e2a575b2af27482ccbe6a0efc3407f678ac5cece8654c36fd827ac540a631'
+          with urllib.request.urlopen(metadata_url, timeout=60) as response:
+              metadata = json.load(response)
+          wheels = [
+              item for item in metadata['urls']
+              if item['filename'] == 'markdown_strings-3.4.0-py2.py3-none-any.whl'
+          ]
+          if len(wheels) != 1:
+              raise SystemExit(f'expected one wheel, found {len(wheels)}')
+          item = wheels[0]
+          if item['digests']['sha256'] != expected:
+              raise SystemExit('PyPI metadata digest mismatch')
+          destination = pathlib.Path('/tmp/markdown_strings-3.4.0-py2.py3-none-any.whl')
+          with urllib.request.urlopen(item['url'], timeout=120) as response:
+              payload = response.read()
+          actual = hashlib.sha256(payload).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'download digest mismatch: {actual}')
+          destination.write_bytes(payload)
+          print(f'verified {destination.name} sha256={actual}')
+          PY
+          python -m pip install --no-deps \
+            /tmp/markdown_strings-3.4.0-py2.py3-none-any.whl \
+            2>&1 | tee validation-artifacts/pip-bootstrap.txt
+
       - name: Install declared dependencies
-        id: dependencies
-        continue-on-error: true
-        shell: bash
         run: |
           set -o pipefail
-          python -m pip install markdown_strings==3.4.0 \
-            2>&1 | tee validation-artifacts/pip-bootstrap.txt
           python -m pip install --retries 5 --timeout 60 -r requirements.txt \
             2>&1 | tee validation-artifacts/pip-install.txt
           python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
@@ -53,19 +82,16 @@ jobs:
             --summary-only | tee validation-artifacts/m0-b-summary.json
 
       - name: Run focused M0-B tests
-        if: steps.dependencies.outcome == 'success'
         run: |
           python -m pytest -q tests/audit/test_m0_b_controlflow_concurrency_inventory.py \
             | tee validation-artifacts/focused-pytest.txt
 
       - name: Collect full suite
-        if: steps.dependencies.outcome == 'success'
         run: |
           python -m pytest --collect-only -q \
             | tee validation-artifacts/collect-only.txt
 
       - name: Run full suite
-        if: steps.dependencies.outcome == 'success'
         run: |
           python -m pytest -q | tee validation-artifacts/full-pytest.txt
 
@@ -100,9 +126,3 @@ jobs:
           path: validation-artifacts/*
           if-no-files-found: error
           retention-days: 30
-
-      - name: Enforce dependency and full-suite gate
-        if: always()
-        run: |
-          test "${{ steps.dependencies.outcome }}" = "success"
-          test -s validation-artifacts/full-pytest.txt
