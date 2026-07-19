@@ -1,16 +1,14 @@
-name: Validate M0-D exact final head on command
+name: Validate M0-D reviewer-ruled exact head
 
 on:
-  issue_comment:
-    types: [created]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   validate:
-    if: github.event.issue.number == 125 && github.event.comment.body == '/validate-m0-d-final-head'
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     env:
@@ -64,11 +62,7 @@ jobs:
           assert summary['module_disposition_counts']['DEPRECATE'] == 2
           assert summary['module_disposition_counts']['REMOVE'] == 0
           assert all(x['detection'] == 'manual' and x['decided_by'] == 'reviewer' and not x['unresolved'] for x in data['module_dispositions'])
-          print(json.dumps({
-              'dispositions': summary['module_disposition_counts'],
-              'unresolved_module_dispositions': summary['unresolved_module_dispositions'],
-              'unresolved_items': summary['unresolved_items'],
-          }, sort_keys=True))
+          print(json.dumps(summary, sort_keys=True))
           PY
 
       - name: Run focused tests
@@ -100,28 +94,3 @@ jobs:
           name: m0-d-reviewer-ruled-exact-head-validation
           path: /tmp/m0-d-final-evidence
           if-no-files-found: error
-
-      - name: Publish validation result
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          focused="$(tail -n 1 /tmp/m0-d-final-evidence/focused.txt)"
-          collected="$(tail -n 1 /tmp/m0-d-final-evidence/collect.txt)"
-          full="$(tail -n 1 /tmp/m0-d-final-evidence/full.txt)"
-          body=$(cat <<EOF
-          M0-D exact-head validation passed.
-
-          - exact head: \`$TARGET_SHA\`
-          - deterministic double-run: byte-identical
-          - focused: \`$focused\`
-          - collection: \`$collected\`
-          - full suite: \`$full\`
-          - exact five-file scope: PASS
-          - unresolved module dispositions: 0
-          - unresolved standalone items: 0
-          - REWRITE / DEPRECATE / REMOVE: 6 / 2 / 0
-          - workflow run: \`$GITHUB_RUN_ID\`
-          - artifact: \`m0-d-reviewer-ruled-exact-head-validation\`
-          EOF
-          )
-          gh api repos/${{ github.repository }}/issues/125/comments -f body="$body"
