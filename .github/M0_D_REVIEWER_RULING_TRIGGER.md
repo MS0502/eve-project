@@ -1,2 +1,2 @@
 Disposable trigger for the temporary M0-D reviewer-ruling workflow.
-Synchronize event after workflow installation on main.
+Push event after the dedicated runner was installed on main.
