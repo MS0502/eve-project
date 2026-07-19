@@ -45,27 +45,24 @@ jobs:
           python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-1.json
           python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-2.json
           diff -u /tmp/m0-d-1.json /tmp/m0-d-2.json
-      - name: Diagnose focused M0-D tests
-        run: |
-          set +e
-          python -m pytest -q tests/audit/test_m0_d_component_inventory.py > /tmp/focused.txt 2>&1
-          code=$?
-          set -e
-          cat /tmp/focused.txt
-          if [ "$code" -ne 0 ]; then
-            gh pr comment 135 --repo MS0502/eve-project --body "Focused M0-D validation failed.\n\n\`\`\`text\n$(tail -n 80 /tmp/focused.txt)\n\`\`\`"
-            exit "$code"
-          fi
+      - name: Run focused M0-D tests
+        run: python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/focused.txt
       - name: Collect full suite
         shell: bash
         run: |
           set -o pipefail
           python -m pytest --collect-only -q | tee /tmp/collect.txt
-      - name: Run full suite
-        shell: bash
+      - name: Diagnose full suite
         run: |
-          set -o pipefail
-          python -m pytest -q | tee /tmp/full.txt
+          set +e
+          python -m pytest -q > /tmp/full.txt 2>&1
+          code=$?
+          set -e
+          cat /tmp/full.txt
+          if [ "$code" -ne 0 ]; then
+            gh pr comment 135 --repo MS0502/eve-project --body "Full-suite validation failed.\n\n\`\`\`text\n$(tail -n 120 /tmp/full.txt)\n\`\`\`"
+            exit "$code"
+          fi
       - name: Verify exact correction scope
         run: |
           changed="$(git diff --name-only | sort)"
