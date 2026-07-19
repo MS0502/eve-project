@@ -16,6 +16,33 @@ The command scans tracked Python files with `ast.parse` and emits canonical JSON
 
 Every entry records repository-relative path, exact line range, enclosing callable, mechanically detected evidence, detector, manual classification, confidence, unresolved state, and whether the entry is manual-only.
 
+## Validated inventory snapshot
+
+Validated after path, source-file, embedded-fixture, and generic sqlite-string false-positive removal:
+
+```text
+tracked Python files: 582
+total occurrence entries: 7,669
+persistence I/O occurrences: 856
+artifact path occurrences: 519
+persistence-intended state occurrences: 3,845
+legacy hormone/affect state occurrences: 1,777
+drive/need state occurrences: 386
+hormone-to-drive bridge candidates: 54
+test files: 230 KEEP / 0 REWRITE / 0 RETIRE
+unresolved entries: 7,440
+parse errors: 2
+```
+
+Counts are occurrence-level mechanical evidence. They are not counts of distinct authoritative state objects, active persistence channels, or architectural defects. Active runtime code, legacy snapshots, operator scripts, validation utilities, tests, and dry-run surfaces remain in the tracked Python scan.
+
+The two tracked parse failures remain explicit unresolved evidence:
+
+- `eve_foundation_v10_2.py:11557` — `'[' was never closed`;
+- `eve_foundation_v12_0.py:11542` — `'[' was never closed`.
+
+M0-C neither excludes nor repairs those legacy snapshots.
+
 ## Audit categories
 
 | Category | Mechanical scope | Default classification |
@@ -28,67 +55,123 @@ Every entry records repository-relative path, exact line range, enclosing callab
 | `hormone_drive_bridge` | callable scopes containing both hormone/affect and drive/need symbols | `HORMONE_TO_DRIVE_MIGRATION_CANDIDATE` |
 | `parse_error` | tracked Python that cannot be parsed | `UNRESOLVED_PARSE_ERROR` |
 
-## Required state domains
+Artifact-path detection accepts recognized persistence suffixes directly. Directory-like strings require persistence markers such as state, checkpoint, vector, vocabulary, seed, operator artifact, debug export, or validation artifact. Source files, Markdown, shell files, pytest node IDs, URLs, commands, root-only strings, and unrelated media paths are excluded.
 
-The scanner mechanically inventories these M0-C domains:
+## State-domain distribution
 
-- episodic memory;
-- semantic/concept memory;
-- self-model, identity, and preferences;
-- relationships, familiarity, trust, and user presence;
-- affect, emotion, mood, and hormones;
-- goals, intentions, and plans;
-- learned parameters, statistics, and model state;
-- vectors, embeddings, and vector stores;
-- vocabularies, lexicons, and token maps;
-- checkpoints and rollback state;
-- autosave targets;
-- debug/state exports;
-- operator, validation, audit, and report artifacts.
+```text
+affect / hormones: 1,534
+vectors / embeddings: 1,175
+checkpoints / rollback state: 278
+self-model / identity / preferences: 267
+semantic / concept memory: 155
+vocabularies / lexicons: 112
+relationships / familiarity / trust: 88
+goals / intentions / plans: 65
+operator / validation artifacts: 60
+episodic memory: 43
+debug / state exports: 39
+learned parameters / statistics: 17
+autosave: 12
+```
 
-A symbol match is persistence-intended-state evidence, not proof that the current object is actually serialized or restored. Reachability and ownership remain unresolved until call-path review.
+A symbol match is persistence-intended-state evidence, not proof that the current object is serialized, authoritative, restored, validated, or reachable from the active runtime.
 
 ## Persistence formats and operations
 
-The inventory distinguishes:
+Validated format evidence:
 
-- pickle and compressed pickle;
-- JSON, compressed JSON, and JSONL;
-- sqlite and generic database paths;
-- NumPy arrays and archives;
-- torch checkpoints;
-- safetensors;
-- joblib;
-- YAML;
-- CSV/TSV;
-- gzip, bz2, and lzma containers;
-- generic checkpoint and artifact targets.
+```text
+JSON: 544
+text: 314
+filesystem mutation/copy/replace: 149
+NumPy: 118
+path or persistence target: 104
+file open: 43
+bytes: 27
+gzip: 17
+checkpoint: 10
+pickle: 10
+JSONL: 8
+YAML: 7
+CSV: 4
+pickle+gzip: 2
+sqlite: 2
+torch checkpoint: 2
+JSON+gzip: 1
+JSONL+gzip: 1
+generic database: 1
+joblib: 1
+safetensors: 1
+TSV: 1
+```
 
-Operations are classified as read, write, read-write, serialize, deserialize, copy, replace, delete, create, or container access where mechanical evidence permits.
+Validated persistence-operation evidence:
+
+```text
+read: 234
+write: 180
+serialize: 187
+deserialize: 106
+create: 87
+replace: 48
+copy: 9
+delete: 5
+```
+
+These are call/path occurrences. For example, `json.dumps` is serialization evidence but does not alone prove durable persistence.
+
+## High-impact active and migration surfaces
+
+### Runtime persistence adapter
+
+`adapters/persistence_adapter.py` contains the clearest active persistence path:
+
+- `PersistenceAdapter.save` calls legacy `Persistence.save` and writes a gzip/pickle sidecar;
+- `pickle.dump` occurs at line 70;
+- `_load_sidecar` recognizes `.v41sidecar.gz` and related `.gz` paths;
+- `pickle.load` occurs at line 142;
+- M0-A previously confirmed `save` at lines 54–80, `load` at 84–101, and sidecar restoration at 130–151.
+
+This creates two persistence representations: legacy persistence plus a separate pickle sidecar. M0-C does not decide their replacement contract.
+
+### Autosave and operator save/load
+
+- `adapters/live_loop.py` contains autosave state and the active `_do_autosave` path confirmed by M0-A at lines 205–212;
+- `main.py:419` configures `~/eve.ckpt` for the interactive runtime, with another occurrence at line 547;
+- `main.py:718` invokes `persistence.save`;
+- `main.py:724` invokes `persistence.load`.
+
+Automatic autosave and explicit operator persistence are separate activation and migration boundaries.
+
+### State debug and operator evidence
+
+`adapters/state_debug_adapter.py` aggregates identity, integrated self, goals, concept memory, embedding state, affect, and additional diagnostics into a broad snapshot/export surface. Runtime-mapping dry-run and limited-sandbox modules separately define checkpoint, rollback, debug-export, vector, and operator-evidence artifacts. These surfaces are evidence/export contracts, not automatically authoritative runtime checkpoints.
+
+### Memory, self, relationship, vector, and vocabulary state
+
+The inventory finds persistence-intended symbols across episodic memory, concept/semantic memory, self-state, integrated-self views, user-presence and relationship state, goal state, learned statistics, vector stores, embedding stores, and vocabularies. Their high occurrence counts reflect distributed ownership and repeated schema/test evidence; they do not prove one coherent persistence envelope exists.
 
 ## Hormone-to-drive migration inventory
 
-M0-C does not perform the migration. It records three evidence layers:
+M0-C records:
 
-1. legacy hormone/affect state sites;
-2. drive/need state sites;
-3. callable scopes that reference both families and therefore may translate, modulate, aggregate, or couple them.
+```text
+legacy hormone/affect sites: 1,777
+drive/need sites: 386
+callable bridge candidates: 54
+```
 
-A bridge candidate is not automatically a correct migration boundary. Later design work must determine whether the relation is representation replacement, compatibility projection, read-only observation, proposal generation, or prohibited live mutation.
+High-impact bridge candidates include:
 
-## Initial high-impact review targets
+- `main.py:20-356` / `build_full_engine` — hormone, emotion, mood, allostatic, and urge composition;
+- `adapters/live_loop.py:113-201` / `LiveLoop._run` — hormone updates and urge-driven proactive behavior;
+- `adapters/allostatic_adapter.py:24-37` / `AllostaticAdapter.__init__` — hormone/allostatic coupling;
+- `adapters/urge_adapter.py:45-93` / `UrgeAdapter.compute_urge` — dopamine/hormone inputs and urge output;
+- `core/autonomous.py` — need detection, autonomous step, and tick bridges;
+- `language/streaming.py` — chat, proactive, and sensory-processing bridges.
 
-The measured report must be used to confirm and document at least these active surfaces:
-
-- `adapters/persistence_adapter.py` save/load and sidecar behavior;
-- `adapters/live_loop.py` autosave target and autosave call path;
-- `main.py` default checkpoint target and operator `/save`/`/load` commands;
-- episodic and semantic memory stores;
-- self-state and integrated-self surfaces;
-- relationship/user-presence state;
-- hormone/affect and goal/need/drive state;
-- vector and vocabulary stores;
-- runtime mapping checkpoints, rollback, debug export, and operator evidence artifacts.
+A bridge candidate is not automatically the correct migration boundary. Later design work must distinguish representation replacement, compatibility projection, read-only observation, proposal generation, and prohibited live mutation.
 
 ## Interpretation rules
 
@@ -98,8 +181,9 @@ The measured report must be used to confirm and document at least these active s
 - A load call does not prove restored data is validated before mutation.
 - A debug export may contain persistence-intended state without being an authoritative checkpoint.
 - Pickle evidence is retained as a security, compatibility, and migration concern; M0-C does not replace it.
-- Vector, vocabulary, and learned-parameter files are state even when they are described as caches or model assets.
+- Vector, vocabulary, and learned-parameter files are state even when described as caches or model assets.
 - Autosave and operator save/load paths must be assessed separately.
+- Runtime-mapping dry-run artifacts must not be confused with enabled production persistence.
 - Parse failures are never silently excluded.
 
 ## Scope boundary
@@ -115,5 +199,3 @@ M0-C does not:
 - delete, skip, xfail, weaken, or rewrite tests;
 - commit generated JSON;
 - decide M0-D module retirement or integrated architecture disposition.
-
-Measured counts and exact high-impact findings will be added only after independent validation against the unchanged branch head.
