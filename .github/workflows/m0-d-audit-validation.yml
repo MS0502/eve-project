@@ -1,0 +1,144 @@
+name: Validate EVE M0-D audit
+
+on:
+  push:
+    branches: [claude/eve-m0-d-disposition-audit]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/eve-m0-d-disposition-audit
+          fetch-depth: 0
+
+      - name: Expand disposition scope to every non-audit Python module once
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/audit/m0_d_component_inventory.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''    if len(relative.parts) == 1:
+              return relative.name in TOP_LEVEL_RUNTIME_FILES or relative.name.startswith("eve_")
+              return relative.parts[0] in RUNTIME_PACKAGE_ROOTS
+          '''
+          new = '''    if len(relative.parts) == 1:
+              return True
+              return True
+          '''
+          if old in text:
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+          elif new not in text:
+              raise SystemExit('runtime module scope anchor not found')
+          PY
+          python -m py_compile scripts/audit/m0_d_component_inventory.py
+          git diff --check
+          if ! git diff --quiet; then
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add scripts/audit/m0_d_component_inventory.py
+            git commit -m "Classify every non-audit Python module in M0-D"
+            git push origin HEAD:claude/eve-m0-d-disposition-audit
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare validation artifacts
+        run: mkdir -p validation-artifacts
+
+      - name: Install pinned markdown-strings compatibility package
+        run: |
+          set -o pipefail
+          python -m pip install --no-deps \
+            'git+https://github.com/awesmubarak/markdown_strings.git@9834a3f3cc13bd1e028756949c96bb54d573e7cf' \
+            2>&1 | tee validation-artifacts/pip-bootstrap.txt
+          python - <<'PY'
+          import importlib.metadata
+          version = importlib.metadata.version('markdown-strings')
+          if version != '3.4.0':
+              raise SystemExit(f'unexpected markdown-strings version: {version}')
+          print(f'markdown-strings version={version}')
+          PY
+
+      - name: Install declared dependencies
+        run: |
+          set -o pipefail
+          python -m pip install --retries 5 --timeout 60 -r requirements.txt \
+            2>&1 | tee validation-artifacts/pip-install.txt
+          python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
+
+      - name: Compile required surface
+        run: |
+          python -m compileall -q adapters core cognition tests main.py scripts
+
+      - name: Generate deterministic M0-D inventories
+        run: |
+          python scripts/audit/m0_d_component_inventory.py > /tmp/d1.json
+          python scripts/audit/m0_d_component_inventory.py > /tmp/d2.json
+          diff -u /tmp/d1.json /tmp/d2.json | tee validation-artifacts/determinism-diff.txt
+          cp /tmp/d1.json validation-artifacts/m0-d-inventory.json
+          python scripts/audit/m0_d_component_inventory.py --summary-only \
+            | tee validation-artifacts/m0-d-summary.json
+
+      - name: Run focused M0-D tests
+        run: |
+          set -o pipefail
+          python -m pytest -q tests/audit/test_m0_d_component_inventory.py \
+            | tee validation-artifacts/focused-pytest.txt
+
+      - name: Collect full suite
+        run: |
+          set -o pipefail
+          python -m pytest --collect-only -q \
+            | tee validation-artifacts/collect-only.txt
+
+      - name: Run full suite
+        run: |
+          set -o pipefail
+          python -m pytest -q | tee validation-artifacts/full-pytest.txt
+
+      - name: Verify temporary scope and clean generated state
+        run: |
+          git diff --check origin/main...HEAD
+          python - <<'PY'
+          import subprocess
+          allowed = {
+              '.github/workflows/m0-d-audit-validation.yml',
+              'docs/EVE_IMPLEMENTATION_STATUS_v4.md',
+              'docs/audit/M0_D_MODULE_DISPOSITION.md',
+              'docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md',
+              'scripts/audit/m0_d_component_inventory.py',
+              'tests/audit/test_m0_d_component_inventory.py',
+          }
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only', 'origin/main...HEAD'], text=True
+          ).splitlines())
+          if changed != allowed:
+              raise SystemExit(f'unexpected scope: {sorted(changed)}')
+          if subprocess.check_output(['git', 'ls-files', 'validation-artifacts'], text=True).strip():
+              raise SystemExit('validation artifacts are tracked')
+          subprocess.check_call(['git', 'diff', '--exit-code'])
+          subprocess.check_call(['git', 'diff', '--cached', '--exit-code'])
+          PY
+
+      - name: Upload M0-D validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eve-m0-d-validation
+          path: validation-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
