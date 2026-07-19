@@ -31,74 +31,42 @@ jobs:
           text = script.read_text(encoding='utf-8')
           changed = False
 
-          old_markers = '''LEGACY_TEST_FORMAT_MARKERS = {
-              "pickle",
-              "sidecar",
-              "sqlite",
-              "eve.ckpt",
-              ".ckpt",
-              ".pickle",
-              ".pkl",
-          }
-          '''
-          new_markers = '''LEGACY_TEST_FORMAT_MARKERS = {
-              "sidecar",
-              "sqlite",
-              "eve.ckpt",
-              ".ckpt",
-              ".pickle",
-              ".pkl",
-          }
-          '''
-          if old_markers in text:
-              text = text.replace(old_markers, new_markers, 1)
+          pickle_marker = '    "pickle",\n    "sidecar",\n'
+          if pickle_marker in text:
+              text = text.replace(pickle_marker, '    "sidecar",\n', 1)
               changed = True
-          elif 'LEGACY_TEST_FORMAT_MARKERS' in text and '    "pickle",\n' in text:
-              raise SystemExit('legacy test marker block changed unexpectedly')
 
-          old_path_fragment = '''    if _format_for_path(candidate) is not None:
-              return True
-              if candidate in {"/", "\\\\"} or "://" in candidate:
-              return False
-          '''
-          new_path_fragment = '''    if _format_for_path(candidate) is not None:
-              return True
-              if "::" in candidate or candidate.lower().endswith(
-                  (".py", ".pyi", ".md", ".rst", ".sh")
-              ):
-                  return False
-              if candidate in {"/", "\\\\"} or "://" in candidate:
-              return False
-          '''
-          if old_path_fragment in text:
-              text = text.replace(old_path_fragment, new_path_fragment, 1)
+          format_anchor = (
+              '    if _format_for_path(candidate) is not None:\n'
+              '        return True\n'
+          )
+          source_exclusion = (
+              '    if _format_for_path(candidate) is not None:\n'
+              '        return True\n'
+              '    if "::" in candidate or candidate.lower().endswith(\n'
+              '        (".py", ".pyi", ".md", ".rst", ".sh")\n'
+              '    ):\n'
+              '        return False\n'
+          )
+          if 'if "::" in candidate' not in text:
+              if text.count(format_anchor) != 1:
+                  raise SystemExit(f'format anchor count={text.count(format_anchor)}')
+              text = text.replace(format_anchor, source_exclusion, 1)
               changed = True
-          elif 'if "::" in candidate' not in text:
-              raise SystemExit('M0-C source path exclusion anchor not found')
 
-          old_constant = '''    def visit_Constant(self, node: ast.Constant) -> None:
-              if isinstance(node.value, str):
-                  lowered = node.value.lower()
-                  for marker in sorted(LEGACY_TEST_FORMAT_MARKERS):
-                      if marker in lowered:
-                          self.signals.append((int(getattr(node, "lineno", 1)), f"legacy_format={marker}", True))
-                          break
-              self.generic_visit(node)
-          '''
-          new_constant = '''    def visit_Constant(self, node: ast.Constant) -> None:
-              if isinstance(node.value, str) and "\\n" not in node.value and "\\r" not in node.value:
-                  lowered = node.value.lower()
-                  for marker in sorted(LEGACY_TEST_FORMAT_MARKERS):
-                      if marker in lowered:
-                          self.signals.append((int(getattr(node, "lineno", 1)), f"legacy_format={marker}", True))
-                          break
-              self.generic_visit(node)
-          '''
-          if old_constant in text:
-              text = text.replace(old_constant, new_constant, 1)
+          class_index = text.index('class TestPersistenceVisitor')
+          prefix, suffix = text[:class_index], text[class_index:]
+          constant_line = '        if isinstance(node.value, str):\n'
+          refined_line = (
+              '        if isinstance(node.value, str) and "\\n" not in node.value '
+              'and "\\r" not in node.value:\n'
+          )
+          if refined_line not in suffix:
+              if suffix.count(constant_line) < 1:
+                  raise SystemExit('test constant visitor line not found')
+              suffix = suffix.replace(constant_line, refined_line, 1)
+              text = prefix + suffix
               changed = True
-          elif 'and "\\n" not in node.value' not in text:
-              raise SystemExit('M0-C test constant visitor anchor not found')
 
           if changed:
               script.write_text(text, encoding='utf-8')
@@ -119,12 +87,16 @@ jobs:
               assert own["confidence"] == "high"
               assert own["unresolved"] is False
           '''
-          if 'assert module._path_like("adapters/self_embedding_adapter.py") is False' not in tests:
+          source_assertion = '    assert module._path_like("adapters/self_embedding_adapter.py") is False\n'
+          if source_assertion not in tests:
+              marker = '    assert module._path_like("/nonexistent.wav") is False\n'
+              if marker not in tests:
+                  raise SystemExit('path test insertion marker not found')
               tests = tests.replace(
-                  '    assert module._path_like("/nonexistent.wav") is False\n',
-                  '    assert module._path_like("/nonexistent.wav") is False\n'
-                  '    assert module._path_like("adapters/self_embedding_adapter.py") is False\n'
-                  '    assert module._path_like("docs/STATE_REPORT.md") is False\n',
+                  marker,
+                  marker
+                  + source_assertion
+                  + '    assert module._path_like("docs/STATE_REPORT.md") is False\n',
                   1,
               )
           test_path.write_text(tests, encoding='utf-8')
