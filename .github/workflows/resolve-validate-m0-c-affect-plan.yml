@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      BASE_SHA: 28ec113a8ee371fdc6ac13341c0d70e00db26ce4
       EXPECTED_HEAD: f1f58ecf929287ca46273078baf8e09537455cdc
       TARGET_BRANCH: claude/eve-m0-c-affect-migration-plan
       GH_TOKEN: ${{ github.token }}
@@ -25,17 +26,44 @@ jobs:
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
-      - name: Verify and load temporary validators
+      - name: Verify and load temporary helpers
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           test -z "$(git status --short)"
           git fetch origin main
           git show origin/main:scripts/tmp_apply_m0_c_affect_plan_rulings.py > /tmp/apply.py
-          git show origin/main:scripts/tmp_validate_m0_c_affect_plan.py > /tmp/validate.py
+          git show origin/main:scripts/tmp_install_m0_c_validation_dependency.py > /tmp/install_compat.py
       - name: Apply reviewer rulings
         run: python /tmp/apply.py
-      - name: Validate exact working tree
-        run: python /tmp/validate.py
+      - name: Install SHA-pinned compatibility dependency
+        run: python /tmp/install_compat.py
+      - name: Install declared dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Compile audit surface
+        run: python -m compileall -q scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py
+      - name: Generate and verify deterministic audit
+        run: |
+          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-1.json
+          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-2.json
+          diff -u /tmp/affect-plan-1.json /tmp/affect-plan-2.json
+          python scripts/audit/m0_c_affect_migration_check.py --fail-on-unresolved --summary-only | tee /tmp/summary.json
+      - name: Run focused tests
+        run: python -m pytest -q tests/audit/test_m0_c_affect_migration_check.py | tee /tmp/focused.txt
+      - name: Collect full suite
+        run: python -m pytest --collect-only -q | tee /tmp/collect.txt
+      - name: Run full suite
+        run: python -m pytest -q | tee /tmp/full.txt
+      - name: Verify exact four-file scope
+        run: |
+          changed="$(git diff --name-only "$BASE_SHA"...HEAD | sort)"
+          expected="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py | sort)"
+          test "$changed" = "$expected"
+          uncommitted="$(git diff --name-only | sort)"
+          expected_uncommitted="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md | sort)"
+          test "$uncommitted" = "$expected_uncommitted"
+          git diff --check
       - name: Commit reviewer rulings
         run: |
           git config user.name github-actions[bot]
@@ -55,7 +83,6 @@ jobs:
             /tmp/focused.txt
             /tmp/collect.txt
             /tmp/full.txt
-            /tmp/validation-result.json
             /tmp/final-head.txt
           if-no-files-found: error
       - name: Publish result comment
