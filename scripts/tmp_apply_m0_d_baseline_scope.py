@@ -28,10 +28,7 @@ new = '''def _git_tracked_python_files(root: Path) -> list[Path]:
     """
     try:
         raw = subprocess.check_output(
-            [
-                "git", "-C", str(root), "ls-tree", "-r", "-z", "--name-only",
-                BASELINE_SHA, "--", "*.py",
-            ],
+            ["git", "-C", str(root), "ls-tree", "-r", "-z", "--name-only", BASELINE_SHA],
             stderr=subprocess.DEVNULL,
         )
     except (OSError, subprocess.CalledProcessError):
@@ -41,6 +38,8 @@ new = '''def _git_tracked_python_files(root: Path) -> list[Path]:
         if not value:
             continue
         relative = Path(os.fsdecode(value))
+        if relative.suffix != ".py":
+            continue
         if any(part in EXCLUDED_PARTS for part in relative.parts):
             continue
         path = root / relative
