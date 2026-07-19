@@ -28,19 +28,19 @@ jobs:
           from pathlib import Path
           path = Path('scripts/audit/m0_d_component_inventory.py')
           text = path.read_text(encoding='utf-8')
-          old = '''    if len(relative.parts) == 1:
-              return relative.name in TOP_LEVEL_RUNTIME_FILES or relative.name.startswith("eve_")
-              return relative.parts[0] in RUNTIME_PACKAGE_ROOTS
-          '''
-          new = '''    if len(relative.parts) == 1:
-              return True
-              return True
-          '''
-          if old in text:
-              text = text.replace(old, new, 1)
+          top_level = '        return relative.name in TOP_LEVEL_RUNTIME_FILES or relative.name.startswith("eve_")'
+          nested = '    return relative.parts[0] in RUNTIME_PACKAGE_ROOTS'
+          changed = False
+          if top_level in text:
+              text = text.replace(top_level, '        return True', 1)
+              changed = True
+          if nested in text:
+              text = text.replace(nested, '    return True', 1)
+              changed = True
+          if changed:
               path.write_text(text, encoding='utf-8')
-          elif new not in text:
-              raise SystemExit('runtime module scope anchor not found')
+          elif text.count('return True') < 2:
+              raise SystemExit('runtime module scope lines not found')
           PY
           python -m py_compile scripts/audit/m0_d_component_inventory.py
           git diff --check
