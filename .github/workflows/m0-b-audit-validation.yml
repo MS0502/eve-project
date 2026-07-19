@@ -25,10 +25,23 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install declared dependencies
+      - name: Prepare validation artifacts
+        run: mkdir -p validation-artifacts
+
+      - name: Install declared dependencies with captured status
+        id: dependencies
+        shell: bash
         run: |
-          python -m pip install --retries 5 --timeout 60 -r requirements.txt
-          python -m pip check
+          set +e
+          python -m pip install --retries 5 --timeout 60 -r requirements.txt \
+            2>&1 | tee validation-artifacts/pip-install.txt
+          STATUS=${PIPESTATUS[0]}
+          if [ "$STATUS" -eq 0 ]; then
+            python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
+            STATUS=${PIPESTATUS[0]}
+          fi
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Compile audit surface
         run: |
@@ -37,23 +50,25 @@ jobs:
 
       - name: Generate ephemeral M0-B inventory
         run: |
-          mkdir -p validation-artifacts
           python scripts/audit/m0_b_controlflow_concurrency_inventory.py \
             --output validation-artifacts/m0-b-inventory.json
           python scripts/audit/m0_b_controlflow_concurrency_inventory.py \
             --summary-only | tee validation-artifacts/m0-b-summary.json
 
       - name: Run focused M0-B tests
+        if: steps.dependencies.outputs.status == '0'
         run: |
           python -m pytest -q tests/audit/test_m0_b_controlflow_concurrency_inventory.py \
             | tee validation-artifacts/focused-pytest.txt
 
       - name: Collect full suite
+        if: steps.dependencies.outputs.status == '0'
         run: |
           python -m pytest --collect-only -q \
             | tee validation-artifacts/collect-only.txt
 
       - name: Run full suite
+        if: steps.dependencies.outputs.status == '0'
         run: |
           python -m pytest -q | tee validation-artifacts/full-pytest.txt
 
@@ -80,9 +95,16 @@ jobs:
           PY
 
       - name: Upload M0-B validation evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eve-m0-b-validation
           path: validation-artifacts/*
           if-no-files-found: error
           retention-days: 30
+
+      - name: Enforce dependency and full-suite gate
+        if: always()
+        run: |
+          test "${{ steps.dependencies.outputs.status }}" = "0"
+          test -s validation-artifacts/full-pytest.txt
