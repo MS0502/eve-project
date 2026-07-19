@@ -1,0 +1,121 @@
+name: Validate M0-D exact final head
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      TARGET_SHA: c6ccfc109b09fb234a040cbd374e640e0d06c658
+      BASE_SHA: fe10cd954bdf445400ea6aa9708dd214ed761114
+    steps:
+      - name: Checkout exact M0-D final head
+        uses: actions/checkout@v4
+        with:
+          ref: c6ccfc109b09fb234a040cbd374e640e0d06c658
+          fetch-depth: 0
+
+      - name: Verify exact revision
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare evidence directory
+        run: mkdir -p validation-artifacts
+
+      - name: Install pinned markdown-strings compatibility package
+        run: |
+          set -o pipefail
+          python -m pip install --no-deps \
+            'git+https://github.com/awesmubarak/markdown_strings.git@9834a3f3cc13bd1e028756949c96bb54d573e7cf' \
+            2>&1 | tee validation-artifacts/pip-bootstrap.txt
+          python - <<'PY'
+          import importlib.metadata
+          version = importlib.metadata.version('markdown-strings')
+          if version != '3.4.0':
+              raise SystemExit(f'unexpected markdown-strings version: {version}')
+          print(f'markdown-strings version={version}')
+          PY
+
+      - name: Install dependencies
+        run: |
+          set -o pipefail
+          python -m pip install --retries 5 --timeout 60 -r requirements.txt \
+            2>&1 | tee validation-artifacts/pip-install.txt
+          python -m pip check 2>&1 | tee validation-artifacts/pip-check.txt
+
+      - name: Compile required surface
+        run: |
+          python -m compileall -q adapters core cognition tests main.py scripts
+
+      - name: Generate deterministic inventory
+        run: |
+          python scripts/audit/m0_d_component_inventory.py > /tmp/d1.json
+          python scripts/audit/m0_d_component_inventory.py > /tmp/d2.json
+          diff -u /tmp/d1.json /tmp/d2.json | tee validation-artifacts/determinism-diff.txt
+          cp /tmp/d1.json validation-artifacts/m0-d-inventory.json
+          python scripts/audit/m0_d_component_inventory.py --summary-only \
+            | tee validation-artifacts/m0-d-summary.json
+
+      - name: Run focused tests
+        run: |
+          set -o pipefail
+          python -m pytest -q tests/audit/test_m0_d_component_inventory.py \
+            | tee validation-artifacts/focused-pytest.txt
+
+      - name: Collect full suite
+        run: |
+          set -o pipefail
+          python -m pytest --collect-only -q \
+            | tee validation-artifacts/collect-only.txt
+
+      - name: Run full suite
+        run: |
+          set -o pipefail
+          python -m pytest -q | tee validation-artifacts/full-pytest.txt
+
+      - name: Verify exact final scope and clean state
+        run: |
+          python - <<'PY'
+          import subprocess
+          expected = {
+              'docs/EVE_IMPLEMENTATION_STATUS_v4.md',
+              'docs/audit/M0_D_MODULE_DISPOSITION.md',
+              'docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md',
+              'scripts/audit/m0_d_component_inventory.py',
+              'tests/audit/test_m0_d_component_inventory.py',
+          }
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only',
+               'fe10cd954bdf445400ea6aa9708dd214ed761114...HEAD'],
+              text=True,
+          ).splitlines())
+          if changed != expected:
+              raise SystemExit(f'unexpected exact final scope: {sorted(changed)}')
+          subprocess.check_call([
+              'git', 'diff', '--check',
+              'fe10cd954bdf445400ea6aa9708dd214ed761114...HEAD',
+          ])
+          if subprocess.check_output(['git', 'ls-files', 'validation-artifacts'], text=True).strip():
+              raise SystemExit('validation artifacts are tracked')
+          subprocess.check_call(['git', 'diff', '--exit-code'])
+          subprocess.check_call(['git', 'diff', '--cached', '--exit-code'])
+          PY
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m0-d-final-exact-head-validation
+          path: validation-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
