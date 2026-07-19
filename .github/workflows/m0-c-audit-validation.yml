@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -19,99 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: audit/m0-c-persistence-state
           fetch-depth: 0
-
-      - name: Refine M0-C source and fixture evidence once
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          script = Path('scripts/audit/m0_c_persistence_state_inventory.py')
-          text = script.read_text(encoding='utf-8')
-          changed = False
-
-          pickle_marker = '    "pickle",\n    "sidecar",\n'
-          if pickle_marker in text:
-              text = text.replace(pickle_marker, '    "sidecar",\n', 1)
-              changed = True
-
-          format_anchor = (
-              '    if _format_for_path(candidate) is not None:\n'
-              '        return True\n'
-          )
-          source_exclusion = (
-              '    if _format_for_path(candidate) is not None:\n'
-              '        return True\n'
-              '    if "::" in candidate or candidate.lower().endswith(\n'
-              '        (".py", ".pyi", ".md", ".rst", ".sh")\n'
-              '    ):\n'
-              '        return False\n'
-          )
-          if 'if "::" in candidate' not in text:
-              if text.count(format_anchor) != 1:
-                  raise SystemExit(f'format anchor count={text.count(format_anchor)}')
-              text = text.replace(format_anchor, source_exclusion, 1)
-              changed = True
-
-          class_index = text.index('class TestPersistenceVisitor')
-          prefix, suffix = text[:class_index], text[class_index:]
-          constant_line = '        if isinstance(node.value, str):\n'
-          refined_line = (
-              '        if isinstance(node.value, str) and "\\n" not in node.value '
-              'and "\\r" not in node.value:\n'
-          )
-          if refined_line not in suffix:
-              if suffix.count(constant_line) < 1:
-                  raise SystemExit('test constant visitor line not found')
-              suffix = suffix.replace(constant_line, refined_line, 1)
-              text = prefix + suffix
-              changed = True
-
-          if changed:
-              script.write_text(text, encoding='utf-8')
-
-          test_path = Path('tests/audit/test_m0_c_persistence_state_inventory.py')
-          tests = test_path.read_text(encoding='utf-8')
-          if 'def test_repository_policy_does_not_flag_embedded_fixture_source' not in tests:
-              tests += '''\n\ndef test_repository_policy_does_not_flag_embedded_fixture_source():
-              module = _load_module()
-              report = module.audit_repository(REPO_ROOT)
-              own = next(
-                  entry
-                  for entry in report["entries"]
-                  if entry["category"] == "test_classification"
-                  and entry["path"] == "tests/audit/test_m0_c_persistence_state_inventory.py"
-              )
-              assert own["manual_classification"] == "KEEP"
-              assert own["confidence"] == "high"
-              assert own["unresolved"] is False
-          '''
-          source_assertion = '    assert module._path_like("adapters/self_embedding_adapter.py") is False\n'
-          if source_assertion not in tests:
-              marker = '    assert module._path_like("/nonexistent.wav") is False\n'
-              if marker not in tests:
-                  raise SystemExit('path test insertion marker not found')
-              tests = tests.replace(
-                  marker,
-                  marker
-                  + source_assertion
-                  + '    assert module._path_like("docs/STATE_REPORT.md") is False\n',
-                  1,
-              )
-          test_path.write_text(tests, encoding='utf-8')
-          PY
-          python -m py_compile scripts/audit/m0_c_persistence_state_inventory.py
-          python -m py_compile tests/audit/test_m0_c_persistence_state_inventory.py
-          git diff --check
-          if ! git diff --quiet; then
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add scripts/audit/m0_c_persistence_state_inventory.py \
-              tests/audit/test_m0_c_persistence_state_inventory.py
-            git commit -m "Refine M0-C source and fixture evidence"
-            git push origin HEAD:audit/m0-c-persistence-state
-          fi
 
       - uses: actions/setup-python@v5
         with:
