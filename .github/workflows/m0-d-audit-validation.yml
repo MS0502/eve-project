@@ -26,58 +26,64 @@ jobs:
 
           life_start = text.index('    def _life_candidate(')
           life_end = text.index('\n    def visit_Import(', life_start)
-          life_block = '''    def _life_candidate(self, node: ast.AST, name: str, kind: str) -> tuple[str, int] | None:
-              tokens = _symbol_tokens(name)
-              context_tokens = _symbol_tokens(f"{self.path} {self.symbol}")
-              generic_step = name.lower() in {"run", "_run", "step"}
-              is_candidate = bool(tokens & LOOP_NAME_TOKENS) or name.lower() == "tick" or (
-                  generic_step and bool(context_tokens & LOOP_NAME_TOKENS)
-              )
-              if not is_candidate:
-                  return None
-              key = (self.symbol, int(getattr(node, "lineno", 1)))
-              self.life_candidates.setdefault(key, {
-                  "path": self.path, "line_start": int(getattr(node, "lineno", 1)),
-                  "line_end": _node_end(node), "symbol": self.symbol, "kind": kind,
-                  "name": name, "clock_calls": [], "concurrency_calls": [], "output_calls": [],
-              })
-              return key
-          '''
+          life_block = '\n'.join([
+              '    def _life_candidate(self, node: ast.AST, name: str, kind: str) -> tuple[str, int] | None:',
+              '        tokens = _symbol_tokens(name)',
+              '        context_tokens = _symbol_tokens(f"{self.path} {self.symbol}")',
+              '        generic_step = name.lower() in {"run", "_run", "step"}',
+              '        is_candidate = bool(tokens & LOOP_NAME_TOKENS) or name.lower() == "tick" or (',
+              '            generic_step and bool(context_tokens & LOOP_NAME_TOKENS)',
+              '        )',
+              '        if not is_candidate:',
+              '            return None',
+              '        key = (self.symbol, int(getattr(node, "lineno", 1)))',
+              '        self.life_candidates.setdefault(key, {',
+              '            "path": self.path, "line_start": int(getattr(node, "lineno", 1)),',
+              '            "line_end": _node_end(node), "symbol": self.symbol, "kind": kind,',
+              '            "name": name, "clock_calls": [], "concurrency_calls": [], "output_calls": [],',
+              '        })',
+              '        return key',
+              '',
+          ])
           text = text[:life_start] + life_block + text[life_end:]
 
           taxonomy_start = text.index('def _taxonomy_for(')
           taxonomy_end = text.index('\ndef _entry_ref(', taxonomy_start)
-          taxonomy_block = '''def _taxonomy_for(path: str, symbol: str) -> list[str]:
-              tokens = _symbol_tokens(f"{path} {symbol}")
-              categories: list[str] = []
-              if tokens & {"hormone", "allostatic", "allostasis", "homeostatic", "homeostasis", "vital"} or {"live", "loop"} <= tokens:
-                  categories.append("Vital")
-              if tokens & {"dmn", "reason", "reasoning", "cognitive", "cognition", "think", "workspace", "inference"}:
-                  categories.append("Cognitive")
-              if tokens & {"goal", "intent", "plan", "planning", "urge", "need"}:
-                  categories.append("Goal")
-              if tokens & {"autonomous", "autonomy", "activity", "action", "outing"} or {"live", "loop"} <= tokens:
-                  categories.append("Activity")
-              if tokens & {"learn", "learning", "adaptive", "training", "train", "curiosity", "stabilize", "continual", "corpus"}:
-                  categories.append("Learning")
-              if tokens & {"memory", "consolidate", "consolidation", "replay", "recall"}:
-                  categories.append("Memory")
-              if tokens & {"social", "relationship", "presence"}:
-                  categories.append("Social")
-              if tokens & {"speech", "proactive", "spontaneous", "stream", "streaming", "expression", "generator", "dmn"}:
-                  categories.append("Expression")
-              if not categories:
-                  categories.append("no-v4-equivalent")
-              return [category for category in LOOP_TAXONOMY_ORDER if category in categories]
-          '''
+          taxonomy_block = '\n'.join([
+              'def _taxonomy_for(path: str, symbol: str) -> list[str]:',
+              '    tokens = _symbol_tokens(f"{path} {symbol}")',
+              '    categories: list[str] = []',
+              '    if tokens & {"hormone", "allostatic", "allostasis", "homeostatic", "homeostasis", "vital"} or {"live", "loop"} <= tokens:',
+              '        categories.append("Vital")',
+              '    if tokens & {"dmn", "reason", "reasoning", "cognitive", "cognition", "think", "workspace", "inference"}:',
+              '        categories.append("Cognitive")',
+              '    if tokens & {"goal", "intent", "plan", "planning", "urge", "need"}:',
+              '        categories.append("Goal")',
+              '    if tokens & {"autonomous", "autonomy", "activity", "action", "outing"} or {"live", "loop"} <= tokens:',
+              '        categories.append("Activity")',
+              '    if tokens & {"learn", "learning", "adaptive", "training", "train", "curiosity", "stabilize", "continual", "corpus"}:',
+              '        categories.append("Learning")',
+              '    if tokens & {"memory", "consolidate", "consolidation", "replay", "recall"}:',
+              '        categories.append("Memory")',
+              '    if tokens & {"social", "relationship", "presence"}:',
+              '        categories.append("Social")',
+              '    if tokens & {"speech", "proactive", "spontaneous", "stream", "streaming", "expression", "generator", "dmn"}:',
+              '        categories.append("Expression")',
+              '    if not categories:',
+              '        categories.append("no-v4-equivalent")',
+              '    return [category for category in LOOP_TAXONOMY_ORDER if category in categories]',
+              '',
+          ])
           text = text[:taxonomy_start] + taxonomy_block + text[taxonomy_end:]
 
-          old = '''    if reachable and has_hormone:
-              return "REWRITE", "medium", True, "Reachable module is coupled to legacy hormone/affect state; v4 requires drive/appraisal/derived-emotion semantics and a continuity-preserving migration contract."
-          '''
-          new = '''    if reachable and has_hormone:
-              return "WRAP", "medium", True, "Reachable module is coupled to legacy hormone/affect state; preserve behavior behind an explicit compatibility projection until the required drive/appraisal/derived-emotion migration contract is reviewed."
-          '''
+          old = '\n'.join([
+              '    if reachable and has_hormone:',
+              '        return "REWRITE", "medium", True, "Reachable module is coupled to legacy hormone/affect state; v4 requires drive/appraisal/derived-emotion semantics and a continuity-preserving migration contract."',
+          ])
+          new = '\n'.join([
+              '    if reachable and has_hormone:',
+              '        return "WRAP", "medium", True, "Reachable module is coupled to legacy hormone/affect state; preserve behavior behind an explicit compatibility projection until the required drive/appraisal/derived-emotion migration contract is reviewed."',
+          ])
           if old not in text:
               raise SystemExit('hormone disposition anchor not found')
           text = text.replace(old, new, 1)
