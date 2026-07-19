@@ -1,4 +1,4 @@
-name: Resolve and validate M0-C affect plan
+name: Validate M0-D baseline path scope
 
 on:
   pull_request:
@@ -6,19 +6,15 @@ on:
 
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 jobs:
-  resolve-validate:
-    if: github.event.pull_request.head.ref == 'validation/m0-c-affect-plan-trigger'
+  validate:
+    if: github.event.pull_request.head.ref == 'validation/m0-d-baseline-scope-trigger'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      BASE_SHA: 28ec113a8ee371fdc6ac13341c0d70e00db26ce4
-      EXPECTED_HEAD: f1f58ecf929287ca46273078baf8e09537455cdc
-      TARGET_BRANCH: claude/eve-m0-c-affect-migration-plan
-      GH_TOKEN: ${{ github.token }}
+      EXPECTED_HEAD: 223c680cb404ebec305fda39825a80616ceccbc5
+      TARGET_BRANCH: fix/m0-d-baseline-path-scope
       PIP_INDEX_URL: https://pypi.org/simple
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
@@ -26,77 +22,64 @@ jobs:
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
-      - name: Verify and load temporary helpers
+      - name: Verify and load helpers
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           test -z "$(git status --short)"
           git fetch origin main
-          git show origin/main:scripts/tmp_apply_m0_c_affect_plan_rulings.py > /tmp/apply.py
+          git show origin/main:scripts/tmp_apply_m0_d_baseline_scope.py > /tmp/apply.py
           git show origin/main:scripts/tmp_install_m0_c_validation_dependency.py > /tmp/install_compat.py
-      - name: Apply reviewer rulings
+      - name: Apply baseline-scope correction
         run: python /tmp/apply.py
-      - name: Install SHA-pinned compatibility dependency
-        run: python /tmp/install_compat.py
-      - name: Install declared dependencies
+      - name: Install dependencies
         run: |
+          python /tmp/install_compat.py
           python -m pip install -r requirements.txt
           python -m pip check
-      - name: Compile audit surface
-        run: python -m compileall -q scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py
-      - name: Diagnose deterministic audit
+      - name: Compile and deterministic audit
         run: |
-          set +e
-          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-1.json > /tmp/checker-stdout.txt 2> /tmp/checker-stderr.txt
-          code=$?
-          set -e
-          cat /tmp/checker-stdout.txt
-          cat /tmp/checker-stderr.txt
-          if [ "$code" -ne 0 ]; then
-            body="Checker failed with exit $code.\n\n\`\`\`text\n$(cat /tmp/checker-stderr.txt)\n\`\`\`"
-            gh pr comment 132 --repo MS0502/eve-project --body "$body"
-            exit "$code"
-          fi
-          python scripts/audit/m0_c_affect_migration_check.py --output /tmp/affect-plan-2.json
-          diff -u /tmp/affect-plan-1.json /tmp/affect-plan-2.json
-          python scripts/audit/m0_c_affect_migration_check.py --fail-on-unresolved --summary-only | tee /tmp/summary.json
-      - name: Run focused tests
-        run: python -m pytest -q tests/audit/test_m0_c_affect_migration_check.py | tee /tmp/focused.txt
+          python -m compileall -q scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
+          python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-1.json
+          python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-2.json
+          diff -u /tmp/m0-d-1.json /tmp/m0-d-2.json
+      - name: Run focused M0-D tests
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/focused.txt
       - name: Collect full suite
-        run: python -m pytest --collect-only -q | tee /tmp/collect.txt
-      - name: Run full suite
-        run: python -m pytest -q | tee /tmp/full.txt
-      - name: Verify exact four-file scope
+        shell: bash
         run: |
-          changed="$(git diff --name-only "$BASE_SHA"...HEAD | sort)"
-          expected="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md scripts/audit/m0_c_affect_migration_check.py tests/audit/test_m0_c_affect_migration_check.py | sort)"
+          set -o pipefail
+          python -m pytest --collect-only -q | tee /tmp/collect.txt
+      - name: Run full suite
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q | tee /tmp/full.txt
+      - name: Verify exact correction scope
+        run: |
+          changed="$(git diff --name-only | sort)"
+          expected="$(printf '%s\n' docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
           test "$changed" = "$expected"
-          uncommitted="$(git diff --name-only | sort)"
-          expected_uncommitted="$(printf '%s\n' docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md | sort)"
-          test "$uncommitted" = "$expected_uncommitted"
           git diff --check
-      - name: Commit reviewer rulings
+      - name: Commit correction
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add docs/EVE_IMPLEMENTATION_STATUS_v4.md docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md
-          git commit -m "Apply reviewer rulings to affect migration plan"
+          git add docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
+          git commit -m "Pin M0-D Python path scope to audit baseline"
           git push origin HEAD:"$TARGET_BRANCH"
           git rev-parse HEAD | tee /tmp/final-head.txt
       - name: Upload validation evidence
         uses: actions/upload-artifact@v4
         with:
-          name: m0-c-affect-migration-plan-validation
+          name: m0-d-baseline-path-scope-validation
           path: |
-            /tmp/affect-plan-1.json
-            /tmp/affect-plan-2.json
-            /tmp/summary.json
+            /tmp/m0-d-1.json
+            /tmp/m0-d-2.json
             /tmp/focused.txt
             /tmp/collect.txt
             /tmp/full.txt
             /tmp/final-head.txt
           if-no-files-found: error
-      - name: Publish result comment
-        run: |
-          head="$(cat /tmp/final-head.txt)"
-          summary="$(cat /tmp/summary.json)"
-          gh pr comment 132 --repo MS0502/eve-project --body "Reviewer rulings applied and exact working-tree validation passed.\n\nFinal head: \`$head\`\nWorkflow run: \`${{ github.run_id }}\`\nArtifact: \`m0-c-affect-migration-plan-validation\`\n\nSummary: \`$summary\`"
