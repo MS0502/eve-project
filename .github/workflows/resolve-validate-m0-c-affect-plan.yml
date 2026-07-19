@@ -46,7 +46,10 @@ jobs:
           python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-2.json
           diff -u /tmp/m0-d-1.json /tmp/m0-d-2.json
       - name: Run focused M0-D tests
-        run: python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/focused.txt
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/focused.txt
       - name: Collect full suite
         shell: bash
         run: |
@@ -60,7 +63,8 @@ jobs:
           set -e
           cat /tmp/full.txt
           if [ "$code" -ne 0 ]; then
-            gh pr comment 135 --repo MS0502/eve-project --body "Full-suite validation failed.\n\n\`\`\`text\n$(tail -n 120 /tmp/full.txt)\n\`\`\`"
+            grep -E '^(FAILED|ERROR)|AssertionError|short test summary' /tmp/full.txt | tail -n 30 > /tmp/failure-summary.txt || true
+            gh pr comment 135 --repo MS0502/eve-project --body "M0-D full-suite concise failure summary:\n\n\`\`\`text\n$(cat /tmp/failure-summary.txt)\n\`\`\`"
             exit "$code"
           fi
       - name: Verify exact correction scope
@@ -78,6 +82,7 @@ jobs:
           git push origin HEAD:"$TARGET_BRANCH"
           git rev-parse HEAD | tee /tmp/final-head.txt
       - name: Upload validation evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m0-d-baseline-path-scope-validation
@@ -87,5 +92,6 @@ jobs:
             /tmp/focused.txt
             /tmp/collect.txt
             /tmp/full.txt
+            /tmp/failure-summary.txt
             /tmp/final-head.txt
-          if-no-files-found: error
+          if-no-files-found: warn
