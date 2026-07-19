@@ -201,6 +201,28 @@ def test_adapter_path_does_not_imply_learning_taxonomy():
     ) == ["Learning"]
 
 
+def test_markdown_counts_and_module_matrix_match_report(report):
+    inventory = (
+        REPO_ROOT / "docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md"
+    ).read_text(encoding="utf-8")
+    disposition = (
+        REPO_ROOT / "docs/audit/M0_D_MODULE_DISPOSITION.md"
+    ).read_text(encoding="utf-8")
+    summary = report["summary"]
+
+    assert f"tracked Python files: {summary['tracked_python_files']}" in inventory
+    assert f"runtime modules classified: {summary['runtime_modules_classified']}" in inventory
+    assert f"component evidence entries: {summary['component_evidence_entries']}" in inventory
+    assert f"life-loop entries: {summary['life_loop_entries']}" in inventory
+
+    for category, count in summary["module_disposition_counts"].items():
+        assert f"{category}: {count}" in disposition
+
+    for entry in report["module_dispositions"]:
+        row_prefix = f"| `{entry['path']}` | `{entry['classification']}` |"
+        assert disposition.count(row_prefix) == 1
+
+
 def test_cli_output_is_byte_identical(tmp_path):
     first = tmp_path / "d1.json"
     second = tmp_path / "d2.json"
