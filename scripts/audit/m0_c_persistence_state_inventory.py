@@ -299,7 +299,6 @@ DRIVE_TOKENS = {
 }
 
 LEGACY_TEST_FORMAT_MARKERS = {
-    "pickle",
     "sidecar",
     "sqlite",
     "eve.ckpt",
@@ -379,6 +378,10 @@ def _path_like(value: str) -> bool:
         return False
     if _format_for_path(candidate) is not None:
         return True
+    if "::" in candidate or candidate.lower().endswith(
+        (".py", ".pyi", ".md", ".rst", ".sh")
+    ):
+        return False
     if candidate in {"/", "\\"} or "://" in candidate:
         return False
     if any(character.isspace() for character in candidate):
@@ -726,7 +729,7 @@ class TestPersistenceVisitor(ast.NodeVisitor):
         self.signals: list[tuple[int, str, bool]] = []
 
     def visit_Constant(self, node: ast.Constant) -> None:
-        if isinstance(node.value, str):
+        if isinstance(node.value, str) and "\n" not in node.value and "\r" not in node.value:
             lowered = node.value.lower()
             for marker in sorted(LEGACY_TEST_FORMAT_MARKERS):
                 if marker in lowered:

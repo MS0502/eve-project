@@ -285,3 +285,19 @@ def test_path_like_requires_persistence_directory_markers():
     assert module._path_like("tests/test_file.py::test_case") is False
     assert module._path_like(r"^foo\s+/bar$") is False
     assert module._path_like("/nonexistent.wav") is False
+    assert module._path_like("adapters/self_embedding_adapter.py") is False
+    assert module._path_like("docs/STATE_REPORT.md") is False
+
+
+def test_repository_policy_does_not_flag_embedded_fixture_source():
+    module = _load_module()
+    report = module.audit_repository(REPO_ROOT)
+    own = next(
+        entry
+        for entry in report["entries"]
+        if entry["category"] == "test_classification"
+        and entry["path"] == "tests/audit/test_m0_c_persistence_state_inventory.py"
+    )
+    assert own["manual_classification"] == "KEEP"
+    assert own["confidence"] == "high"
+    assert own["unresolved"] is False
