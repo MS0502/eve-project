@@ -89,7 +89,12 @@ jobs:
           } | sed '/^[[:space:]]*$/d' | sort -u > /tmp/focused-paths.txt
           if test -s /tmp/focused-paths.txt; then
             mapfile -t focused < /tmp/focused-paths.txt
-            python -m pytest -q "${focused[@]}" | tee /tmp/focused.txt
+            set +e
+            python -m pytest -q --tb=short "${focused[@]}" > /tmp/focused.txt 2>&1
+            status=$?
+            set -e
+            cat /tmp/focused.txt
+            exit "$status"
           else
             printf '%s\n' 'No focused tests selected.' | tee /tmp/focused.txt
           fi
@@ -152,6 +157,7 @@ jobs:
           test -z "$(git status --short)"
 
       - name: Upload exact-head evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: exact-head-validation-${{ env.TARGET_SHA }}
