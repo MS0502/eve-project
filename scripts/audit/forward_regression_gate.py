@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Enforce EVE v4.1 current-tree forward-regression governance.
 
-The historical M0 scanners remain snapshot-pinned. This scanner reuses their AST
-visitor detector families against both the frozen v4.1 forward baseline and the
-current tracked tree, then rejects only additions not registered in the reviewed
-forward-additions manifest.
+Historical M0 scanners remain snapshot-pinned. This scanner reuses their AST
+visitor detector families against the frozen v4.1 forward baseline and the
+current tracked tree, then rejects only additions not registered in the same
+reviewed PR.
 """
 from __future__ import annotations
 
@@ -28,8 +28,18 @@ CONSTITUTION_BASELINE_SHA = "8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b"
 DEFAULT_MANIFEST = Path("docs/audit/FORWARD_ADDITIONS_MANIFEST.json")
 
 EXCLUDED_PARTS = {
-    ".git", ".hg", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox",
-    ".venv", "__pycache__", "build", "dist", "node_modules", "venv",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
 }
 NON_RUNTIME_ROOTS = {".codex", ".github", "docs", "scripts", "tests"}
 ADAPTIVE_CLASSIFICATIONS = {
@@ -41,22 +51,71 @@ ADAPTIVE_CLASSIFICATIONS = {
     "VECTOR_OR_VOCAB_ARTIFACT_IO_CANDIDATE",
 }
 RAW_NAME_TOKENS = {
-    "body", "chat", "content", "document", "external", "input", "message",
-    "ocr", "payload", "prompt", "query", "raw", "request", "source", "stt",
-    "text", "transcript", "utterance",
+    "body",
+    "chat",
+    "content",
+    "document",
+    "external",
+    "input",
+    "message",
+    "ocr",
+    "payload",
+    "prompt",
+    "query",
+    "raw",
+    "request",
+    "source",
+    "stt",
+    "text",
+    "transcript",
+    "utterance",
 }
 RAW_CALL_TOKENS = {
-    "fetch", "input", "listen", "ocr", "read", "receive", "request", "source",
-    "stt", "transcribe",
+    "fetch",
+    "input",
+    "listen",
+    "ocr",
+    "read",
+    "receive",
+    "request",
+    "source",
+    "stt",
+    "transcribe",
 }
 EXPRESSION_SINK_TOKENS = {
-    "compose", "emit", "express", "expression", "generate", "generator", "output",
-    "publish", "render", "reply", "respond", "response", "send", "speak", "speech",
+    "compose",
+    "emit",
+    "express",
+    "expression",
+    "generate",
+    "generator",
+    "output",
+    "publish",
+    "render",
+    "reply",
+    "respond",
+    "response",
+    "send",
+    "speak",
+    "speech",
     "stream",
 }
+REQUIRED_BASELINE_FIELDS = {
+    "counter_sha256",
+    "unique_fingerprints",
+    "occurrences",
+    "category_counts",
+}
 REQUIRED_REGISTRATION_FIELDS = {
-    "fingerprint", "count", "category", "path", "symbol", "rationale", "owner",
-    "disposition", "introduced_by_pr",
+    "fingerprint",
+    "count",
+    "category",
+    "path",
+    "symbol",
+    "rationale",
+    "owner",
+    "disposition",
+    "introduced_by_pr",
 }
 
 
@@ -73,7 +132,10 @@ def _detector_modules(root: Path) -> tuple[Any, Any, Any]:
     audit = root / "scripts/audit"
     return (
         _load_module(audit / "m0_a_runtime_inventory.py", "_eve_forward_m0_a"),
-        _load_module(audit / "m0_b_controlflow_concurrency_inventory.py", "_eve_forward_m0_b"),
+        _load_module(
+            audit / "m0_b_controlflow_concurrency_inventory.py",
+            "_eve_forward_m0_b",
+        ),
         _load_module(audit / "m0_d_component_inventory.py", "_eve_forward_m0_d"),
     )
 
@@ -157,7 +219,8 @@ def _dotted_name(node: ast.AST | None) -> str:
 def _iter_function_nodes(node: ast.AST) -> Iterator[ast.AST]:
     for child in ast.iter_child_nodes(node):
         if isinstance(
-            child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+            child,
+            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda),
         ):
             continue
         yield child
@@ -214,7 +277,11 @@ def _target_names(node: ast.AST) -> set[str]:
 
 
 def _function_arguments(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
-    values = list(node.args.posonlyargs) + list(node.args.args) + list(node.args.kwonlyargs)
+    values = (
+        list(node.args.posonlyargs)
+        + list(node.args.args)
+        + list(node.args.kwonlyargs)
+    )
     if node.args.vararg is not None:
         values.append(node.args.vararg)
     if node.args.kwarg is not None:
@@ -237,10 +304,15 @@ def _raw_capability_findings(path: str, tree: ast.AST) -> list[dict[str, Any]]:
                 self.visit(child)
             self.scope.pop()
 
-        def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        def _visit_function(
+            self,
+            node: ast.FunctionDef | ast.AsyncFunctionDef,
+        ) -> None:
             self.scope.append(node.name)
             symbol = ".".join(self.scope)
-            tainted = {name for name in _function_arguments(node) if _raw_named(name)}
+            tainted = {
+                name for name in _function_arguments(node) if _raw_named(name)
+            }
             assignments: list[tuple[set[str], ast.AST | None]] = []
             nodes = list(_iter_function_nodes(node))
             for child in nodes:
@@ -269,7 +341,8 @@ def _raw_capability_findings(path: str, tree: ast.AST) -> list[dict[str, Any]]:
                         keyword.value for keyword in child.keywords
                     ]
                     if not any(
-                        _expression_is_raw(argument, tainted) for argument in arguments
+                        _expression_is_raw(argument, tainted)
+                        for argument in arguments
                     ):
                         continue
                     findings.append(
@@ -278,11 +351,18 @@ def _raw_capability_findings(path: str, tree: ast.AST) -> list[dict[str, Any]]:
                             "path": path,
                             "line_start": int(getattr(child, "lineno", 1)),
                             "line_end": int(
-                                getattr(child, "end_lineno", getattr(child, "lineno", 1))
+                                getattr(
+                                    child,
+                                    "end_lineno",
+                                    getattr(child, "lineno", 1),
+                                )
                             ),
                             "symbol": symbol,
                             "detector_family": "v4_1_raw_capability",
-                            "classification": "RAW_EXTERNAL_TEXT_TO_EXPRESSION_CAPABILITY_CANDIDATE",
+                            "classification": (
+                                "RAW_EXTERNAL_TEXT_TO_EXPRESSION_"
+                                "CAPABILITY_CANDIDATE"
+                            ),
                             "evidence": f"raw_to_expression_call={target}",
                             "details": {
                                 "sink": target,
@@ -309,14 +389,22 @@ def _raw_capability_findings(path: str, tree: ast.AST) -> list[dict[str, Any]]:
                                 ),
                                 "symbol": symbol,
                                 "detector_family": "v4_1_raw_capability",
-                                "classification": "RAW_EXTERNAL_TEXT_RETURNED_BY_EXPRESSION_CALLABLE_CANDIDATE",
-                                "evidence": f"raw_expression_return={type(child).__name__}",
-                                "details": {"tainted_names": sorted(tainted)},
+                                "classification": (
+                                    "RAW_EXTERNAL_TEXT_RETURNED_BY_"
+                                    "EXPRESSION_CALLABLE_CANDIDATE"
+                                ),
+                                "evidence": (
+                                    f"raw_expression_return={type(child).__name__}"
+                                ),
+                                "details": {
+                                    "tainted_names": sorted(tainted)
+                                },
                             }
                         )
             for child in node.body:
                 if isinstance(
-                    child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                    child,
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
                 ):
                     self.visit(child)
             self.scope.pop()
@@ -390,7 +478,7 @@ def scan_sources(root: Path, sources: Mapping[str, str]) -> dict[str, Any]:
                 {
                     "path": path,
                     "line": int(getattr(exc, "lineno", 1) or 1),
-                    "error": str(exc),
+                    "error": str(getattr(exc, "msg", None) or exc),
                 }
             )
             continue
@@ -406,7 +494,8 @@ def scan_sources(root: Path, sources: Mapping[str, str]) -> dict[str, Any]:
         findings.extend(
             _normalise_m0_b(entry)
             for entry in visitor_b.findings
-            if entry["manual_classification"] == "SILENT_BROAD_EXCEPTION_PATH"
+            if entry["manual_classification"]
+            == "SILENT_BROAD_EXCEPTION_PATH"
         )
         visitor_d = m0_d.ComponentVisitor(path)
         visitor_d.visit(tree)
@@ -430,7 +519,8 @@ def scan_sources(root: Path, sources: Mapping[str, str]) -> dict[str, Any]:
         "python_files_scanned": len(sources),
         "findings": findings,
         "parse_errors": sorted(
-            parse_errors, key=lambda entry: (entry["path"], entry["line"])
+            parse_errors,
+            key=lambda entry: (entry["path"], entry["line"]),
         ),
     }
 
@@ -446,13 +536,38 @@ def finding_fingerprint(finding: Mapping[str, Any]) -> str:
         "details": finding.get("details", {}),
     }
     canonical = json.dumps(
-        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _counter(findings: Iterable[Mapping[str, Any]]) -> Counter[str]:
     return Counter(str(finding["fingerprint"]) for finding in findings)
+
+
+def _counter_digest(counter: Mapping[str, int]) -> str:
+    canonical = json.dumps(
+        sorted((str(key), int(value)) for key, value in counter.items()),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def baseline_contract(scan: Mapping[str, Any]) -> dict[str, Any]:
+    counter = _counter(scan["findings"])
+    categories = Counter(
+        str(finding["category"]) for finding in scan["findings"]
+    )
+    return {
+        "counter_sha256": _counter_digest(counter),
+        "unique_fingerprints": len(counter),
+        "occurrences": sum(counter.values()),
+        "category_counts": dict(sorted(categories.items())),
+    }
 
 
 def _finding_index(
@@ -463,7 +578,11 @@ def _finding_index(
         index[str(finding["fingerprint"])].append(dict(finding))
     for values in index.values():
         values.sort(
-            key=lambda entry: (entry["path"], entry["line_start"], entry["line_end"])
+            key=lambda entry: (
+                entry["path"],
+                entry["line_start"],
+                entry["line_end"],
+            )
         )
     return dict(index)
 
@@ -475,20 +594,46 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _validate_baseline_contract(value: Any) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(value, dict):
+        return ["baseline must be an object"]
+    missing = REQUIRED_BASELINE_FIELDS - set(value)
+    if missing:
+        errors.append(
+            f"baseline missing fields: {','.join(sorted(missing))}"
+        )
+        return errors
+    digest = value.get("counter_sha256")
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
+        errors.append("baseline counter_sha256 must be lowercase SHA-256")
+    for field in ("unique_fingerprints", "occurrences"):
+        if not isinstance(value.get(field), int) or value[field] <= 0:
+            errors.append(f"baseline {field} must be a positive integer")
+    category_counts = value.get("category_counts")
+    if not isinstance(category_counts, dict) or not all(
+        isinstance(key, str)
+        and isinstance(count, int)
+        and count >= 0
+        for key, count in category_counts.items()
+    ):
+        errors.append("baseline category_counts must be string->integer")
+    elif sum(category_counts.values()) != value.get("occurrences"):
+        errors.append("baseline category_counts do not sum to occurrences")
+    return errors
+
+
 def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     if manifest.get("schema_version") != MANIFEST_SCHEMA_VERSION:
         errors.append("manifest schema_version mismatch")
     if manifest.get("baseline_sha") != CONSTITUTION_BASELINE_SHA:
         errors.append("manifest baseline_sha is not the frozen v4.1 merge SHA")
-    baseline = manifest.get("baseline_fingerprints")
-    if not isinstance(baseline, dict) or not all(
-        isinstance(key, str) and isinstance(value, int) and value > 0
-        for key, value in baseline.items()
-    ):
-        errors.append(
-            "baseline_fingerprints must be a fingerprint->positive-count object"
-        )
+    errors.extend(_validate_baseline_contract(manifest.get("baseline")))
     registrations = manifest.get("registered_additions")
     if not isinstance(registrations, list):
         errors.append("registered_additions must be a list")
@@ -501,7 +646,8 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
         missing = REQUIRED_REGISTRATION_FIELDS - set(registration)
         if missing:
             errors.append(
-                f"registration[{index}] missing fields: {','.join(sorted(missing))}"
+                f"registration[{index}] missing fields: "
+                f"{','.join(sorted(missing))}"
             )
             continue
         fingerprint = registration["fingerprint"]
@@ -518,16 +664,29 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
             "owner",
             "disposition",
         ):
-            if not isinstance(registration[field], str) or not registration[field].strip():
-                errors.append(f"registration[{index}] {field} must be non-empty")
+            if (
+                not isinstance(registration[field], str)
+                or not registration[field].strip()
+            ):
+                errors.append(
+                    f"registration[{index}] {field} must be non-empty"
+                )
         if (
             not isinstance(registration["introduced_by_pr"], int)
             or registration["introduced_by_pr"] <= 0
         ):
             errors.append(
-                f"registration[{index}] introduced_by_pr must be a positive integer"
+                f"registration[{index}] introduced_by_pr must be a "
+                "positive integer"
             )
     return errors
+
+
+def _parse_error_counter(scan: Mapping[str, Any]) -> Counter[tuple[str, str]]:
+    return Counter(
+        (str(entry["path"]), str(entry["error"]))
+        for entry in scan["parse_errors"]
+    )
 
 
 def evaluate(
@@ -536,22 +695,24 @@ def evaluate(
     manifest: Mapping[str, Any],
 ) -> dict[str, Any]:
     errors = _validate_manifest(manifest)
-    computed_baseline = _counter(baseline_scan["findings"])
-    frozen_baseline = Counter(
-        {
-            str(key): int(value)
-            for key, value in manifest.get("baseline_fingerprints", {}).items()
+    computed_baseline_contract = baseline_contract(baseline_scan)
+    manifest_baseline_contract = manifest.get("baseline")
+    baseline_drift = (
+        None
+        if manifest_baseline_contract == computed_baseline_contract
+        else {
+            "manifest": manifest_baseline_contract,
+            "computed": computed_baseline_contract,
         }
     )
-    baseline_drift = {
-        "missing": dict(sorted((frozen_baseline - computed_baseline).items())),
-        "unexpected": dict(sorted((computed_baseline - frozen_baseline).items())),
-    }
-    if baseline_drift["missing"] or baseline_drift["unexpected"]:
-        errors.append("frozen forward baseline fingerprint drift")
+    if baseline_drift is not None:
+        errors.append("frozen forward baseline digest drift")
+
+    computed_baseline = _counter(baseline_scan["findings"])
     current = _counter(current_scan["findings"])
-    additions = current - frozen_baseline
+    additions = current - computed_baseline
     representatives = _finding_index(current_scan["findings"])
+
     registered = Counter()
     stale: list[dict[str, Any]] = []
     metadata_errors: list[str] = []
@@ -580,10 +741,12 @@ def evaluate(
     errors.extend(metadata_errors)
     if stale:
         errors.append("stale or over-counted forward registrations")
+
     unregistered_counter = additions - registered
     over_registered = registered - additions
     if over_registered:
         errors.append("registered count exceeds current addition count")
+
     unregistered: list[dict[str, Any]] = []
     for fingerprint, count in sorted(unregistered_counter.items()):
         representative = representatives[fingerprint][0]
@@ -601,6 +764,13 @@ def evaluate(
         )
     if unregistered:
         errors.append("unregistered current-tree additions")
+
+    baseline_parse_errors = _parse_error_counter(baseline_scan)
+    current_parse_errors = _parse_error_counter(current_scan)
+    new_parse_errors = current_parse_errors - baseline_parse_errors
+    if new_parse_errors:
+        errors.append("new current-tree parse errors hide detector coverage")
+
     category_counts = Counter(
         finding["category"] for finding in current_scan["findings"]
     )
@@ -610,6 +780,7 @@ def evaluate(
             addition_category_counts[
                 representatives[fingerprint][0]["category"]
             ] += count
+
     return {
         "pass": not errors,
         "errors": errors,
@@ -621,14 +792,21 @@ def evaluate(
             "current_category_counts": dict(sorted(category_counts.items())),
             "addition_counts": dict(sorted(addition_category_counts.items())),
             "registered_addition_occurrences": sum(registered.values()),
-            "unregistered_addition_occurrences": sum(unregistered_counter.values()),
+            "unregistered_addition_occurrences": sum(
+                unregistered_counter.values()
+            ),
             "stale_registration_count": len(stale),
-            "baseline_parse_errors": len(baseline_scan["parse_errors"]),
-            "current_parse_errors": len(current_scan["parse_errors"]),
+            "baseline_parse_errors": sum(baseline_parse_errors.values()),
+            "current_parse_errors": sum(current_parse_errors.values()),
+            "new_parse_errors": sum(new_parse_errors.values()),
         },
         "baseline_drift": baseline_drift,
         "unregistered_additions": unregistered,
         "stale_registrations": stale,
+        "new_parse_errors": [
+            {"path": path, "error": error, "count": count}
+            for (path, error), count in sorted(new_parse_errors.items())
+        ],
         "parse_errors": {
             "baseline": baseline_scan["parse_errors"],
             "current": current_scan["parse_errors"],
@@ -668,7 +846,7 @@ def suggested_manifest(
     return {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "baseline_sha": CONSTITUTION_BASELINE_SHA,
-        "baseline_fingerprints": dict(sorted(baseline.items())),
+        "baseline": baseline_contract(baseline_scan),
         "registered_additions": registrations,
     }
 
@@ -676,7 +854,9 @@ def suggested_manifest(
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--root", type=Path, default=Path(__file__).resolve().parents[2]
+        "--root",
+        type=Path,
+        default=Path(__file__).resolve().parents[2],
     )
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--output", type=Path)
@@ -704,14 +884,14 @@ def main(argv: Iterable[str] | None = None) -> int:
     else:
         manifest = _load_manifest(manifest_path)
         result = evaluate(baseline_scan, current_scan, manifest)
+        try:
+            manifest_display = manifest_path.relative_to(root).as_posix()
+        except ValueError:
+            manifest_display = manifest_path.as_posix()
         payload = {
             "schema_version": SCHEMA_VERSION,
             "baseline_sha": CONSTITUTION_BASELINE_SHA,
-            "manifest": (
-                manifest_path.relative_to(root).as_posix()
-                if manifest_path.is_relative_to(root)
-                else manifest_path.as_posix()
-            ),
+            "manifest": manifest_display,
             **result,
         }
         exit_code = 0 if result["pass"] or args.report_only else 1
