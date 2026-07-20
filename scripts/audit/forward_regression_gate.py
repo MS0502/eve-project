@@ -26,6 +26,7 @@ SCHEMA_VERSION = "1.0.0-forward-regression"
 MANIFEST_SCHEMA_VERSION = "1.0.0-forward-additions"
 CONSTITUTION_BASELINE_SHA = "8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b"
 DEFAULT_MANIFEST = Path("docs/audit/FORWARD_ADDITIONS_MANIFEST.json")
+REVIEW_REQUIRED = "REVIEW_REQUIRED"
 
 EXCLUDED_PARTS = {
     ".git",
@@ -593,6 +594,21 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _load_manifest_at_sha(root: Path, sha: str, path: Path) -> dict[str, Any]:
+    relative = path.relative_to(root).as_posix()
+    try:
+        raw = subprocess.check_output(
+            ["git", "-C", str(root), "show", f"{sha}:{relative}"],
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return {"registered_addition_groups": []}
+    payload = json.loads(raw.decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("base manifest root must be an object")
+    return payload
+
+
 def _validate_baseline_contract(value: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(value, dict):
@@ -649,8 +665,11 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
             )
             continue
         for field in ("path", "rationale", "owner", "disposition"):
-            if not isinstance(group[field], str) or not group[field].strip():
+            value = group[field]
+            if not isinstance(value, str) or not value.strip():
                 errors.append(f"group[{index}] {field} must be non-empty")
+            elif value == REVIEW_REQUIRED:
+                errors.append(f"group[{index}] {field} still requires review")
         for field in ("categories", "symbols"):
             values = group[field]
             if (
@@ -695,6 +714,43 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     return errors
 
 
+def _registration_index(manifest: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for group in manifest.get("registered_addition_groups", []):
+        if not isinstance(group, dict):
+            continue
+        fingerprints = group.get("fingerprints", {})
+        if not isinstance(fingerprints, dict):
+            continue
+        for fingerprint, count in fingerprints.items():
+            index[str(fingerprint)] = {
+                "count": int(count or 0),
+                "introduced_by_pr": group.get("introduced_by_pr"),
+                "path": group.get("path"),
+            }
+    return index
+
+
+def _same_pr_registration_errors(
+    base_manifest: Mapping[str, Any],
+    current_manifest: Mapping[str, Any],
+    current_pr: int,
+) -> list[str]:
+    errors: list[str] = []
+    base = _registration_index(base_manifest)
+    current = _registration_index(current_manifest)
+    for fingerprint, record in sorted(current.items()):
+        previous_count = int(base.get(fingerprint, {}).get("count", 0) or 0)
+        if record["count"] <= previous_count:
+            continue
+        if record["introduced_by_pr"] != current_pr:
+            errors.append(
+                "new or increased registration does not name current PR "
+                f"#{current_pr}: {fingerprint}"
+            )
+    return errors
+
+
 def _parse_error_counter(scan: Mapping[str, Any]) -> Counter[tuple[str, str]]:
     return Counter(
         (str(entry["path"]), str(entry["error"]))
@@ -706,8 +762,20 @@ def evaluate(
     baseline_scan: Mapping[str, Any],
     current_scan: Mapping[str, Any],
     manifest: Mapping[str, Any],
+    *,
+    base_manifest: Mapping[str, Any] | None = None,
+    current_pr: int | None = None,
 ) -> dict[str, Any]:
     errors = _validate_manifest(manifest)
+    same_pr_errors: list[str] = []
+    if current_pr is not None and base_manifest is not None:
+        same_pr_errors = _same_pr_registration_errors(
+            base_manifest,
+            manifest,
+            current_pr,
+        )
+        errors.extend(same_pr_errors)
+
     computed_baseline_contract = baseline_contract(baseline_scan)
     manifest_baseline_contract = manifest.get("baseline")
     baseline_drift = (
@@ -738,33 +806,38 @@ def evaluate(
         fingerprints = group.get("fingerprints", {})
         if not isinstance(fingerprints, dict):
             continue
+        actual_categories: set[str] = set()
+        actual_symbols: set[str] = set()
         for fingerprint, raw_count in fingerprints.items():
             count = int(raw_count or 0)
-            registered[str(fingerprint)] += count
-            candidates = representatives.get(str(fingerprint), [])
+            fingerprint = str(fingerprint)
+            registered[fingerprint] += count
+            candidates = representatives.get(fingerprint, [])
             representative = candidates[0] if candidates else None
-            if representative is None or additions.get(str(fingerprint), 0) < count:
+            if representative is None or additions.get(fingerprint, 0) < count:
                 stale.append(
                     {
-                        "fingerprint": str(fingerprint),
+                        "fingerprint": fingerprint,
                         "registered": count,
-                        "actual_addition": additions.get(str(fingerprint), 0),
+                        "actual_addition": additions.get(fingerprint, 0),
                         "group_path": expected_path,
                     }
                 )
                 continue
+            actual_categories.add(representative["category"])
+            actual_symbols.add(representative["symbol"])
             if representative["path"] != expected_path:
                 metadata_errors.append(
                     f"registration path mismatch for {fingerprint}"
                 )
-            if representative["category"] not in allowed_categories:
-                metadata_errors.append(
-                    f"registration category mismatch for {fingerprint}"
-                )
-            if representative["symbol"] not in allowed_symbols:
-                metadata_errors.append(
-                    f"registration symbol mismatch for {fingerprint}"
-                )
+        if actual_categories != allowed_categories:
+            metadata_errors.append(
+                f"registration category set mismatch for group path {expected_path}"
+            )
+        if actual_symbols != allowed_symbols:
+            metadata_errors.append(
+                f"registration symbol set mismatch for group path {expected_path}"
+            )
     errors.extend(metadata_errors)
     if stale:
         errors.append("stale or over-counted forward registrations")
@@ -823,11 +896,13 @@ def evaluate(
                 unregistered_counter.values()
             ),
             "stale_registration_count": len(stale),
+            "same_pr_error_count": len(same_pr_errors),
             "baseline_parse_errors": sum(baseline_parse_errors.values()),
             "current_parse_errors": sum(current_parse_errors.values()),
             "new_parse_errors": sum(new_parse_errors.values()),
         },
         "baseline_drift": baseline_drift,
+        "same_pr_registration_errors": same_pr_errors,
         "unregistered_additions": unregistered,
         "stale_registrations": stale,
         "new_parse_errors": [
@@ -868,12 +943,9 @@ def suggested_manifest(
                 "symbols": sorted(
                     {representative["symbol"] for _, _, representative in values}
                 ),
-                "rationale": (
-                    "Forward-regression scanner infrastructure introduced by "
-                    "the same reviewed PR."
-                ),
-                "owner": "forward-regression infrastructure",
-                "disposition": "AUDIT_TOOLING",
+                "rationale": REVIEW_REQUIRED,
+                "owner": REVIEW_REQUIRED,
+                "disposition": REVIEW_REQUIRED,
                 "introduced_by_pr": introduced_by_pr,
                 "fingerprints": {
                     fingerprint: count
@@ -901,11 +973,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--pretty", action="store_true")
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument("--suggest-manifest-for-pr", type=int)
+    parser.add_argument("--current-pr", type=int)
+    parser.add_argument("--base-sha")
     return parser
 
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = _parser().parse_args(list(argv) if argv is not None else None)
+    if (args.current_pr is None) != (args.base_sha is None):
+        raise SystemExit("--current-pr and --base-sha must be supplied together")
     root = args.root.resolve()
     manifest_path = args.manifest or (root / DEFAULT_MANIFEST)
     baseline_sources = _snapshot_sources(root, CONSTITUTION_BASELINE_SHA)
@@ -921,7 +997,18 @@ def main(argv: Iterable[str] | None = None) -> int:
         exit_code = 0
     else:
         manifest = _load_manifest(manifest_path)
-        result = evaluate(baseline_scan, current_scan, manifest)
+        base_manifest = (
+            _load_manifest_at_sha(root, args.base_sha, manifest_path)
+            if args.base_sha is not None
+            else None
+        )
+        result = evaluate(
+            baseline_scan,
+            current_scan,
+            manifest,
+            base_manifest=base_manifest,
+            current_pr=args.current_pr,
+        )
         try:
             manifest_display = manifest_path.relative_to(root).as_posix()
         except ValueError:
