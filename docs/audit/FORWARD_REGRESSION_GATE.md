@@ -16,18 +16,22 @@ The gate therefore enforces **unregistered delta = 0**, not absolute delta = 0. 
 - M0-B current-tree `SILENT_BROAD_EXCEPTION_PATH` visitor.
 - M0-D current-tree adaptive/numeric state, method, component, and artifact-I/O visitors.
 - A conservative raw-capability taint candidate detector for runtime callables that route raw/source-named values into expression/generation sinks or return them from expression-named callables.
+- New current-tree parse errors, because a parse failure would hide the affected file from all AST detector families.
 
-Raw-capability findings are candidates, not proof of an approved or exploitable edge. The complete capability-edge authority remains assigned to M2-B.
+Raw-capability findings are candidates, not proof of an approved or exploitable edge. The complete capability-edge authority remains assigned to M2-B. The two already known parse-invalid legacy snapshots remain tolerated because they are present in the frozen baseline; a new parse error is not registerable and fails the gate.
 
 ## Frozen manifest
 
 `docs/audit/FORWARD_ADDITIONS_MANIFEST.json` contains:
 
 - the exact v4.1 merge SHA;
-- the frozen fingerprint multiset for that baseline;
-- reviewed post-baseline additions.
+- a SHA-256 commitment to the canonical frozen fingerprint multiset;
+- the frozen unique-fingerprint, total-occurrence, and category counts used to make an empty or truncated baseline fail closed;
+- reviewed post-baseline additions with exact occurrence counts and review metadata.
 
-Fingerprints exclude line numbers but include path, callable/symbol, detector family, classification, evidence, and stable details. This prevents unrelated line shifts from becoming false additions while preserving duplicate occurrence counts.
+The full 7,000-plus baseline fingerprint set is deterministically regenerated from the exact v4.1 tree rather than duplicated into a half-megabyte governance file. The committed digest and counts make detector or baseline drift visible while keeping the manifest reviewable.
+
+Finding fingerprints exclude line numbers but include path, callable/symbol, detector family, classification, evidence, and stable details. This prevents unrelated line shifts from becoming false additions while preserving duplicate occurrence counts.
 
 A registration is invalid when it is missing review metadata, exceeds the actual delta count, points at mismatched path/category/symbol metadata, or becomes stale after the corresponding finding is removed. Stale registrations fail the gate and must be deleted.
 
@@ -37,7 +41,7 @@ A registration is invalid when it is missing review metadata, exceeds the actual
 python scripts/audit/forward_regression_gate.py --pretty
 ```
 
-The command exits nonzero for baseline drift, malformed/stale registration, or unregistered additions.
+The command exits nonzero for baseline digest drift, a malformed or stale registration, an unregistered addition, or a new parse error.
 
 For review diagnostics only:
 
@@ -45,7 +49,7 @@ For review diagnostics only:
 python scripts/audit/forward_regression_gate.py --report-only --pretty
 ```
 
-For the initial manifest bootstrap or an explicitly reviewed rebaseline proposal:
+For initial manifest bootstrap or an explicitly reviewed detector-baseline proposal:
 
 ```bash
 python scripts/audit/forward_regression_gate.py \
@@ -54,7 +58,7 @@ python scripts/audit/forward_regression_gate.py \
   --pretty
 ```
 
-The suggestion command does not approve its output. The resulting manifest must be inspected, committed in the same PR, and pass enforced mode.
+The suggestion command does not approve its output. The resulting manifest must be inspected, committed in the same PR, and pass enforced mode. Changing the frozen baseline digest is not an ordinary registration update; it requires explicit infrastructure review because it changes what the detector family recognizes in the v4.1 tree.
 
 ## Boundaries
 
