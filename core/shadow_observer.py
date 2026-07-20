@@ -8,6 +8,7 @@ return value or exception remains authoritative; observation output is
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, TypeVar
 
@@ -61,7 +62,7 @@ ACTIVATION_LEARN_PAIR_TARGET = ShadowTarget(
     target_id="legacy.activation.learn_pair",
     module_path="adapters/activation_adapter.py",
     callable_name="ActivationAdapter.learn_pair",
-    evidence_range="105-107",
+    evidence_range="103-105",
     module_disposition="WRAP",
     stream_id="shadow:legacy.activation.learn_pair",
 )
@@ -210,17 +211,7 @@ class LegacyFunnelShadowObserver:
         try:
             value = provider()
             encoded = canonical_json_object(value, field=stage)
-            return EventEnvelope.create(
-                event_id="snapshot:validation",
-                event_type="shadow.snapshot_validation",
-                stream_id="shadow:snapshot_validation",
-                sequence=1,
-                producer=OBSERVER_PRODUCER,
-                producer_version=OBSERVER_VERSION,
-                correlation_id="snapshot:validation",
-                payload={"snapshot": value},
-                causal_context={},
-            ).payload["snapshot"]
+            return json.loads(encoded)
         except Exception as observer_error:
             self._record_failure(
                 target,
