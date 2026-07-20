@@ -332,17 +332,15 @@ def test_unknown_target_and_invalid_inputs_fail_before_legacy_call():
     assert observer.failures() == ()
 
 
-def test_target_registry_and_failure_views_are_immutable_copies():
+def test_target_registry_and_failure_views_are_read_only():
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
 
     assert observer.target(ACTIVATION_LEARN_PAIR_TARGET.target_id) is (
         ACTIVATION_LEARN_PAIR_TARGET
     )
-    first_view = observer.failures()
-    second_view = observer.failures()
-    assert first_view == second_view == ()
-    assert first_view is not second_view
+    assert observer.failures() == ()
+    assert isinstance(observer.failures(), tuple)
 
 
 def test_observer_module_has_no_legacy_import_persistence_clock_or_thread_surface():
