@@ -10,7 +10,6 @@ import pytest
 from core.shadow_lifecycle import (
     BRIDGE_DOMAINS,
     BRIDGE_SCHEMA_VERSION,
-    CHECKPOINT_SCHEMA_VERSION if False else BRIDGE_SCHEMA_VERSION,
     DEFAULT_BRIDGE_REGISTRY,
     DISCONNECTED_MODE,
     DISCONNECTED_STATUS,
@@ -68,10 +67,12 @@ def test_registry_sources_match_m0_d_disposition_rows():
 
     for source_path, disposition in EXPECTED_BRIDGES.values():
         expected_prefix = f"| `{source_path}` | `{disposition}` |"
-        matches = [line for line in document.splitlines() if line.startswith(expected_prefix)]
-        assert matches == [matches[0]]
+        matches = [
+            line for line in document.splitlines()
+            if line.startswith(expected_prefix)
+        ]
         assert len(matches) == 1
-        assert "UNRESOLVED" not in matches[0]
+        assert "| `NO` |" in matches[0]
 
 
 def test_every_bridge_is_disconnected_disabled_and_authority_free():
