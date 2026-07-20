@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 from pathlib import Path
 
@@ -30,8 +31,16 @@ def _manifest(module, baseline_scan, groups=None):
     }
 
 
-def test_unregistered_mutation_is_rejected():
-    module = _load_module()
+def _approved(manifest, *, pr_number=145):
+    for group in manifest["registered_addition_groups"]:
+        group["rationale"] = "Reviewed bounded test addition."
+        group["owner"] = "focused test owner"
+        group["disposition"] = "TEST_EVIDENCE"
+        group["introduced_by_pr"] = pr_number
+    return manifest
+
+
+def _baseline_and_current(module):
     baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     current = module.scan_sources(
         REPO_ROOT,
@@ -43,6 +52,12 @@ def test_unregistered_mutation_is_rejected():
             )
         },
     )
+    return baseline, current
+
+
+def test_unregistered_mutation_is_rejected():
+    module = _load_module()
+    baseline, current = _baseline_and_current(module)
 
     result = module.evaluate(baseline, current, _manifest(module, baseline))
 
@@ -55,40 +70,72 @@ def test_unregistered_mutation_is_rejected():
 
 def test_same_pr_registration_allows_exact_delta():
     module = _load_module()
-    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
-    current = module.scan_sources(
-        REPO_ROOT,
-        {
-            "pkg/runtime.py": (
-                BASE_ENGINE
-                + "    def set_value(self):\n"
-                + "        self.state = {}\n"
-            )
-        },
+    baseline, current = _baseline_and_current(module)
+    manifest = _approved(
+        module.suggested_manifest(baseline, current, introduced_by_pr=145)
     )
-    manifest = module.suggested_manifest(baseline, current, introduced_by_pr=145)
 
-    result = module.evaluate(baseline, current, manifest)
+    result = module.evaluate(
+        baseline,
+        current,
+        manifest,
+        base_manifest=_manifest(module, baseline),
+        current_pr=145,
+    )
 
     assert result["pass"]
     assert result["summary"]["registered_addition_occurrences"] > 0
     assert result["summary"]["unregistered_addition_occurrences"] == 0
+    assert result["summary"]["same_pr_error_count"] == 0
+
+
+def test_wrong_pr_registration_is_rejected():
+    module = _load_module()
+    baseline, current = _baseline_and_current(module)
+    manifest = _approved(
+        module.suggested_manifest(baseline, current, introduced_by_pr=144),
+        pr_number=144,
+    )
+
+    result = module.evaluate(
+        baseline,
+        current,
+        manifest,
+        base_manifest=_manifest(module, baseline),
+        current_pr=145,
+    )
+
+    assert not result["pass"]
+    assert result["summary"]["same_pr_error_count"] > 0
+
+
+def test_prior_pr_registration_remains_valid_when_unchanged():
+    module = _load_module()
+    baseline, current = _baseline_and_current(module)
+    manifest = _approved(
+        module.suggested_manifest(baseline, current, introduced_by_pr=144),
+        pr_number=144,
+    )
+    base_manifest = copy.deepcopy(manifest)
+
+    result = module.evaluate(
+        baseline,
+        current,
+        manifest,
+        base_manifest=base_manifest,
+        current_pr=145,
+    )
+
+    assert result["pass"]
+    assert result["summary"]["same_pr_error_count"] == 0
 
 
 def test_stale_registration_is_rejected():
     module = _load_module()
-    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
-    changed = module.scan_sources(
-        REPO_ROOT,
-        {
-            "pkg/runtime.py": (
-                BASE_ENGINE
-                + "    def set_value(self):\n"
-                + "        self.state = {}\n"
-            )
-        },
+    baseline, changed = _baseline_and_current(module)
+    manifest = _approved(
+        module.suggested_manifest(baseline, changed, introduced_by_pr=145)
     )
-    manifest = module.suggested_manifest(baseline, changed, introduced_by_pr=145)
 
     result = module.evaluate(baseline, baseline, manifest)
 
@@ -124,7 +171,9 @@ def test_duplicate_occurrences_preserve_counts():
             )
         },
     )
-    manifest = module.suggested_manifest(baseline, current, introduced_by_pr=145)
+    manifest = _approved(
+        module.suggested_manifest(baseline, current, introduced_by_pr=145)
+    )
     append_counts = []
     for group in manifest["registered_addition_groups"]:
         for fingerprint, count in group["fingerprints"].items():
@@ -164,20 +213,23 @@ def test_silent_broad_adaptive_and_raw_capability_detectors_run():
     assert "raw_capability" in categories
 
 
-def test_manifest_requires_review_metadata():
+def test_suggested_manifest_fails_until_reviewed():
     module = _load_module()
-    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
-    current = module.scan_sources(
-        REPO_ROOT,
-        {
-            "pkg/runtime.py": (
-                BASE_ENGINE
-                + "    def set_value(self):\n"
-                + "        self.state = {}\n"
-            )
-        },
-    )
+    baseline, current = _baseline_and_current(module)
     manifest = module.suggested_manifest(baseline, current, introduced_by_pr=145)
+
+    result = module.evaluate(baseline, current, manifest)
+
+    assert not result["pass"]
+    assert any("still requires review" in error for error in result["errors"])
+
+
+def test_manifest_requires_all_review_metadata():
+    module = _load_module()
+    baseline, current = _baseline_and_current(module)
+    manifest = _approved(
+        module.suggested_manifest(baseline, current, introduced_by_pr=145)
+    )
     del manifest["registered_addition_groups"][0]["rationale"]
 
     result = module.evaluate(baseline, current, manifest)
