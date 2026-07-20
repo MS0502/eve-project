@@ -301,3 +301,41 @@ def test_repository_policy_does_not_flag_embedded_fixture_source():
     assert own["manual_classification"] == "KEEP"
     assert own["confidence"] == "high"
     assert own["unresolved"] is False
+
+
+def test_audit_snapshot_freezes_paths_and_source_content(tmp_path):
+    module = _load_module()
+    subprocess.check_call(["git", "init", "-q"], cwd=tmp_path)
+    subprocess.check_call(
+        ["git", "config", "user.email", "audit@example.invalid"], cwd=tmp_path
+    )
+    subprocess.check_call(["git", "config", "user.name", "Audit Test"], cwd=tmp_path)
+    (tmp_path / "baseline.py").write_text(
+        "VALUE = 'baseline'\n", encoding="utf-8"
+    )
+    subprocess.check_call(["git", "add", "baseline.py"], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "baseline"], cwd=tmp_path)
+    snapshot = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True
+    ).strip()
+    (tmp_path / "baseline.py").write_text(
+        "VALUE = 'changed'\n", encoding="utf-8"
+    )
+    (tmp_path / "later.py").write_text("VALUE = 'later'\n", encoding="utf-8")
+    subprocess.check_call(["git", "add", "baseline.py", "later.py"], cwd=tmp_path)
+    subprocess.check_call(["git", "commit", "-q", "-m", "later"], cwd=tmp_path)
+
+    original = module.AUDIT_SNAPSHOT_SHA
+    module.AUDIT_SNAPSHOT_SHA = snapshot
+    try:
+        relative = [
+            path.relative_to(tmp_path).as_posix()
+            for path in module._git_tracked_python_files(tmp_path)
+        ]
+        source = module._read_source(tmp_path, tmp_path / "baseline.py")
+    finally:
+        module.AUDIT_SNAPSHOT_SHA = original
+
+    assert relative == ["baseline.py"]
+    assert "'baseline'" in source
+    assert "'changed'" not in source
