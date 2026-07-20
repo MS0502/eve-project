@@ -1,2 +1,2 @@
-Trigger audit snapshot validation.
-Run reproduction diagnostics.
+Trigger final M0-A/B/C audit snapshot-pin validation.
+Correction base: 235dbfb92fcb06570736e581ea730f025ebfc660
