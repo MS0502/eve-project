@@ -106,16 +106,15 @@ REQUIRED_BASELINE_FIELDS = {
     "occurrences",
     "category_counts",
 }
-REQUIRED_REGISTRATION_FIELDS = {
-    "fingerprint",
-    "count",
-    "category",
+REQUIRED_GROUP_FIELDS = {
     "path",
-    "symbol",
+    "categories",
+    "symbols",
     "rationale",
     "owner",
     "disposition",
     "introduced_by_pr",
+    "fingerprints",
 }
 
 
@@ -634,51 +633,65 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     if manifest.get("baseline_sha") != CONSTITUTION_BASELINE_SHA:
         errors.append("manifest baseline_sha is not the frozen v4.1 merge SHA")
     errors.extend(_validate_baseline_contract(manifest.get("baseline")))
-    registrations = manifest.get("registered_additions")
-    if not isinstance(registrations, list):
-        errors.append("registered_additions must be a list")
+    groups = manifest.get("registered_addition_groups")
+    if not isinstance(groups, list):
+        errors.append("registered_addition_groups must be a list")
         return errors
     seen: set[str] = set()
-    for index, registration in enumerate(registrations):
-        if not isinstance(registration, dict):
-            errors.append(f"registration[{index}] must be an object")
+    for index, group in enumerate(groups):
+        if not isinstance(group, dict):
+            errors.append(f"group[{index}] must be an object")
             continue
-        missing = REQUIRED_REGISTRATION_FIELDS - set(registration)
+        missing = REQUIRED_GROUP_FIELDS - set(group)
         if missing:
             errors.append(
-                f"registration[{index}] missing fields: "
-                f"{','.join(sorted(missing))}"
+                f"group[{index}] missing fields: {','.join(sorted(missing))}"
             )
             continue
-        fingerprint = registration["fingerprint"]
-        if fingerprint in seen:
-            errors.append(f"duplicate registration fingerprint: {fingerprint}")
-        seen.add(fingerprint)
-        if not isinstance(registration["count"], int) or registration["count"] <= 0:
-            errors.append(f"registration[{index}] count must be positive")
-        for field in (
-            "category",
-            "path",
-            "symbol",
-            "rationale",
-            "owner",
-            "disposition",
-        ):
+        for field in ("path", "rationale", "owner", "disposition"):
+            if not isinstance(group[field], str) or not group[field].strip():
+                errors.append(f"group[{index}] {field} must be non-empty")
+        for field in ("categories", "symbols"):
+            values = group[field]
             if (
-                not isinstance(registration[field], str)
-                or not registration[field].strip()
+                not isinstance(values, list)
+                or not values
+                or not all(isinstance(value, str) and value for value in values)
+                or values != sorted(set(values))
             ):
                 errors.append(
-                    f"registration[{index}] {field} must be non-empty"
+                    f"group[{index}] {field} must be a sorted unique string list"
                 )
         if (
-            not isinstance(registration["introduced_by_pr"], int)
-            or registration["introduced_by_pr"] <= 0
+            not isinstance(group["introduced_by_pr"], int)
+            or group["introduced_by_pr"] <= 0
         ):
             errors.append(
-                f"registration[{index}] introduced_by_pr must be a "
-                "positive integer"
+                f"group[{index}] introduced_by_pr must be a positive integer"
             )
+        fingerprints = group["fingerprints"]
+        if not isinstance(fingerprints, dict) or not fingerprints:
+            errors.append(f"group[{index}] fingerprints must be a nonempty object")
+            continue
+        for fingerprint, count in fingerprints.items():
+            if fingerprint in seen:
+                errors.append(f"duplicate registered fingerprint: {fingerprint}")
+            seen.add(fingerprint)
+            if (
+                not isinstance(fingerprint, str)
+                or len(fingerprint) != 64
+                or any(
+                    character not in "0123456789abcdef"
+                    for character in fingerprint
+                )
+            ):
+                errors.append(
+                    f"group[{index}] has invalid fingerprint: {fingerprint}"
+                )
+            if not isinstance(count, int) or count <= 0:
+                errors.append(
+                    f"group[{index}] count for {fingerprint} must be positive"
+                )
     return errors
 
 
@@ -716,27 +729,41 @@ def evaluate(
     registered = Counter()
     stale: list[dict[str, Any]] = []
     metadata_errors: list[str] = []
-    for registration in manifest.get("registered_additions", []):
-        if not isinstance(registration, dict) or "fingerprint" not in registration:
+    for group in manifest.get("registered_addition_groups", []):
+        if not isinstance(group, dict):
             continue
-        fingerprint = str(registration["fingerprint"])
-        count = int(registration.get("count", 0) or 0)
-        registered[fingerprint] += count
-        candidates = representatives.get(fingerprint, [])
-        representative = candidates[0] if candidates else None
-        if representative is None or additions.get(fingerprint, 0) < count:
-            stale.append(
-                {
-                    "fingerprint": fingerprint,
-                    "registered": count,
-                    "actual_addition": additions.get(fingerprint, 0),
-                }
-            )
+        allowed_categories = set(group.get("categories", []))
+        allowed_symbols = set(group.get("symbols", []))
+        expected_path = group.get("path")
+        fingerprints = group.get("fingerprints", {})
+        if not isinstance(fingerprints, dict):
             continue
-        for field in ("category", "path", "symbol"):
-            if registration.get(field) != representative.get(field):
+        for fingerprint, raw_count in fingerprints.items():
+            count = int(raw_count or 0)
+            registered[str(fingerprint)] += count
+            candidates = representatives.get(str(fingerprint), [])
+            representative = candidates[0] if candidates else None
+            if representative is None or additions.get(str(fingerprint), 0) < count:
+                stale.append(
+                    {
+                        "fingerprint": str(fingerprint),
+                        "registered": count,
+                        "actual_addition": additions.get(str(fingerprint), 0),
+                        "group_path": expected_path,
+                    }
+                )
+                continue
+            if representative["path"] != expected_path:
                 metadata_errors.append(
-                    f"registration metadata mismatch for {fingerprint}: {field}"
+                    f"registration path mismatch for {fingerprint}"
+                )
+            if representative["category"] not in allowed_categories:
+                metadata_errors.append(
+                    f"registration category mismatch for {fingerprint}"
+                )
+            if representative["symbol"] not in allowed_symbols:
+                metadata_errors.append(
+                    f"registration symbol mismatch for {fingerprint}"
                 )
     errors.extend(metadata_errors)
     if stale:
@@ -824,16 +851,23 @@ def suggested_manifest(
     current = _counter(current_scan["findings"])
     additions = current - baseline
     index = _finding_index(current_scan["findings"])
-    registrations: list[dict[str, Any]] = []
+    grouped: dict[str, list[tuple[str, int, dict[str, Any]]]] = defaultdict(list)
     for fingerprint, count in sorted(additions.items()):
         representative = index[fingerprint][0]
-        registrations.append(
+        grouped[representative["path"]].append(
+            (fingerprint, count, representative)
+        )
+    groups: list[dict[str, Any]] = []
+    for path, values in sorted(grouped.items()):
+        groups.append(
             {
-                "fingerprint": fingerprint,
-                "count": count,
-                "category": representative["category"],
-                "path": representative["path"],
-                "symbol": representative["symbol"],
+                "path": path,
+                "categories": sorted(
+                    {representative["category"] for _, _, representative in values}
+                ),
+                "symbols": sorted(
+                    {representative["symbol"] for _, _, representative in values}
+                ),
                 "rationale": (
                     "Forward-regression scanner infrastructure introduced by "
                     "the same reviewed PR."
@@ -841,13 +875,17 @@ def suggested_manifest(
                 "owner": "forward-regression infrastructure",
                 "disposition": "AUDIT_TOOLING",
                 "introduced_by_pr": introduced_by_pr,
+                "fingerprints": {
+                    fingerprint: count
+                    for fingerprint, count, _representative in values
+                },
             }
         )
     return {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "baseline_sha": CONSTITUTION_BASELINE_SHA,
         "baseline": baseline_contract(baseline_scan),
-        "registered_additions": registrations,
+        "registered_addition_groups": groups,
     }
 
 
