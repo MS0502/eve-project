@@ -17,6 +17,8 @@ from core.event_kernel import EventEnvelope, SHADOW_AUTHORITY, canonical_json_ob
 from core.shadow_observer import (
     ACTIVATION_LEARN_PAIR_TARGET,
     FAILURE_EVENT_TYPE,
+    OBSERVER_PRODUCER,
+    OBSERVER_VERSION,
     SUCCESS_EVENT_TYPE,
 )
 
@@ -94,6 +96,15 @@ def _require_snapshot(
         _require_pair_record(item, field=f"{field}.learned[{index}]")
         for index, item in enumerate(learned_value)
     )
+    call_index = 0
+    for learned_record in learned:
+        while call_index < len(calls) and calls[call_index] != learned_record:
+            call_index += 1
+        if call_index >= len(calls):
+            raise ProjectionTransitionError(
+                f"{field}.learned must be an ordered subsequence of calls"
+            )
+        call_index += 1
     return calls, learned
 
 
@@ -194,6 +205,11 @@ def _validate_event_contract(envelope: EventEnvelope) -> tuple[dict[str, Any], b
         raise UnsupportedProjectionEvent("projection accepts EventEnvelope only")
     if envelope.authority != SHADOW_AUTHORITY:
         raise UnsupportedProjectionEvent("projection accepts shadow_only events")
+    if (
+        envelope.producer != OBSERVER_PRODUCER
+        or envelope.producer_version != OBSERVER_VERSION
+    ):
+        raise UnsupportedProjectionEvent("event producer is not the M1-B observer")
     if envelope.stream_id != ACTIVATION_LEARN_PAIR_TARGET.stream_id:
         raise UnsupportedProjectionEvent("event stream is outside M1-C scope")
     if envelope.event_type not in {SUCCESS_EVENT_TYPE, FAILURE_EVENT_TYPE}:
@@ -253,7 +269,6 @@ def reduce_activation_learn_pair(
         raise ProjectionSequenceError(
             f"expected projection sequence {expected_sequence}"
         )
-
     before_calls, before_learned = _require_snapshot(
         payload["before"],
         field="payload.before",
