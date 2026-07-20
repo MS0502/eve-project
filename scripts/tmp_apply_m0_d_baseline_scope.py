@@ -87,7 +87,7 @@ SNAPSHOT_BLOCK = textwrap.dedent(
 ).strip() + "\n\n"
 
 TEST_BLOCK = textwrap.dedent(
-    '''
+    r'''
 
 
     def test_audit_snapshot_freezes_paths_and_source_content(tmp_path):
