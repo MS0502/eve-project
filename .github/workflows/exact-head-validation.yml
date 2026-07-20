@@ -98,18 +98,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git worktree add --detach /tmp/eve-base "$BASE_SHA"
-          for item in \
-            a:scripts/audit/m0_a_runtime_inventory.py \
-            b:scripts/audit/m0_b_controlflow_concurrency_inventory.py \
-            c:scripts/audit/m0_c_persistence_state_inventory.py \
-            d:scripts/audit/m0_d_component_inventory.py; do
-            name="${item%%:*}"
-            script="${item#*:}"
-            (cd /tmp/eve-base && python "$script" --output "/tmp/base-${name}.json")
-            python "$script" --output "/tmp/head-${name}.json"
+          for phase in base head; do
+            if test "$phase" = base; then
+              sha="$BASE_SHA"
+            else
+              sha="$TARGET_SHA"
+            fi
+            git checkout --detach "$sha"
+            test -z "$(git status --short)"
+            for item in \
+              a:scripts/audit/m0_a_runtime_inventory.py \
+              b:scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+              c:scripts/audit/m0_c_persistence_state_inventory.py \
+              d:scripts/audit/m0_d_component_inventory.py; do
+              name="${item%%:*}"
+              script="${item#*:}"
+              python "$script" --output "/tmp/${phase}-${name}.json"
+            done
+          done
+          git checkout --detach "$TARGET_SHA"
+          for name in a b c d; do
             diff -u "/tmp/base-${name}.json" "/tmp/head-${name}.json"
           done
+          test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
       - name: Collect full suite
