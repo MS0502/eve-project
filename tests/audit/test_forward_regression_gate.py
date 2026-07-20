@@ -6,6 +6,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "scripts/audit/forward_regression_gate.py"
+BASE_ENGINE = (
+    "class Engine:\n"
+    "    def __init__(self):\n"
+    "        self.baseline_state = {}\n"
+)
 
 
 def _load_module():
@@ -27,16 +32,14 @@ def _manifest(module, baseline_scan, registrations=None):
 
 def test_unregistered_mutation_is_rejected():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     current = module.scan_sources(
         REPO_ROOT,
         {
             "pkg/runtime.py": (
-                "class Engine:\n"
-                "    def set_value(self):\n"
-                "        self.state = {}\n"
+                BASE_ENGINE
+                + "    def set_value(self):\n"
+                + "        self.state = {}\n"
             )
         },
     )
@@ -52,16 +55,14 @@ def test_unregistered_mutation_is_rejected():
 
 def test_same_pr_registration_allows_exact_delta():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     current = module.scan_sources(
         REPO_ROOT,
         {
             "pkg/runtime.py": (
-                "class Engine:\n"
-                "    def set_value(self):\n"
-                "        self.state = {}\n"
+                BASE_ENGINE
+                + "    def set_value(self):\n"
+                + "        self.state = {}\n"
             )
         },
     )
@@ -76,16 +77,14 @@ def test_same_pr_registration_allows_exact_delta():
 
 def test_stale_registration_is_rejected():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     changed = module.scan_sources(
         REPO_ROOT,
         {
             "pkg/runtime.py": (
-                "class Engine:\n"
-                "    def set_value(self):\n"
-                "        self.state = {}\n"
+                BASE_ENGINE
+                + "    def set_value(self):\n"
+                + "        self.state = {}\n"
             )
         },
     )
@@ -99,25 +98,10 @@ def test_stale_registration_is_rejected():
 
 def test_line_shift_does_not_create_false_delta():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT,
-        {
-            "pkg/runtime.py": (
-                "class Engine:\n"
-                "    def set_value(self):\n"
-                "        self.state = {}\n"
-            )
-        },
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     current = module.scan_sources(
         REPO_ROOT,
-        {
-            "pkg/runtime.py": (
-                "\n\nclass Engine:\n"
-                "    def set_value(self):\n"
-                "        self.state = {}\n"
-            )
-        },
+        {"pkg/runtime.py": "\n\n" + BASE_ENGINE},
     )
 
     result = module.evaluate(baseline, current, _manifest(module, baseline))
@@ -128,17 +112,15 @@ def test_line_shift_does_not_create_false_delta():
 
 def test_duplicate_occurrences_preserve_counts():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     current = module.scan_sources(
         REPO_ROOT,
         {
             "pkg/runtime.py": (
-                "class Engine:\n"
-                "    def add(self, value):\n"
-                "        self.items.append(value)\n"
-                "        self.items.append(value)\n"
+                BASE_ENGINE
+                + "    def add(self, value):\n"
+                + "        self.items.append(value)\n"
+                + "        self.items.append(value)\n"
             )
         },
     )
@@ -184,16 +166,14 @@ def test_silent_broad_adaptive_and_raw_capability_detectors_run():
 
 def test_manifest_requires_review_metadata():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     current = module.scan_sources(
         REPO_ROOT,
         {
             "pkg/runtime.py": (
-                "class Engine:\n"
-                "    def set_value(self):\n"
-                "        self.state = {}\n"
+                BASE_ENGINE
+                + "    def set_value(self):\n"
+                + "        self.state = {}\n"
             )
         },
     )
@@ -208,9 +188,7 @@ def test_manifest_requires_review_metadata():
 
 def test_baseline_digest_drift_is_rejected():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
-    )
+    baseline = module.scan_sources(REPO_ROOT, {"pkg/runtime.py": BASE_ENGINE})
     manifest = _manifest(module, baseline)
     manifest["baseline"]["counter_sha256"] = "0" * 64
 
@@ -222,13 +200,18 @@ def test_baseline_digest_drift_is_rejected():
 
 def test_new_parse_error_is_rejected_but_existing_one_is_tolerated():
     module = _load_module()
-    baseline = module.scan_sources(
-        REPO_ROOT, {"legacy.py": "BROKEN = [\n"}
-    )
-    same = module.scan_sources(REPO_ROOT, {"legacy.py": "BROKEN = [\n"})
+    baseline_sources = {
+        "valid.py": BASE_ENGINE,
+        "legacy.py": "BROKEN = [\n",
+    }
+    baseline = module.scan_sources(REPO_ROOT, baseline_sources)
+    same = module.scan_sources(REPO_ROOT, baseline_sources)
     added = module.scan_sources(
         REPO_ROOT,
-        {"legacy.py": "BROKEN = [\n", "new.py": "ALSO_BROKEN = {\n"},
+        {
+            **baseline_sources,
+            "new.py": "ALSO_BROKEN = {\n",
+        },
     )
     manifest = _manifest(module, baseline)
 
