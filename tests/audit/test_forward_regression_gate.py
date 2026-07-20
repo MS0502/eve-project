@@ -21,12 +21,12 @@ def _load_module():
     return module
 
 
-def _manifest(module, baseline_scan, registrations=None):
+def _manifest(module, baseline_scan, groups=None):
     return {
         "schema_version": module.MANIFEST_SCHEMA_VERSION,
         "baseline_sha": module.CONSTITUTION_BASELINE_SHA,
         "baseline": module.baseline_contract(baseline_scan),
-        "registered_additions": registrations or [],
+        "registered_addition_groups": groups or [],
     }
 
 
@@ -125,18 +125,18 @@ def test_duplicate_occurrences_preserve_counts():
         },
     )
     manifest = module.suggested_manifest(baseline, current, introduced_by_pr=145)
-    append_registrations = []
-    for item in manifest["registered_additions"]:
-        evidence = next(
-            finding["evidence"]
-            for finding in current["findings"]
-            if finding["fingerprint"] == item["fingerprint"]
-        )
-        if "mutation_method=self.items.append" in evidence:
-            append_registrations.append(item)
+    append_counts = []
+    for group in manifest["registered_addition_groups"]:
+        for fingerprint, count in group["fingerprints"].items():
+            evidence = next(
+                finding["evidence"]
+                for finding in current["findings"]
+                if finding["fingerprint"] == fingerprint
+            )
+            if "mutation_method=self.items.append" in evidence:
+                append_counts.append(count)
 
-    assert append_registrations
-    assert append_registrations[0]["count"] == 2
+    assert append_counts == [2]
     assert module.evaluate(baseline, current, manifest)["pass"]
 
 
@@ -178,7 +178,7 @@ def test_manifest_requires_review_metadata():
         },
     )
     manifest = module.suggested_manifest(baseline, current, introduced_by_pr=145)
-    del manifest["registered_additions"][0]["rationale"]
+    del manifest["registered_addition_groups"][0]["rationale"]
 
     result = module.evaluate(baseline, current, manifest)
 
