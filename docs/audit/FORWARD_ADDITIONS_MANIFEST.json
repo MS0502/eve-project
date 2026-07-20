@@ -1,0 +1,123 @@
+{
+  "baseline": {
+    "category_counts": {
+      "adaptive_numeric": 1639,
+      "direct_write": 319,
+      "mutation": 8049,
+      "raw_capability": 170,
+      "silent_broad": 525
+    },
+    "counter_sha256": "5c01be8cf2de84e82ef1cf1e7e786fb1d0b00a27cd1f050862a7f83fc21ca055",
+    "occurrences": 10702,
+    "unique_fingerprints": 7236
+  },
+  "baseline_sha": "8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b",
+  "registered_addition_groups": [
+    {
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "disposition": "AUDIT_TOOLING",
+      "fingerprints": {
+        "000910d91c02a7e15de2c4dcb95d782f258809bcb2097811adc03ff0f01d76d8": 1,
+        "0a8ed4bdb208197eb05782da06867a2f702ad41a7abffc5ca27407c1a1a97928": 4,
+        "18307bc5090a4dbf1a53647da5ee0c7c13ee7f6698a8f99b440f51e27c205027": 2,
+        "197728897ad85d1719c13f1dfb27ee9134f9496b3377073fe044940e662dc059": 1,
+        "217f5180a08d640e6c41be4859a5ee9530331b8e836bdf12cf95c668af26a0a6": 3,
+        "21e021bfe9875dd2a01ef85c43eceb5f805a2806e214ad817870841a409bceef": 1,
+        "34a2a8e944796caa9eea976ae51839523fd8b53659c368e0116418af17a7f193": 1,
+        "34b2dc57f682464b01d2d48df97d8bacc02c5c99242103e221cc1219c7c6df50": 3,
+        "4020abb61b0e3789f369de11a1ce1cd93105a674c05184af301021dcc6a31772": 1,
+        "4062be85a097cd35a1cdba47d74a635564528fd2aca7d22239622b949a1da957": 1,
+        "4245cf2501926cb565cb4bf4920dced979466c7e427766257a44220ff2a22bb5": 1,
+        "4cd2b7d71db1eec803a96df729d91d7bded797808a38873b39f0894c605a8a60": 1,
+        "50947a7fed125e12626ec6cdb0f9daa587f58f0cc75e7cc61dbf0f0bdccf68b4": 1,
+        "5147d9409270f68494fe6d50dea1a2766f96e52556097e0b9426cd0cc582f999": 2,
+        "51f596859123a8739befcc06e920121396eca9a0990b18413f9e391064e5d861": 1,
+        "60c29a03693cd2984065ee267b7ebe93cf95a2aefc49fa4b316194c14c087039": 1,
+        "614a0b28a16a362ec0e7615a9c1030360acdeb81e3b26134420dc2a4623e396c": 5,
+        "65ee3f75cc5d75a7d3469b8b005f01bde132a2ef5883b3bae4da956073cd04c5": 2,
+        "8058b9b70bfb973180371a09dcf71f406926e877dc942001ac455ef305b0a81d": 1,
+        "86dc6134a0496e8bf09fe61dd491b416bdeade63bb71ef5980d79dc1032d5824": 1,
+        "8792a6a0ec8f7029b94d2848c2ac838828e30b516933c438ac1cc252a7b03751": 2,
+        "8928f7e6fab5eee47d69fd95779da5364f2c18feabe29d45a4baebf969550ad7": 1,
+        "905a4d60c69a3599290123b1ad5a770d524ea87beb7b785d7b9db0ead34f6989": 1,
+        "9100f56fdf957f85140e2ad31f336e9b60451f3a6a598746a6fcd7b29d2eea8b": 1,
+        "99a22dd224857dcdc8a928c1c5f84c65d35c07254920469c4049114a7292e3ba": 1,
+        "9c958bc34baad710e83434894e08d9df047c720417c215d261d9e00fbc842252": 1,
+        "a3077878889fdb0310dceeb6c0857353a0f3a3a63df2cb68b1d8158cbd0bc3ef": 2,
+        "a43308492e8f1f662d159aa9c56044976ef07cc8d3bb510d2d395fa19649f3d8": 1,
+        "a51825bd08d0d211cf6b54350e604c8592d246ade8dcb8f7ac905aa8972efa9b": 1,
+        "a6e582abf8d9be7417f2ada3dd350dfa3c0bf79ac2dce1a44df564ce808f3906": 1,
+        "ac6ebbdf49500a8e2dd43173946ea0ae94e628179614897fafe91530befe8cca": 1,
+        "aed2dffbceb4ef60cd36ac222b062f0f51f4ae4d797e925b26e45b1cbaad1a32": 3,
+        "af770e8d9ecb95d974538dd0f338778c45401628a5410add27b6c17564fabb32": 1,
+        "b653812e701d9aff3baced0e579061a840c1b708df86389d170569995dfe51b0": 4,
+        "bd4e2ec7917ef319c8f285ef5ff9524a988c7efb58964671336c8b7b880774e0": 1,
+        "bf58233f51469e30f6978f042d6db050306ac772df18b800f8f8a1ea12ac391a": 1,
+        "bf67bf96134932a9f12fa2ae77f7c559aa4cfa0ce2d80de8e76e5d89be0bb21e": 5,
+        "c1163d6ba1986e9be14b0fe6c1e6565af89d6dd0620c8af5d3559d354bafe65a": 3,
+        "cbc71a5a1b462a954c91e40a70d454b0bcb20a784197798490ed14fc27c3cc54": 1,
+        "cd2ad57155c7e4eabe90fc42c757cbcbb5a0461a389946898eda502f7d4dd137": 1,
+        "cf22ca228e50ac5c625dc80803f2833194825a0caec161762ecf104fb3659efb": 13,
+        "d822dfc8feee2c2d6addf5967677c0d90abd969a05ecc122ed0ed70da3436b67": 1,
+        "de1aa9e2ab592186beaf3e36f7699ea00c0c37dd656074c0f013099935a240db": 1,
+        "e6caf36a28f2a6563d6537dd7b9f2e372c5ffdeb3fdada8ed17d6d66bedb1384": 1,
+        "eb03a94ce885ba0bacdfff3a72b424fcbbb060ee923a52048bc788b306fa96af": 1,
+        "eb6d12b786643f9f401615c3215b2fbe3a41157198b9d3f38b59d5271c665343": 3,
+        "f2d6a37b2e1e10fc81d0d84e59ba93e7206409fb876a854fae4aa7f13053410e": 1,
+        "f7627a32c95dcc6323780e45a4faa7fce16ee3c4535f3474c4f5f905925f8ce8": 1
+      },
+      "introduced_by_pr": 145,
+      "owner": "forward-regression infrastructure",
+      "path": "scripts/audit/forward_regression_gate.py",
+      "rationale": "Current-tree governance scanner, manifest validation, and same-PR provenance enforcement introduced by PR #145.",
+      "symbols": [
+        "_counter_digest",
+        "_current_sources",
+        "_finding_index",
+        "_function_arguments",
+        "_names_in",
+        "_raw_capability_findings.Visitor.__init__",
+        "_raw_capability_findings.Visitor._visit_function",
+        "_raw_capability_findings.Visitor.visit_ClassDef",
+        "_registration_index",
+        "_same_pr_registration_errors",
+        "_snapshot_sources",
+        "_target_names",
+        "_validate_baseline_contract",
+        "_validate_manifest",
+        "evaluate",
+        "finding_fingerprint",
+        "main",
+        "scan_sources",
+        "suggested_manifest"
+      ]
+    },
+    {
+      "categories": [
+        "mutation"
+      ],
+      "disposition": "TEST_EVIDENCE",
+      "fingerprints": {
+        "1438f60df95d5fbf4b5697119fcef9f83b3e85baba418c715442d4db389ec1e0": 1,
+        "7e394b5cf8bab007d74e8728e2f983fe29682c8caad271da20b8f780407f6bb9": 1,
+        "90c373a01c4c34059ff8f4f7ea519cab139dd4d8fcd47ae4aa24258a273dde3c": 4,
+        "c46b02d9b23886f7d448c7544d65e2557f51d636f92d4d09f1becf7b87b56263": 1
+      },
+      "introduced_by_pr": 145,
+      "owner": "forward-regression verification",
+      "path": "tests/audit/test_forward_regression_gate.py",
+      "rationale": "Focused fail-closed evidence for detector deltas, reviewed registration, stale entries, same-PR provenance, baseline drift, and parse errors introduced by PR #145.",
+      "symbols": [
+        "_approved",
+        "test_baseline_digest_drift_is_rejected",
+        "test_duplicate_occurrences_preserve_counts",
+        "test_manifest_requires_all_review_metadata"
+      ]
+    }
+  ],
+  "schema_version": "1.0.0-forward-additions"
+}

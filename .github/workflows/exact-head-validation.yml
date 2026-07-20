@@ -29,6 +29,7 @@ jobs:
     env:
       TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
       BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base_sha }}
+      CURRENT_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
       REQUESTED_FOCUSED_TESTS: ${{ inputs.focused_tests }}
       PIP_INDEX_URL: https://pypi.org/simple
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
@@ -89,7 +90,12 @@ jobs:
           } | sed '/^[[:space:]]*$/d' | sort -u > /tmp/focused-paths.txt
           if test -s /tmp/focused-paths.txt; then
             mapfile -t focused < /tmp/focused-paths.txt
-            python -m pytest -q "${focused[@]}" | tee /tmp/focused.txt
+            set +e
+            python -m pytest -q --tb=short "${focused[@]}" > /tmp/focused.txt 2>&1
+            status=$?
+            set -e
+            cat /tmp/focused.txt
+            exit "$status"
           else
             printf '%s\n' 'No focused tests selected.' | tee /tmp/focused.txt
           fi
@@ -123,6 +129,20 @@ jobs:
           test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
+      - name: Verify forward regression gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if test -n "$CURRENT_PR"; then
+            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
+          fi
+          python scripts/audit/forward_regression_gate.py \
+            --output /tmp/forward-regression.json \
+            --pretty \
+            "${args[@]}"
+          cat /tmp/forward-regression.json
+
       - name: Collect full suite
         shell: bash
         run: |
@@ -143,6 +163,7 @@ jobs:
           test -z "$(git status --short)"
 
       - name: Upload exact-head evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: exact-head-validation-${{ env.TARGET_SHA }}
@@ -152,6 +173,7 @@ jobs:
             /tmp/focused-paths.txt
             /tmp/focused.txt
             /tmp/invariance.txt
+            /tmp/forward-regression.json
             /tmp/base-a.json
             /tmp/head-a.json
             /tmp/base-b.json

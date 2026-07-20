@@ -5,15 +5,18 @@ Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 Runtime status: **pre-kernel legacy runtime; no v4 runtime implementation or activation claim**
 Previous v3/v3.1 documents: historical reference only
 M0 status: **closed**
-Current next step: **forward-regression scanner and forward-additions manifest infrastructure**
+Forward-gate status: **implemented and enforced by exact-head validation**
+Current next step: **M1-A — minimal event kernel and in-memory append-only envelope**
 Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
-Constitution baseline: `646191c082a18e817d114cdff4a2d81b404fda33`
+Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 
 ## Current state
 
-The v4.1 amendment is documentation and governance only. It changes no runtime code, test, data, model, vector, checkpoint, persistence state, scanner, enforcement tool, default, or frozen branch. No event kernel, event-store authority, persistence cutover, capability-edge manifest, affect conversion, scheduler, or autonomous-life activation is implemented by v4.1.
+EVE v4.1 is active constitutional authority, but the v4 runtime is not yet implemented or activated. The existing implementation remains the **pre-kernel legacy runtime**. Terms such as “event” or “authoritative event store” describe future accepted architecture, not the authority of current mutations, sidecars, debug exports, or diagnostic envelopes.
 
-The existing implementation is designated the **pre-kernel legacy runtime**. Terms such as “event” or “authoritative event store” describe future accepted architecture, not the authority of current mutations, sidecars, debug exports, or diagnostic envelopes.
+The forward-regression infrastructure now separates immutable historical audit regeneration from current-tree enforcement. It changes no production runtime behavior, persistence authority, model/vector activation, data, default, or frozen branch.
+
+No event kernel, event-store authority, persistence cutover, affect conversion, capability-edge manifest, scheduler, or autonomous-life activation exists yet. M1-A is the first runtime-construction milestone.
 
 ## Merged source-of-truth evidence
 
@@ -51,15 +54,44 @@ Implemented infrastructure exists. M0-A/B/C are pinned by PR #141; exact-head pa
 
 ### Forward regression gate
 
-Not yet implemented. Until the scanner and forward-additions manifest exist, the following are review-enforced:
+Implemented by:
 
-- no unregistered new mutation or direct-write entry;
-- no unregistered adaptive/numeric state owner, artifact writer, learned-state repository, or vector/weight persistence path;
-- no new silent+broad exception handler;
-- no new raw-external-text capability edge into expression/generation;
-- justified kernel or audit additions must be registered in the same PR that introduces them.
+- `scripts/audit/forward_regression_gate.py`;
+- `docs/audit/FORWARD_ADDITIONS_MANIFEST.json`;
+- `docs/audit/FORWARD_REGRESSION_GATE.md`;
+- `tests/audit/test_forward_regression_gate.py`;
+- the enforced forward-gate step in `.github/workflows/exact-head-validation.yml`.
 
-The forward scanner is the first post-v4.1 infrastructure PR. It must not modify the frozen historical audit outputs.
+The frozen v4.1 current-tree baseline is:
+
+```text
+baseline SHA:         8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b
+fingerprint digest:   5c01be8cf2de84e82ef1cf1e7e786fb1d0b00a27cd1f050862a7f83fc21ca055
+unique fingerprints:  7,236
+occurrences:          10,702
+```
+
+Baseline category occurrences:
+
+```text
+mutation:          8,049
+direct_write:        319
+silent_broad:         525
+adaptive_numeric:   1,639
+raw_capability:       170
+```
+
+The gate enforces **unregistered delta = 0**, not absolute delta = 0. It rejects:
+
+- unregistered new mutation or direct-write findings;
+- unregistered adaptive/numeric findings;
+- new silent+broad handlers;
+- new raw-external-text-to-expression/generation candidates;
+- new parse errors that would hide AST detector coverage;
+- baseline digest drift;
+- malformed, stale, metadata-mismatched, or over-counted registrations.
+
+Justified kernel or audit additions must be registered in the same reviewed PR. Registration is evidence for review, not automatic approval. The initial PR #145 additions are restricted to the forward scanner and its focused tests; no runtime path is registered.
 
 ## Governance registry
 
@@ -75,9 +107,10 @@ Copied from `docs/audit/M0_D_MODULE_DISPOSITION.md`:
 ### Required infrastructure
 
 - `.github/workflows/exact-head-validation.yml`
+- `scripts/audit/forward_regression_gate.py`
+- `docs/audit/FORWARD_ADDITIONS_MANIFEST.json`
 - historical snapshot pinning established by PR #141
 - exact-head invariance correction established by PR #143
-- future forward-regression scanner and forward-additions manifest
 
 ## Milestone Registry
 
@@ -129,12 +162,12 @@ M1-E acceptance grants only eligibility to open a human-reviewed v4.2 amendment 
 
 ## Current next step
 
-Build the small forward-regression scanner infrastructure PR. It must:
+Begin **M1-A** after this infrastructure PR merges. M1-A must:
 
-1. preserve frozen M0-A through M0-D outputs byte-identically;
-2. run mutation/direct-write, adaptive/numeric, silent+broad, and raw-capability detectors against the current tree;
-3. compare against frozen forward manifests;
-4. support same-PR reviewed forward-additions registration;
-5. change no runtime behavior or production authority.
-
-After that infrastructure merges, begin M1-A.
+1. define a versioned immutable event envelope and causal metadata;
+2. implement an append-only in-memory kernel only, with no SQLite/file persistence;
+3. expose an explicit reducer boundary without wrapping or mutating legacy runtime funnels yet;
+4. reject malformed, duplicate, or authority-claiming envelopes fail-closed;
+5. preserve pre-kernel runtime authority and all production defaults;
+6. register every justified scanner finding in the same M1-A PR;
+7. pass focused kernel tests, the forward gate, historical audit invariance, collection, and the full suite.
