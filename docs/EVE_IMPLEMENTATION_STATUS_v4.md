@@ -2,53 +2,75 @@
 
 Active constitution: **EVE v4.1**
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
-Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A kernel is shadow-only and disconnected**
+Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A/M1-B are shadow-only and not production-integrated**
 Previous v3/v3.1 documents: historical reference only
 M0 status: **closed**
 Forward-gate status: **implemented and enforced by exact-head validation**
-M1-A status: **completed by the merge carrying this STATUS update**
-Current next step: **M1-B — registered legacy-funnel shadow observer**
+M1-A status: **completed by PR #146**
+M1-B status: **completed by the merge carrying this STATUS update**
+Current next step: **M1-C — deterministic reducers, replay checks, and bounded event/state equivalence**
 Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
+M1-A merge baseline: `1a3da9aee41c0bed065bb0bbbcc2e8e577aa50f9`
 
 ## Current state
 
-EVE v4.1 is active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime authority.
+EVE v4.1 is the active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime and persistence authority.
 
-M1-A adds a minimal event-kernel contract in `core/event_kernel.py`. It is intentionally disconnected from `main.py`, `language/streaming.py`, live/autonomous loops, persistence adapters, and every legacy mutation funnel. It creates no file, SQLite database, snapshot, sidecar, thread, clock, network request, model/vector load, or production default. It cannot observe or alter live runtime behavior.
+M1-A provides an immutable canonical `shadow_only` event envelope, an append-only in-memory kernel, and an explicit reducer/replay boundary. M1-B provides a separately invoked after-the-fact observer for one registered legacy funnel. Neither milestone is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths.
 
-The M1-A kernel accepts only immutable canonical envelopes marked `shadow_only`, stores them only in process memory, and exposes append/read/replay boundaries. This is an implementation of the kernel contract, not event-store cutover, persistence authority, or evidence that legacy mutations are already represented by events.
-
-No shadow observer, event/state equivalence proof, persistence cutover, affect conversion, capability-edge manifest, activity scheduler, or autonomous-life activation exists yet. M1-B is the next milestone.
+No SQLite database, file event store, snapshot, checkpoint, sidecar, WAL, backup, migration, cutover, model/vector activation, scheduler, external effect, or production default is introduced. M1-A/M1-B do not replace legacy state authority and do not establish general event/state equivalence.
 
 ## M1-A implementation record
 
 Implemented surfaces:
 
-- `EventEnvelope`: frozen versioned schema, canonical bounded JSON payload and causal context, deterministic digest, caller-supplied identifiers and ordering, and fixed `shadow_only` authority.
+- `EventEnvelope`: frozen versioned schema, bounded canonical JSON payload and causal context, deterministic digest, caller-supplied identifiers and ordering, and fixed `shadow_only` authority.
 - `AppendReceipt`: immutable in-memory append evidence with envelope digest.
 - `InMemoryEventKernel`: append-only in-memory ordering, duplicate-ID rejection, per-stream contiguous sequence checks, known-causation checks, immutable read views, and explicit reducer replay.
-- focused tests: canonicalization, deep immutability boundary, authority rejection, identifier/version validation, finite/JSON-only payloads, size/depth bounds, append atomicity, duplicate/sequence/causation failure, independent streams, reducer failure propagation, and static absence of persistence/clock/thread/random/runtime integration.
 
 Fail-closed constraints:
 
 - malformed or noncanonical envelope → reject;
 - authority other than `shadow_only` → reject;
-- duplicate event ID → reject before append;
-- non-one-based or noncontiguous stream sequence → reject before append;
-- unknown or self causation → reject;
+- duplicate event ID, sequence gap, unknown causation, or self-causation → reject before append;
 - non-callable reducer or reducer returning `None` → reject;
 - reducer exception → propagate visibly;
-- new scanner findings → require same-PR reviewed registration.
+- no file/database persistence, runtime hook, clock, thread, randomness, recovery, or mutation authority.
 
-Explicit exclusions:
+## M1-B implementation record
 
-- no legacy-runtime hook or observer;
-- no event emission from chat, live, autonomous, memory, affect, goal, or persistence paths;
-- no SQLite, file, checkpoint, snapshot, sidecar, WAL, backup, restore, migration, or cutover;
-- no recovery or mutation authority for the kernel;
-- no claim that current legacy state is replayable from M1-A envelopes.
+The only registered M1-B target is:
+
+```text
+target_id:          legacy.activation.learn_pair
+module:             adapters/activation_adapter.py
+callable:           ActivationAdapter.learn_pair
+source range:       103-105
+M0-D disposition:   WRAP
+observer stream:    shadow:legacy.activation.learn_pair
+```
+
+`core/shadow_observer.py` provides an explicitly constructed `LegacyFunnelShadowObserver`. A caller must supply the reviewed target ID, the legacy callable, caller-chosen event/correlation metadata, and read-only before/after snapshot providers. The observer is not patched into `ActivationAdapter` or any production composition root.
+
+Behavioral contract:
+
+- capture a detached before snapshot;
+- call the supplied legacy callable exactly once;
+- preserve its return value unchanged or re-raise the same exception object;
+- capture a detached after snapshot;
+- attempt one after-the-fact `shadow_only` candidate append;
+- capture neither legacy arguments nor legacy return values in the envelope;
+- retain observer failures as explicit in-memory `ShadowObservationFailure` records;
+- never convert observer failure into retry, recovery, suppression, persistence, mutation, or legacy-runtime failure authority.
+
+Observed candidate event types are diagnostic only:
+
+- `shadow.legacy_mutation_observed_candidate`;
+- `shadow.legacy_mutation_failed_candidate`.
+
+M1-B does **not** claim that the observer is active in production, that all mutation funnels are covered, or that current legacy state is reconstructible from these candidates.
 
 ## Merged source-of-truth evidence
 
@@ -56,12 +78,10 @@ Explicit exclusions:
 - `docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md`: merged canonical failure figures broad 614, silent 597, silent broad 525.
 - `docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md`: legacy persistence plus gzip/pickle sidecar evidence; no cutover contract was implemented by M0-C.
 - `docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md`: 63 axes = 26 mutable legacy + 37 read-only registry; 59 `MAPPED`, 4 `PROPOSED-DROP`, 0 `UNRESOLVED`.
-- `docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`: 1,225 component evidence entries; 75 life-loop entries; pre-M0-D failure baseline broad 614, silent 607, silent broad 532.
+- `docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`: 1,225 component evidence entries; 75 life-loop entries; integrated pre-M0-D failure baseline broad 614, silent 607, silent broad 532.
 - `docs/audit/M0_D_MODULE_DISPOSITION.md`: 288 runtime modules; KEEP 30, WRAP 78, REWRITE 6, EXPERIMENTAL 172, DEPRECATE 2, REMOVE 0.
 
 ## Figure provenance and discrepancy register
-
-The source-of-truth duty found no contradiction between the v4.1 amendment task and the merged documents. It did find provenance-specific figures that must remain separate:
 
 | Measure | Merged M0-B snapshot `eea70c...` | Integrated pre-M0-D tree `fe10cd...` | Treatment |
 |---|---:|---:|---|
@@ -69,13 +89,11 @@ The source-of-truth duty found no contradiction between the v4.1 amendment task 
 | silent handlers | 597 | 607 | Preserve both; do not silently normalize |
 | silent broad handlers | 525 | 532 | Preserve both; do not silently normalize |
 
-The M0-B figures come from `M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md`. The integrated figures come from the A/B/C retrospective in `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`. This difference is evidence for audit snapshot pinning, not permission to rewrite either historical baseline.
+Count semantics remain fixed:
 
-Count semantics are fixed:
-
-- 13,341 = M0-A total evidence entries, not objects.
-- 1,225 = M0-D component evidence entries, not modules or owners.
-- 288 = module disposition units.
+- 13,341 = M0-A total evidence entries, not objects;
+- 1,225 = M0-D component evidence entries, not modules or owners;
+- 288 = module disposition units;
 - 75 = life-loop entries; taxonomy occurrence totals may exceed 75 because one callable may map to multiple categories.
 
 ## Dual-gate status
@@ -94,7 +112,7 @@ Implemented by:
 - `tests/audit/test_forward_regression_gate.py`;
 - the enforced forward-gate step in `.github/workflows/exact-head-validation.yml`.
 
-The frozen v4.1 current-tree baseline is:
+Frozen v4.1 baseline:
 
 ```text
 baseline SHA:         8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b
@@ -113,45 +131,28 @@ adaptive_numeric:   1,639
 raw_capability:       170
 ```
 
-The gate enforces **unregistered delta = 0**, not absolute delta = 0. It rejects:
+The gate enforces **unregistered delta = 0**, not absolute delta = 0. It rejects unregistered findings, new parse errors, baseline drift, stale or over-counted registrations, metadata mismatches, and wrong-PR provenance.
 
-- unregistered new mutation or direct-write findings;
-- unregistered adaptive/numeric findings;
-- new silent+broad handlers;
-- new raw-external-text-to-expression/generation candidates;
-- new parse errors that would hide AST detector coverage;
-- baseline digest drift;
-- malformed, stale, metadata-mismatched, over-counted, or wrong-PR registrations.
+Reviewed additions are registered as follows:
 
-M1-A registers exactly two reviewed groups under PR #146:
+- PR #145: forward scanner and focused gate tests only;
+- PR #146: M1-A kernel and focused M1-A tests only;
+- PR #147: M1-B observer and focused M1-B tests only.
 
-- `core/event_kernel.py`: kernel-owned in-memory append/canonical-digest findings; disposition `M1_A_EVENT_KERNEL`;
-- `tests/test_v4_m1_a_event_kernel.py`: focused verification findings; disposition `TEST_EVIDENCE`.
-
-The M1-A registration includes no direct-write, silent-broad, or raw-capability addition. Registration is evidence for review, not automatic authority.
+PR #147 adds no registered direct-write, silent-broad, or raw-capability finding. Registration is evidence for review, not automatic runtime authority.
 
 ## Governance registry
 
 ### Frozen-PR dispositions
-
-Copied from `docs/audit/M0_D_MODULE_DISPOSITION.md`:
 
 | Disposition | PRs | Meaning |
 |---|---|---|
 | `REWRITE-AS-V4-CONTRACT` | #109, #86, #84, #82 | Preserve evidence and tests, then restate under v4 contracts; do not merge the frozen branch. |
 | `ABSORB-INTO-M1` | #11, #7, #4 | Preserve safety and validation requirements as M1 inputs; do not merge the obsolete activation bundle. |
 
-### Required infrastructure
-
-- `.github/workflows/exact-head-validation.yml`
-- `scripts/audit/forward_regression_gate.py`
-- `docs/audit/FORWARD_ADDITIONS_MANIFEST.json`
-- historical snapshot pinning established by PR #141
-- exact-head invariance correction established by PR #143
-
 ## Milestone Registry
 
-This is the provisional registry of IDs referenced by the constitution. It may be adjusted by a reviewed STATUS update without a constitutional amendment. A STATUS update may refine sequencing and evidence requirements but may not weaken the constitution, bypass exact-head validation, or make promotion/cutover automatic.
+This registry may be adjusted by a reviewed STATUS update without a constitutional amendment. It may refine sequencing and evidence requirements but may not weaken the constitution, bypass exact-head validation, or make promotion/cutover automatic.
 
 ### M1 — Event kernel and shadow acceptance
 
@@ -199,12 +200,13 @@ M1-E acceptance grants only eligibility to open a human-reviewed v4.2 amendment 
 
 ## Current next step
 
-Begin **M1-B** only after M1-A merges. M1-B must:
+Begin **M1-C** only after M1-B merges. M1-C must:
 
-1. select a minimal bounded set of legacy mutation funnels from M0-A and register each target;
-2. observe after-the-fact state-transition evidence without replacing or controlling the legacy mutation;
-3. emit only `shadow_only` envelopes into the in-memory kernel;
-4. preserve legacy return values, exceptions, ordering, state, persistence behavior, and defaults byte-for-byte where observable;
-5. grant no observer recovery, retry, suppression, persistence, or mutation authority;
-6. surface observer failure explicitly without converting it into a legacy-runtime failure or silent+broad handler;
-7. pass focused no-side-effect/coverage tests, the forward gate, historical audit invariance, collection, and the full suite.
+1. define a versioned bounded shadow-state schema for the registered `ActivationAdapter.learn_pair` target;
+2. implement a deterministic reducer that consumes only the M1-B candidate envelope contract;
+3. compare reducer replay with the detached legacy after-state for the bounded target;
+4. report mismatches and malformed sequences visibly without altering legacy state;
+5. provide an explicit in-memory rollback/checkpoint boundary for the shadow projection only;
+6. add no SQLite/file persistence, production hook, retry, suppression, cutover, or legacy mutation authority;
+7. register every justified scanner finding in the same PR;
+8. pass focused equivalence/failure tests, the forward gate, historical audit invariance, collection, and the full suite.
