@@ -1,14 +1,14 @@
-# EVE v4 Active Agent Instructions
+# EVE v4.1 Active Agent Instructions
 
 ## Active authority
 
-After the EVE v4 Constitution Rebaseline merges, this file and `docs/EVE_DESIGN_v4.md` are the active constitutional authority. Older v3 and v3.1 design/status/dependency documents are retained only as historical reference and do not override this v4 authority.
+After the EVE v4.1 Constitution Amendment merges, this file and `docs/EVE_DESIGN_v4.md` are the active constitutional authority. Older v3 and v3.1 design/status/dependency documents are retained only as historical reference and do not override this v4.1 authority.
 
-EVE v4.0 is provisional pending M0. It may be revised to v4.1 after evidence from M0. Evidence-based revision is part of the process and is not a project failure.
+EVE v4.1 is the active constitutional authority. It is not a claim that a v4 runtime is implemented, activated, or authoritative in production.
 
 ## Current implementation status
 
-Do not claim that the v4 runtime is implemented. This rebaseline is documentation and governance only. Existing implementation work is frozen through M0, including open PRs #109, #97, #86, #84, #82, #11, #7, #4, and #1.
+Do not claim that the v4 runtime is implemented. The current implementation is the **pre-kernel legacy runtime** identified by M0. Existing implementation work remains frozen, including open PRs #109, #86, #84, #82, #11, #7, and #4. The first post-v4.1 infrastructure task is the forward-regression scanner; no scanner, event kernel, persistence cutover, or runtime migration is implemented by the constitution amendment.
 
 ## EVE identity
 
@@ -38,7 +38,7 @@ Record discrete transitions such as input/observation acceptance, memory candida
 
 ## Future persistence requirements
 
-M1/M2 must later use append-only SQLite event storage, periodic validated snapshots, replay from latest valid snapshot, WAL where supported, explicit transactions, integrity checks, schema versions and migration history, crash recovery, bounded backups, forced-termination resilience, corrupt-snapshot fallback and restore verification, and mobile storage-growth policy. Do not create or activate a database during the constitution rebaseline.
+M1/M2 must later use append-only SQLite event storage, periodic validated snapshots, replay from latest valid snapshot, WAL where supported, explicit transactions, integrity checks, schema versions and migration history, crash recovery, bounded backups, forced-termination resilience, corrupt-snapshot fallback and restore verification, and mobile storage-growth policy. Do not create or activate a database during governance-only work.
 
 ## Memory and forgetting
 
@@ -46,7 +46,7 @@ EVE may not consciously delete historical source events. Original event history 
 
 ## Affect migration
 
-The current 26-hormone architecture is not automatically retained. M0 must inventory all hormone state and mutation, persistence and memory snapshots, and hormone-dependent tests, speech, goals, agency, loops, and persistence behavior. M0 must propose migration toward core drives, appraisal, and derived emotion without orphaning historical memory or breaking identity continuity. Do not change affect implementation during this rebaseline.
+The merged `docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md` is binding design input: 63 authoritative axes comprise 26 mutable legacy channels and 37 read-only registry axes; reviewer rulings are 59 `MAPPED`, 4 `PROPOSED-DROP`, and 0 `UNRESOLVED`. Dropped axes retain originals and provenance for historical interpretation. Implementation belongs to M2/M3 in the Milestone Registry and is not activated by v4.1.
 
 ## Self-code boundary
 
@@ -65,6 +65,17 @@ Timer ticks, hormone decay, and proactive speech are not proof of life or consci
 M0 is evidence-focused and split into M0-A through M0-D. M0-A inventories runtime entrypoints, imports/dependency construction, mutation/direct-write sites, and test classifications. M0-B covers gates, bypasses, outputs, exceptions, clocks, queues, threads, concurrency, and nondeterminism. M0-C covers persistence and affect/hormone migration. M0-D covers neural/vector/adaptive components, life-loop assessment, module disposition, integrated conclusions, and recommendations for frozen PRs.
 
 Every M0 map entry must include path, exact line/range, callable, mechanically detected evidence, manual classification, confidence, and unresolved status where applicable. Grep may supplement AST but cannot be the sole evidence. Generated JSON artifacts must not be committed.
+
+## v4.1 amendment summary
+
+1. **Mutation reality and dual gates** — Treat the current implementation as the pre-kernel legacy runtime; preserve historical snapshot regeneration and reject unregistered current-tree mutation/direct-write additions.
+2. **Persistence authority** — Add no pickle or legacy-sidecar writer; legacy remains authoritative through shadow and dual-read until a separately approved event-store cutover.
+3. **Affect contract** — Use the reviewer-ruled 63-axis Affect Migration Plan as binding design input, with originals and provenance preserved for all proposed drops.
+4. **Life loops** — Use the 75-entry M0-D inventory as a taxonomy baseline; only timer/proactive/output-centric paths are legacy expression behavior, and no new timer-driven speech trigger is allowed.
+5. **Raw-source quarantine** — Do not mistake output surfaces for capability edges; permit no new raw-text-to-expression capability edge before the M2-B capability manifest is approved.
+6. **Adaptive/numeric state** — Treat 1,225 as evidence entries and 288 runtime modules as the disposition unit; new state/artifact/vector authority requires disposition plus provenance/version/evaluation/rollback.
+7. **Failure visibility** — Silent broad handling is a defect class; add no new silent+broad handler, and pre-kernel observation may emit diagnostic candidates only.
+8. **Audit baseline pinning** — Completed audits are immutable snapshot-scoped evidence; retroactive drift is a defect and exact-head validation is required infrastructure.
 
 ## Test migration policy
 

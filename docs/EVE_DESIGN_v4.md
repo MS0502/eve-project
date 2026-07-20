@@ -1,8 +1,8 @@
-# EVE v4.0 Constitution and Design
+# EVE v4.1 Constitution and Design
 
-EVE v4.0 is provisional pending M0. It may be revised to v4.1 after evidence from M0. Evidence-based revision is part of the process and is not a project failure.
+EVE v4.1 is the **ACTIVE CONSTITUTIONAL AUTHORITY**.
 
-This document is constitutional authority only. It does not claim that the v4 runtime is implemented and does not enable runtime features, persistence, enforcement, model activation, vector loading, database creation, AGP bypass, speech generation passthrough, or production defaults.
+This document is constitutional authority only. It does not claim that any v4 runtime is implemented or activated and does not enable runtime features, persistence, enforcement, model activation, vector loading, database creation, AGP bypass, speech-generation passthrough, or production defaults. The implementation audited by M0 is designated the **pre-kernel legacy runtime** until later milestones explicitly replace its authorities.
 
 ## 1. Identity
 
@@ -26,23 +26,29 @@ Future architecture must enforce that raw external text exists only in a quarant
 
 ## 6. Event-log reproducibility
 
-EVE v4 does not require identical answers after learning or bit-identical neural execution. It requires every meaningful state transition to be represented by an event, non-deterministic inputs to preserve causes, parameters, model versions, and seeds where applicable, state reconstruction from a valid snapshot plus subsequent events, reconstruction failure to be treated as a defect, and important decisions to retain causal provenance.
+The v4 target does not require identical answers after learning or bit-identical neural execution. It requires every meaningful state transition to be represented by an event, non-deterministic inputs to preserve causes, parameters, model versions, and seeds where applicable, state reconstruction from a valid snapshot plus subsequent events, reconstruction failure to be treated as a defect, and important decisions to retain causal provenance.
+
+The pre-kernel legacy runtime does not satisfy this event-kernel contract merely because existing code mutates state or emits diagnostics. Event authority begins only after an event kernel is implemented and accepted under the Milestone Registry.
 
 ## 7. Event granularity
 
-Record discrete transitions such as input/observation acceptance, memory candidate and consolidation, goal create/suspend/resume, action selection, appraisal completion, skill update stabilization, permission change, and external effect authorization/execution. Do not record every timer tick or continuous decay step. Derived continuous values such as activation, accessibility, energy, or drive decay must be reproducible from base state, model version, parameters, and monotonic elapsed time.
+After event-kernel activation, record discrete transitions such as input/observation acceptance, memory candidate and consolidation, goal create/suspend/resume, action selection, appraisal completion, skill-update stabilization, permission change, and external-effect authorization/execution. Do not record every timer tick or continuous decay step. Derived continuous values such as activation, accessibility, energy, or drive decay must be reproducible from base state, model version, parameters, and monotonic elapsed time.
 
 ## 8. Future persistence requirements
 
-M1/M2 must later use append-only SQLite event storage, periodic validated snapshots, replay from latest valid snapshot, WAL where supported, explicit transactions, integrity checks, schema versions and migration history, crash recovery, bounded backups, forced-termination resilience, corrupt-snapshot fallback and restore verification, and mobile storage-growth policy. This PR must not create or activate a database.
+M1/M2 must later use append-only SQLite event storage, periodic validated snapshots, replay from the latest valid snapshot, WAL where supported, explicit transactions, integrity checks, schema versions and migration history, crash recovery, bounded backups, forced-termination resilience, corrupt-snapshot fallback and restore verification, and mobile storage-growth policy. No governance-only amendment creates or activates a database.
 
 ## 9. Memory and forgetting
 
 EVE may not consciously delete historical source events. Original event history is retained. Forgetting is automatic accessibility decay, compression, consolidation, generalization, association change, and cue-based reactivation. Personal recollection and immutable safety/audit history are separate. Migration must preserve provenance and continuity.
 
-## 10. Affect migration
+## 10. Binding affect migration contract
 
-The current 26-hormone architecture is not automatically retained. M0 must inventory all hormone state and mutation, persistence and memory snapshots, and hormone-dependent tests, speech, goals, agency, loops, and persistence behavior. M0 must propose migration toward core drives, appraisal, and derived emotion without orphaning historical memory or breaking identity continuity. This document does not change affect implementation.
+The former M0 deficiency is closed by the merged `docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md`, which is binding design input rather than runtime activation.
+
+The authoritative migration surface is **63 axes**: **26 mutable legacy hormone channels plus 37 read-only affect-registry axes**. Reviewer rulings are **59 `MAPPED`, 4 `PROPOSED-DROP`, and 0 `UNRESOLVED`**. Original values and provenance remain readable for every proposed drop; a drop removes future behavioral authority, not historical evidence. These figures and rules are copied from the merged Affect Migration Plan.
+
+Implementation is assigned to M2/M3 by the Milestone Registry in `docs/EVE_IMPLEMENTATION_STATUS_v4.md`. No projection, state conversion, live affect mutation, goal integration, persistence migration, or cutover is authorized by this constitutional amendment.
 
 ## 11. Self-code boundary
 
@@ -55,3 +61,113 @@ Ordinary internal activity does not require Minseok's approval. Private journals
 ## 13. Speech is not life
 
 Timer ticks, hormone decay, and proactive speech are not proof of life or consciousness. Continuity is evaluated through persistent state, memory, goals, independent activity, learning, interruption/resumption, and long-term change. Architecture alone cannot prove subjective consciousness.
+
+## 14. Mutation reality and dual gates
+
+M0 established that the current implementation is a **pre-kernel legacy runtime**, not an event-kernel implementation. `docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md` records **7,842 in-memory mutation sites** and **283 filesystem or persistence direct-write sites**. These are occurrence-level sites, not distinct state objects or approved architecture units.
+
+Two independent gates govern this reality:
+
+1. **Historical audit gate.** Completed M0 audit regeneration must remain byte-identical to the merged snapshot universe. This is the PR #141 / PR #143 regime.
+2. **Forward regression gate.** The same detector families operate against the current tree. Mutation or direct-write entries absent from the frozen forward manifest are prohibited unless the same PR registers the justified additions in a reviewed **forward-additions manifest**. Event-kernel code and audit tooling use this registration path; construction of the kernel is not blocked by an absolute `delta = 0` rule.
+
+Until the forward scanner and manifest exist, the second gate is review-enforced. Implementing that scanner is the first post-v4.1 infrastructure PR. A registration is evidence for review, not automatic approval.
+
+## 15. Persistence authority and cutover
+
+No new pickle writer or legacy-sidecar writer may be added.
+
+Legacy persistence retains runtime authority throughout event-store shadowing and dual-read migration. The event store becomes authoritative only through an explicit human-reviewed cutover authorization after all of the following are demonstrated:
+
+- replay equivalence over the defined state envelope;
+- validated snapshot restore;
+- rollback rehearsal;
+- corrupt-state and corrupt-snapshot failure handling;
+- a defined observation window following the same staged pattern as the merged Affect Migration Plan;
+- exact-head validation and approval of the cutover head.
+
+Before cutover, event-store output is shadow evidence only. After cutover, legacy checkpoints and sidecars become non-authoritative, read-only migration evidence. Activation of an event store is not the same as cutover.
+
+## 16. Life-loop ownership
+
+`docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md` records a **75-entry life-loop inventory** and the full taxonomy: Vital, Cognitive, Goal, Activity, Learning, Memory, Social, Expression, and `no-v4-equivalent`. A callable may occupy more than one category, so taxonomy occurrences are not distinct-object counts.
+
+Only timer-, proactive-, or output-centric paths are designated **legacy expression behavior** and must be wrapped behind the future activity scheduler. All other inventoried paths retain their recorded taxonomy and must receive an explicit lifecycle owner plus scheduler mapping before activation or rewrite. No new timer-driven speech trigger is allowed.
+
+## 17. Raw-source quarantine and capability edges
+
+The M0-B observable-output map is not a capability-edge baseline: output surfaces do not prove which source stores or raw inputs expression can read.
+
+At milestone **M2-B**, a mechanically extracted read-capability manifest must map:
+
+`source store or raw input → cognition → expression or generation`
+
+Until that manifest is approved, no **new** capability edge may allow expression or generation to read raw external text beyond the known `StreamingEngine` chat funnel. The existing funnel is documented by `docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md` and carries a `REWRITE` disposition in `docs/audit/M0_D_MODULE_DISPOSITION.md`. Interim enforcement is review-based.
+
+## 18. Adaptive and numeric state
+
+`docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md` records **1,225 component evidence entries**. That figure is retained only for evidence-regeneration verification. The architectural disposition unit is the **288 runtime modules** ruled in `docs/audit/M0_D_MODULE_DISPOSITION.md`.
+
+A new adaptive/numeric state owner, artifact writer, learned-state repository, vector persistence path, or weight persistence path absent from the frozen path/symbol manifest requires:
+
+1. prior module disposition;
+2. provenance and version contract;
+3. bounded evaluation contract;
+4. rollback contract;
+5. registration under the same historical/forward dual-gate structure defined in Section 14.
+
+Evidence-entry counts must never be presented as object, owner, repository, or module counts.
+
+## 19. Failure visibility
+
+Silent broad exception handling is a constitutional defect class.
+
+The integrated pre-M0-D baseline at `fe10cd954bdf445400ea6aa9708dd214ed761114`, recorded in `docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`, is:
+
+- broad handlers: **614**;
+- silent handlers: **607**;
+- silent broad handlers: **532**.
+
+The merged M0-B canonical snapshot in `docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md` separately records broad **614**, silent **597**, and silent broad **525**. These are different snapshot-provenance figures and must not be collapsed or silently reconciled.
+
+No new silent+broad handler is allowed. This prohibition is review-enforced until the forward gate exists.
+
+Before the event kernel, shadow instrumentation may emit only non-authoritative diagnostic envelopes with type `silent_failure_observed_candidate`. Such envelopes have no recovery, persistence, mutation, or event authority. A validated `silent_failure_observed` event may exist only after the event kernel. Remediation occurs incrementally when a module is wrapped; bulk exception rewrites are prohibited.
+
+## 20. Audit baseline pinning
+
+Completed evidence artifacts are pinned to their merged snapshot's path and source-content universe. Regeneration must be byte-identical; retroactive drift is a defect.
+
+PR #141 established merged-snapshot pinning for M0-A/B/C. PR #143 corrected exact-head invariance path handling. `.github/workflows/exact-head-validation.yml` is required infrastructure for constitutional, governance, scanner, kernel, migration, and cutover work.
+
+Historical audit invariance and current-tree forward regression are separate gates. Passing one does not imply passing the other.
+
+## 21. Governance registry
+
+The following frozen-PR planning dispositions are binding inputs copied from `docs/audit/M0_D_MODULE_DISPOSITION.md`:
+
+- `REWRITE-AS-V4-CONTRACT`: PR #109, #86, #84, #82.
+- `ABSORB-INTO-M1`: PR #11, #7, #4.
+
+These dispositions preserve identified evidence and tests; they do not authorize merging the frozen branches.
+
+Required infrastructure: `.github/workflows/exact-head-validation.yml`.
+
+Detailed milestone IDs referenced by this constitution are defined in the provisional **Milestone Registry** in `docs/EVE_IMPLEMENTATION_STATUS_v4.md`. Registry sequencing may be adjusted by a reviewed STATUS update without constitutional amendment, but no STATUS update may weaken constitutional gates or redefine cutover authority.
+
+## 22. Promotion rule
+
+M1 shadow-acceptance evidence grants only **eligibility to open** a human-reviewed v4.2 amendment review. Promotion is never automatic. A v4.2 amendment requires its own exact-head validation, explicit approval, and constitutional merge.
+
+## Amendment Log — v4.1
+
+| Amendment | Constitutional result | Merged evidence source |
+|---|---|---|
+| A1 — Mutation reality, dual gates | Names the pre-kernel legacy runtime; separates immutable historical regeneration from a registered-additions forward gate. | `M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md`; PR #141; PR #143 |
+| A2 — Persistence authority | Prohibits new pickle/sidecar writers and separates shadow activation, dual-read, and explicit authoritative cutover. | `M0_C_PERSISTENCE_AND_STATE_MAP.md`; `M0_D_MODULE_DISPOSITION.md` |
+| A3 — Affect contract | Makes the 63-axis, 59/4/0 reviewer-ruled plan binding while preserving dropped-axis originals and provenance. | `M0_C_AFFECT_MIGRATION_PLAN.md` |
+| A4 — Life loops | Uses all 75 entries and the full taxonomy; limits “legacy expression” to timer/proactive/output-centric paths. | `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md` |
+| A5 — Raw-source quarantine | Rejects output-count substitution for capability edges and assigns the mechanical edge manifest to M2-B. | `M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md`; `M0_D_MODULE_DISPOSITION.md` |
+| A6 — Adaptive/numeric state | Keeps 1,225 as evidence count and 288 modules as disposition units; adds contract and dual-gate requirements. | `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`; `M0_D_MODULE_DISPOSITION.md` |
+| A7 — Failure visibility | Prohibits new silent+broad handling, records both provenance-specific baselines, and limits pre-kernel signals to diagnostic candidates. | `M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md`; `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md` |
+| A8 — Audit baseline pinning | Makes snapshot-scoped byte identity and exact-head validation permanent governance requirements. | PR #141; PR #143; `.github/workflows/exact-head-validation.yml` |
