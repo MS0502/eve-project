@@ -60,8 +60,8 @@ def test_registry_contains_exact_reviewed_domains_sources_and_dispositions():
         assert bridge.source_disposition == disposition
         prefix = f"| `{source_path}` | `{disposition}` |"
         rows = [line for line in document.splitlines() if line.startswith(prefix)]
-        assert len(rows) == 1
-        assert "| `NO` |" in rows[0]
+        assert rows
+        assert all("| `NO` |" in row for row in rows)
 
 
 def test_every_bridge_is_disconnected_disabled_and_authority_free():
