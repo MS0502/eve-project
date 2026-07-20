@@ -54,6 +54,8 @@ def _event(
     stream_id: str | None = None,
     target: dict | None = None,
     context: dict | None = None,
+    producer: str = OBSERVER_PRODUCER,
+    producer_version: str = OBSERVER_VERSION,
 ):
     resolved_event_id = event_id or f"shadow:projection:{sequence}"
     return EventEnvelope.create(
@@ -63,8 +65,8 @@ def _event(
         ),
         stream_id=stream_id or ACTIVATION_LEARN_PAIR_TARGET.stream_id,
         sequence=sequence,
-        producer=OBSERVER_PRODUCER,
-        producer_version=OBSERVER_VERSION,
+        producer=producer,
+        producer_version=producer_version,
         correlation_id="corr:m1-c",
         causation_id=causation_id,
         payload={
@@ -214,6 +216,26 @@ def test_event_scope_target_context_and_outcome_are_strict():
                 sequence=1,
                 before=_snapshot(),
                 after=after,
+                producer="other.observer",
+            ),
+        )
+    with pytest.raises(UnsupportedProjectionEvent):
+        reduce_activation_learn_pair(
+            initial,
+            _event(
+                sequence=1,
+                before=_snapshot(),
+                after=after,
+                producer_version="9.9.9",
+            ),
+        )
+    with pytest.raises(UnsupportedProjectionEvent):
+        reduce_activation_learn_pair(
+            initial,
+            _event(
+                sequence=1,
+                before=_snapshot(),
+                after=after,
                 stream_id="shadow:other",
             ),
         )
@@ -258,6 +280,20 @@ def test_snapshot_schema_and_numbers_fail_closed():
     with pytest.raises(ProjectionTransitionError):
         ActivationLearnPairShadowState.from_initial_snapshot(
             {"calls": [["a", "b"]], "learned": []}
+        )
+    with pytest.raises(ProjectionTransitionError, match="ordered subsequence"):
+        ActivationLearnPairShadowState.from_initial_snapshot(
+            {
+                "calls": [["a", "b", 0.4], ["c", "d", 0.5]],
+                "learned": [["c", "d", 0.5], ["a", "b", 0.4]],
+            }
+        )
+    with pytest.raises(ProjectionTransitionError, match="ordered subsequence"):
+        ActivationLearnPairShadowState.from_initial_snapshot(
+            {
+                "calls": [["a", "b", 0.4]],
+                "learned": [["x", "y", 0.8]],
+            }
         )
 
 
