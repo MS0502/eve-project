@@ -2,21 +2,53 @@
 
 Active constitution: **EVE v4.1**
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
-Runtime status: **pre-kernel legacy runtime; no v4 runtime implementation or activation claim**
+Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A kernel is shadow-only and disconnected**
 Previous v3/v3.1 documents: historical reference only
 M0 status: **closed**
 Forward-gate status: **implemented and enforced by exact-head validation**
-Current next step: **M1-A — minimal event kernel and in-memory append-only envelope**
+M1-A status: **completed by the merge carrying this STATUS update**
+Current next step: **M1-B — registered legacy-funnel shadow observer**
 Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
+Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
 
 ## Current state
 
-EVE v4.1 is active constitutional authority, but the v4 runtime is not yet implemented or activated. The existing implementation remains the **pre-kernel legacy runtime**. Terms such as “event” or “authoritative event store” describe future accepted architecture, not the authority of current mutations, sidecars, debug exports, or diagnostic envelopes.
+EVE v4.1 is active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime authority.
 
-The forward-regression infrastructure now separates immutable historical audit regeneration from current-tree enforcement. It changes no production runtime behavior, persistence authority, model/vector activation, data, default, or frozen branch.
+M1-A adds a minimal event-kernel contract in `core/event_kernel.py`. It is intentionally disconnected from `main.py`, `language/streaming.py`, live/autonomous loops, persistence adapters, and every legacy mutation funnel. It creates no file, SQLite database, snapshot, sidecar, thread, clock, network request, model/vector load, or production default. It cannot observe or alter live runtime behavior.
 
-No event kernel, event-store authority, persistence cutover, affect conversion, capability-edge manifest, scheduler, or autonomous-life activation exists yet. M1-A is the first runtime-construction milestone.
+The M1-A kernel accepts only immutable canonical envelopes marked `shadow_only`, stores them only in process memory, and exposes append/read/replay boundaries. This is an implementation of the kernel contract, not event-store cutover, persistence authority, or evidence that legacy mutations are already represented by events.
+
+No shadow observer, event/state equivalence proof, persistence cutover, affect conversion, capability-edge manifest, activity scheduler, or autonomous-life activation exists yet. M1-B is the next milestone.
+
+## M1-A implementation record
+
+Implemented surfaces:
+
+- `EventEnvelope`: frozen versioned schema, canonical bounded JSON payload and causal context, deterministic digest, caller-supplied identifiers and ordering, and fixed `shadow_only` authority.
+- `AppendReceipt`: immutable in-memory append evidence with envelope digest.
+- `InMemoryEventKernel`: append-only in-memory ordering, duplicate-ID rejection, per-stream contiguous sequence checks, known-causation checks, immutable read views, and explicit reducer replay.
+- focused tests: canonicalization, deep immutability boundary, authority rejection, identifier/version validation, finite/JSON-only payloads, size/depth bounds, append atomicity, duplicate/sequence/causation failure, independent streams, reducer failure propagation, and static absence of persistence/clock/thread/random/runtime integration.
+
+Fail-closed constraints:
+
+- malformed or noncanonical envelope → reject;
+- authority other than `shadow_only` → reject;
+- duplicate event ID → reject before append;
+- non-one-based or noncontiguous stream sequence → reject before append;
+- unknown or self causation → reject;
+- non-callable reducer or reducer returning `None` → reject;
+- reducer exception → propagate visibly;
+- new scanner findings → require same-PR reviewed registration.
+
+Explicit exclusions:
+
+- no legacy-runtime hook or observer;
+- no event emission from chat, live, autonomous, memory, affect, goal, or persistence paths;
+- no SQLite, file, checkpoint, snapshot, sidecar, WAL, backup, restore, migration, or cutover;
+- no recovery or mutation authority for the kernel;
+- no claim that current legacy state is replayable from M1-A envelopes.
 
 ## Merged source-of-truth evidence
 
@@ -39,7 +71,7 @@ The source-of-truth duty found no contradiction between the v4.1 amendment task 
 
 The M0-B figures come from `M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md`. The integrated figures come from the A/B/C retrospective in `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`. This difference is evidence for audit snapshot pinning, not permission to rewrite either historical baseline.
 
-Count semantics are also fixed:
+Count semantics are fixed:
 
 - 13,341 = M0-A total evidence entries, not objects.
 - 1,225 = M0-D component evidence entries, not modules or owners.
@@ -50,7 +82,7 @@ Count semantics are also fixed:
 
 ### Historical audit gate
 
-Implemented infrastructure exists. M0-A/B/C are pinned by PR #141; exact-head path handling is corrected by PR #143. `.github/workflows/exact-head-validation.yml` regenerates M0-A through M0-D at base and head and requires byte identity.
+M0-A/B/C are pinned by PR #141; exact-head path handling is corrected by PR #143. `.github/workflows/exact-head-validation.yml` regenerates M0-A through M0-D at base and head and requires byte identity.
 
 ### Forward regression gate
 
@@ -89,9 +121,14 @@ The gate enforces **unregistered delta = 0**, not absolute delta = 0. It rejects
 - new raw-external-text-to-expression/generation candidates;
 - new parse errors that would hide AST detector coverage;
 - baseline digest drift;
-- malformed, stale, metadata-mismatched, or over-counted registrations.
+- malformed, stale, metadata-mismatched, over-counted, or wrong-PR registrations.
 
-Justified kernel or audit additions must be registered in the same reviewed PR. Registration is evidence for review, not automatic approval. The initial PR #145 additions are restricted to the forward scanner and its focused tests; no runtime path is registered.
+M1-A registers exactly two reviewed groups under PR #146:
+
+- `core/event_kernel.py`: kernel-owned in-memory append/canonical-digest findings; disposition `M1_A_EVENT_KERNEL`;
+- `tests/test_v4_m1_a_event_kernel.py`: focused verification findings; disposition `TEST_EVIDENCE`.
+
+The M1-A registration includes no direct-write, silent-broad, or raw-capability addition. Registration is evidence for review, not automatic authority.
 
 ## Governance registry
 
@@ -162,12 +199,12 @@ M1-E acceptance grants only eligibility to open a human-reviewed v4.2 amendment 
 
 ## Current next step
 
-Begin **M1-A** after this infrastructure PR merges. M1-A must:
+Begin **M1-B** only after M1-A merges. M1-B must:
 
-1. define a versioned immutable event envelope and causal metadata;
-2. implement an append-only in-memory kernel only, with no SQLite/file persistence;
-3. expose an explicit reducer boundary without wrapping or mutating legacy runtime funnels yet;
-4. reject malformed, duplicate, or authority-claiming envelopes fail-closed;
-5. preserve pre-kernel runtime authority and all production defaults;
-6. register every justified scanner finding in the same M1-A PR;
-7. pass focused kernel tests, the forward gate, historical audit invariance, collection, and the full suite.
+1. select a minimal bounded set of legacy mutation funnels from M0-A and register each target;
+2. observe after-the-fact state-transition evidence without replacing or controlling the legacy mutation;
+3. emit only `shadow_only` envelopes into the in-memory kernel;
+4. preserve legacy return values, exceptions, ordering, state, persistence behavior, and defaults byte-for-byte where observable;
+5. grant no observer recovery, retry, suppression, persistence, or mutation authority;
+6. surface observer failure explicitly without converting it into a legacy-runtime failure or silent+broad handler;
+7. pass focused no-side-effect/coverage tests, the forward gate, historical audit invariance, collection, and the full suite.
