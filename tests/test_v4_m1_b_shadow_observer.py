@@ -96,10 +96,10 @@ def test_registered_target_matches_actual_legacy_callable_and_wrap_disposition()
     assert ACTIVATION_LEARN_PAIR_TARGET.callable_name == (
         "ActivationAdapter.learn_pair"
     )
-    assert ACTIVATION_LEARN_PAIR_TARGET.evidence_range == "105-107"
+    assert ACTIVATION_LEARN_PAIR_TARGET.evidence_range == "103-105"
     assert ACTIVATION_LEARN_PAIR_TARGET.module_disposition == "WRAP"
-    assert learn_pair.lineno == 105
-    assert learn_pair.end_lineno == 107
+    assert learn_pair.lineno == 103
+    assert learn_pair.end_lineno == 105
 
 
 def test_success_preserves_legacy_return_state_and_call_order():
