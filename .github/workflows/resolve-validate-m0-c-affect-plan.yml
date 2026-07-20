@@ -15,8 +15,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      BASE_SHA: 73cf5911d8a0d516763a6302782c0aa5644dc806
-      EXPECTED_HEAD: 1a1c3c3c224b74c089af6795b252853a9f2e2da7
       TARGET_BRANCH: cleanup/remove-temporary-m0-validation-files
       GH_TOKEN: ${{ github.token }}
       PIP_INDEX_URL: https://pypi.org/simple
@@ -28,11 +26,12 @@ jobs:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
 
-      - name: Verify exact head and clean worktree
+      - name: Verify exact remote head and clean worktree
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          git fetch origin main "$TARGET_BRANCH"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/$TARGET_BRANCH)"
           test -z "$(git status --short)"
 
       - name: Install SHA-pinned compatibility dependency
@@ -59,7 +58,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          changed="$(git diff --name-only "$BASE_SHA"...HEAD | sort)"
+          changed="$(git diff --name-only origin/main...HEAD | sort)"
           expected="$(printf '%s\n' \
             .github/workflows/resolve-validate-m0-c-affect-plan.yml \
             scripts/tmp_apply_m0_c_affect_plan_rulings.py \
@@ -75,7 +74,7 @@ jobs:
             scripts/tmp_validate_m0_c_affect_plan.py; do
             test ! -e "$path"
           done
-          git diff --check "$BASE_SHA"...HEAD
+          git diff --check origin/main...HEAD
           test -z "$(git status --short)"
           printf '%s\n' "$changed" > /tmp/scope.txt
 
