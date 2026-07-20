@@ -1,123 +1,32 @@
-name: Validate final M0 cleanup and audit snapshot pins
+name: Diagnose M0 audit snapshot reproduction
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   issues: write
   pull-requests: write
 
 jobs:
-  validate-cleanup:
-    if: github.event.pull_request.head.ref == 'validation/cleanup-m0-temp-trigger'
+  diagnose:
+    if: github.event.pull_request.head.ref == 'validation/m0-abc-universe-pin-trigger'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
-      TARGET_BRANCH: cleanup/remove-temporary-m0-validation-files
+      TARGET_BRANCH: fix/m0-abc-audit-snapshot-pins
       GH_TOKEN: ${{ github.token }}
-      PIP_INDEX_URL: https://pypi.org/simple
-      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
-      - name: Verify exact remote head
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main "$TARGET_BRANCH"
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/$TARGET_BRANCH)"
-          test -z "$(git status --short)"
-      - name: Install dependencies
+      - name: Apply snapshot pins and report summaries
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import hashlib, pathlib, subprocess, sys, urllib.request
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
-          PY
-          python -m pip install -r requirements.txt
-          python -m pip check
-      - name: Verify cleanup scope
-        shell: bash
-        run: |
-          set -euo pipefail
-          changed="$(git diff --name-only origin/main...HEAD | sort)"
-          expected="$(printf '%s\n' .github/workflows/resolve-validate-m0-c-affect-plan.yml scripts/tmp_apply_m0_c_affect_plan_rulings.py scripts/tmp_apply_m0_d_baseline_scope.py scripts/tmp_install_m0_c_validation_dependency.py scripts/tmp_validate_m0_c_affect_plan.py | sort)"
-          test "$changed" = "$expected"
-          for path in $expected; do test ! -e "$path"; done
-          git diff --check origin/main...HEAD
-          test -z "$(git status --short)"
-          printf '%s\n' "$changed" > /tmp/scope.txt
-      - name: Collect full suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest --collect-only -q | tee /tmp/collect.txt
-      - name: Run full suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest -q | tee /tmp/full.txt
-      - name: Record exact head
-        shell: bash
-        run: |
-          set -euo pipefail
-          git rev-parse HEAD | tee /tmp/final-head.txt
-          test -z "$(git status --short)"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: m0-temporary-file-cleanup-validation
-          path: |
-            /tmp/scope.txt
-            /tmp/collect.txt
-            /tmp/full.txt
-            /tmp/final-head.txt
-          if-no-files-found: error
-      - name: Publish cleanup result
-        shell: bash
-        run: |
-          set -euo pipefail
-          head="$(cat /tmp/final-head.txt)"
-          collect="$(tail -n 1 /tmp/collect.txt)"
-          full="$(tail -n 1 /tmp/full.txt)"
-          gh pr comment 137 --repo MS0502/eve-project --body "Exact cleanup validation passed.\n\nValidated head:\n\n\`\`\`text\n${head}\n\`\`\`\n\nCollection: \`${collect}\`\nFull suite: \`${full}\`\nWorkflow run: \`${{ github.run_id }}\`"
-
-  validate-audit-snapshot-pins:
-    if: github.event.pull_request.head.ref == 'validation/m0-abc-universe-pin-trigger'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      TARGET_BRANCH: fix/m0-abc-audit-snapshot-pins
-      GH_TOKEN: ${{ github.token }}
-      PIP_INDEX_URL: https://pypi.org/simple
-      PIP_DISABLE_PIP_VERSION_CHECK: '1'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_BRANCH }}
-          fetch-depth: 0
-      - name: Verify exact correction base
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "$TARGET_BRANCH"
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/$TARGET_BRANCH)"
-          test -z "$(git status --short)"
-          git rev-parse HEAD > /tmp/base-head.txt
-      - name: Apply snapshot pins
-        shell: bash
-        run: |
-          set -euo pipefail
-          if ! python - <<'PY' > /tmp/patch.log 2>&1
           from pathlib import Path
           import textwrap
 
@@ -159,11 +68,7 @@ jobs:
               sources = _git_snapshot_sources(root)
               if sources is None:
                   return []
-              return [
-                  root / Path(value)
-                  for value in sorted(sources)
-                  if not any(part in EXCLUDED_PARTS for part in Path(value).parts)
-              ]
+              return [root / Path(value) for value in sorted(sources) if not any(part in EXCLUDED_PARTS for part in Path(value).parts)]
 
 
           def _read_source(root: Path, path: Path) -> str:
@@ -177,36 +82,8 @@ jobs:
                   return path.read_text(encoding="utf-8", errors="replace")
           ''').strip() + '\n\n'
 
-          test_block = textwrap.dedent('''
-
-          def test_audit_snapshot_freezes_paths_and_source_content(tmp_path):
-              module = _load_module()
-              subprocess.check_call(["git", "init", "-q"], cwd=tmp_path)
-              subprocess.check_call(["git", "config", "user.email", "audit@example.invalid"], cwd=tmp_path)
-              subprocess.check_call(["git", "config", "user.name", "Audit Test"], cwd=tmp_path)
-              (tmp_path / "baseline.py").write_text("VALUE = 'baseline'\\n", encoding="utf-8")
-              subprocess.check_call(["git", "add", "baseline.py"], cwd=tmp_path)
-              subprocess.check_call(["git", "commit", "-q", "-m", "baseline"], cwd=tmp_path)
-              snapshot = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
-              (tmp_path / "baseline.py").write_text("VALUE = 'changed'\\n", encoding="utf-8")
-              (tmp_path / "later.py").write_text("VALUE = 'later'\\n", encoding="utf-8")
-              subprocess.check_call(["git", "add", "baseline.py", "later.py"], cwd=tmp_path)
-              subprocess.check_call(["git", "commit", "-q", "-m", "later"], cwd=tmp_path)
-              original = module.AUDIT_SNAPSHOT_SHA
-              module.AUDIT_SNAPSHOT_SHA = snapshot
-              try:
-                  relative = [path.relative_to(tmp_path).as_posix() for path in module._git_tracked_python_files(tmp_path)]
-                  source = module._read_source(tmp_path, tmp_path / "baseline.py")
-              finally:
-                  module.AUDIT_SNAPSHOT_SHA = original
-              assert relative == ["baseline.py"]
-              assert "'baseline'" in source
-              assert "'changed'" not in source
-          ''').rstrip() + '\n'
-
           for label, script_path, test_path, doc_path, schema_line, snapshot in configs:
               text = script_path.read_text(encoding='utf-8')
-              assert 'AUDIT_SNAPSHOT_SHA' not in text, script_path
               text = text.replace('import ast\n', 'import ast\nimport io\n', 1)
               text = text.replace('import subprocess\n', 'import subprocess\nimport tarfile\n', 1)
               text = text.replace(schema_line, schema_line + f'\nAUDIT_SNAPSHOT_SHA = "{snapshot}"', 1)
@@ -215,120 +92,20 @@ jobs:
               text = text[:start] + new_block + text[end:]
               old4 = '    try:\n        source = path.read_text(encoding="utf-8")\n    except UnicodeDecodeError:\n        source = path.read_text(encoding="utf-8", errors="replace")\n'
               old8 = '        try:\n            source = path.read_text(encoding="utf-8")\n        except UnicodeDecodeError:\n            source = path.read_text(encoding="utf-8", errors="replace")\n'
-              if label == 'M0-A':
-                  assert old8 in text, script_path
-                  text = text.replace(old8, '        source = _read_source(root, path)\n', 1)
-              else:
-                  assert old4 in text, script_path
-                  text = text.replace(old4, '    source = _read_source(root, path)\n', 1)
+              text = text.replace(old8, '        source = _read_source(root, path)\n', 1) if label == 'M0-A' else text.replace(old4, '    source = _read_source(root, path)\n', 1)
               script_path.write_text(text, encoding='utf-8')
-
-              test = test_path.read_text(encoding='utf-8')
-              assert 'test_audit_snapshot_freezes_paths_and_source_content' not in test, test_path
-              test_path.write_text(test.rstrip() + test_block, encoding='utf-8')
-
-              doc = doc_path.read_text(encoding='utf-8')
-              marker = 'Generated JSON must not be committed.'
-              assert marker in doc, doc_path
-              assert 'source-content universe is frozen' not in doc, doc_path
-              paragraph = (
-                  f"\n\nThe audit path and source-content universe is frozen to the merged {label} snapshot "
-                  f"`{snapshot}`. Later Python additions, deletions, or edits cannot retroactively change "
-                  "this completed audit's canonical output. Fixture repositories without that snapshot "
-                  "continue to use their local files for focused tests."
-              )
-              doc_path.write_text(doc.replace(marker, marker + paragraph, 1), encoding='utf-8')
           PY
-          then
-            { echo 'Snapshot-pin patch failed:'; tail -n 120 /tmp/patch.log; } > /tmp/patch-comment.txt
-            gh pr comment 139 --repo MS0502/eve-project --body-file /tmp/patch-comment.txt
-            cat /tmp/patch.log
-            exit 1
-          fi
-          cat /tmp/patch.log
-          git diff --check
-          changed="$(git diff --name-only | sort)"
-          expected="$(printf '%s\n' docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md scripts/audit/m0_a_runtime_inventory.py scripts/audit/m0_b_controlflow_concurrency_inventory.py scripts/audit/m0_c_persistence_state_inventory.py tests/audit/test_m0_a_runtime_inventory.py tests/audit/test_m0_b_controlflow_concurrency_inventory.py tests/audit/test_m0_c_persistence_state_inventory.py | sort)"
-          test "$changed" = "$expected"
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add $changed
-          git commit -m "Pin M0-A B C audits to merged snapshots"
-          test -z "$(git status --short)"
-      - name: Install dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import hashlib, pathlib, subprocess, sys, urllib.request
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
-          PY
-          python -m pip install -r requirements.txt
-          python -m pip check
-      - name: Reproduce canonical audits
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m compileall -q scripts/audit/m0_a_runtime_inventory.py scripts/audit/m0_b_controlflow_concurrency_inventory.py scripts/audit/m0_c_persistence_state_inventory.py tests/audit/test_m0_a_runtime_inventory.py tests/audit/test_m0_b_controlflow_concurrency_inventory.py tests/audit/test_m0_c_persistence_state_inventory.py
           for name in a b c; do
             case "$name" in a) script=scripts/audit/m0_a_runtime_inventory.py;; b) script=scripts/audit/m0_b_controlflow_concurrency_inventory.py;; c) script=scripts/audit/m0_c_persistence_state_inventory.py;; esac
-            python "$script" --output "/tmp/m0-${name}-1.json"
-            python "$script" --output "/tmp/m0-${name}-2.json"
-            diff -u "/tmp/m0-${name}-1.json" "/tmp/m0-${name}-2.json"
+            python "$script" --output "/tmp/m0-${name}.json"
           done
-          python - <<'PY'
+          python - <<'PY' > /tmp/summary.txt
           import json
           from pathlib import Path
-          expected = {'a': (578, 13341), 'b': (580, 4063), 'c': (582, 7669)}
-          for name, pair in expected.items():
-              summary = json.loads(Path(f'/tmp/m0-{name}-1.json').read_text(encoding='utf-8'))['summary']
-              assert (summary['python_files_scanned'], summary['total_entries']) == pair, (name, summary)
+          for name in ('a','b','c'):
+              summary = json.loads(Path(f'/tmp/m0-{name}.json').read_text(encoding='utf-8'))['summary']
+              print(name, json.dumps(summary, ensure_ascii=False, sort_keys=True))
           PY
-      - name: Run focused tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest -q tests/audit/test_m0_a_runtime_inventory.py tests/audit/test_m0_b_controlflow_concurrency_inventory.py tests/audit/test_m0_c_persistence_state_inventory.py | tee /tmp/focused.txt
-      - name: Collect full suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest --collect-only -q | tee /tmp/collect.txt
-      - name: Run full suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest -q | tee /tmp/full.txt
-      - name: Verify scope and push
-        shell: bash
-        run: |
-          set -euo pipefail
-          base="$(cat /tmp/base-head.txt)"
-          changed="$(git diff --name-only "$base"...HEAD | sort)"
-          expected="$(printf '%s\n' docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md docs/audit/M0_C_PERSISTENCE_AND_STATE_MAP.md scripts/audit/m0_a_runtime_inventory.py scripts/audit/m0_b_controlflow_concurrency_inventory.py scripts/audit/m0_c_persistence_state_inventory.py tests/audit/test_m0_a_runtime_inventory.py tests/audit/test_m0_b_controlflow_concurrency_inventory.py tests/audit/test_m0_c_persistence_state_inventory.py | sort)"
-          test "$changed" = "$expected"
-          test -z "$(git status --short)"
-          git rev-parse HEAD | tee /tmp/final-head.txt
-          printf '%s\n' "$changed" > /tmp/scope.txt
-          git push origin HEAD:"$TARGET_BRANCH"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: m0-abc-audit-snapshot-pin-validation
-          path: |
-            /tmp/m0-a-1.json
-            /tmp/m0-a-2.json
-            /tmp/m0-b-1.json
-            /tmp/m0-b-2.json
-            /tmp/m0-c-1.json
-            /tmp/m0-c-2.json
-            /tmp/focused.txt
-            /tmp/collect.txt
-            /tmp/full.txt
-            /tmp/scope.txt
-            /tmp/final-head.txt
-          if-no-files-found: error
+          { echo 'Snapshot reproduction summaries:'; echo; sed 's/^/    /' /tmp/summary.txt; } > /tmp/comment.txt
+          gh pr comment 139 --repo MS0502/eve-project --body-file /tmp/comment.txt
+          cat /tmp/summary.txt
