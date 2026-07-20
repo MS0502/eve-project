@@ -29,6 +29,7 @@ jobs:
     env:
       TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
       BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base_sha }}
+      CURRENT_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
       REQUESTED_FOCUSED_TESTS: ${{ inputs.focused_tests }}
       PIP_INDEX_URL: https://pypi.org/simple
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
@@ -128,14 +129,19 @@ jobs:
           test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
-      - name: Bootstrap reviewed forward manifest candidates
+      - name: Verify forward regression gate
         shell: bash
         run: |
           set -euo pipefail
+          args=()
+          if test -n "$CURRENT_PR"; then
+            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
+          fi
           python scripts/audit/forward_regression_gate.py \
-            --suggest-manifest-for-pr 145 \
-            --output /tmp/forward-additions-manifest.json \
-            --pretty
+            --output /tmp/forward-regression.json \
+            --pretty \
+            "${args[@]}"
+          cat /tmp/forward-regression.json
 
       - name: Collect full suite
         shell: bash
@@ -167,7 +173,7 @@ jobs:
             /tmp/focused-paths.txt
             /tmp/focused.txt
             /tmp/invariance.txt
-            /tmp/forward-additions-manifest.json
+            /tmp/forward-regression.json
             /tmp/base-a.json
             /tmp/head-a.json
             /tmp/base-b.json
