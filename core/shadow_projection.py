@@ -39,7 +39,7 @@ class UnsupportedProjectionEvent(ShadowProjectionError):
 
 
 class ProjectionSequenceError(ShadowProjectionError):
-    """Raised when replay ordering or causation is inconsistent."""
+    """Raised when bounded replay ordering is inconsistent."""
 
 
 class ProjectionStateMismatch(ShadowProjectionError):
@@ -253,11 +253,6 @@ def reduce_activation_learn_pair(
         raise ProjectionSequenceError(
             f"expected projection sequence {expected_sequence}"
         )
-    if (
-        envelope.causation_id is not None
-        and envelope.causation_id != state.last_event_id
-    ):
-        raise ProjectionSequenceError("event causation does not match replay head")
 
     before_calls, before_learned = _require_snapshot(
         payload["before"],
@@ -299,6 +294,8 @@ def replay_activation_learn_pair(
 ) -> ActivationLearnPairShadowState:
     """Deterministically replay a bounded event sequence through the reducer."""
 
+    if not isinstance(initial_state, ActivationLearnPairShadowState):
+        raise ShadowProjectionError("replay requires projection initial state")
     state = initial_state
     for envelope in events:
         state = reduce_activation_learn_pair(state, envelope)
@@ -322,9 +319,23 @@ class ShadowEquivalenceReport:
             raise ShadowProjectionError("unsupported equivalence schema version")
         if self.stream_id != ACTIVATION_LEARN_PAIR_TARGET.stream_id:
             raise ShadowProjectionError("equivalence report stream is out of scope")
-        if not _DIGEST_PATTERN.fullmatch(self.projected_digest):
+        if (
+            not isinstance(self.sequence, int)
+            or isinstance(self.sequence, bool)
+            or self.sequence < 0
+        ):
+            raise ShadowProjectionError("equivalence sequence must be non-negative")
+        if not isinstance(self.matches, bool):
+            raise ShadowProjectionError("equivalence matches flag must be boolean")
+        if (
+            not isinstance(self.projected_digest, str)
+            or not _DIGEST_PATTERN.fullmatch(self.projected_digest)
+        ):
             raise ShadowProjectionError("projected digest is malformed")
-        if not _DIGEST_PATTERN.fullmatch(self.expected_snapshot_digest):
+        if (
+            not isinstance(self.expected_snapshot_digest, str)
+            or not _DIGEST_PATTERN.fullmatch(self.expected_snapshot_digest)
+        ):
             raise ShadowProjectionError("expected snapshot digest is malformed")
         if not isinstance(self.mismatches, tuple):
             raise ShadowProjectionError("mismatches must be immutable")
