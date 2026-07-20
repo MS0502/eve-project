@@ -14,6 +14,8 @@ python scripts/audit/m0_c_persistence_state_inventory.py --pretty
 
 The command scans tracked Python files with `ast.parse` and emits canonical JSON to stdout. `--output` is permitted only for an ephemeral validation artifact. Generated JSON must not be committed.
 
+The audit path and source-content universe is frozen to the merged M0-C snapshot `fe10cd954bdf445400ea6aa9708dd214ed761114`. Later Python additions, deletions, or edits cannot retroactively change this completed audit's canonical output. Fixture repositories without that snapshot continue to use their local files for focused tests.
+
 Every entry records repository-relative path, exact line range, enclosing callable, mechanically detected evidence, detector, manual classification, confidence, unresolved state, and whether the entry is manual-only.
 
 ## Validated inventory snapshot

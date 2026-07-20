@@ -8,15 +8,18 @@ from __future__ import annotations
 
 import argparse
 import ast
+import io
 import json
 import os
 import subprocess
+import tarfile
 import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 SCHEMA_VERSION = "1.0.0-m0-a"
+AUDIT_SNAPSHOT_SHA = "78544d74af84afed450014d599b360c9b4af4f03"
 
 EXCLUDED_PARTS = {
     ".git",
@@ -265,24 +268,56 @@ def _open_write_mode(call: ast.Call) -> str | None:
     return mode if any(flag in mode for flag in "wax+") else None
 
 
-def _git_tracked_python_files(root: Path) -> list[Path]:
+_SNAPSHOT_SOURCE_CACHE: dict[tuple[str, str], dict[str, str] | None] = {}
+
+
+def _git_snapshot_sources(root: Path) -> dict[str, str] | None:
+    """Return Python source text from the completed audit snapshot."""
+    key = (str(root.resolve()), AUDIT_SNAPSHOT_SHA)
+    if key in _SNAPSHOT_SOURCE_CACHE:
+        return _SNAPSHOT_SOURCE_CACHE[key]
     try:
-        raw = subprocess.check_output(
-            ["git", "-C", str(root), "ls-files", "-z", "--", "*.py"],
+        archive = subprocess.check_output(
+            ["git", "-C", str(root), "archive", "--format=tar", AUDIT_SNAPSHOT_SHA],
             stderr=subprocess.DEVNULL,
         )
     except (OSError, subprocess.CalledProcessError):
-        return []
-    paths: list[Path] = []
-    for value in raw.split(b"\0"):
-        if not value:
-            continue
-        relative = Path(os.fsdecode(value))
-        if any(part in EXCLUDED_PARTS for part in relative.parts):
-            continue
-        paths.append(root / relative)
-    return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
+        _SNAPSHOT_SOURCE_CACHE[key] = None
+        return None
+    sources: dict[str, str] = {}
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as handle:
+        for member in handle.getmembers():
+            if not member.isfile() or not member.name.endswith(".py"):
+                continue
+            extracted = handle.extractfile(member)
+            if extracted is not None:
+                sources[Path(member.name).as_posix()] = extracted.read().decode(
+                    "utf-8", errors="replace"
+                )
+    _SNAPSHOT_SOURCE_CACHE[key] = sources
+    return sources
 
+
+def _git_tracked_python_files(root: Path) -> list[Path]:
+    sources = _git_snapshot_sources(root)
+    if sources is None:
+        return []
+    return [
+        root / Path(value)
+        for value in sorted(sources)
+        if not any(part in EXCLUDED_PARTS for part in Path(value).parts)
+    ]
+
+
+def _read_source(root: Path, path: Path) -> str:
+    relative = path.relative_to(root).as_posix()
+    sources = _git_snapshot_sources(root)
+    if sources is not None and relative in sources:
+        return sources[relative]
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return path.read_text(encoding="utf-8", errors="replace")
 
 def iter_python_files(root: Path) -> Iterator[Path]:
     tracked = _git_tracked_python_files(root)
@@ -602,10 +637,7 @@ def audit_repository(root: Path) -> dict[str, Any]:
     for path in paths:
         relative = path.relative_to(root)
         relative_text = relative.as_posix()
-        try:
-            source = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            source = path.read_text(encoding="utf-8", errors="replace")
+        source = _read_source(root, path)
 
         if _is_test_path(relative):
             tests.append(classify_test(relative_text, source))
