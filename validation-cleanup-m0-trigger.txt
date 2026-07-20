@@ -1,2 +1,2 @@
 Trigger exact-head validation for cleanup PR #137.
-Final cleanup head: f2495ef10b5f56e5d4601533ce0fe57109b2f335
+Final cleanup head: 6959a81c3c55b9db14b0bd25b64a92f9f69f28bf
