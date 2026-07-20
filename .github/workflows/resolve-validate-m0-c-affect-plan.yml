@@ -1,93 +1,119 @@
-name: Validate M0-D baseline path scope
+name: Validate final M0 temporary-file cleanup
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   issues: write
   pull-requests: write
 
 jobs:
-  validate:
-    if: github.event.pull_request.head.ref == 'validation/m0-d-baseline-scope-trigger'
+  validate-cleanup:
+    if: github.event.pull_request.head.ref == 'validation/cleanup-m0-temp-trigger'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      EXPECTED_HEAD: 223c680cb404ebec305fda39825a80616ceccbc5
-      TARGET_BRANCH: fix/m0-d-baseline-path-scope
+      BASE_SHA: 73cf5911d8a0d516763a6302782c0aa5644dc806
+      EXPECTED_HEAD: 1a1c3c3c224b74c089af6795b252853a9f2e2da7
+      TARGET_BRANCH: cleanup/remove-temporary-m0-validation-files
       GH_TOKEN: ${{ github.token }}
       PIP_INDEX_URL: https://pypi.org/simple
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact cleanup head
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
-      - name: Verify and load helpers
-        run: |
-          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
-          test -z "$(git status --short)"
-          git fetch origin main
-          git show origin/main:scripts/tmp_apply_m0_d_baseline_scope.py > /tmp/apply.py
-          git show origin/main:scripts/tmp_install_m0_c_validation_dependency.py > /tmp/install_compat.py
-      - name: Apply and locally commit baseline-scope correction
-        run: |
-          python /tmp/apply.py
-          changed="$(git diff --name-only | sort)"
-          expected="$(printf '%s\n' docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
-          test "$changed" = "$expected"
-          git diff --check
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
-          git commit -m "Pin M0-D Python path scope to audit baseline"
-          test -z "$(git status --short)"
-      - name: Install dependencies
-        run: |
-          python /tmp/install_compat.py
-          python -m pip install -r requirements.txt
-          python -m pip check
-      - name: Compile and deterministic audit
-        run: |
-          python -m compileall -q scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py
-          python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-1.json
-          python scripts/audit/m0_d_component_inventory.py --output /tmp/m0-d-2.json
-          diff -u /tmp/m0-d-1.json /tmp/m0-d-2.json
-      - name: Run focused M0-D tests
+
+      - name: Verify exact head and clean worktree
         shell: bash
         run: |
-          set -o pipefail
-          python -m pytest -q tests/audit/test_m0_d_component_inventory.py | tee /tmp/focused.txt
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test -z "$(git status --short)"
+
+      - name: Install SHA-pinned compatibility dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Verify exact five-file deletion scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only "$BASE_SHA"...HEAD | sort)"
+          expected="$(printf '%s\n' \
+            .github/workflows/resolve-validate-m0-c-affect-plan.yml \
+            scripts/tmp_apply_m0_c_affect_plan_rulings.py \
+            scripts/tmp_apply_m0_d_baseline_scope.py \
+            scripts/tmp_install_m0_c_validation_dependency.py \
+            scripts/tmp_validate_m0_c_affect_plan.py | sort)"
+          test "$changed" = "$expected"
+          for path in \
+            .github/workflows/resolve-validate-m0-c-affect-plan.yml \
+            scripts/tmp_apply_m0_c_affect_plan_rulings.py \
+            scripts/tmp_apply_m0_d_baseline_scope.py \
+            scripts/tmp_install_m0_c_validation_dependency.py \
+            scripts/tmp_validate_m0_c_affect_plan.py; do
+            test ! -e "$path"
+          done
+          git diff --check "$BASE_SHA"...HEAD
+          test -z "$(git status --short)"
+          printf '%s\n' "$changed" > /tmp/scope.txt
+
       - name: Collect full suite
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           python -m pytest --collect-only -q | tee /tmp/collect.txt
+
       - name: Run full suite
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           python -m pytest -q | tee /tmp/full.txt
-      - name: Verify exact committed correction scope
+
+      - name: Record exact validated head
+        shell: bash
         run: |
-          changed="$(git diff --name-only "$EXPECTED_HEAD"...HEAD | sort)"
-          expected="$(printf '%s\n' docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md scripts/audit/m0_d_component_inventory.py tests/audit/test_m0_d_component_inventory.py | sort)"
-          test "$changed" = "$expected"
-          test -z "$(git status --short)"
+          set -euo pipefail
           git rev-parse HEAD | tee /tmp/final-head.txt
-      - name: Push validated correction
-        run: git push origin HEAD:"$TARGET_BRANCH"
+          test -z "$(git status --short)"
+
       - name: Upload validation evidence
         uses: actions/upload-artifact@v4
         with:
-          name: m0-d-baseline-path-scope-validation
+          name: m0-temporary-file-cleanup-validation
           path: |
-            /tmp/m0-d-1.json
-            /tmp/m0-d-2.json
-            /tmp/focused.txt
+            /tmp/scope.txt
             /tmp/collect.txt
             /tmp/full.txt
             /tmp/final-head.txt
           if-no-files-found: error
+
+      - name: Publish validation result
+        shell: bash
+        run: |
+          set -euo pipefail
+          head="$(cat /tmp/final-head.txt)"
+          collect="$(tail -n 1 /tmp/collect.txt)"
+          full="$(tail -n 1 /tmp/full.txt)"
+          gh pr comment 137 --repo MS0502/eve-project --body "Exact cleanup validation passed.\n\nValidated head:\n\n\`\`\`text\n${head}\n\`\`\`\n\nCollection: \`${collect}\`\nFull suite: \`${full}\`\nWorkflow run: \`${{ github.run_id }}\`\nArtifact: \`m0-temporary-file-cleanup-validation\`"
