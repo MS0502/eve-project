@@ -23,12 +23,20 @@ TARGET_PATH = REPO_ROOT / "adapters/activation_adapter.py"
 
 
 class FakeSpreadingActivation:
-    def __init__(self, *, failure: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        failure: Exception | None = None,
+        trace: list[str] | None = None,
+    ) -> None:
         self.learned: list[tuple[str, str, float]] = []
         self.calls: list[tuple[str, tuple]] = []
         self.failure = failure
+        self.trace = trace
 
     def learn_pair(self, a: str, b: str, *, strength: float) -> None:
+        if self.trace is not None:
+            self.trace.append("legacy")
         self.calls.append(("learn_pair", (a, b, strength)))
         if self.failure is not None:
             raise self.failure
@@ -39,9 +47,13 @@ class FakeWorkingMemory:
     pass
 
 
-def _adapter(*, failure: Exception | None = None) -> ActivationAdapter:
+def _adapter(
+    *,
+    failure: Exception | None = None,
+    trace: list[str] | None = None,
+) -> ActivationAdapter:
     return ActivationAdapter(
-        sa=FakeSpreadingActivation(failure=failure),
+        sa=FakeSpreadingActivation(failure=failure, trace=trace),
         wm=FakeWorkingMemory(),
     )
 
@@ -65,18 +77,16 @@ def _observe_learn_pair(
     trace: list[str],
     causation_id: str | None = None,
 ):
-    def legacy_call():
-        trace.append("legacy")
-        return adapter.learn_pair("alpha", "beta", strength=0.4)
-
     return observer.observe_call(
         ACTIVATION_LEARN_PAIR_TARGET.target_id,
         event_id=event_id,
         correlation_id="corr:m1-b",
         causation_id=causation_id,
-        legacy_callable=legacy_call,
+        legacy_callable=adapter.learn_pair,
         before_snapshot=_snapshot(adapter, trace, "before"),
         after_snapshot=_snapshot(adapter, trace, "after"),
+        args=("alpha", "beta"),
+        kwargs={"strength": 0.4},
     )
 
 
@@ -104,11 +114,11 @@ def test_registered_target_matches_actual_legacy_callable_and_wrap_disposition()
 
 def test_success_preserves_legacy_return_state_and_call_order():
     baseline = _adapter()
-    observed = _adapter()
+    trace: list[str] = []
+    observed = _adapter(trace=trace)
     baseline_result = baseline.learn_pair("alpha", "beta", strength=0.4)
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
-    trace: list[str] = []
 
     observed_result = _observe_learn_pair(
         observer,
@@ -125,7 +135,8 @@ def test_success_preserves_legacy_return_state_and_call_order():
 
 
 def test_success_candidate_is_shadow_only_and_excludes_args_and_result():
-    adapter = _adapter()
+    trace: list[str] = []
+    adapter = _adapter(trace=trace)
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
 
@@ -133,7 +144,7 @@ def test_success_candidate_is_shadow_only_and_excludes_args_and_result():
         observer,
         adapter,
         event_id="shadow:activation:1",
-        trace=[],
+        trace=trace,
     )
 
     assert len(kernel) == 1
@@ -155,10 +166,10 @@ def test_success_candidate_is_shadow_only_and_excludes_args_and_result():
 
 def test_legacy_exception_is_re_raised_unchanged_after_failure_candidate():
     legacy_error = RuntimeError("legacy defect")
-    adapter = _adapter(failure=legacy_error)
+    trace: list[str] = []
+    adapter = _adapter(failure=legacy_error, trace=trace)
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
-    trace: list[str] = []
 
     with pytest.raises(RuntimeError) as captured:
         _observe_learn_pair(
@@ -184,26 +195,24 @@ def test_legacy_exception_is_re_raised_unchanged_after_failure_candidate():
 
 
 def test_before_snapshot_failure_is_visible_but_legacy_still_succeeds():
-    adapter = _adapter()
+    trace: list[str] = []
+    adapter = _adapter(trace=trace)
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
-    trace: list[str] = []
 
     def broken_before():
         trace.append("before")
         raise RuntimeError("snapshot secret")
 
-    def legacy_call():
-        trace.append("legacy")
-        return adapter.learn_pair("alpha", "beta", strength=0.4)
-
     result = observer.observe_call(
         ACTIVATION_LEARN_PAIR_TARGET.target_id,
         event_id="shadow:activation:1",
         correlation_id="corr:m1-b",
-        legacy_callable=legacy_call,
+        legacy_callable=adapter.learn_pair,
         before_snapshot=broken_before,
         after_snapshot=_snapshot(adapter, trace, "after"),
+        args=("alpha", "beta"),
+        kwargs={"strength": 0.4},
     )
 
     assert result is None
@@ -230,11 +239,11 @@ def test_after_snapshot_failure_does_not_replace_legacy_return():
         ACTIVATION_LEARN_PAIR_TARGET.target_id,
         event_id="shadow:activation:1",
         correlation_id="corr:m1-b",
-        legacy_callable=lambda: adapter.learn_pair(
-            "alpha", "beta", strength=0.4
-        ),
+        legacy_callable=adapter.learn_pair,
         before_snapshot=lambda: {"learned": []},
         after_snapshot=broken_after,
+        args=("alpha", "beta"),
+        kwargs={"strength": 0.4},
     )
 
     assert result is None
@@ -300,22 +309,21 @@ def test_causation_and_sequence_advance_only_for_successful_candidates():
     assert second.causation_id == first.event_id
 
 
-def test_unknown_target_and_invalid_inputs_fail_before_legacy_call():
+def test_unknown_target_invalid_inputs_and_callable_mismatch_fail_before_call():
+    adapter = _adapter()
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
-    calls: list[str] = []
-
-    def legacy_call():
-        calls.append("legacy")
 
     with pytest.raises(UnknownShadowTarget):
         observer.observe_call(
             "legacy.unknown.target",
             event_id="shadow:unknown:1",
             correlation_id="corr:m1-b",
-            legacy_callable=legacy_call,
+            legacy_callable=adapter.learn_pair,
             before_snapshot=lambda: {},
             after_snapshot=lambda: {},
+            args=("alpha", "beta"),
+            kwargs={"strength": 0.4},
         )
     with pytest.raises(ShadowObserverContractError):
         observer.observe_call(
@@ -326,8 +334,26 @@ def test_unknown_target_and_invalid_inputs_fail_before_legacy_call():
             before_snapshot=lambda: {},
             after_snapshot=lambda: {},
         )
+    with pytest.raises(ShadowObserverContractError, match="registered bound method"):
+        observer.observe_call(
+            ACTIVATION_LEARN_PAIR_TARGET.target_id,
+            event_id="shadow:activation:2",
+            correlation_id="corr:m1-b",
+            legacy_callable=lambda: None,
+            before_snapshot=lambda: {},
+            after_snapshot=lambda: {},
+        )
+    with pytest.raises(ShadowObserverContractError, match="registered bound method"):
+        observer.observe_call(
+            ACTIVATION_LEARN_PAIR_TARGET.target_id,
+            event_id="shadow:activation:3",
+            correlation_id="corr:m1-b",
+            legacy_callable=adapter.top_active,
+            before_snapshot=lambda: {},
+            after_snapshot=lambda: {},
+        )
 
-    assert calls == []
+    assert adapter.sa.calls == []
     assert len(kernel) == 0
     assert observer.failures() == ()
 
