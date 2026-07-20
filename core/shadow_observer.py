@@ -76,9 +76,9 @@ class LegacyFunnelShadowObserver:
     """Observe a reviewed legacy call without gaining legacy authority.
 
     The observer captures detached before/after snapshots, calls the supplied
-    legacy callable exactly once, and then attempts to append one shadow-only
-    candidate. Observer defects are retained in ``failures()`` and never replace
-    a successful legacy return or suppress a legacy exception.
+    registered bound method exactly once, and then attempts to append one
+    shadow-only candidate. Observer defects are retained in ``failures()`` and
+    never replace a successful legacy return or suppress a legacy exception.
     """
 
     def __init__(
@@ -130,16 +130,18 @@ class LegacyFunnelShadowObserver:
         args: tuple[Any, ...] = (),
         kwargs: Mapping[str, Any] | None = None,
     ) -> ResultT:
-        """Call one registered funnel and emit after-the-fact shadow evidence.
+        """Call one registered bound method and emit after-the-fact evidence.
 
-        Unknown targets and non-callable inputs fail before the legacy callable.
-        Once the legacy callable begins, observer errors are isolated and exposed
-        through ``failures()``. Legacy exceptions are re-raised unchanged.
+        Unknown targets, identity mismatch, and invalid inputs fail before the
+        legacy callable. Once the legacy callable begins, observer errors are
+        isolated and exposed through ``failures()``. Legacy exceptions are
+        re-raised unchanged.
         """
 
         target = self.target(target_id)
         if not callable(legacy_callable):
             raise ShadowObserverContractError("legacy_callable must be callable")
+        self._validate_registered_callable(target, legacy_callable)
         if not callable(before_snapshot) or not callable(after_snapshot):
             raise ShadowObserverContractError("snapshot providers must be callable")
         if not isinstance(args, tuple):
@@ -198,6 +200,28 @@ class LegacyFunnelShadowObserver:
             legacy_error_type=None,
         )
         return result
+
+    @staticmethod
+    def _validate_registered_callable(
+        target: ShadowTarget,
+        legacy_callable: Callable[..., Any],
+    ) -> None:
+        """Require the exact reviewed Python bound method for the target."""
+
+        bound_instance = getattr(legacy_callable, "__self__", None)
+        bound_function = getattr(legacy_callable, "__func__", None)
+        expected_module = target.module_path.removesuffix(".py").replace("/", ".")
+        actual_module = getattr(bound_function, "__module__", None)
+        actual_name = getattr(bound_function, "__qualname__", None)
+        if (
+            bound_instance is None
+            or bound_function is None
+            or actual_module != expected_module
+            or actual_name != target.callable_name
+        ):
+            raise ShadowObserverContractError(
+                "legacy_callable does not match the registered bound method"
+            )
 
     def _capture_snapshot(
         self,
