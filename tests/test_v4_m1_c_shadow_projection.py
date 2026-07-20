@@ -143,7 +143,7 @@ def test_failure_reducer_appends_attempt_without_learning():
     assert state.learned == (("old", "pair", 0.2),)
 
 
-def test_sequence_and_causation_fail_without_mutating_state():
+def test_sequence_gap_fails_without_mutating_state():
     initial = ActivationLearnPairShadowState.from_initial_snapshot(_snapshot())
     gap = _event(
         sequence=2,
@@ -154,22 +154,21 @@ def test_sequence_and_causation_fail_without_mutating_state():
         reduce_activation_learn_pair(initial, gap)
     assert initial.sequence == 0
 
-    first = _event(
+
+def test_external_causation_is_preserved_but_not_reinterpreted_by_projection():
+    initial = ActivationLearnPairShadowState.from_initial_snapshot(_snapshot())
+    event = _event(
         sequence=1,
         before=_snapshot(),
         after=_snapshot(("a", "b", 0.4)),
-        event_id="shadow:projection:one",
+        causation_id="external:observation:1",
     )
-    state = reduce_activation_learn_pair(initial, first)
-    wrong_cause = _event(
-        sequence=2,
-        before=state.snapshot,
-        after=_snapshot(("a", "b", 0.4), ("c", "d", 0.5)),
-        causation_id="shadow:projection:other",
-    )
-    with pytest.raises(ProjectionSequenceError):
-        reduce_activation_learn_pair(state, wrong_cause)
+
+    state = reduce_activation_learn_pair(initial, event)
+
     assert state.sequence == 1
+    assert state.last_event_id == event.event_id
+    assert event.causation_id == "external:observation:1"
 
 
 def test_before_state_mismatch_fails_closed():
@@ -284,6 +283,11 @@ def test_replay_is_deterministic_and_uses_explicit_initial_state():
     assert left == right
     assert left.digest == right.digest
     assert left.sequence == 2
+
+
+def test_empty_replay_rejects_invalid_initial_state():
+    with pytest.raises(ValueError, match="initial state"):
+        replay_activation_learn_pair(object(), ())  # type: ignore[arg-type]
 
 
 def test_equivalence_report_is_visible_for_match_and_mismatch():
