@@ -22,14 +22,15 @@
       "disposition": "AUDIT_TOOLING",
       "fingerprints": {
         "000910d91c02a7e15de2c4dcb95d782f258809bcb2097811adc03ff0f01d76d8": 1,
-        "0a8ed4bdb208197eb05782da06867a2f702ad41a7abffc5ca27407c1a1a97928": 2,
-        "18307bc5090a4dbf1a53647da5ee0c7c13ee7f6698a8f99b440f51e27c205027": 1,
+        "0a8ed4bdb208197eb05782da06867a2f702ad41a7abffc5ca27407c1a1a97928": 4,
+        "18307bc5090a4dbf1a53647da5ee0c7c13ee7f6698a8f99b440f51e27c205027": 2,
         "197728897ad85d1719c13f1dfb27ee9134f9496b3377073fe044940e662dc059": 1,
         "217f5180a08d640e6c41be4859a5ee9530331b8e836bdf12cf95c668af26a0a6": 3,
         "21e021bfe9875dd2a01ef85c43eceb5f805a2806e214ad817870841a409bceef": 1,
         "34a2a8e944796caa9eea976ae51839523fd8b53659c368e0116418af17a7f193": 1,
         "34b2dc57f682464b01d2d48df97d8bacc02c5c99242103e221cc1219c7c6df50": 3,
         "4020abb61b0e3789f369de11a1ce1cd93105a674c05184af301021dcc6a31772": 1,
+        "4062be85a097cd35a1cdba47d74a635564528fd2aca7d22239622b949a1da957": 1,
         "4245cf2501926cb565cb4bf4920dced979466c7e427766257a44220ff2a22bb5": 1,
         "4cd2b7d71db1eec803a96df729d91d7bded797808a38873b39f0894c605a8a60": 1,
         "50947a7fed125e12626ec6cdb0f9daa587f58f0cc75e7cc61dbf0f0bdccf68b4": 1,
@@ -41,6 +42,7 @@
         "8058b9b70bfb973180371a09dcf71f406926e877dc942001ac455ef305b0a81d": 1,
         "86dc6134a0496e8bf09fe61dd491b416bdeade63bb71ef5980d79dc1032d5824": 1,
         "8792a6a0ec8f7029b94d2848c2ac838828e30b516933c438ac1cc252a7b03751": 2,
+        "8928f7e6fab5eee47d69fd95779da5364f2c18feabe29d45a4baebf969550ad7": 1,
         "905a4d60c69a3599290123b1ad5a770d524ea87beb7b785d7b9db0ead34f6989": 1,
         "9100f56fdf957f85140e2ad31f336e9b60451f3a6a598746a6fcd7b29d2eea8b": 1,
         "99a22dd224857dcdc8a928c1c5f84c65d35c07254920469c4049114a7292e3ba": 1,
@@ -58,8 +60,10 @@
         "bf67bf96134932a9f12fa2ae77f7c559aa4cfa0ce2d80de8e76e5d89be0bb21e": 5,
         "c1163d6ba1986e9be14b0fe6c1e6565af89d6dd0620c8af5d3559d354bafe65a": 3,
         "cbc71a5a1b462a954c91e40a70d454b0bcb20a784197798490ed14fc27c3cc54": 1,
-        "cf22ca228e50ac5c625dc80803f2833194825a0caec161762ecf104fb3659efb": 12,
+        "cd2ad57155c7e4eabe90fc42c757cbcbb5a0461a389946898eda502f7d4dd137": 1,
+        "cf22ca228e50ac5c625dc80803f2833194825a0caec161762ecf104fb3659efb": 13,
         "d822dfc8feee2c2d6addf5967677c0d90abd969a05ecc122ed0ed70da3436b67": 1,
+        "de1aa9e2ab592186beaf3e36f7699ea00c0c37dd656074c0f013099935a240db": 1,
         "e6caf36a28f2a6563d6537dd7b9f2e372c5ffdeb3fdada8ed17d6d66bedb1384": 1,
         "eb03a94ce885ba0bacdfff3a72b424fcbbb060ee923a52048bc788b306fa96af": 1,
         "eb6d12b786643f9f401615c3215b2fbe3a41157198b9d3f38b59d5271c665343": 3,
@@ -69,7 +73,7 @@
       "introduced_by_pr": 145,
       "owner": "forward-regression infrastructure",
       "path": "scripts/audit/forward_regression_gate.py",
-      "rationale": "Forward-regression scanner infrastructure introduced by the same reviewed PR.",
+      "rationale": "Current-tree governance scanner, manifest validation, and same-PR provenance enforcement introduced by PR #145.",
       "symbols": [
         "_counter_digest",
         "_current_sources",
@@ -79,6 +83,8 @@
         "_raw_capability_findings.Visitor.__init__",
         "_raw_capability_findings.Visitor._visit_function",
         "_raw_capability_findings.Visitor.visit_ClassDef",
+        "_registration_index",
+        "_same_pr_registration_errors",
         "_snapshot_sources",
         "_target_names",
         "_validate_baseline_contract",
@@ -94,20 +100,22 @@
       "categories": [
         "mutation"
       ],
-      "disposition": "AUDIT_TOOLING",
+      "disposition": "TEST_EVIDENCE",
       "fingerprints": {
         "1438f60df95d5fbf4b5697119fcef9f83b3e85baba418c715442d4db389ec1e0": 1,
-        "c46b02d9b23886f7d448c7544d65e2557f51d636f92d4d09f1becf7b87b56263": 1,
-        "e553277c5f6464fd1d274638970ca03c67fe4fb8f31c89b8b9f47be881368d30": 1
+        "7e394b5cf8bab007d74e8728e2f983fe29682c8caad271da20b8f780407f6bb9": 1,
+        "90c373a01c4c34059ff8f4f7ea519cab139dd4d8fcd47ae4aa24258a273dde3c": 4,
+        "c46b02d9b23886f7d448c7544d65e2557f51d636f92d4d09f1becf7b87b56263": 1
       },
       "introduced_by_pr": 145,
-      "owner": "forward-regression infrastructure",
+      "owner": "forward-regression verification",
       "path": "tests/audit/test_forward_regression_gate.py",
-      "rationale": "Forward-regression scanner infrastructure introduced by the same reviewed PR.",
+      "rationale": "Focused fail-closed evidence for detector deltas, reviewed registration, stale entries, same-PR provenance, baseline drift, and parse errors introduced by PR #145.",
       "symbols": [
+        "_approved",
         "test_baseline_digest_drift_is_rejected",
         "test_duplicate_occurrences_preserve_counts",
-        "test_manifest_requires_review_metadata"
+        "test_manifest_requires_all_review_metadata"
       ]
     }
   ],
