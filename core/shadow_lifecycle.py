@@ -20,12 +20,12 @@ FAILURE_SCHEMA_VERSION = "eve.shadow-bridge-failure-signal.v1"
 
 BRIDGE_DOMAINS: tuple[str, ...] = ("activity", "chat", "goal", "memory")
 REVIEWED_DISPOSITION_DOCUMENT = "docs/audit/M0_D_MODULE_DISPOSITION.md"
-REVIEWED_BRIDGE_SOURCES: dict[str, tuple[str, str]] = {
-    "activity": ("adapters/agency_adapter.py", "WRAP"),
-    "chat": ("language/streaming.py", "REWRITE"),
-    "goal": ("adapters/goal_adapter.py", "WRAP"),
-    "memory": ("adapters/memory_adapter.py", "WRAP"),
-}
+REVIEWED_BRIDGE_SOURCES: tuple[tuple[str, str, str], ...] = (
+    ("activity", "adapters/agency_adapter.py", "WRAP"),
+    ("chat", "language/streaming.py", "REWRITE"),
+    ("goal", "adapters/goal_adapter.py", "WRAP"),
+    ("memory", "adapters/memory_adapter.py", "WRAP"),
+)
 
 NO_AUTHORITY = "none"
 DISCONNECTED_STATUS = "declared_disconnected"
@@ -67,6 +67,13 @@ def _require_text(value: Any, *, field: str) -> str:
     if not isinstance(value, str) or not value or value != value.strip():
         raise ShadowLifecycleContractError(f"{field} must be canonical text")
     return value
+
+
+def _reviewed_source(domain: str) -> tuple[str, str]:
+    for reviewed_domain, source_path, disposition in REVIEWED_BRIDGE_SOURCES:
+        if reviewed_domain == domain:
+            return source_path, disposition
+    raise ShadowLifecycleContractError("domain has no reviewed M0-D source")
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,8 +162,9 @@ class ShadowBridgeContract:
             raise ShadowLifecycleContractError("bridge_id does not match domain")
         if self.owner_id != f"m1.lifecycle.{self.domain}":
             raise ShadowLifecycleContractError("bridge owner does not match domain")
-        expected_source = REVIEWED_BRIDGE_SOURCES[self.domain]
-        if (self.source_module_path, self.source_disposition) != expected_source:
+        if (self.source_module_path, self.source_disposition) != _reviewed_source(
+            self.domain
+        ):
             raise ShadowLifecycleContractError(
                 "bridge source and disposition must match reviewed M0-D evidence"
             )
@@ -387,8 +395,8 @@ DEFAULT_BRIDGE_REGISTRY = ShadowBridgeRegistry(
             bridge_id=f"m1.bridge.{domain}",
             domain=domain,
             owner_id=f"m1.lifecycle.{domain}",
-            source_module_path=REVIEWED_BRIDGE_SOURCES[domain][0],
-            source_disposition=REVIEWED_BRIDGE_SOURCES[domain][1],
+            source_module_path=_reviewed_source(domain)[0],
+            source_disposition=_reviewed_source(domain)[1],
         )
         for domain in BRIDGE_DOMAINS
     ),
