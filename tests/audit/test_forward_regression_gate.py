@@ -165,6 +165,8 @@ def test_silent_broad_adaptive_and_raw_capability_detectors_run():
         {
             "pkg/runtime.py": (
                 "class VectorStore:\n"
+                "    def update_vector(self, vector):\n"
+                "        self.vector = vector\n"
                 "    def generate_response(self, raw_text):\n"
                 "        try:\n"
                 "            return raw_text\n"
