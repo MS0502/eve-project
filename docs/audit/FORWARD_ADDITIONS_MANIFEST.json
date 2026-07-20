@@ -117,6 +117,72 @@
         "test_duplicate_occurrences_preserve_counts",
         "test_manifest_requires_all_review_metadata"
       ]
+    },
+    {
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "disposition": "M1_A_EVENT_KERNEL",
+      "fingerprints": {
+        "38d20c1b7163e376062f34a9f0a936492ee32561fa8b043aae8d3f5f6becc190": 2,
+        "54215922b06d6576006756f0ed0d3bf8ed82d5fe5a362f3d350d0718001aa1ae": 1,
+        "6a4af8ab9c4265df2f770989b5b47b1975a8880d8bbc5c7ae95bfaa4b6e3d452": 1,
+        "9f98bc20893c1f6b03f6d5adf44ec7381a83f50a5ca54e6a48ceaecc21ff2093": 1,
+        "a541c0399d45b26c535f1509853c10e1e2a2c2e75c7c7fca677d5017cc4f67ea": 1,
+        "e9e81dba627bf671ab84464a79249660e2fe7019eb3952f0a806436e9f3977ea": 1,
+        "effbc37d16a19d6ea1b10c9800840fbfae31ff9cf541b4224f9b655b2886d41f": 1
+      },
+      "introduced_by_pr": 146,
+      "owner": "M1-A event kernel",
+      "path": "core/event_kernel.py",
+      "rationale": "Immutable canonical event-envelope hashing and append-only in-memory kernel state introduced by M1-A; no file/database persistence, legacy-runtime integration, or authoritative cutover is included.",
+      "symbols": [
+        "EventEnvelope.digest",
+        "InMemoryEventKernel.__init__",
+        "InMemoryEventKernel.append",
+        "canonical_json_object"
+      ]
+    },
+    {
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "disposition": "TEST_EVIDENCE",
+      "fingerprints": {
+        "0aa84c4339cdf6319ba31b0345fc7c5c0186144d08f275f758bb2c2d916a1593": 1,
+        "1947e6658436c0cccb49e2a84babb7b2de6542abd8f0839853dec51c4da63012": 2,
+        "1b73eee017b31f16bac23d94e0a4d413499532d733feb49795faadc529b3c9d9": 2,
+        "1fef56ff8e529f9241bda49c5a4ab3ba3097b7603cca62747952d111b1f8d603": 1,
+        "255a832f0b8ad259de507e3de5a1ae1b55a5d321cab865510869c0f65db5c8f5": 1,
+        "4add1466541f62754141c22baab629b820f208605ceccf6c0a82445361634f77": 1,
+        "7d232c15e9ddb4164847e392350e8db0ffefaef7dc62696a888867da3e9baf54": 4,
+        "80ec753187452366af8e7e947aef072762784f3472075dc13bdc35687bf97c5d": 1,
+        "8559b8360ca21996eaab708d830d56ec4dbbefa608e27bf32d2f4292dd225f19": 2,
+        "a6b65e8f41ddf6be87568f3c26be36f4ac0326310808f70772b9b166a8e0813f": 1,
+        "acd786d14e730bc83049d4ed238cdb67b86919d1206262ce25b1a57eff945cf5": 1,
+        "c2e4419757a103f4b4fcbd5e1d4aef73577fc9de7d167224d5e8bcdcab4ca550": 2,
+        "d3c9a9835eb3950867e0a066ac56955cb0d0e4f114afe04dd79a2964d7bb4fba": 1,
+        "d473f5263b11ee59611b22a424b8e102642cf3d6c162ed88894d614a4a9d8a22": 2,
+        "d9fc45f01f4f2893e71954ea15577c7181d688a99e88fc21953a5bd105042863": 2
+      },
+      "introduced_by_pr": 146,
+      "owner": "M1-A event kernel verification",
+      "path": "tests/test_v4_m1_a_event_kernel.py",
+      "rationale": "Focused fail-closed verification for immutable envelopes, canonical causal metadata, append ordering, duplicate and unknown-cause rejection, reducer boundaries, and absence of persistence/runtime integration introduced by PR #146.",
+      "symbols": [
+        "test_append_is_one_based_contiguous_and_returns_immutable_receipt",
+        "test_duplicate_id_sequence_gap_and_unknown_cause_fail_before_append",
+        "test_envelope_is_frozen_canonical_and_shadow_only",
+        "test_identifier_and_version_fields_fail_closed",
+        "test_kernel_rejects_non_envelope_values",
+        "test_module_has_no_persistence_clock_thread_random_or_runtime_integration",
+        "test_payload_and_context_accessors_are_detached_copies",
+        "test_replay_propagates_reducer_failure_and_rejects_none",
+        "test_replay_uses_explicit_reducer_without_mutating_kernel",
+        "test_stream_sequences_are_independent_but_causation_is_global"
+      ]
     }
   ],
   "schema_version": "1.0.0-forward-additions"
