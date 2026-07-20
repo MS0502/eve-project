@@ -20,7 +20,7 @@ def _manifest(module, baseline_scan, registrations=None):
     return {
         "schema_version": module.MANIFEST_SCHEMA_VERSION,
         "baseline_sha": module.CONSTITUTION_BASELINE_SHA,
-        "baseline_fingerprints": dict(module._counter(baseline_scan["findings"])),
+        "baseline": module.baseline_contract(baseline_scan),
         "registered_additions": registrations or [],
     }
 
@@ -204,3 +204,35 @@ def test_manifest_requires_review_metadata():
 
     assert not result["pass"]
     assert any("missing fields" in error for error in result["errors"])
+
+
+def test_baseline_digest_drift_is_rejected():
+    module = _load_module()
+    baseline = module.scan_sources(
+        REPO_ROOT, {"pkg/runtime.py": "class Engine:\n    pass\n"}
+    )
+    manifest = _manifest(module, baseline)
+    manifest["baseline"]["counter_sha256"] = "0" * 64
+
+    result = module.evaluate(baseline, baseline, manifest)
+
+    assert not result["pass"]
+    assert result["baseline_drift"]
+
+
+def test_new_parse_error_is_rejected_but_existing_one_is_tolerated():
+    module = _load_module()
+    baseline = module.scan_sources(
+        REPO_ROOT, {"legacy.py": "BROKEN = [\n"}
+    )
+    same = module.scan_sources(REPO_ROOT, {"legacy.py": "BROKEN = [\n"})
+    added = module.scan_sources(
+        REPO_ROOT,
+        {"legacy.py": "BROKEN = [\n", "new.py": "ALSO_BROKEN = {\n"},
+    )
+    manifest = _manifest(module, baseline)
+
+    assert module.evaluate(baseline, same, manifest)["pass"]
+    failed = module.evaluate(baseline, added, manifest)
+    assert not failed["pass"]
+    assert failed["summary"]["new_parse_errors"] == 1
