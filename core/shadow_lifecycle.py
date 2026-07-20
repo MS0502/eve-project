@@ -1,9 +1,8 @@
 """M1-D lifecycle ownership and disconnected shadow-bridge contracts.
 
-The registry in this module is descriptive and fail-closed. It does not import,
-construct, call, patch, or activate any legacy module. Every bridge remains
-``declared_disconnected`` with no runtime, persistence, event, retry,
-suppression, recovery, or external-effect authority.
+This module is declaration-only. It imports, constructs, calls, patches, and
+activates no legacy module. Every bridge remains disconnected, default-disabled,
+authority-free, event-free, capability-free, and persistence-free.
 """
 from __future__ import annotations
 
@@ -20,7 +19,13 @@ REGISTRY_SCHEMA_VERSION = "eve.shadow-bridge-registry.v1"
 FAILURE_SCHEMA_VERSION = "eve.shadow-bridge-failure-signal.v1"
 
 BRIDGE_DOMAINS: tuple[str, ...] = ("activity", "chat", "goal", "memory")
-SOURCE_DISPOSITIONS: tuple[str, ...] = ("REWRITE", "WRAP")
+REVIEWED_DISPOSITION_DOCUMENT = "docs/audit/M0_D_MODULE_DISPOSITION.md"
+REVIEWED_BRIDGE_SOURCES: dict[str, tuple[str, str]] = {
+    "activity": ("adapters/agency_adapter.py", "WRAP"),
+    "chat": ("language/streaming.py", "REWRITE"),
+    "goal": ("adapters/goal_adapter.py", "WRAP"),
+    "memory": ("adapters/memory_adapter.py", "WRAP"),
+}
 
 NO_AUTHORITY = "none"
 DISCONNECTED_STATUS = "declared_disconnected"
@@ -31,10 +36,6 @@ SUPPRESSION_FORBIDDEN = "forbidden"
 SHADOW_ROLLBACK_ONLY = "shadow_state_only"
 PROPAGATE_ORIGINAL = "surface_signal_and_propagate_original"
 
-_IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,127}$")
-_STAGE_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
-_DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-
 REQUIRED_ACTIVATION_EVIDENCE: tuple[str, ...] = (
     "explicit_reviewed_integration_pr",
     "initialization_and_shutdown_implementation",
@@ -43,13 +44,17 @@ REQUIRED_ACTIVATION_EVIDENCE: tuple[str, ...] = (
     "exact_head_validation_green",
 )
 
+_IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,127}$")
+_STAGE_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+_DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
 
 class ShadowLifecycleContractError(ValueError):
-    """Raised when a lifecycle or bridge contract is malformed."""
+    """Raised when a lifecycle or bridge declaration is malformed."""
 
 
 class UnknownShadowBridge(ShadowLifecycleContractError):
-    """Raised when a bridge ID or domain is absent from the registry."""
+    """Raised when a requested owner, bridge, or domain is not registered."""
 
 
 def _require_identifier(value: Any, *, field: str) -> str:
@@ -58,17 +63,15 @@ def _require_identifier(value: Any, *, field: str) -> str:
     return value
 
 
-def _require_nonempty_text(value: Any, *, field: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ShadowLifecycleContractError(f"{field} must be non-empty text")
-    if value != value.strip():
-        raise ShadowLifecycleContractError(f"{field} cannot contain edge whitespace")
+def _require_text(value: Any, *, field: str) -> str:
+    if not isinstance(value, str) or not value or value != value.strip():
+        raise ShadowLifecycleContractError(f"{field} must be canonical text")
     return value
 
 
 @dataclass(frozen=True, slots=True)
 class LifecycleOwnerContract:
-    """Immutable responsibility assignment for one shadow bridge domain."""
+    """Immutable responsibility assignment for one disconnected domain."""
 
     owner_id: str
     domain: str
@@ -86,10 +89,10 @@ class LifecycleOwnerContract:
         if self.domain not in BRIDGE_DOMAINS:
             raise ShadowLifecycleContractError("owner domain is outside M1-D scope")
         if self.owner_id != f"m1.lifecycle.{self.domain}":
-            raise ShadowLifecycleContractError("owner_id does not match its domain")
+            raise ShadowLifecycleContractError("owner_id does not match domain")
         if self.schema_version != OWNER_SCHEMA_VERSION:
             raise ShadowLifecycleContractError("unsupported owner schema version")
-        expected = {
+        required = {
             "initialization_responsibility": "explicit_caller_construction_only",
             "shutdown_responsibility": "release_shadow_resources_only",
             "interruption_responsibility": "cancel_shadow_work_preserve_legacy",
@@ -98,10 +101,10 @@ class LifecycleOwnerContract:
             "rollback_responsibility": "restore_registered_shadow_state_only",
             "authority": NO_AUTHORITY,
         }
-        for field, expected_value in expected.items():
-            if getattr(self, field) != expected_value:
+        for field, expected in required.items():
+            if getattr(self, field) != expected:
                 raise ShadowLifecycleContractError(
-                    f"{field} cannot weaken the disconnected owner contract"
+                    f"{field} cannot weaken lifecycle ownership"
                 )
 
     @property
@@ -122,14 +125,14 @@ class LifecycleOwnerContract:
 
 @dataclass(frozen=True, slots=True)
 class ShadowBridgeContract:
-    """Immutable declaration of one unimplemented, disconnected bridge."""
+    """Immutable declaration of one reviewed but unimplemented bridge."""
 
     bridge_id: str
     domain: str
     owner_id: str
     source_module_path: str
     source_disposition: str
-    source_evidence_document: str = "docs/audit/M0_D_MODULE_DISPOSITION.md"
+    source_evidence_document: str = REVIEWED_DISPOSITION_DOCUMENT
     lifecycle_status: str = DISCONNECTED_STATUS
     integration_mode: str = DISCONNECTED_MODE
     default_enabled: bool = False
@@ -148,26 +151,23 @@ class ShadowBridgeContract:
         _require_identifier(self.owner_id, field="owner_id")
         if self.domain not in BRIDGE_DOMAINS:
             raise ShadowLifecycleContractError("bridge domain is outside M1-D scope")
-        if self.owner_id != f"m1.lifecycle.{self.domain}":
-            raise ShadowLifecycleContractError("bridge owner does not match domain")
         if self.bridge_id != f"m1.bridge.{self.domain}":
             raise ShadowLifecycleContractError("bridge_id does not match domain")
-        if (
-            not isinstance(self.source_module_path, str)
-            or not self.source_module_path.endswith(".py")
-            or self.source_module_path.startswith("/")
-            or ".." in self.source_module_path.split("/")
-        ):
-            raise ShadowLifecycleContractError("source_module_path is not canonical")
-        if self.source_disposition not in SOURCE_DISPOSITIONS:
-            raise ShadowLifecycleContractError("source disposition is not reviewed")
-        _require_nonempty_text(
-            self.source_evidence_document,
-            field="source_evidence_document",
-        )
+        if self.owner_id != f"m1.lifecycle.{self.domain}":
+            raise ShadowLifecycleContractError("bridge owner does not match domain")
+        expected_source = REVIEWED_BRIDGE_SOURCES[self.domain]
+        if (self.source_module_path, self.source_disposition) != expected_source:
+            raise ShadowLifecycleContractError(
+                "bridge source and disposition must match reviewed M0-D evidence"
+            )
+        if self.source_evidence_document != REVIEWED_DISPOSITION_DOCUMENT:
+            raise ShadowLifecycleContractError(
+                "bridge evidence document must remain the reviewed M0-D map"
+            )
+        _require_text(self.source_module_path, field="source_module_path")
         if self.schema_version != BRIDGE_SCHEMA_VERSION:
             raise ShadowLifecycleContractError("unsupported bridge schema version")
-        fixed_values = {
+        required = {
             "lifecycle_status": DISCONNECTED_STATUS,
             "integration_mode": DISCONNECTED_MODE,
             "default_enabled": False,
@@ -180,10 +180,10 @@ class ShadowBridgeContract:
             "rollback_scope": SHADOW_ROLLBACK_ONLY,
             "future_activation_evidence": REQUIRED_ACTIVATION_EVIDENCE,
         }
-        for field, expected_value in fixed_values.items():
-            if getattr(self, field) != expected_value:
+        for field, expected in required.items():
+            if getattr(self, field) != expected:
                 raise ShadowLifecycleContractError(
-                    f"{field} cannot activate or weaken a bridge contract"
+                    f"{field} cannot activate or weaken a bridge"
                 )
 
     @property
@@ -220,7 +220,7 @@ class ShadowBridgeContract:
 
 @dataclass(frozen=True, slots=True)
 class ShadowBridgeRegistry:
-    """Immutable, complete registry for the four bounded M1-D domains."""
+    """Immutable complete registry for the four M1-D domains."""
 
     owners: tuple[LifecycleOwnerContract, ...]
     bridges: tuple[ShadowBridgeContract, ...]
@@ -254,8 +254,8 @@ class ShadowBridgeRegistry:
             bridge_ids.add(bridge.bridge_id)
             bridge_domains.add(bridge.domain)
 
-        required_domains = set(BRIDGE_DOMAINS)
-        if owner_domains != required_domains or bridge_domains != required_domains:
+        required = set(BRIDGE_DOMAINS)
+        if owner_domains != required or bridge_domains != required:
             raise ShadowLifecycleContractError(
                 "registry must contain exactly activity, chat, goal, and memory"
             )
@@ -322,23 +322,27 @@ class BridgeFailureSignal:
         _require_identifier(self.owner_id, field="owner_id")
         if self.domain not in BRIDGE_DOMAINS:
             raise ShadowLifecycleContractError("failure domain is outside M1-D scope")
+        if self.bridge_id != f"m1.bridge.{self.domain}":
+            raise ShadowLifecycleContractError("failure bridge does not match domain")
+        if self.owner_id != f"m1.lifecycle.{self.domain}":
+            raise ShadowLifecycleContractError("failure owner does not match domain")
         if not isinstance(self.stage, str) or not _STAGE_PATTERN.fullmatch(self.stage):
             raise ShadowLifecycleContractError("failure stage is not canonical")
-        _require_nonempty_text(self.error_type, field="error_type")
+        _require_text(self.error_type, field="error_type")
         if (
             not isinstance(self.error_message_digest, str)
             or not _DIGEST_PATTERN.fullmatch(self.error_message_digest)
         ):
             raise ShadowLifecycleContractError("failure digest is malformed")
-        fixed_values = {
+        required = {
             "handling": PROPAGATE_ORIGINAL,
             "retry_allowed": False,
             "suppression_allowed": False,
             "legacy_authority_changed": False,
             "schema_version": FAILURE_SCHEMA_VERSION,
         }
-        for field, expected_value in fixed_values.items():
-            if getattr(self, field) != expected_value:
+        for field, expected in required.items():
+            if getattr(self, field) != expected:
                 raise ShadowLifecycleContractError(
                     f"{field} cannot weaken failure propagation"
                 )
@@ -378,34 +382,14 @@ DEFAULT_BRIDGE_REGISTRY = ShadowBridgeRegistry(
         )
         for domain in BRIDGE_DOMAINS
     ),
-    bridges=(
+    bridges=tuple(
         ShadowBridgeContract(
-            bridge_id="m1.bridge.activity",
-            domain="activity",
-            owner_id="m1.lifecycle.activity",
-            source_module_path="adapters/agency_adapter.py",
-            source_disposition="WRAP",
-        ),
-        ShadowBridgeContract(
-            bridge_id="m1.bridge.chat",
-            domain="chat",
-            owner_id="m1.lifecycle.chat",
-            source_module_path="language/streaming.py",
-            source_disposition="REWRITE",
-        ),
-        ShadowBridgeContract(
-            bridge_id="m1.bridge.goal",
-            domain="goal",
-            owner_id="m1.lifecycle.goal",
-            source_module_path="adapters/goal_adapter.py",
-            source_disposition="WRAP",
-        ),
-        ShadowBridgeContract(
-            bridge_id="m1.bridge.memory",
-            domain="memory",
-            owner_id="m1.lifecycle.memory",
-            source_module_path="adapters/memory_adapter.py",
-            source_disposition="WRAP",
-        ),
+            bridge_id=f"m1.bridge.{domain}",
+            domain=domain,
+            owner_id=f"m1.lifecycle.{domain}",
+            source_module_path=REVIEWED_BRIDGE_SOURCES[domain][0],
+            source_disposition=REVIEWED_BRIDGE_SOURCES[domain][1],
+        )
+        for domain in BRIDGE_DOMAINS
     ),
 )
