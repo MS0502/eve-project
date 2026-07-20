@@ -21,6 +21,7 @@ from core.shadow_lifecycle import (
     REGISTRY_SCHEMA_VERSION,
     REQUIRED_ACTIVATION_EVIDENCE,
     RETRY_FORBIDDEN,
+    REVIEWED_BRIDGE_SOURCES,
     SHADOW_ROLLBACK_ONLY,
     SUPPRESSION_FORBIDDEN,
     BridgeFailureSignal,
@@ -46,6 +47,13 @@ def test_registry_contains_exact_reviewed_domains_sources_and_dispositions():
     registry = DEFAULT_BRIDGE_REGISTRY
     assert registry.schema_version == REGISTRY_SCHEMA_VERSION
     assert tuple(sorted(BRIDGE_DOMAINS)) == ("activity", "chat", "goal", "memory")
+    assert REVIEWED_BRIDGE_SOURCES == (
+        ("activity", "adapters/agency_adapter.py", "WRAP"),
+        ("chat", "language/streaming.py", "REWRITE"),
+        ("goal", "adapters/goal_adapter.py", "WRAP"),
+        ("memory", "adapters/memory_adapter.py", "WRAP"),
+    )
+    assert isinstance(REVIEWED_BRIDGE_SOURCES, tuple)
     assert {owner.domain for owner in registry.owners} == set(EXPECTED_BRIDGES)
     assert {bridge.domain for bridge in registry.bridges} == set(EXPECTED_BRIDGES)
 
@@ -130,39 +138,25 @@ def test_unknown_registry_lookups_fail_closed():
         DEFAULT_BRIDGE_REGISTRY.bridge_for_domain("unknown")
 
 
-def test_owner_and_bridge_reject_authority_activation_and_bad_paths():
+def test_owner_and_bridge_reject_authority_activation_and_source_spoofing():
     with pytest.raises(ShadowLifecycleContractError):
         LifecycleOwnerContract(
             owner_id="m1.lifecycle.chat", domain="chat", authority="runtime"
         )
     with pytest.raises(ShadowLifecycleContractError):
         LifecycleOwnerContract(owner_id="m1.lifecycle.memory", domain="goal")
+
+    chat = DEFAULT_BRIDGE_REGISTRY.bridge("m1.bridge.chat")
     with pytest.raises(ShadowLifecycleContractError):
-        ShadowBridgeContract(
-            bridge_id="m1.bridge.chat",
-            domain="chat",
-            owner_id="m1.lifecycle.chat",
-            source_module_path="language/streaming.py",
-            source_disposition="REWRITE",
-            default_enabled=True,
-        )
+        replace(chat, default_enabled=True)
     with pytest.raises(ShadowLifecycleContractError):
-        ShadowBridgeContract(
-            bridge_id="m1.bridge.chat",
-            domain="chat",
-            owner_id="m1.lifecycle.chat",
-            source_module_path="language/streaming.py",
-            source_disposition="REWRITE",
-            emitted_event_types=("shadow.chat",),
-        )
+        replace(chat, emitted_event_types=("shadow.chat",))
     with pytest.raises(ShadowLifecycleContractError):
-        ShadowBridgeContract(
-            bridge_id="m1.bridge.memory",
-            domain="memory",
-            owner_id="m1.lifecycle.memory",
-            source_module_path="../memory.py",
-            source_disposition="WRAP",
-        )
+        replace(chat, source_module_path="adapters/agency_adapter.py")
+    with pytest.raises(ShadowLifecycleContractError):
+        replace(chat, source_disposition="WRAP")
+    with pytest.raises(ShadowLifecycleContractError):
+        replace(chat, source_evidence_document="docs/other.md")
 
 
 def test_registry_rejects_missing_duplicate_and_cross_domain_owner():
@@ -222,7 +216,7 @@ def test_failure_signal_rejects_unknown_bad_stage_and_nonexception():
         )
 
 
-def test_failure_signal_cannot_enable_retry_suppression_or_authority_change():
+def test_failure_signal_cannot_spoof_ownership_retry_or_suppression():
     signal = BridgeFailureSignal.capture(
         DEFAULT_BRIDGE_REGISTRY,
         bridge_id="m1.bridge.goal",
@@ -230,6 +224,9 @@ def test_failure_signal_cannot_enable_retry_suppression_or_authority_change():
         error=ValueError("visible"),
     )
     for field, value in (
+        ("bridge_id", "m1.bridge.chat"),
+        ("owner_id", "m1.lifecycle.chat"),
+        ("domain", "chat"),
         ("retry_allowed", True),
         ("suppression_allowed", True),
         ("legacy_authority_changed", True),
