@@ -1,2 +1,2 @@
 Trigger audit snapshot validation.
-Retry with hardened patcher.
+Run reproduction diagnostics.
