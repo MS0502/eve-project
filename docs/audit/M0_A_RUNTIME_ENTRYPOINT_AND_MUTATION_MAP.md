@@ -14,6 +14,8 @@ python scripts/audit/m0_a_runtime_inventory.py --pretty
 
 The command scans tracked Python files with `ast.parse` and emits canonical JSON to stdout. An operator may pass `--output` only for an ephemeral CI artifact. Generated JSON must not be committed.
 
+The audit path and source-content universe is frozen to the merged M0-A snapshot `78544d74af84afed450014d599b360c9b4af4f03`. Later Python additions, deletions, or edits cannot retroactively change this completed audit's canonical output. Fixture repositories without that snapshot continue to use their local files for focused tests.
+
 Every emitted map entry contains:
 
 - repository-relative `path`;

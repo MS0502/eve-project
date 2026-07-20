@@ -14,6 +14,8 @@ python scripts/audit/m0_b_controlflow_concurrency_inventory.py --pretty
 
 The command scans tracked Python files with `ast.parse` and emits canonical JSON to stdout. `--output` is permitted only for an ephemeral validation artifact. Generated JSON must not be committed.
 
+The audit path and source-content universe is frozen to the merged M0-B snapshot `eea70c286e947cbc180db9565bfa5ddc062d1ac3`. Later Python additions, deletions, or edits cannot retroactively change this completed audit's canonical output. Fixture repositories without that snapshot continue to use their local files for focused tests.
+
 Every entry records repository-relative path, exact line range, enclosing callable, mechanical evidence, detector, manual classification, confidence, unresolved state, and whether the evidence is manual-only.
 
 ## Validated inventory snapshot
