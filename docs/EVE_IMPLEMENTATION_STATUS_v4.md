@@ -157,8 +157,10 @@ v4_2_eligible: false
 authority: shadow_only
 runtime_integrated: false
 persistence_mode: none
-unauthorized_effects_detected: false
+unauthorized_effects_detected: derived from zero_unauthorized_effects
 ```
+
+A complete packet has `unauthorized_effects_detected=false`. An incomplete packet whose zero-effects criterion fails has it set to `true`; contradictory construction is rejected.
 
 M1-E therefore supplies review evidence but cannot accept itself, activate a bridge, grant persistence or recovery authority, perform cutover, or open v4.2 automatically. Explicit human acceptance remains a separate constitutional decision.
 
@@ -222,9 +224,9 @@ Reviewed additions are registered by introducing PR:
 - PR #147: M1-B observer and focused tests;
 - PR #148: M1-C projection and focused tests;
 - PR #149: M1-D lifecycle declarations and focused tests;
-- PR #150: M1-E machine acceptance evidence and focused tests.
+- PR #150: M1-E acceptance evaluator and focused tests.
 
-PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 275 occurrences. Registration and machine completion are review evidence, not human acceptance or runtime authority.
+PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 275 occurrences. Registration is review evidence, not automatic runtime authority.
 
 ## Governance registry
 
@@ -281,18 +283,14 @@ This registry may be adjusted by a reviewed STATUS update without a constitution
 
 ## Promotion rule
 
-M1-E acceptance grants only eligibility to open a human-reviewed v4.2 amendment review. Promotion is never automatic. v4.2 requires its own exact-head validation and explicit approval.
+M1-E machine evidence does not itself grant promotion. Only a separate explicit human acceptance can make M1 eligible to open a v4.2 amendment review. Promotion is never automatic; v4.2 requires its own exact-head validation and explicit approval.
 
 ## Current next step
 
-M1-E machine evidence may be merged only as a non-authoritative review package. After merge, the remaining M1 exit condition is an **explicit human accept/reject decision** over the final PR #150 head and evidence artifact.
+Perform a separate **explicit human review** of the immutable M1-E machine packet and exact-head artifact. Until that decision:
 
-Until that decision is separately recorded:
-
-1. `human_accepted` remains `false`;
-2. `v4_2_eligible` remains `false`;
-3. no v4.2 amendment review is opened;
-4. no M2 implementation, persistence activation, bridge installation, scheduler, recovery, external effect, or cutover is authorized;
+1. `human_accepted` remains false;
+2. `v4_2_eligible` remains false;
+3. no bridge, persistence path, scheduler, recovery behavior, cutover, or production hook may be activated;
+4. M2 implementation does not begin;
 5. the pre-kernel legacy runtime remains authoritative.
-
-A future human acceptance record must cite the exact validated head and artifact, state the reviewed criteria, remain external to the immutable machine packet, and pass its own reviewed exact-head change. Rejection or requested changes keep M1-E open without weakening any criterion.
