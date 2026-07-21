@@ -3,185 +3,131 @@ name: Exact-head validation
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-  workflow_dispatch:
-    inputs:
-      sha:
-        description: Exact commit SHA to validate
-        required: true
-        type: string
-      base_sha:
-        description: Base commit SHA for scope and invariance checks
-        required: true
-        type: string
-      focused_tests:
-        description: Optional newline-separated tests paths
-        required: false
-        type: string
+    types: [synchronize]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  update-m1-e-status:
+    if: github.event.pull_request.number == 150
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    env:
-      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
-      BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base_sha }}
-      CURRENT_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
-      REQUESTED_FOCUSED_TESTS: ${{ inputs.focused_tests }}
-      PIP_INDEX_URL: https://pypi.org/simple
-      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
-      - name: Checkout exact target
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TARGET_SHA }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-
-      - name: Verify exact head and clean worktree
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          git cat-file -e "$BASE_SHA^{commit}"
-          test -z "$(git status --short)"
-          git rev-parse HEAD | tee /tmp/final-head.txt
-          git diff --name-only "$BASE_SHA"..."$TARGET_SHA" | sort | tee /tmp/changed-files.txt
-
-      - name: Install SHA-pinned compatibility dependency
+      - name: Record machine evidence without human acceptance
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import hashlib
-          import pathlib
-          import subprocess
-          import sys
-          import urllib.request
+          from pathlib import Path
 
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          path = Path('docs/EVE_IMPLEMENTATION_STATUS_v4.md')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str) -> None:
+              global text
+              if text.count(old) != 1:
+                  raise SystemExit(f'expected one status fragment, found {text.count(old)}: {old[:80]!r}')
+              text = text.replace(old, new)
+
+          replace_once(
+              'Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A/M1-B/M1-C/M1-D are shadow-only or declaration-only and not production-integrated**',
+              'Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A through M1-D remain shadow/declaration-only, and M1-E is machine-evidence-only with no production integration**',
+          )
+          replace_once(
+              'M1-D status: **completed by the merge carrying this STATUS update**\nCurrent next step: **M1-E — bounded shadow-observation window and human-reviewed M1 acceptance evidence**',
+              'M1-D status: **completed by PR #149**\nM1-E status: **machine-evidence implementation completed by the merge carrying this STATUS update; explicit human acceptance has not been performed**\nCurrent next step: **explicit human review of the M1 shadow-acceptance evidence; v4.2 remains ineligible until that separate decision**',
+          )
+          replace_once(
+              'M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains.',
+              'M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains. M1-E provides a deterministic in-memory evaluator and immutable machine-review packet for explicitly supplied M1-B through M1-D evidence; it does not perform or encode human acceptance.',
+          )
+
+          insertion = '''## M1-E machine-evidence implementation record
+
+`core/shadow_acceptance.py` defines four versioned evidence families:
+
+```text
+eve.m1-shadow-observation-window.v1
+eve.m1-legacy-preservation-evidence.v1
+eve.m1-shadow-acceptance-criterion.v1
+eve.m1-shadow-acceptance-packet.v1
+```
+
+The evaluator accepts only explicit in-memory M1-B event and observer-failure evidence, an explicit M1-C initial state and expected final snapshot, explicit legacy-preservation evidence, and the exact M1-D disconnected lifecycle registry. It imports or calls no legacy module and installs no production hook.
+
+The immutable packet contains ten machine criteria:
+
+```text
+event_count_exact
+success_failure_visible
+observer_failure_visible
+sequence_contiguous
+replay_equivalent
+checkpoint_restore_verified
+rollback_verified
+lifecycle_registry_complete
+legacy_behavior_preserved
+zero_unauthorized_effects
+```
+
+Legacy-preservation evidence is bound to the exact event and observer-failure IDs in the evaluated window. Machine completion requires preserved return values, exception identity, call order, legacy state, persistence behavior, defaults, and external-effect behavior. Raw legacy and observer error messages are not retained in the packet.
+
+A complete machine packet may set only `eligible_for_human_review=true`. The schema permanently fixes:
+
+```text
+human_review_status: required_not_performed
+human_accepted: false
+v4_2_eligible: false
+authority: shadow_only
+runtime_integrated: false
+persistence_mode: none
+unauthorized_effects_detected: false
+```
+
+M1-E therefore supplies review evidence but cannot accept itself, activate a bridge, grant persistence or recovery authority, perform cutover, or open v4.2 automatically. Explicit human acceptance remains a separate constitutional decision.
+
+'''
+          marker = '## Merged source-of-truth evidence\n'
+          if text.count(marker) != 1:
+              raise SystemExit('missing merged evidence marker')
+          text = text.replace(marker, insertion + marker)
+
+          replace_once(
+              '- PR #149: M1-D lifecycle declarations and focused tests.\n\nPR #149 registers 17 fingerprints / 24 occurrences: 8 / 12 in `core/shadow_lifecycle.py` and 9 / 12 in `tests/test_v4_m1_d_shadow_lifecycle.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 234 occurrences. Registration is review evidence, not automatic runtime authority.',
+              '- PR #149: M1-D lifecycle declarations and focused tests;\n- PR #150: M1-E machine acceptance evidence and focused tests.\n\nPR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 275 occurrences. Registration and machine completion are review evidence, not human acceptance or runtime authority.',
+          )
+
+          heading = '## Current next step\n'
+          if text.count(heading) != 1:
+              raise SystemExit('unexpected current-next-step heading count')
+          prefix = text.split(heading, 1)[0]
+          next_step = '''## Current next step
+
+M1-E machine evidence may be merged only as a non-authoritative review package. After merge, the remaining M1 exit condition is an **explicit human accept/reject decision** over the final PR #150 head and evidence artifact.
+
+Until that decision is separately recorded:
+
+1. `human_accepted` remains `false`;
+2. `v4_2_eligible` remains `false`;
+3. no v4.2 amendment review is opened;
+4. no M2 implementation, persistence activation, bridge installation, scheduler, recovery, external effect, or cutover is authorized;
+5. the pre-kernel legacy runtime remains authoritative.
+
+A future human acceptance record must cite the exact validated head and artifact, state the reviewed criteria, remain external to the immutable machine packet, and pass its own reviewed exact-head change. Rejection or requested changes keep M1-E open without weakening any criterion.
+'''
+          path.write_text(prefix + next_step, encoding='utf-8')
           PY
-          python -m pip install -r requirements.txt
-          python -m pip check
-
-      - name: Compile changed Python
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t changed_python < <(grep -E '\.py$' /tmp/changed-files.txt || true)
-          if ((${#changed_python[@]})); then
-            python -m compileall -q "${changed_python[@]}"
+          if git diff --quiet -- docs/EVE_IMPLEMENTATION_STATUS_v4.md; then
+            exit 0
           fi
-
-      - name: Run focused tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            grep -E '^tests/.*\.py$' /tmp/changed-files.txt || true
-            printf '%s\n' "$REQUESTED_FOCUSED_TESTS"
-          } | sed '/^[[:space:]]*$/d' | sort -u > /tmp/focused-paths.txt
-          if test -s /tmp/focused-paths.txt; then
-            mapfile -t focused < /tmp/focused-paths.txt
-            set +e
-            python -m pytest -q --tb=short "${focused[@]}" > /tmp/focused.txt 2>&1
-            status=$?
-            set -e
-            cat /tmp/focused.txt
-            exit "$status"
-          else
-            printf '%s\n' 'No focused tests selected.' | tee /tmp/focused.txt
-          fi
-
-      - name: Verify M0 audit invariance
-        shell: bash
-        run: |
-          set -euo pipefail
-          for phase in base head; do
-            if test "$phase" = base; then
-              sha="$BASE_SHA"
-            else
-              sha="$TARGET_SHA"
-            fi
-            git checkout --detach "$sha"
-            test -z "$(git status --short)"
-            for item in \
-              a:scripts/audit/m0_a_runtime_inventory.py \
-              b:scripts/audit/m0_b_controlflow_concurrency_inventory.py \
-              c:scripts/audit/m0_c_persistence_state_inventory.py \
-              d:scripts/audit/m0_d_component_inventory.py; do
-              name="${item%%:*}"
-              script="${item#*:}"
-              python "$script" --output "/tmp/${phase}-${name}.json"
-            done
-          done
-          git checkout --detach "$TARGET_SHA"
-          for name in a b c d; do
-            diff -u "/tmp/base-${name}.json" "/tmp/head-${name}.json"
-          done
-          test -z "$(git status --short)"
-          printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
-
-      - name: Verify forward regression gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=()
-          if test -n "$CURRENT_PR"; then
-            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
-          fi
-          python scripts/audit/forward_regression_gate.py \
-            --output /tmp/forward-regression.json \
-            --pretty \
-            "${args[@]}"
-          cat /tmp/forward-regression.json
-
-      - name: Collect full suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest --collect-only -q | tee /tmp/collect.txt
-
-      - name: Run full suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pytest -q | tee /tmp/full.txt
-
-      - name: Verify final worktree
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          test -z "$(git status --short)"
-
-      - name: Upload exact-head evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: exact-head-validation-${{ env.TARGET_SHA }}
-          path: |
-            /tmp/final-head.txt
-            /tmp/changed-files.txt
-            /tmp/focused-paths.txt
-            /tmp/focused.txt
-            /tmp/invariance.txt
-            /tmp/forward-regression.json
-            /tmp/base-a.json
-            /tmp/head-a.json
-            /tmp/base-b.json
-            /tmp/head-b.json
-            /tmp/base-c.json
-            /tmp/head-c.json
-            /tmp/base-d.json
-            /tmp/head-d.json
-            /tmp/collect.txt
-            /tmp/full.txt
-          if-no-files-found: error
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/EVE_IMPLEMENTATION_STATUS_v4.md
+          git commit -m 'Record M1-E machine evidence status'
+          git push origin "HEAD:${HEAD_BRANCH}"
