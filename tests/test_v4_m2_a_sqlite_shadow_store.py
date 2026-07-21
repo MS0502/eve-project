@@ -45,6 +45,9 @@ def test_construction_is_io_free_and_initialize_is_explicit(tmp_path: Path):
     assert not path.exists()
     with pytest.raises(StoreNotInitialized):
         store.events()
+    with pytest.raises(StoreNotInitialized):
+        store.create_backup(tmp_path / "backups", backup_ordinal=1)
+    assert not (tmp_path / "backups").exists()
     report = store.initialize()
     assert path.exists()
     assert report.schema_version == STORE_SCHEMA_VERSION
@@ -78,6 +81,8 @@ def test_append_is_atomic_readback_verified_and_hash_chained(tmp_path: Path):
     assert receipts[0].after_chain_digest == receipts[1].before_chain_digest
     assert all(item.readback_verified and item.state_changed for item in receipts)
     assert store.events() == (first, second)
+    with pytest.raises(ValueError):
+        store.events(after_sequence=1)
     assert store.integrity_check().valid is True
 
 
@@ -128,6 +133,14 @@ def test_snapshot_due_binding_and_readback(tmp_path: Path):
     selection = store.latest_valid_snapshot("shadow:test")
     assert selection.selected is not None
     assert selection.selected.state == {"sum": 3}
+    with pytest.raises(SnapshotCorruption):
+        store.write_snapshot(
+            snapshot_id="",
+            stream_id="shadow:test",
+            through_sequence=2,
+            state={"sum": 3},
+            state_schema_version="test.state.v1",
+        )
     with pytest.raises(SnapshotCorruption):
         store.write_snapshot(
             snapshot_id="snapshot:wrong",
@@ -190,6 +203,28 @@ def test_restore_replays_twice_from_valid_snapshot_and_is_reproducible(tmp_path:
     assert result.verified is True
 
 
+def test_restore_uses_fresh_canonical_start_state_for_each_replay(tmp_path: Path):
+    store = SQLiteShadowStore(tmp_path / "shadow.sqlite3")
+    store.initialize()
+    store.append(event(1))
+    initial = {"total": 0}
+
+    def mutating_reducer(state: dict[str, int], envelope: EventEnvelope) -> dict[str, int]:
+        state["total"] += int(envelope.payload["delta"])
+        return state
+
+    result = store.restore_verified(
+        stream_id="shadow:test",
+        initial_state=initial,
+        reducer=mutating_reducer,
+        state_to_mapping=lambda state: state,
+        state_from_mapping=lambda value: {"total": int(value["total"])},
+    )
+    assert result.state == {"total": 1}
+    assert result.state_digest == result.repeated_state_digest
+    assert initial == {"total": 0}
+
+
 def test_reopen_after_uncommitted_external_transaction_preserves_committed_history(tmp_path: Path):
     path = tmp_path / "shadow.sqlite3"
     store = SQLiteShadowStore(path)
@@ -247,6 +282,9 @@ def test_verified_backups_are_bounded_without_touching_event_history(tmp_path: P
     assert store.events() == (event(1),)
     with pytest.raises(BackupPolicyError):
         store.create_backup(backup_dir, backup_ordinal=3)
+    with pytest.raises(BackupPolicyError):
+        store.create_backup(backup_dir, backup_ordinal=1)
+    assert not (backup_dir / "shadow-backup-00000001.sqlite3").exists()
 
 
 def test_module_has_no_default_activation_legacy_bridge_thread_clock_random_or_pickle_surface():

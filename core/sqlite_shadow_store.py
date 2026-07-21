@@ -336,6 +336,8 @@ class SQLiteShadowStore:
         connection = sqlite3.connect(self._path, isolation_level=None, timeout=5.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA synchronous=FULL")
+        connection.execute("PRAGMA wal_autocheckpoint=1000")
         connection.execute("PRAGMA busy_timeout=5000")
         try:
             yield connection
@@ -434,6 +436,8 @@ class SQLiteShadowStore:
     def events(self, *, stream_id: str | None = None, after_sequence: int = 0) -> tuple[EventEnvelope, ...]:
         if isinstance(after_sequence, bool) or not isinstance(after_sequence, int) or after_sequence < 0:
             raise ValueError("after_sequence must be non-negative")
+        if stream_id is None and after_sequence:
+            raise ValueError("after_sequence requires an explicit stream_id")
         with self._connect() as connection:
             if stream_id is None:
                 rows = connection.execute("SELECT event_json,envelope_digest FROM events ORDER BY ordinal").fetchall()
@@ -452,6 +456,14 @@ class SQLiteShadowStore:
 
     def write_snapshot(self, *, snapshot_id: str, stream_id: str, through_sequence: int,
                        state: Mapping[str, Any], state_schema_version: str) -> SnapshotReceipt:
+        for field, value in (("snapshot_id", snapshot_id), ("stream_id", stream_id),
+                             ("state_schema_version", state_schema_version)):
+            if not isinstance(value, str) or not value.strip():
+                raise SnapshotCorruption(f"{field} must be a non-empty string")
+        if isinstance(through_sequence, bool) or not isinstance(through_sequence, int) or through_sequence < 0:
+            raise SnapshotCorruption("through_sequence must be a non-negative integer")
+        if not isinstance(state, Mapping):
+            raise SnapshotCorruption("state must be a mapping")
         state_json = _canon(state, "snapshot_state")
         state_digest = _sha(state_json)
         manifest_json = _canon(
@@ -564,15 +576,20 @@ class SQLiteShadowStore:
             raise RestoreVerificationError("restore requires explicit state codecs and reducer")
         selection = self.latest_valid_snapshot(stream_id)
         if selection.selected is None:
-            start, after, snapshot_id = initial_state, 0, None
+            start_mapping = state_to_mapping(initial_state)
+            after, snapshot_id = 0, None
         else:
-            start = state_from_mapping(selection.selected.state)
+            start_mapping = selection.selected.state
             after = selection.selected.through_sequence
             snapshot_id = selection.selected.snapshot_id
+        start_json = _canon(start_mapping, "restore_start_state")
         events = self.events(stream_id=stream_id, after_sequence=after)
 
         def replay() -> tuple[StateT, str]:
-            state = start
+            decoded = json.loads(start_json)
+            if not isinstance(decoded, dict):
+                raise RestoreVerificationError("restore start state must be an object")
+            state = state_from_mapping(decoded)
             for event in events:
                 state = reducer(state, event)
                 if state is None:
@@ -647,10 +664,19 @@ class SQLiteShadowStore:
         return IntegrityReport(not errors, tuple(errors), event_count, snapshot_count, chain, _digest(material, "integrity_report"))
 
     def create_backup(self, backup_directory: str | Path, *, backup_ordinal: int) -> BackupReceipt:
+        if not self._initialized:
+            raise StoreNotInitialized("store requires explicit initialize()")
         if isinstance(backup_ordinal, bool) or not isinstance(backup_ordinal, int) or not 1 <= backup_ordinal <= 99_999_999:
             raise BackupPolicyError("backup_ordinal must be 1..99999999")
         directory = Path(backup_directory)
         directory.mkdir(parents=True, exist_ok=True)
+        existing = sorted(
+            (int(match.group(1)), path)
+            for path in directory.iterdir()
+            if path.is_file() and (match := _BACKUP.fullmatch(path.name)) is not None
+        )
+        if existing and backup_ordinal <= existing[-1][0]:
+            raise BackupPolicyError("backup_ordinal must increase monotonically")
         target = directory / f"shadow-backup-{backup_ordinal:08d}.sqlite3"
         temporary = directory / f".{target.name}.partial"
         if target.exists() or temporary.exists():
