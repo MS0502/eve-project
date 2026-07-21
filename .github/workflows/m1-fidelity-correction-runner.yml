@@ -66,13 +66,30 @@ jobs:
 
           path = Path('scripts/audit/apply_m1_extended_fidelity_correction.py')
           text = path.read_text(encoding='utf-8')
-          needle = "        '''    form_lines = \"" + chr(92) + "n\".join("
-          replacement = "        r'''    form_lines = \"" + chr(92) + "n\".join("
-          if text.count(needle) != 2:
+          renderer_needle = "        '''    form_lines = \"" + chr(92) + "n\".join("
+          renderer_replacement = "        r'''    form_lines = \"" + chr(92) + "n\".join("
+          if text.count(renderer_needle) != 2:
               raise SystemExit(
-                  f'expected two renderer literals, found {text.count(needle)}'
+                  f'expected two renderer literals, found {text.count(renderer_needle)}'
               )
-          path.write_text(text.replace(needle, replacement), encoding='utf-8')
+          text = text.replace(renderer_needle, renderer_replacement)
+          self_remove_needle = (
+              '    regenerate_artifacts_and_pins()\n'
+              '    refresh_manifest()\n'
+          )
+          self_remove_replacement = (
+              '    regenerate_artifacts_and_pins()\n'
+              '    Path(__file__).unlink()\n'
+              '    refresh_manifest()\n'
+          )
+          if text.count(self_remove_needle) != 1:
+              raise SystemExit(
+                  f'expected one self-removal insertion point, found {text.count(self_remove_needle)}'
+              )
+          path.write_text(
+              text.replace(self_remove_needle, self_remove_replacement),
+              encoding='utf-8',
+          )
           PY
           set +e
           python scripts/audit/apply_m1_extended_fidelity_correction.py \
@@ -95,7 +112,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm \
+          rm -f \
+            .github/m1-extended-fidelity-trigger.txt \
+            .github/workflows/m1-extended-fidelity-correction.yml \
+            .github/workflows/m1-fidelity-correction-runner.yml \
+            scripts/audit/apply_m1_extended_fidelity_correction.py
+          git add -u -- \
             .github/m1-extended-fidelity-trigger.txt \
             .github/workflows/m1-extended-fidelity-correction.yml \
             .github/workflows/m1-fidelity-correction-runner.yml \
