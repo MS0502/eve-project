@@ -166,15 +166,42 @@ jobs:
       - name: Verify generated evidence and forward gate
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          : > /tmp/verification.log
+          set +e
           python -m pytest -q --tb=short \
-            tests/test_v4_m1_extended_controlled_observation_campaign.py
-          python scripts/audit/forward_regression_gate.py \
-            --current-pr "$CURRENT_PR" \
-            --base-sha "$BASE_SHA" \
-            --pretty \
-            --output /tmp/forward-after-registration.json
-          cat /tmp/forward-after-registration.json
+            tests/test_v4_m1_extended_controlled_observation_campaign.py \
+            >> /tmp/verification.log 2>&1
+          test_status=$?
+          forward_status=99
+          if test "$test_status" -eq 0; then
+            python scripts/audit/forward_regression_gate.py \
+              --current-pr "$CURRENT_PR" \
+              --base-sha "$BASE_SHA" \
+              --pretty \
+              --output /tmp/forward-after-registration.json \
+              >> /tmp/verification.log 2>&1
+            forward_status=$?
+            if test -f /tmp/forward-after-registration.json; then
+              cat /tmp/forward-after-registration.json >> /tmp/verification.log
+            fi
+          fi
+          set -e
+          cat /tmp/verification.log
+          if test "$test_status" -ne 0; then
+            exit "$test_status"
+          fi
+          if test "$forward_status" -ne 0; then
+            exit "$forward_status"
+          fi
+
+      - name: Upload verification failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-extended-verification-failure-${{ env.TARGET_SHA }}
+          path: /tmp/verification.log
+          if-no-files-found: ignore
 
       - name: Commit generated evidence and remove bootstrap
         shell: bash
