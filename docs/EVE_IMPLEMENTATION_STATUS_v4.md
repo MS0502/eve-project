@@ -98,7 +98,7 @@ M1-C does **not** claim:
 eve.shadow-lifecycle-owner.v1
 eve.shadow-bridge-contract.v1
 eve.shadow-bridge-registry.v1
-eve.shadow-bridge-failure.v1
+eve.shadow-bridge-failure-signal.v1
 ```
 
 The exact reviewed domain/source/disposition registry is immutable:
