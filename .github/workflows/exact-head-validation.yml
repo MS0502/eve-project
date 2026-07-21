@@ -3,117 +3,185 @@ name: Exact-head validation
 on:
   pull_request:
     branches: [main]
-    types: [synchronize]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact commit SHA to validate
+        required: true
+        type: string
+      base_sha:
+        description: Base commit SHA for scope and invariance checks
+        required: true
+        type: string
+      focused_tests:
+        description: Optional newline-separated tests paths
+        required: false
+        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  register-pr-152:
-    if: github.event.pull_request.number == 152
+  validate:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+      BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base_sha }}
+      CURRENT_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+      REQUESTED_FOCUSED_TESTS: ${{ inputs.focused_tests }}
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact target
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
-      - name: Append reviewed findings and restore validator
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
+
+      - name: Verify exact head and clean worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git cat-file -e "$BASE_SHA^{commit}"
+          test -z "$(git status --short)"
+          git rev-parse HEAD | tee /tmp/final-head.txt
+          git diff --name-only "$BASE_SHA"..."$TARGET_SHA" | sort | tee /tmp/changed-files.txt
+
+      - name: Install SHA-pinned compatibility dependency
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json
-          from pathlib import Path
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
 
-          path = Path('docs/audit/FORWARD_ADDITIONS_MANIFEST.json')
-          data = json.loads(path.read_text(encoding='utf-8'))
-          groups = data['registered_addition_groups']
-          if any(group.get('introduced_by_pr') == 152 for group in groups):
-              raise SystemExit('PR #152 is already registered')
-
-          groups.append({
-              'categories': ['adaptive_numeric', 'mutation'],
-              'disposition': 'M1_CONTROLLED_OBSERVATION_EVIDENCE',
-              'fingerprints': {
-                  '007cd88be754ca453aaf62090c872729ba626cc1cd073c2edad743478bfb28a3': 1,
-                  '0325c8f8428adf714e11dad7ad77dfe2d81d362623351ec1699a3edf2d6dc8cb': 1,
-                  '0529fd27bc84833cb91717276566499a7e299c4b88cb0c4814fe624aa12ef964': 1,
-                  '08c4ce2e6fdc3540e3f7bb875e8a87c8691e0be932679ae920aa90911d2b7c9d': 1,
-                  '15b7cb367cacf8384266ce030ea4d7f95b43b332d49c25c6ebe735fb28bbf24e': 1,
-                  '19a271c110418aa5905d7c353c33c36f9cfef32f24bd8e2333b8b83a0166a560': 1,
-                  '1a31e49ac901a74cb0b3f85fbed1a6405240fd2eb2a66339bcc2732a6642890f': 1,
-                  '24cc155b8bce7ec20e19583e630ff957ae4233fad31306d6b26761634cd63dc0': 1,
-                  '28cbb5ba3f97cb2a1674b66cc4ad295ad114ac0a0dbe1bb9d8be98dc1e5f09d6': 1,
-                  '2bff1001d787a5cd912a3858c7997eb1278ded66d67fbd155ba753a74230659e': 2,
-                  '2e2392ff1be0daccd2e6108047d535d135ef6487c1d88635bca7de614359cb21': 1,
-                  '34562f18c310b31c3d4c59eb02053a023a8e97ba068bf21ef8bc987476c16e4a': 1,
-                  '46b94876d2ba016869f931e141c46c34d7b5f4590b770b6197f8fd9a13be6f6e': 1,
-                  '4b7d23718422ab8993566fad704079306b0ffed8197825137a19722a1870f815': 1,
-                  '4fde9393f9252f7ea6486e116fd4f5b9d53bf6e3d682386b411c2baf875ed174': 1,
-                  '522de019422df0a9da8849510e184ad4feea292647419cf9823552ae2dbc4326': 1,
-                  '676cb5dcde609d952f9fb664acd925cc7c7a5e26ba0f2aee45b2fac9e7a17991': 1,
-                  '68552ef79bdd7ad96dca4e2baa83f48329d6807548486e2f2ae56cf04924b142': 1,
-                  '70e798114a04610fcf05ee2196d1aa3043c3bb4bfa09590c67dfebebf62ce5c4': 1,
-                  '7b460648508319332ae976beb6727824fe7274c384d526ab3d26ea2c03c7016e': 2,
-                  '848e06b37f8c65bd0c17461ab7aad14d8190da515dcc70b5316745da5b2946c8': 1,
-                  '8e1bc84cb85aad6c3be3754af752b51010d5e9af51fa4959240344e90efd9d5e': 1,
-                  '944cd67c397b37299c05d242f5a177f9a12d5c334ab5e1bb52de28166e96b7ef': 1,
-                  'a2d390f67a78241a85e52efe9a431a3b236907cf6bf62fe2bf7abc3d27cdb42e': 1,
-                  'ac84ea676c932f8fef3e380f03f32e88f702c0baf21e7f6207fc1b22e13b97fc': 1,
-                  'bd445237d16f6a166dcec2007c7c88b9f3822682f598c6ca0ee0c6d6e2a75e93': 1,
-                  'c5c1c0b1da6bb57cd18bcd6838bc6f47ca8d5cde20a55c143656b56f506e17d9': 1,
-                  'cabbfb0df86c4ce81a03ff512d15b830e54d6b0c62cce9ba80cb13c559c91e73': 1,
-                  'cbba8f454aa9e7f44a1a1e8000572af56e66a7eb6573cc3273d9dbf030249786': 1,
-                  'f623443d559023c32eae9b78564e3bd871442f0b2d200f51d9d7f3e3be57e16b': 1,
-                  'fd3c92214ce45c2e049c0412d3c47ea2ecf0c0fd4ed75b370be5c623b494073e': 1,
-              },
-              'introduced_by_pr': 152,
-              'owner': 'M1 controlled observation evidence',
-              'path': 'scripts/audit/m1_controlled_observation_campaign.py',
-              'rationale': 'Deterministic disconnected evidence campaign for the registered M1 stream, bounded replay, event-rate measurement, and selected silent-handler observation; no production integration, persistence, cutover, or human approval.',
-              'symbols': [
-                  'DelegatingObservedSpreadingActivation.__init__',
-                  'DelegatingObservedSpreadingActivation.learn_pair',
-                  '_ProbeSA.__init__',
-                  '_ProbeWM.__init__',
-                  '_json_bytes',
-                  '_run_learn_window',
-                  '_run_learn_window.after_snapshot',
-                  '_run_learn_window.before_snapshot',
-                  '_run_observer_failure_probe',
-                  '_sha',
-                  '_silent_candidate',
-                  'run_controlled_observation_campaign',
-              ],
-          })
-          groups.append({
-              'categories': ['adaptive_numeric', 'mutation'],
-              'disposition': 'TEST_EVIDENCE',
-              'fingerprints': {
-                  '08e2f01b071b63342d8cba630b2c9d552acbb1d7ca0d3146ab14a75e75467d3a': 1,
-                  '141ca8da0ae2f8846674f3695f8caf9f97b4cf74456c7ffc325cdd8f2fa3f356': 2,
-                  '74485104f205aacc80b6a5934da9e8e64a7607abc83c3f5093731c7823223c34': 2,
-                  '7a7054f4c882e1a27b7de69f3d0e5be88fab52af6c5192985c4b2c51b652db6e': 1,
-                  '824c3718079cff94dcb26cf3e8f60f296bf5838e196a0f18fcd6b9145316613f': 1,
-              },
-              'introduced_by_pr': 152,
-              'owner': 'M1 controlled observation verification',
-              'path': 'tests/test_v4_m1_controlled_observation_campaign.py',
-              'rationale': 'Focused evidence for deterministic scope, full divergence accounting, legacy preservation, selected silent-handler locations, event rate, and unchanged human/runtime authority.',
-              'symbols': [
-                  'test_campaign_module_has_no_io_clock_random_thread_or_runtime_install_surface',
-              ],
-          })
-          path.write_text(
-              json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(',', ':')) + '\n',
-              encoding='utf-8',
-          )
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
           PY
-          git show origin/main:.github/workflows/exact-head-validation.yml > .github/workflows/exact-head-validation.yml
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add docs/audit/FORWARD_ADDITIONS_MANIFEST.json .github/workflows/exact-head-validation.yml
-          git commit -m 'Register M1 controlled observation evidence'
-          git push origin "HEAD:${HEAD_BRANCH}"
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Compile changed Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed_python < <(grep -E '\.py$' /tmp/changed-files.txt || true)
+          if ((${#changed_python[@]})); then
+            python -m compileall -q "${changed_python[@]}"
+          fi
+
+      - name: Run focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            grep -E '^tests/.*\.py$' /tmp/changed-files.txt || true
+            printf '%s\n' "$REQUESTED_FOCUSED_TESTS"
+          } | sed '/^[[:space:]]*$/d' | sort -u > /tmp/focused-paths.txt
+          if test -s /tmp/focused-paths.txt; then
+            mapfile -t focused < /tmp/focused-paths.txt
+            set +e
+            python -m pytest -q --tb=short "${focused[@]}" > /tmp/focused.txt 2>&1
+            status=$?
+            set -e
+            cat /tmp/focused.txt
+            exit "$status"
+          else
+            printf '%s\n' 'No focused tests selected.' | tee /tmp/focused.txt
+          fi
+
+      - name: Verify M0 audit invariance
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in base head; do
+            if test "$phase" = base; then
+              sha="$BASE_SHA"
+            else
+              sha="$TARGET_SHA"
+            fi
+            git checkout --detach "$sha"
+            test -z "$(git status --short)"
+            for item in \
+              a:scripts/audit/m0_a_runtime_inventory.py \
+              b:scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+              c:scripts/audit/m0_c_persistence_state_inventory.py \
+              d:scripts/audit/m0_d_component_inventory.py; do
+              name="${item%%:*}"
+              script="${item#*:}"
+              python "$script" --output "/tmp/${phase}-${name}.json"
+            done
+          done
+          git checkout --detach "$TARGET_SHA"
+          for name in a b c d; do
+            diff -u "/tmp/base-${name}.json" "/tmp/head-${name}.json"
+          done
+          test -z "$(git status --short)"
+          printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
+
+      - name: Verify forward regression gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if test -n "$CURRENT_PR"; then
+            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
+          fi
+          python scripts/audit/forward_regression_gate.py \
+            --output /tmp/forward-regression.json \
+            --pretty \
+            "${args[@]}"
+          cat /tmp/forward-regression.json
+
+      - name: Collect full suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest --collect-only -q | tee /tmp/collect.txt
+
+      - name: Run full suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q | tee /tmp/full.txt
+
+      - name: Verify final worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git status --short)"
+
+      - name: Upload exact-head evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exact-head-validation-${{ env.TARGET_SHA }}
+          path: |
+            /tmp/final-head.txt
+            /tmp/changed-files.txt
+            /tmp/focused-paths.txt
+            /tmp/focused.txt
+            /tmp/invariance.txt
+            /tmp/forward-regression.json
+            /tmp/base-a.json
+            /tmp/head-a.json
+            /tmp/base-b.json
+            /tmp/head-b.json
+            /tmp/base-c.json
+            /tmp/head-c.json
+            /tmp/base-d.json
+            /tmp/head-d.json
+            /tmp/collect.txt
+            /tmp/full.txt
+          if-no-files-found: error
