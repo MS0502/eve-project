@@ -40,6 +40,8 @@ focused tests: 12 passed
 full suite: 2712 passed
 ```
 
+Forward registration: `4` adaptive-numeric fingerprints / `4` occurrences in the independent acceptance test, all introduced by PR `#158`.
+
 ## Reviewed criteria
 
 | Criterion | Passed |
