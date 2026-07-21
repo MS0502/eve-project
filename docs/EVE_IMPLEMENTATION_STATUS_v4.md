@@ -15,6 +15,7 @@ M1 status: **closed for mechanism verification; coverage remains deferred to A2/
 v4.2 review status: **opened and closed by the v4.2 amendment; `v4_2_review_opened = true`; no outstanding constitutional objection**
 v4.2 review consensus: **6 objections accepted plus 1 refinement requiring supersession/revocation artifacts to pass the same exact-head and human-review regime as the decisions they change**
 M2-A status: **not started; eligible to be scoped next only as separate work after v4.2, with no implementation or authority granted by this amendment**
+PR #158 gate wording retained for historical verification: **M2-A remains blocked until v4.2 approval**. This amendment satisfies that constitutional prerequisite only; it does not start M2-A.
 Current next step: **M2-A append-only SQLite shadow-persistence work may be separately scoped; no M2 pre-design or implementation is included here**
 Frozen work: open REWRITE PRs #109, #86, #84, and #82 remain untouched; absorbed PRs #11, #7, and #4 are closed
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
