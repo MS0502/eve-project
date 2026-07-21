@@ -129,6 +129,12 @@ jobs:
           test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
+      - name: Capture forward manifest for evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool docs/audit/FORWARD_ADDITIONS_MANIFEST.json > /tmp/forward-manifest-pretty.json
+
       - name: Verify forward regression gate
         shell: bash
         run: |
@@ -173,6 +179,7 @@ jobs:
             /tmp/focused-paths.txt
             /tmp/focused.txt
             /tmp/invariance.txt
+            /tmp/forward-manifest-pretty.json
             /tmp/forward-regression.json
             /tmp/base-a.json
             /tmp/head-a.json
