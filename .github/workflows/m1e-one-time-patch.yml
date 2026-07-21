@@ -1,0 +1,113 @@
+name: M1-E one-time consistency patch
+
+on:
+  push:
+    branches: [m1/shadow-acceptance-window]
+    paths:
+      - .github/workflows/m1e-one-time-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: m1/shadow-acceptance-window
+          fetch-depth: 0
+      - name: Derive unauthorized-effect state from criterion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str) -> None:
+              text = path.read_text(encoding='utf-8')
+              if text.count(old) != 1:
+                  raise SystemExit(
+                      f'{path}: expected one fragment, found {text.count(old)}'
+                  )
+              path.write_text(text.replace(old, new), encoding='utf-8')
+
+          core = Path('core/shadow_acceptance.py')
+          replace_once(
+              core,
+              '''        if self.eligible_for_human_review != computed:
+            raise ShadowAcceptanceContractError(
+                "review eligibility disagrees with criteria"
+            )
+        fixed = (
+''',
+              '''        if self.eligible_for_human_review != computed:
+            raise ShadowAcceptanceContractError(
+                "review eligibility disagrees with criteria"
+            )
+        zero_effects = next(
+            value
+            for value in self.criteria
+            if value.criterion_id == "zero_unauthorized_effects"
+        )
+        expected_effect_detection = not zero_effects.passed
+        if self.unauthorized_effects_detected != expected_effect_detection:
+            raise ShadowAcceptanceContractError(
+                "unauthorized effect state disagrees with criterion"
+            )
+        fixed = (
+''',
+          )
+          replace_once(
+              core,
+              '''            (self.persistence_mode, NO_PERSISTENCE),
+            (self.unauthorized_effects_detected, False),
+            (self.schema_version, PACKET_SCHEMA_VERSION),
+''',
+              '''            (self.persistence_mode, NO_PERSISTENCE),
+            (self.schema_version, PACKET_SCHEMA_VERSION),
+''',
+          )
+          replace_once(
+              core,
+              '''        eligible_for_human_review=machine_passed,
+    )
+''',
+              '''        eligible_for_human_review=machine_passed,
+        unauthorized_effects_detected=not zero_effects,
+    )
+''',
+          )
+
+          tests = Path('tests/test_v4_m1_e_shadow_acceptance.py')
+          replace_once(
+              tests,
+              '''    assert packet.criterion("zero_unauthorized_effects").passed is False
+    assert packet.eligible_for_human_review is False
+''',
+              '''    assert packet.criterion("zero_unauthorized_effects").passed is False
+    assert packet.unauthorized_effects_detected is True
+    assert packet.eligible_for_human_review is False
+''',
+          )
+
+          status = Path('docs/EVE_IMPLEMENTATION_STATUS_v4.md')
+          replace_once(
+              status,
+              '''unauthorized_effects_detected: false
+```
+
+M1-E therefore supplies review evidence''',
+              '''unauthorized_effects_detected: derived from zero_unauthorized_effects
+```
+
+A complete packet has `unauthorized_effects_detected=false`. An incomplete packet whose zero-effects criterion fails has it set to `true`; contradictory construction is rejected.
+
+M1-E therefore supplies review evidence''',
+          )
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add core/shadow_acceptance.py tests/test_v4_m1_e_shadow_acceptance.py docs/EVE_IMPLEMENTATION_STATUS_v4.md
+          git commit -m 'Derive M1-E unauthorized-effect state'
+          git push origin HEAD:m1/shadow-acceptance-window
