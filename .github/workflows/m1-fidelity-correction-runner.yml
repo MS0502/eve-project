@@ -60,9 +60,23 @@ jobs:
       - name: Apply and verify mutation-state fidelity correction
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          set +e
           python scripts/audit/apply_m1_extended_fidelity_correction.py \
-            --base-sha "$BASE_SHA"
+            --base-sha "$BASE_SHA" \
+            > /tmp/m1-fidelity-correction.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/m1-fidelity-correction.log
+          exit "$status"
+
+      - name: Upload correction failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-fidelity-correction-failure-${{ env.TARGET_SHA }}
+          path: /tmp/m1-fidelity-correction.log
+          if-no-files-found: error
 
       - name: Commit corrected six-file package
         shell: bash
