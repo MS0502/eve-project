@@ -184,7 +184,11 @@ def _window_fixture():
     ).hexdigest()
     evidence = LegacyPreservationEvidence(
         evidence_id="m1e:legacy-preservation",
-        case_ids=("success", "legacy-failure", "observer-failure"),
+        case_ids=(
+            "m1e:event:1",
+            "m1e:event:2",
+            "m1e:observer-failure:1",
+        ),
         return_value_preserved=(success_result is baseline_result is probe_result is None),
         exception_identity_preserved=(captured.value is error),
         call_order_preserved=trace
@@ -202,6 +206,7 @@ def _window_fixture():
         ),
         persistence_behavior_unchanged=True,
         defaults_unchanged=True,
+        external_effects_unchanged=True,
         source_evidence_digest=source_digest,
     )
     spec = ObservationWindowSpec(
@@ -319,6 +324,7 @@ def test_failed_legacy_preservation_evidence_blocks_machine_completion():
     assert evidence.passes is False
     assert packet.machine_passed is False
     assert packet.criterion("legacy_behavior_preserved").passed is False
+    assert packet.criterion("zero_unauthorized_effects").passed is False
     assert packet.eligible_for_human_review is False
 
 
@@ -370,6 +376,14 @@ def test_spec_and_legacy_evidence_contracts_are_strict():
         replace(data["evidence"], case_ids=("duplicate", "duplicate"))
     with pytest.raises(ShadowAcceptanceContractError):
         replace(data["evidence"], source_evidence_digest="bad")
+
+    spoofed = replace(
+        data["evidence"],
+        case_ids=("unrelated:1", "unrelated:2", "unrelated:3"),
+    )
+    packet = _evaluate(data, legacy_evidence=spoofed)
+    assert packet.criterion("legacy_behavior_preserved").passed is False
+    assert packet.machine_passed is False
 
 
 def test_checkpoint_restore_rollback_and_lifecycle_criteria_are_explicit():
