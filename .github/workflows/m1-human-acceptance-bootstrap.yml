@@ -3,7 +3,7 @@ name: M1 human acceptance bootstrap
 on:
   pull_request:
     branches: [main]
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   contents: write
@@ -58,6 +58,12 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip check
 
+      - name: Apply zero-forward correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/patch_m1_acceptance_zero_forward.py
+
       - name: Generate and verify external acceptance record
         shell: bash
         run: |
@@ -87,7 +93,8 @@ jobs:
           rm -f .github/workflows/m1-human-acceptance-bootstrap.yml
           git add -u -- \
             .github/workflows/m1-human-acceptance-bootstrap.yml \
-            scripts/audit/apply_m1_human_acceptance_record.py
+            scripts/audit/apply_m1_human_acceptance_record.py \
+            scripts/audit/patch_m1_acceptance_zero_forward.py
           git add \
             docs/EVE_IMPLEMENTATION_STATUS_v4.md \
             docs/audit/FORWARD_ADDITIONS_MANIFEST.json \
