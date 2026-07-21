@@ -1,26 +1,22 @@
 name: Exact-head validation
 
 on:
-  pull_request:
-    branches: [main]
-    types: [ready_for_review]
+  push:
+    branches: [m1/shadow-acceptance-window]
 
 permissions:
   contents: write
 
 jobs:
   patch-m1-e:
-    if: github.event.pull_request.number == 150
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Apply consistency repair and restore validator
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -121,4 +117,4 @@ M1-E therefore supplies review evidence''',
           git add core/shadow_acceptance.py tests/test_v4_m1_e_shadow_acceptance.py docs/EVE_IMPLEMENTATION_STATUS_v4.md .github/workflows/exact-head-validation.yml
           git add -u .github/workflows/m1e-one-time-patch.yml
           git commit -m "Derive M1-E unauthorized-effect state"
-          git push origin "HEAD:${HEAD_BRANCH}"
+          git push origin "HEAD:m1/shadow-acceptance-window"
