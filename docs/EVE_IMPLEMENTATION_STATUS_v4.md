@@ -1,9 +1,9 @@
 # EVE v4 Implementation Status
 
-Active constitution: **EVE v4.1**
+Active constitution: **EVE v4.2**
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 Runtime status: **pre-kernel legacy runtime remains authoritative; M1 mechanism evidence is human-accepted, while M1-A through M1-E remain shadow/declaration/evidence-only with no production integration**
-Previous v3/v3.1 documents: historical reference only
+Previous v3/v3.1/v4.1 documents: historical reference only
 M0 status: **closed**
 Forward-gate status: **implemented and enforced by exact-head validation**
 M1-A status: **completed by PR #146**
@@ -12,8 +12,12 @@ M1-C status: **completed by PR #148**
 M1-D status: **completed by PR #149**
 M1-E status: **completed and explicitly human-accepted by PR #158; immutable machine packet remains non-authoritative**
 M1 status: **closed for mechanism verification; coverage remains deferred to A2/M2 dual-read and cutover**
-Current next step: **open the reviewed v4.2 amendment triangle; M2-A remains blocked until v4.2 approval**
-Frozen work: open REWRITE PRs #109, #86, #84, and #82; absorbed PRs #11, #7, and #4 are closed
+v4.2 review status: **opened and closed by the v4.2 amendment; `v4_2_review_opened = true`; no outstanding constitutional objection**
+v4.2 review consensus: **6 objections accepted plus 1 refinement requiring supersession/revocation artifacts to pass the same exact-head and human-review regime as the decisions they change**
+M2-A status: **not started; eligible to be scoped next only as separate work after v4.2, with no implementation or authority granted by this amendment**
+PR #158 gate wording retained for historical verification: **M2-A remains blocked until v4.2 approval**. This amendment satisfies that constitutional prerequisite only; it does not start M2-A.
+Current next step: **M2-A append-only SQLite shadow-persistence work may be separately scoped; no M2 pre-design or implementation is included here**
+Frozen work: open REWRITE PRs #109, #86, #84, and #82 remain untouched; absorbed PRs #11, #7, and #4 are closed
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
 M1-A merge baseline: `1a3da9aee41c0bed065bb0bbbcc2e8e577aa50f9`
@@ -24,14 +28,15 @@ M1-E machine-evidence merge baseline: `76e7df1d6bd0194ccd1925fc1b906a359b0c5aef`
 M1 controlled-evidence merge baseline: `847621bcd61634958ce505108ade491c50ced0d4`
 M1 expanded-evidence merge baseline: `7c4573e628e5ac51d0d64ad1040078741f3630e0`
 M1 accepted evidence head: `560b9b54f3237d63762b81da38e7c25c36922214`
+v4.2 amendment baseline: `40a2a42da235d6ac97867c20a57620830a35fecd`
 
 ## Current authority
 
-EVE v4.1 is the active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime and persistence authority.
+EVE v4.2 is the active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime and persistence authority.
 
 M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains. M1-E provides a deterministic in-memory evaluator and immutable machine-review packet for explicitly supplied M1-B through M1-D evidence.
 
-None of M1-A through M1-E is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. M1-D names legacy source modules as evidence only. M1-E imports or calls no legacy module and installs no observer or bridge. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced.
+None of M1-A through M1-E is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. M1-D names legacy source modules as evidence only. M1-E imports or calls no legacy module and installs no observer or bridge. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced by v4.2.
 
 ## M1 implementation records
 
@@ -73,16 +78,7 @@ eve.shadow-equivalence-report.v1
 
 The reducer accepts only the exact M1-B producer/version, target, stream, event types, causal-context shape, target metadata, and success/failure outcome contract. Every snapshot keeps `learned` as an ordered subsequence of `calls`.
 
-A valid transition requires:
-
-- one-based contiguous projection sequence;
-- event `before` snapshot equal to current projection state;
-- exactly one appended legacy-call record;
-- unchanged call-log prefix;
-- success → attempted pair appended exactly once to learned state;
-- failure → learned state unchanged.
-
-Malformed scope, state mismatch, sequence gap, impossible learned-state ordering, and invalid transition fail closed before a new immutable state is returned. Equivalence comparison is read-only. Checkpoint and rollback are immutable in-memory values only and have no durable recovery authority.
+A valid transition requires one-based contiguous projection sequence; event `before` equal to current projection state; exactly one appended legacy-call record; unchanged call-log prefix; success appending the attempted pair exactly once; and failure leaving learned state unchanged. Malformed scope, mismatch, sequence gap, impossible ordering, and invalid transition fail closed. Checkpoint and rollback remain immutable in-memory values with no durable recovery authority.
 
 ### M1-D — disconnected lifecycle contracts
 
@@ -104,24 +100,7 @@ goal     → adapters/goal_adapter.py   → WRAP
 memory   → adapters/memory_adapter.py → WRAP
 ```
 
-Every bridge is fixed to:
-
-```text
-lifecycle_status:      declared_disconnected
-integration_mode:      disconnected
-default_enabled:       false
-authority:             none
-emitted_event_types:   ()
-required_capabilities: ()
-persistence_mode:      none
-retry_policy:          forbidden
-suppression_policy:    forbidden
-rollback_scope:        shadow_state_only
-```
-
-Every owner declares construction, shutdown, interruption, failure propagation, provenance, and rollback responsibilities. Missing, duplicate, unknown, cross-domain, source-spoofed, disposition-spoofed, authority-bearing, event-emitting, capability-bearing, persistence-bearing, retrying, or suppressing declarations fail closed.
-
-`BridgeFailureSignal` retains bridge, owner, domain, stage, error type, and SHA-256 of the error message without retaining the raw message. It cannot authorize retry, suppression, swallowing, recovery, or legacy-authority changes.
+Every bridge is fixed to disconnected, default-disabled, no-authority, no-event, no-capability, no-persistence, no-retry, no-suppression behavior with shadow-state-only rollback. Every owner declares construction, shutdown, interruption, failure propagation, provenance, and rollback responsibilities. Invalid declarations fail closed.
 
 ### M1-E — machine shadow-acceptance evidence
 
@@ -133,8 +112,6 @@ eve.m1-legacy-preservation-evidence.v1
 eve.m1-shadow-acceptance-criterion.v1
 eve.m1-shadow-acceptance-packet.v1
 ```
-
-The evaluator accepts only explicit in-memory M1-B event and observer-failure evidence, an explicit M1-C initial state and expected final snapshot, explicit legacy-preservation evidence, and the exact M1-D disconnected lifecycle registry. It imports or calls no legacy module and installs no production hook.
 
 The immutable packet contains ten machine criteria:
 
@@ -151,31 +128,28 @@ legacy_behavior_preserved
 zero_unauthorized_effects
 ```
 
-Legacy-preservation evidence is bound to the exact event and observer-failure IDs in the evaluated window. Machine completion requires preserved return values, exception identity, call order, legacy state, persistence behavior, defaults, and external-effect behavior. Raw legacy and observer error messages are not retained in the packet.
-
-A complete machine packet may set only `eligible_for_human_review=true`. The schema permanently fixes:
-
-```text
-human_review_status: required_not_performed
-human_accepted: false
-v4_2_eligible: false
-authority: shadow_only
-runtime_integrated: false
-persistence_mode: none
-unauthorized_effects_detected: derived from zero_unauthorized_effects
-```
-
-A complete packet has `unauthorized_effects_detected=false`. An incomplete packet whose zero-effects criterion fails has it set to `true`; contradictory construction is rejected.
-
-M1-E therefore supplies review evidence but cannot accept itself, activate a bridge, grant persistence or recovery authority, perform cutover, or open v4.2 automatically. Explicit human acceptance remains a separate constitutional decision.
+A complete machine packet may set only `eligible_for_human_review=true`. Its schema permanently fixes `human_review_status=required_not_performed`, `human_accepted=false`, `v4_2_eligible=false`, `authority=shadow_only`, `runtime_integrated=false`, and `persistence_mode=none`. It cannot accept itself, activate a bridge, grant persistence or recovery authority, perform cutover, or open v4.2 automatically.
 
 ### M1 human acceptance — external decision record
 
-PR #158 records that separate decision in `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.json` and `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.md`. The canonical JSON record SHA-256 is `aff557da810b7faa0c9dc57bde214a9760a0d3099c8031cb6eb7a24398cf8522`. It pins expanded evidence head `560b9b54f3237d63762b81da38e7c25c36922214`, raw artifact SHA-256 `3618b948cb2e864741412713b5c724632ae9fd72a214479b970d8c4aeeafcaac`, exact-head run `29826184624`, and artifact ZIP SHA-256 `5482da68f38e5d66400d6a32b948d559ce1dd6ce7ec80fe77de08659b8f9d0b9`.
+PR #158 records the separate decision in `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.json` and `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.md`. The canonical JSON record SHA-256 is `aff557da810b7faa0c9dc57bde214a9760a0d3099c8031cb6eb7a24398cf8522`. It pins expanded evidence head `560b9b54f3237d63762b81da38e7c25c36922214`, raw artifact SHA-256 `3618b948cb2e864741412713b5c724632ae9fd72a214479b970d8c4aeeafcaac`, exact-head run `29826184624`, and artifact ZIP SHA-256 `5482da68f38e5d66400d6a32b948d559ce1dd6ce7ec80fe77de08659b8f9d0b9`.
 
-The external record sets `human_accepted=true`, `m1_closed=true`, and `v4_2_eligible=true`. It leaves `v4_2_review_opened=false`, `m2_started=false`, production observer/persistence/runtime integration disabled, and the pre-kernel legacy runtime authoritative. The immutable machine packet remains fixed to false and is not rewritten by the acceptance record.
+The PR #158 record sets `human_accepted=true`, `m1_closed=true`, and `v4_2_eligible=true`. At creation it left `v4_2_review_opened=false` and `m2_started=false`. The immutable machine packet remains fixed and is not rewritten. The v4.2 amendment now records the later review state in this STATUS document rather than modifying the PR #158 artifacts.
 
 The accepted scope is mechanism verification only. Historical coverage is deferred to A2/M2 dual-read and cutover; 527 unobserved historical sites remain tracked debt for progressive correction at WRAP.
+
+## v4.2 constitutional amendment record
+
+The v4.2 amendment is governance-only and changes exactly `AGENTS.md`, `docs/EVE_DESIGN_v4.md`, and this STATUS document. It creates no runtime, test, data, scanner, enforcement, database, persistence, model, vector, checkpoint, or generated artifact change.
+
+The review accepted all six objections raised against the initial C1-C4 draft and accepted one additional refinement. C1-C4 remain draft-lineage aliases only; the constitutional lineage continues as A9-A12:
+
+1. **A9 — Discrete-transition granularity.** PR #152 records 6 standalone deterministic tick steps with 0 events, maximum 1 event in one logical step, and 1.0 event per observed legacy mutating call. PR #153 separately records 4 standalone tick steps with 0 events and a live-thread tick observation with 0 events before discrete mutation. Continuous samples do not emit events; versioned named-state changes may emit in either direction; duplicate emission while the same state persists is prohibited.
+2. **A10 — Evidence recalculability.** Raw observations or immutable SHA-256/schema-pinned references bound into the same package must permit independent recomputation of every claimed metric. Access and redaction rules must preserve authorized recomputability. Green verdicts alone are insufficient.
+3. **A11 — Mutation-state fidelity.** Actual before/after values are required. Large state may use an identical-method canonical digest plus revalidatable structural manifest. `state_changed` is computed, not manually asserted; every record carries a transition hash and replay result.
+4. **A12 — Append-only decision records.** Machine packets and human decisions are immutable. Correction, replacement, supersession, or revocation uses a separate digest-linked append-only artifact. That artifact must pass the same exact-head validation and human-review regime as the decision it changes.
+
+This amendment records `v4_2_review_opened=true` and closes that review on constitutional merge. It does not set `m2_started=true`.
 
 ## Merged source-of-truth evidence
 
@@ -185,6 +159,9 @@ The accepted scope is mechanism verification only. Historical coverage is deferr
 - `docs/audit/M0_C_AFFECT_MIGRATION_PLAN.md`: 63 axes = 26 mutable legacy + 37 read-only registry; 59 `MAPPED`, 4 `PROPOSED-DROP`, 0 `UNRESOLVED`.
 - `docs/audit/M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`: 1,225 component evidence entries; 75 life-loop entries; integrated pre-M0-D failure baseline broad 614, silent 607, silent broad 532.
 - `docs/audit/M0_D_MODULE_DISPOSITION.md`: 288 runtime modules; KEEP 30, WRAP 78, REWRITE 6, EXPERIMENTAL 172, DEPRECATE 2, REMOVE 0.
+- `docs/audit/M1_CONTROLLED_OBSERVATION_EVIDENCE.md` from PR #152: standalone deterministic ticks 6 with events during tick steps 0; maximum events in one logical step 1; events per observed legacy call 1.0.
+- `docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md` and raw JSON from PR #153: standalone tick steps 4 with events 0; live tick count at barrier 1 and events from live tick before discrete mutation 0; raw observations sufficient to recompute every report metric.
+- `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.md` and JSON from PR #158: immutable machine packet retained separately from explicit human acceptance, with exact evidence and workflow artifact pins.
 
 ## Figure provenance and discrepancy register
 
@@ -200,6 +177,8 @@ Count semantics remain fixed:
 - 1,225 = M0-D component evidence entries, not modules or owners;
 - 288 = module disposition units;
 - 75 = life-loop entries; taxonomy occurrence totals may exceed 75 because one callable may map to multiple categories.
+
+No v4.2 source-of-truth discrepancy was found among PRs #152, #153, and #158. The tick evidence is intentionally reported as standalone 6 + standalone 4 + a separate live-thread observation, not silently summed into one count.
 
 ## Dual-gate status
 
@@ -230,20 +209,7 @@ raw_capability:       170
 
 The gate enforces **unregistered delta = 0**. It rejects unregistered findings, new parse errors, baseline drift, stale or over-counted registrations, metadata mismatches, and wrong-PR provenance.
 
-Reviewed additions are registered by introducing PR:
-
-- PR #145: forward scanner and focused gate tests;
-- PR #146: M1-A kernel and focused tests;
-- PR #147: M1-B observer and focused tests;
-- PR #148: M1-C projection and focused tests;
-- PR #149: M1-D lifecycle declarations and focused tests;
-- PR #150: M1-E acceptance evaluator and focused tests;
-- PR #151: documented the missing controlled-observation evidence gap;
-- PR #152: initial controlled M1 observation evidence;
-- PR #153: corrected expanded mechanism evidence with raw mutation-state fidelity;
-- PR #158: external human-acceptance record and independent recalculation tests.
-
-PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. The manifest remains the source of truth for all later exact registrations. Registration is review evidence, not automatic runtime authority.
+Reviewed additions are registered by introducing PR: #145 forward scanner; #146 M1-A; #147 M1-B; #148 M1-C; #149 M1-D; #150 M1-E; #151 evidence-gap documentation; #152 controlled evidence; #153 corrected expanded evidence; and #158 external human acceptance. Registration is review evidence, not automatic runtime authority.
 
 ## Governance registry
 
@@ -272,7 +238,7 @@ This registry may be adjusted by a reviewed STATUS update without a constitution
 
 | ID | Purpose | Entry | Exit |
 |---|---|---|---|
-| M2-A | Add append-only SQLite shadow persistence, schema versions, snapshots, integrity checks, and bounded backup policy with legacy authority retained. | Accepted M1 kernel envelope. | Shadow writes and restores are reproducible; legacy remains authoritative. |
+| M2-A | Add append-only SQLite shadow persistence, schema versions, snapshots, integrity checks, and bounded backup policy with legacy authority retained. | Accepted M1 kernel envelope and active v4.2 constitution. | Shadow writes and restores are reproducible; legacy remains authoritative. |
 | M2-B | Mechanically extract and approve the read-capability edge manifest from source/raw stores through cognition to expression/generation. | M2-A schemas stable; source-store boundaries identified. | Every approved edge has capability, provenance, quarantine, quotation, and denial semantics; no unknown raw-text edge remains. |
 | M2-C | Implement migration tooling and dual-read comparison for the bounded state envelope, including legacy sidecar evidence. | M2-A/B accepted; migration schemas versioned. | Dual-read equivalence and incompatibility reporting pass without changing authority. |
 | M2-D | Rehearse snapshot restore, replay equivalence, corrupt-state handling, forced termination, and rollback under a defined observation window. | M2-C dual-read stable. | Rehearsal evidence is complete and independently reviewed; rollback succeeds. |
@@ -300,20 +266,14 @@ This registry may be adjusted by a reviewed STATUS update without a constitution
 
 ## Promotion rule
 
-M1-E machine evidence did not itself grant promotion. The separate explicit human-acceptance record now closes M1 mechanism verification and makes the project eligible to open a v4.2 amendment review. This does not open or approve v4.2, start M2, or activate any runtime capability; v4.2 requires its own exact-head validation and explicit approval.
+M1-E machine evidence did not itself grant promotion. PR #158 separately closed M1 mechanism verification and made the project eligible to open v4.2 review. The v4.2 amendment has now opened and closed that review through its own exact-head validation, human review, and constitutional merge. This does not start M2 or activate any runtime capability.
 
 ## Current next step
 
-Open a reviewed **v4.2 amendment triangle** containing:
+M2-A is next and must be a separate, tightly scoped task. Until a later M2 change is independently reviewed and accepted:
 
-1. discrete-transition event granularity: continuous decay is derived state and emits no event by default;
-2. raw-observation recalculability for every approval claim;
-3. mutation-state fidelity: execution of a mutation-shaped path is insufficient without independently verifiable changed-state evidence.
-
-Until v4.2 is separately approved:
-
-1. `v4_2_review_opened` remains false until that review PR is created;
-2. M2 implementation does not begin;
-3. no bridge, persistence path, scheduler, recovery behavior, cutover, or production hook may be activated;
-4. the pre-kernel legacy runtime remains authoritative;
-5. the 527 unobserved historical sites remain tracked debt, not safe coverage.
+1. `m2_started` remains false;
+2. no bridge, persistence path, scheduler, recovery behavior, cutover, or production hook may be activated;
+3. the pre-kernel legacy runtime remains authoritative;
+4. the 527 unobserved historical sites remain tracked debt, not safe coverage;
+5. A9-A12 bind all future M2 evidence and decision artifacts.

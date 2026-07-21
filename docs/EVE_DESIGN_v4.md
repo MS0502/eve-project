@@ -1,6 +1,6 @@
-# EVE v4.1 Constitution and Design
+# EVE v4.2 Constitution and Design
 
-EVE v4.1 is the **ACTIVE CONSTITUTIONAL AUTHORITY**.
+EVE v4.2 is the **ACTIVE CONSTITUTIONAL AUTHORITY**.
 
 This document is constitutional authority only. It does not claim that any v4 runtime is implemented or activated and does not enable runtime features, persistence, enforcement, model activation, vector loading, database creation, AGP bypass, speech-generation passthrough, or production defaults. The implementation audited by M0 is designated the **pre-kernel legacy runtime** until later milestones explicitly replace its authorities.
 
@@ -32,15 +32,21 @@ The pre-kernel legacy runtime does not satisfy this event-kernel contract merely
 
 ## 7. Event granularity
 
-After event-kernel activation, record discrete transitions such as input/observation acceptance, memory candidate and consolidation, goal create/suspend/resume, action selection, appraisal completion, skill-update stabilization, permission change, and external-effect authorization/execution. Do not record every timer tick or continuous decay step. Derived continuous values such as activation, accessibility, energy, or drive decay must be reproducible from base state, model version, parameters, and monotonic elapsed time.
+After event-kernel activation, record discrete transitions such as input/observation acceptance, memory candidate and consolidation, goal create/suspend/resume, action selection, appraisal completion, skill-update stabilization, permission change, and external-effect authorization/execution.
+
+The merged empirical record is deliberately separated rather than collapsed: `docs/audit/M1_CONTROLLED_OBSERVATION_EVIDENCE.md` from PR #152 records **6 standalone deterministic tick steps with 0 events**, **maximum 1 event in one logical step**, and **1.0 event per observed legacy mutating call**; `docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md` from PR #153 separately records **4 standalone tick steps with 0 events** and a **live-thread tick observation with 0 events before discrete mutation**. These are therefore cited as **standalone ticks 6 + 4, plus one separate live-thread tick observation**, not as a single undifferentiated tick total.
+
+Events MUST NOT be emitted to sample continuous values. An event MAY be emitted only when a named semantic state, candidate, permission, or lifecycle state actually changes under a versioned transition condition, in either direction. While the same transition state persists, duplicate emission is prohibited. A continuous value such as `hunger = 0.701` is not itself an event; a transition such as `goal_candidate_absent → hunger_goal_candidate_created` may be an event when the versioned predicate changes the named state. Threshold predicates and model versions must be retained for replay. Concrete hysteresis and cooldown numerics are deferred to M3 design; the no-duplicate rule is constitutional now.
+
+Derived continuous values such as activation, accessibility, energy, or drive decay must remain reproducible from base state, model version, parameters, and monotonic elapsed time.
 
 ## 8. Future persistence requirements
 
-M1/M2 must later use append-only SQLite event storage, periodic validated snapshots, replay from the latest valid snapshot, WAL where supported, explicit transactions, integrity checks, schema versions and migration history, crash recovery, bounded backups, forced-termination resilience, corrupt-snapshot fallback and restore verification, and mobile storage-growth policy. No governance-only amendment creates or activates a database.
+M2 must use append-only SQLite event storage, periodic validated snapshots, replay from the latest valid snapshot, WAL where supported, explicit transactions, integrity checks, schema versions and migration history, crash recovery, bounded backups, forced-termination resilience, corrupt-snapshot fallback and restore verification, and mobile storage-growth policy. No governance-only amendment creates or activates a database.
 
 ## 9. Memory and forgetting
 
-EVE may not consciously delete historical source events. Original event history is retained. Forgetting is automatic accessibility decay, compression, consolidation, generalization, association change, and cue-based reactivation. Personal recollection and immutable safety/audit history are separate. Migration must preserve provenance and continuity.
+EVE may not consciously delete historical source events. Original event history is retained. Forgetting is automatic accessibility decay, compression, consolidation, generalization, association change, and cue-based reactivation. Personal recollection and immutable safety/audit history are separate. Migration must preserve provenance and continuity. Original retention does not imply permanent effect: a later validated record may adjust authority, accessibility, or interpretation without rewriting the original.
 
 ## 10. Binding affect migration contract
 
@@ -71,7 +77,7 @@ Two independent gates govern this reality:
 1. **Historical audit gate.** Completed M0 audit regeneration must remain byte-identical to the merged snapshot universe. This is the PR #141 / PR #143 regime.
 2. **Forward regression gate.** The same detector families operate against the current tree. Mutation or direct-write entries absent from the frozen forward manifest are prohibited unless the same PR registers the justified additions in a reviewed **forward-additions manifest**. Event-kernel code and audit tooling use this registration path; construction of the kernel is not blocked by an absolute `delta = 0` rule.
 
-Until the forward scanner and manifest exist, the second gate is review-enforced. Implementing that scanner is the first post-v4.1 infrastructure PR. A registration is evidence for review, not automatic approval.
+The forward scanner and manifest now exist and are enforced by exact-head validation. A registration is evidence for review, not automatic approval.
 
 ## 15. Persistence authority and cutover
 
@@ -130,7 +136,7 @@ The integrated pre-M0-D baseline at `fe10cd954bdf445400ea6aa9708dd214ed761114`, 
 
 The merged M0-B canonical snapshot in `docs/audit/M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md` separately records broad **614**, silent **597**, and silent broad **525**. These are different snapshot-provenance figures and must not be collapsed or silently reconciled.
 
-No new silent+broad handler is allowed. This prohibition is review-enforced until the forward gate exists.
+No new silent+broad handler is allowed. This prohibition is enforced by the active forward gate.
 
 Before the event kernel, shadow instrumentation may emit only non-authoritative diagnostic envelopes with type `silent_failure_observed_candidate`. Such envelopes have no recovery, persistence, mutation, or event authority. A validated `silent_failure_observed` event may exist only after the event kernel. Remediation occurs incrementally when a module is wrapped; bulk exception rewrites are prohibited.
 
@@ -157,9 +163,31 @@ Detailed milestone IDs referenced by this constitution are defined in the provis
 
 ## 22. Promotion rule
 
-M1 shadow-acceptance evidence grants only **eligibility to open** a human-reviewed v4.2 amendment review. Promotion is never automatic. A v4.2 amendment requires its own exact-head validation, explicit approval, and constitutional merge.
+M1 mechanism verification was explicitly human-accepted by PR #158, granting eligibility to open the v4.2 amendment review only. This v4.2 amendment is a separate constitutional decision and becomes active only after its own exact-head validation, explicit human review, and merge. Its merge closes the v4.2 review. It does not start M2, activate persistence, install a production observer, transfer runtime authority, or authorize cutover.
 
-## Amendment Log — v4.1
+## 23. Evidence recalculability
+
+Acceptance, gate, and cutover evidence packages MUST include the raw observational data sufficient for independent recomputation of every claimed metric, OR immutable content-addressed references to that data bound into the same verification package. Each reference must pin SHA-256 and schema version. Access restrictions and redaction rules must be stated; after redaction, claimed metrics must remain recomputable by authorized reviewers. Green verdicts alone are not observation evidence.
+
+`docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md` and its raw companion artifact from PR #153 are the direct precedent: every reported metric is independently recalculable from the bound raw artifact. The separate acceptance record in PR #158 independently pins that artifact. This rule is forward-binding from v4.2. Merged M0 artifacts already conform and are not retroactively invalidated.
+
+## 24. Mutation-state fidelity
+
+Mutation observation evidence MUST record actual state change through before and after values. For large state, exact values may be replaced by a content digest over a versioned canonical representation plus a revalidatable structural manifest. The manifest must identify serialization schema and version, hash algorithm, and applicable counts, shape, and key-domain metadata. Replay-generated state must be digested by the identical method.
+
+`state_changed` is computed from the before/after evidence and is never manually flagged. Each mutation record carries a transition hash and its replay result. PR #153 is the direct precedent: control-flow execution alone was rejected, and the accepted evidence bound changed state, transition digests, and replay results. This rule binds M2 dual-read and cutover packages.
+
+## 25. Append-only decision records
+
+Machine evidence packets and human decision artifacts are immutable after creation. Corrections, withdrawals, rejections, replacements, supersessions, or revocations may be recorded ONLY as separate append-only artifacts that explicitly reference the superseded artifact's digest. The latest valid decision is computed from the chain; history is preserved while erroneous authority remains revocable.
+
+Supersession and revocation artifacts MUST undergo the same validation regime as the decisions they supersede, including exact-head validation and human review. A revocation path may not be a weaker back door than approval.
+
+PR #158 is the direct precedent: the immutable machine packet remained fixed, while a separate human acceptance artifact carried the later constitutional decision. This aligns with Section 9 memory principles: originals are retained, effect is adjustable, and nothing is rewritten.
+
+## Amendment Log — v4.2
+
+Draft-lineage aliases C1-C4 correspond to A9-A12 only; they have no separate constitutional numbering or authority.
 
 | Amendment | Constitutional result | Merged evidence source |
 |---|---|---|
@@ -171,3 +199,7 @@ M1 shadow-acceptance evidence grants only **eligibility to open** a human-review
 | A6 — Adaptive/numeric state | Keeps 1,225 as evidence count and 288 modules as disposition units; adds contract and dual-gate requirements. | `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md`; `M0_D_MODULE_DISPOSITION.md` |
 | A7 — Failure visibility | Prohibits new silent+broad handling, records both provenance-specific baselines, and limits pre-kernel signals to diagnostic candidates. | `M0_B_GATE_FAILURE_CLOCK_CONCURRENCY_MAP.md`; `M0_D_NEURAL_VECTOR_LIFELOOP_INVENTORY.md` |
 | A8 — Audit baseline pinning | Makes snapshot-scoped byte identity and exact-head validation permanent governance requirements. | PR #141; PR #143; `.github/workflows/exact-head-validation.yml` |
+| A9 — Discrete-transition granularity | Prohibits continuous-value sampling events; permits events only for versioned named-state changes in either direction and forbids duplicates while state persists. | PR #152 `M1_CONTROLLED_OBSERVATION_EVIDENCE.md`; PR #153 `M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md` |
+| A10 — Evidence recalculability | Requires raw observations or immutable SHA-256/schema-pinned references sufficient to recompute every claimed metric within the same verification package. | PR #153 raw/evidence artifacts; PR #158 acceptance pins |
+| A11 — Mutation-state fidelity | Requires computed before/after change evidence, or canonical digest plus structural manifest, with transition hash and identical-method replay result. | PR #153 corrected mutation-state evidence; PR #158 reviewed criteria |
+| A12 — Append-only decision records | Makes machine and human decision artifacts immutable; correction or revocation uses a separately exact-head-validated and human-reviewed append-only chain artifact. | PR #158 immutable machine packet plus separate acceptance artifact; Section 9 |
