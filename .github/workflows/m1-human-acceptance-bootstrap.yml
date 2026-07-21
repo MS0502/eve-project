@@ -1,0 +1,101 @@
+name: M1 human acceptance bootstrap
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  generate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'm1/human-acceptance-record'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      CURRENT_PR: ${{ github.event.pull_request.number }}
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - name: Checkout exact acceptance bootstrap head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+
+      - name: Verify acceptance coordinates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$BASE_SHA" = "7c4573e628e5ac51d0d64ad1040078741f3630e0"
+          test -z "$(git status --short)"
+
+      - name: Install declared dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Generate and verify external acceptance record
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          python scripts/audit/apply_m1_human_acceptance_record.py \
+            --approval-pr "$CURRENT_PR" \
+            --base-sha "$BASE_SHA" \
+            > /tmp/m1-human-acceptance.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/m1-human-acceptance.log
+          exit "$status"
+
+      - name: Upload acceptance bootstrap failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-human-acceptance-failure-${{ env.TARGET_SHA }}
+          path: /tmp/m1-human-acceptance.log
+          if-no-files-found: error
+
+      - name: Commit permanent acceptance package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/m1-human-acceptance-bootstrap.yml
+          git add -u -- \
+            .github/workflows/m1-human-acceptance-bootstrap.yml \
+            scripts/audit/apply_m1_human_acceptance_record.py
+          git add \
+            docs/EVE_IMPLEMENTATION_STATUS_v4.md \
+            docs/audit/FORWARD_ADDITIONS_MANIFEST.json \
+            docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.json \
+            docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.md \
+            tests/test_v4_m1_human_acceptance_record.py
+          test -z "$(git status --short | grep -vE '^(M |A |D )' || true)"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "Record explicit M1 human acceptance"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
