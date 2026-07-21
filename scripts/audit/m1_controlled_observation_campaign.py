@@ -1,9 +1,4 @@
-"""Deterministic controlled-runtime evidence for the M1 human review gate.
-
-The campaign invokes the reviewed ``ActivationAdapter.learn_pair`` bound method
-against an isolated delegating legacy SpreadingActivation instance. It installs
-no production hook, uses no clock, performs no I/O, and grants no authority.
-"""
+"""Deterministic, disconnected controlled evidence for the M1 review gate."""
 from __future__ import annotations
 
 import hashlib
@@ -26,6 +21,7 @@ from core.shadow_observer import (
 )
 from core.shadow_projection import (
     ActivationLearnPairShadowState,
+    ShadowProjectionError,
     compare_activation_learn_pair_equivalence,
     reduce_activation_learn_pair,
 )
@@ -37,7 +33,6 @@ CAMPAIGN_ID = "m1:controlled-observation:activation-learn-pair:v1"
 CORRELATION_ID = "corr:m1-controlled-observation"
 STATIC_SILENT_BROAD_FROZEN = 525
 STATIC_SILENT_BROAD_INTEGRATED = 532
-
 LEARN_STEPS: tuple[tuple[str, str, float], ...] = (
     ("alpha", "beta", 0.10),
     ("beta", "gamma", 0.20),
@@ -57,7 +52,7 @@ TICK_AFTER_CALLS = (2, 4, 6, 8, 10, 12)
 
 
 class ControlledCampaignError(RuntimeError):
-    """Campaign construction or evidence consistency failed."""
+    pass
 
 
 def _canonical(value: Mapping[str, Any], field: str) -> str:
@@ -99,9 +94,9 @@ def _event_record(event: Any) -> dict[str, Any]:
 
 
 class DelegatingObservedSpreadingActivation:
-    """Test-only ledger that delegates successful learning to the retained legacy SA."""
+    """Isolated ledger that delegates successful calls to retained legacy SA."""
 
-    def __init__(self, *, fail_on_call: int, failure: Exception) -> None:
+    def __init__(self, *, fail_on_call: int, failure: RuntimeError) -> None:
         self.inner = SpreadingActivation()
         self.calls: list[tuple[str, str, float]] = []
         self.learned: list[tuple[str, str, float]] = []
@@ -128,16 +123,13 @@ class DelegatingObservedSpreadingActivation:
         }
 
     def actual_state(self) -> dict[str, Any]:
-        weights = [
-            [left, right, float(weight)]
-            for (left, right), weight in sorted(self.inner.weights.items())
-        ]
         return {
-            "legacy_class": (
-                "legacy.eve_modules.spreading_activation.SpreadingActivation"
-            ),
+            "legacy_class": "legacy.eve_modules.spreading_activation.SpreadingActivation",
             "time": float(self.inner.time),
-            "weights": weights,
+            "weights": [
+                [left, right, float(weight)]
+                for (left, right), weight in sorted(self.inner.weights.items())
+            ],
         }
 
 
@@ -150,15 +142,15 @@ class _ProbeSA:
     def __init__(self, fail_method: str | None = None) -> None:
         self.fail_method = fail_method
 
-    def _maybe_fail(self, method: str) -> None:
+    def _fail(self, method: str) -> None:
         if self.fail_method == method:
             raise RuntimeError(f"controlled silent probe:{method}")
 
     def decay(self, dt: float) -> None:
-        self._maybe_fail("sa.decay")
+        self._fail("sa.decay")
 
     def apply_hormone_modulation(self, state: Mapping[str, float]) -> None:
-        self._maybe_fail("sa.apply_hormone_modulation")
+        self._fail("sa.apply_hormone_modulation")
 
     def activate(self, category: str, strength: float = 0.5) -> None:
         return None
@@ -174,25 +166,25 @@ class _ProbeWM:
     def __init__(self, fail_method: str | None = None) -> None:
         self.fail_method = fail_method
 
-    def _maybe_fail(self, method: str) -> None:
+    def _fail(self, method: str) -> None:
         if self.fail_method == method:
             raise RuntimeError(f"controlled silent probe:{method}")
 
     def decay(self, dt: float) -> None:
-        self._maybe_fail("wm.decay")
+        self._fail("wm.decay")
 
     def apply_hormone_state(self, state: Mapping[str, float]) -> None:
-        self._maybe_fail("wm.apply_hormone_state")
+        self._fail("wm.apply_hormone_state")
 
     def add(self, category: str, salience: float = 0.5) -> None:
         return None
 
     def get_focus(self) -> str | None:
-        self._maybe_fail("wm.get_focus")
+        self._fail("wm.get_focus")
         return "focus"
 
     def get_focus_set(self) -> set[str]:
-        self._maybe_fail("wm.get_focus_set")
+        self._fail("wm.get_focus_set")
         return {"focus"}
 
 
@@ -206,15 +198,14 @@ def _silent_candidate(
     expected_fallback: Any,
 ) -> dict[str, Any]:
     error_text = f"controlled silent probe:{stage}"
-    outward_error: str | None = None
     result: Any = None
+    outward_error: str | None = None
     try:
         result = invoke()
-    except Exception as exc:  # evidence records an unexpected outward failure
+    except RuntimeError as exc:
         outward_error = type(exc).__name__
     if isinstance(result, set):
         result = sorted(result)
-    observed = outward_error is None and result == expected_fallback
     return {
         "callable": callable_name,
         "candidate_type": "silent_failure_observed_candidate",
@@ -222,7 +213,7 @@ def _silent_candidate(
         "error_type": "RuntimeError",
         "fallback": result,
         "line_range": line_range,
-        "observed_silent": observed,
+        "observed_silent": outward_error is None and result == expected_fallback,
         "outward_error_type": outward_error,
         "path": "adapters/activation_adapter.py",
         "scenario_id": scenario_id,
@@ -287,7 +278,7 @@ def _run_silent_failure_probes() -> tuple[dict[str, Any], ...]:
         ),
     )
     if not all(row["observed_silent"] for row in rows):
-        raise ControlledCampaignError("a silent-failure probe escaped or changed fallback")
+        raise ControlledCampaignError("silent probe escaped or fallback changed")
     return rows
 
 
@@ -315,7 +306,7 @@ def _run_observer_failure_probe() -> tuple[Any, dict[str, Any]]:
     if len(failures) != 1 or kernel.events():
         raise ControlledCampaignError("observer-failure probe contract changed")
     failure = failures[0]
-    evidence = {
+    return failure, {
         "baseline_return_preserved": result is baseline_result is None,
         "event_id": failure.event_id,
         "error_message_digest": failure.error_message_digest,
@@ -327,27 +318,28 @@ def _run_observer_failure_probe() -> tuple[Any, dict[str, Any]]:
         "stage": failure.stage,
         "target_id": failure.target_id,
     }
-    return failure, evidence
 
 
-def run_controlled_observation_campaign() -> dict[str, Any]:
-    """Return the complete deterministic, non-authoritative evidence record."""
-
+def _run_learn_window() -> tuple[
+    DelegatingObservedSpreadingActivation,
+    DelegatingObservedSpreadingActivation,
+    tuple[Any, ...],
+    list[dict[str, Any]],
+    bool,
+]:
     observed_error = RuntimeError("controlled legacy failure")
     baseline_error = RuntimeError("controlled baseline failure")
     observed_sa = DelegatingObservedSpreadingActivation(
-        fail_on_call=FAIL_ON_CALL,
-        failure=observed_error,
+        fail_on_call=FAIL_ON_CALL, failure=observed_error
     )
     baseline_sa = DelegatingObservedSpreadingActivation(
-        fail_on_call=FAIL_ON_CALL,
-        failure=baseline_error,
+        fail_on_call=FAIL_ON_CALL, failure=baseline_error
     )
     observed = ActivationAdapter(sa=observed_sa)
     baseline = ActivationAdapter(sa=baseline_sa)
     kernel = InMemoryEventKernel()
     observer = LegacyFunnelShadowObserver(kernel)
-    step_rows: list[dict[str, Any]] = []
+    steps: list[dict[str, Any]] = []
     propagated_identity = False
     previous_event_id: str | None = None
     logical_step = 0
@@ -391,37 +383,35 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
             if call_index != FAIL_ON_CALL or exc is not baseline_error:
                 raise
             baseline_outcome = "failure"
+        if observed_outcome != baseline_outcome:
+            raise ControlledCampaignError("observed and baseline outcomes differ")
 
         event_delta = len(kernel.events()) - before_count
         if event_delta != 1:
-            raise ControlledCampaignError("each observed legacy call must emit one event")
+            raise ControlledCampaignError("observed call did not emit exactly one event")
         event = kernel.events()[-1]
         previous_event_id = event.event_id
-        step_rows.append(
+        steps.append(
             {
                 "actual_state_digest": _sha(observed_sa.actual_state(), "actual_state"),
                 "event_digest": event.digest,
                 "event_id": event.event_id,
                 "event_type": event.event_type,
-                "events_emitted": event_delta,
+                "events_emitted": 1,
                 "legacy_call_index": call_index,
                 "logical_step": logical_step,
                 "observed_outcome": observed_outcome,
                 "operation": "learn_pair",
             }
         )
-        if observed_outcome != baseline_outcome:
-            raise ControlledCampaignError("observed and baseline outcomes differ")
-
         if call_index in TICK_AFTER_CALLS:
             logical_step += 1
-            before_tick_events = len(kernel.events())
+            before_tick = len(kernel.events())
             observed.tick(dt=1.0)
             baseline.tick(dt=1.0)
-            tick_delta = len(kernel.events()) - before_tick_events
-            if tick_delta != 0:
-                raise ControlledCampaignError("tick unexpectedly emitted a candidate")
-            step_rows.append(
+            if len(kernel.events()) != before_tick:
+                raise ControlledCampaignError("tick emitted a candidate")
+            steps.append(
                 {
                     "actual_state_digest": _sha(observed_sa.actual_state(), "actual_state"),
                     "events_emitted": 0,
@@ -430,11 +420,11 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
                     "tick_dt": 1.0,
                 }
             )
+    return observed_sa, baseline_sa, kernel.events(), steps, propagated_identity
 
-    events = kernel.events()
-    if len(events) != len(LEARN_STEPS):
-        raise ControlledCampaignError("event count differs from observed call count")
 
+def run_controlled_observation_campaign() -> dict[str, Any]:
+    observed_sa, baseline_sa, events, steps, propagated_identity = _run_learn_window()
     state = ActivationLearnPairShadowState(calls=(), learned=())
     replay_rows: list[dict[str, Any]] = []
     divergences: list[dict[str, Any]] = []
@@ -444,7 +434,7 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
             state = reduce_activation_learn_pair(state, event)
             if state.snapshot != event.payload["after"]:
                 mismatch_codes.append("projected_after_mismatch")
-        except Exception as exc:
+        except ShadowProjectionError as exc:
             mismatch_codes.append(f"reducer_error:{type(exc).__name__}")
         row = {
             "event_digest": event.digest,
@@ -458,13 +448,10 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
             divergences.append(row)
 
     final_equivalence = compare_activation_learn_pair_equivalence(
-        state,
-        observed_sa.snapshot(),
+        state, observed_sa.snapshot()
     )
-    matching = sum(1 for row in replay_rows if row["matches"])
     observer_failure, observer_failure_evidence = _run_observer_failure_probe()
     silent_rows = _run_silent_failure_probes()
-
     legacy_state_preserved = (
         observed_sa.snapshot() == baseline_sa.snapshot()
         and observed_sa.actual_state() == baseline_sa.actual_state()
@@ -476,7 +463,6 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
             [f"before:{event_id}", f"legacy:{index}", f"after:{event_id}"]
         )
     call_order_preserved = observed_sa.trace == expected_trace
-
     source_record = {
         "baseline_actual_state": baseline_sa.actual_state(),
         "baseline_snapshot": baseline_sa.snapshot(),
@@ -486,7 +472,7 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
         "observer_failure": observer_failure_evidence,
         "propagated_exception_identity": propagated_identity,
         "silent_candidates": list(silent_rows),
-        "steps": step_rows,
+        "steps": steps,
     }
     source_digest = _sha(source_record, "controlled_campaign_source")
     evidence = LegacyPreservationEvidence(
@@ -501,15 +487,13 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
         external_effects_unchanged=True,
         source_evidence_digest=source_digest,
     )
+    success_count = sum(1 for event in events if event.event_type == SUCCESS_EVENT_TYPE)
+    failure_count = sum(1 for event in events if event.event_type == FAILURE_EVENT_TYPE)
     spec = ObservationWindowSpec(
         window_id=CAMPAIGN_ID,
         expected_event_count=len(events),
-        expected_success_count=sum(
-            1 for event in events if event.event_type == SUCCESS_EVENT_TYPE
-        ),
-        expected_failure_count=sum(
-            1 for event in events if event.event_type == FAILURE_EVENT_TYPE
-        ),
+        expected_success_count=success_count,
+        expected_failure_count=failure_count,
         expected_observer_failure_count=1,
         initial_checkpoint_id="m1-controlled:checkpoint:initial",
         final_checkpoint_id="m1-controlled:checkpoint:final",
@@ -522,14 +506,12 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
         observer_failures=(observer_failure,),
         legacy_evidence=evidence,
     )
-
     event_records = [_event_record(event) for event in events]
     event_bytes = [_json_bytes(record) for record in event_records]
-    packet_bytes = _json_bytes(packet.canonical_record)
+    matching = sum(1 for row in replay_rows if row["matches"])
     event_count = len(events)
-    logical_steps = len(step_rows)
-    tick_steps = sum(1 for row in step_rows if row["operation"] == "tick")
-
+    logical_steps = len(steps)
+    tick_steps = sum(1 for row in steps if row["operation"] == "tick")
     result = {
         "authority": SHADOW_AUTHORITY,
         "campaign_id": CAMPAIGN_ID,
@@ -548,10 +530,10 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
                 "value": event_count / logical_steps,
             },
             "logical_steps": logical_steps,
-            "max_events_in_one_step": max(row["events_emitted"] for row in step_rows),
+            "max_events_in_one_step": max(row["events_emitted"] for row in steps),
             "serialized_event_bytes_max": max(event_bytes),
             "serialized_event_bytes_total": sum(event_bytes),
-            "serialized_packet_bytes": packet_bytes,
+            "serialized_packet_bytes": _json_bytes(packet.canonical_record),
             "tick_steps": tick_steps,
         },
         "events": event_records,
@@ -577,10 +559,7 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
             "tick_steps": tick_steps,
             "wall_clock_duration": None,
         },
-        "packet": {
-            "canonical_record": packet.canonical_record,
-            "digest": packet.digest,
-        },
+        "packet": {"canonical_record": packet.canonical_record, "digest": packet.digest},
         "persistence_mode": "none",
         "replay_equivalence": {
             "compared_events": len(replay_rows),
@@ -599,24 +578,19 @@ def run_controlled_observation_campaign() -> dict[str, Any]:
         "silent_failure_observation": {
             "candidates": list(silent_rows),
             "integrated_static_denominator": STATIC_SILENT_BROAD_INTEGRATED,
-            "integrated_unobserved_remainder": (
-                STATIC_SILENT_BROAD_INTEGRATED - len(silent_rows)
-            ),
+            "integrated_unobserved_remainder": STATIC_SILENT_BROAD_INTEGRATED - len(silent_rows),
             "observed_candidate_count": len(silent_rows),
             "selected_occurrence_count": len(silent_rows),
             "selected_occurrences_observed": len(silent_rows),
             "frozen_static_denominator": STATIC_SILENT_BROAD_FROZEN,
-            "frozen_unobserved_remainder": (
-                STATIC_SILENT_BROAD_FROZEN - len(silent_rows)
-            ),
+            "frozen_unobserved_remainder": STATIC_SILENT_BROAD_FROZEN - len(silent_rows),
         },
-        "step_rows": step_rows,
+        "step_rows": steps,
     }
-
     if not packet.machine_passed or packet.human_accepted or packet.v4_2_eligible:
-        raise ControlledCampaignError("campaign packet crossed its authority boundary")
+        raise ControlledCampaignError("campaign crossed authority boundary")
     if divergences or not final_equivalence.matches:
-        raise ControlledCampaignError("controlled replay produced an unexplained divergence")
+        raise ControlledCampaignError("controlled replay diverged")
     return result
 
 
