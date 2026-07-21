@@ -16,7 +16,7 @@ v4.2 review status: **opened and closed by the v4.2 amendment; `v4_2_review_open
 v4.2 review consensus: **6 objections accepted plus 1 refinement requiring supersession/revocation artifacts to pass the same exact-head and human-review regime as the decisions they change**
 M2-A status: **not started; eligible to be scoped next only as separate work after v4.2, with no implementation or authority granted by this amendment**
 Current next step: **M2-A append-only SQLite shadow-persistence work may be separately scoped; no M2 pre-design or implementation is included here**
-Frozen work: open REWRITE PRs #109, #86, #84, and #82 remain untouched; absorbed PRs #11, #7, and #4 remain closed
+Frozen work: open REWRITE PRs #109, #86, #84, and #82 remain untouched; absorbed PRs #11, #7, and #4 are closed
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
 M1-A merge baseline: `1a3da9aee41c0bed065bb0bbbcc2e8e577aa50f9`
