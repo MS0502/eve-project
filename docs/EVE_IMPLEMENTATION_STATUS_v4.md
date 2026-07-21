@@ -2,7 +2,7 @@
 
 Active constitution: **EVE v4.1**
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
-Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A through M1-D remain shadow/declaration-only, and M1-E is machine-evidence-only with no production integration**
+Runtime status: **pre-kernel legacy runtime remains authoritative; M1 mechanism evidence is human-accepted, while M1-A through M1-E remain shadow/declaration/evidence-only with no production integration**
 Previous v3/v3.1 documents: historical reference only
 M0 status: **closed**
 Forward-gate status: **implemented and enforced by exact-head validation**
@@ -10,15 +10,20 @@ M1-A status: **completed by PR #146**
 M1-B status: **completed by PR #147**
 M1-C status: **completed by PR #148**
 M1-D status: **completed by PR #149**
-M1-E status: **machine-evidence implementation completed by the merge carrying this STATUS update; explicit human acceptance has not been performed**
-Current next step: **explicit human review of M1 shadow-acceptance evidence; v4.2 remains ineligible until that separate decision**
-Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
+M1-E status: **completed and explicitly human-accepted by PR #158; immutable machine packet remains non-authoritative**
+M1 status: **closed for mechanism verification; coverage remains deferred to A2/M2 dual-read and cutover**
+Current next step: **open the reviewed v4.2 amendment triangle; M2-A remains blocked until v4.2 approval**
+Frozen work: open REWRITE PRs #109, #86, #84, and #82; absorbed PRs #11, #7, and #4 are closed
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
 M1-A merge baseline: `1a3da9aee41c0bed065bb0bbbcc2e8e577aa50f9`
 M1-B merge baseline: `15e993780d4c2744047237f877f5add1f7f66339`
 M1-C merge baseline: `2546548a4bf757d0fc7b915be1dac7749e7c9824`
 M1-D merge baseline: `dadc9be7ea67aa9a7f95499d2c874677b00cbcbb`
+M1-E machine-evidence merge baseline: `76e7df1d6bd0194ccd1925fc1b906a359b0c5aef`
+M1 controlled-evidence merge baseline: `847621bcd61634958ce505108ade491c50ced0d4`
+M1 expanded-evidence merge baseline: `7c4573e628e5ac51d0d64ad1040078741f3630e0`
+M1 accepted evidence head: `560b9b54f3237d63762b81da38e7c25c36922214`
 
 ## Current authority
 
@@ -164,6 +169,14 @@ A complete packet has `unauthorized_effects_detected=false`. An incomplete packe
 
 M1-E therefore supplies review evidence but cannot accept itself, activate a bridge, grant persistence or recovery authority, perform cutover, or open v4.2 automatically. Explicit human acceptance remains a separate constitutional decision.
 
+### M1 human acceptance — external decision record
+
+PR #158 records that separate decision in `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.json` and `docs/audit/M1_HUMAN_ACCEPTANCE_RECORD.md`. The canonical JSON record SHA-256 is `aff557da810b7faa0c9dc57bde214a9760a0d3099c8031cb6eb7a24398cf8522`. It pins expanded evidence head `560b9b54f3237d63762b81da38e7c25c36922214`, raw artifact SHA-256 `3618b948cb2e864741412713b5c724632ae9fd72a214479b970d8c4aeeafcaac`, exact-head run `29826184624`, and artifact ZIP SHA-256 `5482da68f38e5d66400d6a32b948d559ce1dd6ce7ec80fe77de08659b8f9d0b9`.
+
+The external record sets `human_accepted=true`, `m1_closed=true`, and `v4_2_eligible=true`. It leaves `v4_2_review_opened=false`, `m2_started=false`, production observer/persistence/runtime integration disabled, and the pre-kernel legacy runtime authoritative. The immutable machine packet remains fixed to false and is not rewritten by the acceptance record.
+
+The accepted scope is mechanism verification only. Historical coverage is deferred to A2/M2 dual-read and cutover; 527 unobserved historical sites remain tracked debt for progressive correction at WRAP.
+
 ## Merged source-of-truth evidence
 
 - `docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md`: 7,842 in-memory mutation sites; 283 direct-write sites. Its 13,341 total is an evidence-entry count, not an object count.
@@ -224,9 +237,13 @@ Reviewed additions are registered by introducing PR:
 - PR #147: M1-B observer and focused tests;
 - PR #148: M1-C projection and focused tests;
 - PR #149: M1-D lifecycle declarations and focused tests;
-- PR #150: M1-E acceptance evaluator and focused tests.
+- PR #150: M1-E acceptance evaluator and focused tests;
+- PR #151: documented the missing controlled-observation evidence gap;
+- PR #152: initial controlled M1 observation evidence;
+- PR #153: corrected expanded mechanism evidence with raw mutation-state fidelity;
+- PR #158: external human-acceptance record and independent recalculation tests.
 
-PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 275 occurrences. Registration is review evidence, not automatic runtime authority.
+PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. The manifest remains the source of truth for all later exact registrations. Registration is review evidence, not automatic runtime authority.
 
 ## Governance registry
 
@@ -235,7 +252,7 @@ PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acce
 | Disposition | PRs | Meaning |
 |---|---|---|
 | `REWRITE-AS-V4-CONTRACT` | #109, #86, #84, #82 | Preserve evidence and tests, then restate under v4 contracts; do not merge the frozen branch. |
-| `ABSORB-INTO-M1` | #11, #7, #4 | Preserve safety and validation requirements as M1 inputs; do not merge the obsolete activation bundle. |
+| `ABSORB-INTO-M1` | #11, #7, #4 | Closed after their safety and validation requirements were absorbed into M1; do not reopen or merge the obsolete activation bundles. |
 
 ## Milestone Registry
 
@@ -283,14 +300,20 @@ This registry may be adjusted by a reviewed STATUS update without a constitution
 
 ## Promotion rule
 
-M1-E machine evidence does not itself grant promotion. Only a separate explicit human acceptance can make M1 eligible to open a v4.2 amendment review. Promotion is never automatic; v4.2 requires its own exact-head validation and explicit approval.
+M1-E machine evidence did not itself grant promotion. The separate explicit human-acceptance record now closes M1 mechanism verification and makes the project eligible to open a v4.2 amendment review. This does not open or approve v4.2, start M2, or activate any runtime capability; v4.2 requires its own exact-head validation and explicit approval.
 
 ## Current next step
 
-Perform a separate **explicit human review** of the immutable M1-E machine packet and exact-head artifact. Until that decision:
+Open a reviewed **v4.2 amendment triangle** containing:
 
-1. `human_accepted` remains false;
-2. `v4_2_eligible` remains false;
+1. discrete-transition event granularity: continuous decay is derived state and emits no event by default;
+2. raw-observation recalculability for every approval claim;
+3. mutation-state fidelity: execution of a mutation-shaped path is insufficient without independently verifiable changed-state evidence.
+
+Until v4.2 is separately approved:
+
+1. `v4_2_review_opened` remains false until that review PR is created;
+2. M2 implementation does not begin;
 3. no bridge, persistence path, scheduler, recovery behavior, cutover, or production hook may be activated;
-4. M2 implementation does not begin;
-5. the pre-kernel legacy runtime remains authoritative.
+4. the pre-kernel legacy runtime remains authoritative;
+5. the 527 unobserved historical sites remain tracked debt, not safe coverage.

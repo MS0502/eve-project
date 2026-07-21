@@ -1,0 +1,144 @@
+{
+  "approval_authority": {
+    "automatic": false,
+    "delegation_basis": "The project creator specified the exact conditional acceptance criteria and authorized the evidence reviewer to approve M1 if the expanded controlled window passed them.",
+    "project_authority": "김민석",
+    "review_executor": "GPT-5.6 Thinking",
+    "review_type": "explicit_delegated_human_review"
+  },
+  "approval_pr": 158,
+  "authority_boundary": {
+    "defaults_changed": false,
+    "legacy_runtime_authoritative": true,
+    "production_observer_installed": false,
+    "production_persistence_enabled": false,
+    "runtime_integrated": false,
+    "shadow_authority_only": true
+  },
+  "decision": {
+    "human_accepted": true,
+    "human_review_status": "accepted",
+    "m1_closed": true,
+    "m2_started": false,
+    "status": "accepted",
+    "v4_2_eligible": true,
+    "v4_2_review_opened": false
+  },
+  "decision_id": "m1-human-acceptance:extended-mechanism:v1",
+  "evidence_pins": {
+    "evidence_baseline_sha": "847621bcd61634958ce505108ade491c50ced0d4",
+    "evidence_merge_sha": "7c4573e628e5ac51d0d64ad1040078741f3630e0",
+    "exact_head_artifact_name": "exact-head-validation-560b9b54f3237d63762b81da38e7c25c36922214",
+    "exact_head_artifact_sha256": "5482da68f38e5d66400d6a32b948d559ce1dd6ce7ec80fe77de08659b8f9d0b9",
+    "exact_head_run_id": 29826184624,
+    "focused_tests_passed": 12,
+    "full_suite_passed": 2712,
+    "raw_artifact_path": "docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_RAW.json",
+    "raw_artifact_sha256": "3618b948cb2e864741412713b5c724632ae9fd72a214479b970d8c4aeeafcaac",
+    "source_evidence_sha256": "06984c653ed2a655f45c7cb27d0777b1c93c6aee872f2cb9c7d1f5a898d9af86",
+    "validated_evidence_head": "560b9b54f3237d63762b81da38e7c25c36922214"
+  },
+  "recorded_at": "2026-07-21",
+  "reviewed_criteria": [
+    {
+      "criterion_id": "mutation_form_state_fidelity",
+      "observed_count": 5,
+      "observed_forms": [
+        "attribute_assignment",
+        "augmented_assignment",
+        "direct_write",
+        "mutating_method_call",
+        "subscript_assignment"
+      ],
+      "passed": true,
+      "required_count": 5
+    },
+    {
+      "adapter_count": 3,
+      "criterion_id": "multiple_adapter_dispositions",
+      "dispositions": [
+        "REWRITE",
+        "WRAP"
+      ],
+      "passed": true
+    },
+    {
+      "criterion_id": "live_tick_thread_concurrency",
+      "mutation_candidates_while_thread_alive": 1,
+      "passed": true,
+      "tick_count_at_barrier": 1
+    },
+    {
+      "compared_events": 4,
+      "criterion_id": "complete_replay_equivalence",
+      "divergence_count": 0,
+      "final_equivalence_count": 3,
+      "matching_events": 4,
+      "passed": true
+    },
+    {
+      "criterion_id": "failure_visibility",
+      "legacy_failure_events": 1,
+      "observer_failure_candidates": 0,
+      "observer_failure_records": 1,
+      "passed": true
+    },
+    {
+      "candidate_events": 4,
+      "continuous_tick_candidates": 0,
+      "criterion_id": "discrete_transition_granularity",
+      "discrete_calls": 4,
+      "passed": true
+    },
+    {
+      "criterion_id": "bounded_direct_write",
+      "passed": true,
+      "temporary_roots_removed": true,
+      "written_files": 1
+    },
+    {
+      "criterion_id": "raw_observation_recalculability",
+      "passed": true,
+      "raw_sha256": "3618b948cb2e864741412713b5c724632ae9fd72a214479b970d8c4aeeafcaac",
+      "source_evidence_sha256": "06984c653ed2a655f45c7cb27d0777b1c93c6aee872f2cb9c7d1f5a898d9af86"
+    },
+    {
+      "criterion_id": "exact_head_validation",
+      "final_worktree_clean": true,
+      "focused_tests_passed": 12,
+      "forward_gate": true,
+      "full_suite_passed": 2712,
+      "m0_invariance": true,
+      "passed": true
+    },
+    {
+      "criterion_id": "zero_unauthorized_effects",
+      "passed": true,
+      "production_observer_installed": false,
+      "production_persistence_enabled": false,
+      "runtime_integrated": false
+    }
+  ],
+  "schema_version": "eve.m1-human-acceptance-record.v1",
+  "scope_ruling": {
+    "coverage_gate": "deferred_to_A2_M2_dual_read_and_cutover",
+    "historical_fraction_is_m1_gate": false,
+    "mechanism_verification": "complete",
+    "unobserved_historical_sites": 527,
+    "unobserved_site_status": "tracked_debt_progressively_corrected_at_WRAP"
+  },
+  "v4_2_candidate_clauses": [
+    {
+      "clause_id": "discrete_transition_granularity",
+      "text": "Continuous decay is derived state; only discrete transitions emit events unless a separately reviewed contract says otherwise."
+    },
+    {
+      "clause_id": "raw_observation_recalculability",
+      "text": "Every approval evidence artifact must contain the raw observations needed to independently recalculate every claimed metric."
+    },
+    {
+      "clause_id": "mutation_state_fidelity",
+      "text": "Executing a mutation-shaped call path is insufficient evidence; the artifact must identify the changed state and preserve exact before/after values or an independently verifiable equivalent."
+    }
+  ]
+}
