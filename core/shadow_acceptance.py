@@ -333,6 +333,16 @@ class M1ShadowAcceptancePacket:
             raise ShadowAcceptanceContractError(
                 "review eligibility disagrees with criteria"
             )
+        zero_effects = next(
+            value
+            for value in self.criteria
+            if value.criterion_id == "zero_unauthorized_effects"
+        )
+        expected_effect_detection = not zero_effects.passed
+        if self.unauthorized_effects_detected != expected_effect_detection:
+            raise ShadowAcceptanceContractError(
+                "unauthorized effect state disagrees with criterion"
+            )
         fixed = (
             (self.human_review_status, HUMAN_REVIEW_REQUIRED),
             (self.human_accepted, False),
@@ -340,7 +350,6 @@ class M1ShadowAcceptancePacket:
             (self.authority, SHADOW_AUTHORITY),
             (self.runtime_integrated, False),
             (self.persistence_mode, NO_PERSISTENCE),
-            (self.unauthorized_effects_detected, False),
             (self.schema_version, PACKET_SCHEMA_VERSION),
         )
         if any(actual != expected for actual, expected in fixed):
@@ -698,4 +707,5 @@ def evaluate_m1_shadow_window(
         ),
         machine_passed=machine_passed,
         eligible_for_human_review=machine_passed,
+        unauthorized_effects_detected=not zero_effects,
     )
