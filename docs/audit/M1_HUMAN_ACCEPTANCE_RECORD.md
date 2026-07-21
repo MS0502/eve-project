@@ -82,3 +82,5 @@ separate constitutional decision required by M1-E.
 1. **`discrete_transition_granularity`** — Continuous decay is derived state; only discrete transitions emit events unless a separately reviewed contract says otherwise.
 2. **`raw_observation_recalculability`** — Every approval evidence artifact must contain the raw observations needed to independently recalculate every claimed metric.
 3. **`mutation_state_fidelity`** — Executing a mutation-shaped call path is insufficient evidence; the artifact must identify the changed state and preserve exact before/after values or an independently verifiable equivalent.
+
+This record is governance metadata only and has no executable runtime authority.
