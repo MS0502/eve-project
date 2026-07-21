@@ -61,6 +61,19 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/audit/apply_m1_extended_fidelity_correction.py')
+          text = path.read_text(encoding='utf-8')
+          needle = "        '''    form_lines = \"" + chr(92) + "n\".join("
+          replacement = "        r'''    form_lines = \"" + chr(92) + "n\".join("
+          if text.count(needle) != 2:
+              raise SystemExit(
+                  f'expected two renderer literals, found {text.count(needle)}'
+              )
+          path.write_text(text.replace(needle, replacement), encoding='utf-8')
+          PY
           set +e
           python scripts/audit/apply_m1_extended_fidelity_correction.py \
             --base-sha "$BASE_SHA" \
