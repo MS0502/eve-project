@@ -1,0 +1,87 @@
+name: M1 fidelity correction runner
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  correct:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'm1/extended-fidelity-correction-run'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - name: Checkout exact correction head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+
+      - name: Verify correction coordinates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$BASE_SHA" = "847621bcd61634958ce505108ade491c50ced0d4"
+          test -z "$(git status --short)"
+
+      - name: Install declared dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Apply and verify mutation-state fidelity correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/apply_m1_extended_fidelity_correction.py \
+            --base-sha "$BASE_SHA"
+
+      - name: Commit corrected six-file package
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm \
+            .github/m1-extended-fidelity-trigger.txt \
+            .github/workflows/m1-extended-fidelity-correction.yml \
+            .github/workflows/m1-fidelity-correction-runner.yml \
+            scripts/audit/apply_m1_extended_fidelity_correction.py
+          git add \
+            docs/audit/FORWARD_ADDITIONS_MANIFEST.json \
+            docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md \
+            docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_RAW.json \
+            docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_REGISTRATION.md \
+            scripts/audit/m1_extended_controlled_observation_campaign.py \
+            tests/test_v4_m1_extended_controlled_observation_campaign.py
+          test -z "$(git status --short | grep -vE '^(M |A |D )' || true)"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "Capture replayable state for every M1 mutation form"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
