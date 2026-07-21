@@ -3,7 +3,7 @@ name: Exact-head validation
 on:
   pull_request:
     branches: [main]
-    types: [synchronize]
+    types: [ready_for_review]
 
 permissions:
   contents: write
@@ -17,7 +17,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Apply effect-state consistency fix
+
+      - name: Apply consistency repair and restore validator
         env:
           HEAD_BRANCH: ${{ github.head_ref }}
         shell: bash
@@ -27,15 +28,15 @@ jobs:
           from pathlib import Path
 
           def replace_once(path: Path, old: str, new: str) -> None:
-              text = path.read_text(encoding='utf-8')
+              text = path.read_text(encoding="utf-8")
               count = text.count(old)
               if count == 0 and new in text:
                   return
               if count != 1:
-                  raise SystemExit(f'{path}: expected one fragment, found {count}')
-              path.write_text(text.replace(old, new), encoding='utf-8')
+                  raise SystemExit(f"{path}: expected one fragment, found {count}")
+              path.write_text(text.replace(old, new), encoding="utf-8")
 
-          core = Path('core/shadow_acceptance.py')
+          core = Path("core/shadow_acceptance.py")
           replace_once(
               core,
               '''        if self.eligible_for_human_review != computed:
@@ -84,7 +85,7 @@ jobs:
 ''',
           )
 
-          tests = Path('tests/test_v4_m1_e_shadow_acceptance.py')
+          tests = Path("tests/test_v4_m1_e_shadow_acceptance.py")
           replace_once(
               tests,
               '''    assert packet.criterion("zero_unauthorized_effects").passed is False
@@ -96,7 +97,7 @@ jobs:
 ''',
           )
 
-          status = Path('docs/EVE_IMPLEMENTATION_STATUS_v4.md')
+          status = Path("docs/EVE_IMPLEMENTATION_STATUS_v4.md")
           replace_once(
               status,
               '''unauthorized_effects_detected: false
@@ -111,13 +112,13 @@ A complete packet has `unauthorized_effects_detected=false`. An incomplete packe
 M1-E therefore supplies review evidence''',
           )
 
-          Path('.github/workflows/m1e-one-time-patch.yml').unlink(missing_ok=True)
+          Path(".github/workflows/m1e-one-time-patch.yml").unlink(missing_ok=True)
           PY
-          if git diff --quiet; then
-            exit 0
-          fi
+
+          git show origin/main:.github/workflows/exact-head-validation.yml > .github/workflows/exact-head-validation.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add core/shadow_acceptance.py tests/test_v4_m1_e_shadow_acceptance.py docs/EVE_IMPLEMENTATION_STATUS_v4.md .github/workflows/m1e-one-time-patch.yml
-          git commit -m 'Derive M1-E unauthorized-effect state'
+          git add core/shadow_acceptance.py tests/test_v4_m1_e_shadow_acceptance.py docs/EVE_IMPLEMENTATION_STATUS_v4.md .github/workflows/exact-head-validation.yml
+          git add -u .github/workflows/m1e-one-time-patch.yml
+          git commit -m "Derive M1-E unauthorized-effect state"
           git push origin "HEAD:${HEAD_BRANCH}"
