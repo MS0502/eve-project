@@ -61,13 +61,29 @@ jobs:
       - name: Generate canonical raw observations and report
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          set +e
           python scripts/audit/m1_extended_controlled_observation_campaign.py \
             --raw-output docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_RAW.json \
-            --evidence-output docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md
+            --evidence-output docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md \
+            > /tmp/campaign-generation.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/campaign-generation.log
+          if test "$status" -ne 0; then
+            exit "$status"
+          fi
           python -m compileall -q \
             scripts/audit/m1_extended_controlled_observation_campaign.py \
             tests/test_v4_m1_extended_controlled_observation_campaign.py
+
+      - name: Upload campaign failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-extended-campaign-failure-${{ env.TARGET_SHA }}
+          path: /tmp/campaign-generation.log
+          if-no-files-found: error
 
       - name: Register exact forward additions
         shell: bash
