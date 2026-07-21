@@ -63,7 +63,7 @@ jobs:
         run: |
           set -uo pipefail
           set +e
-          python scripts/audit/m1_extended_controlled_observation_campaign.py \
+          python -m scripts.audit.m1_extended_controlled_observation_campaign \
             --raw-output docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_RAW.json \
             --evidence-output docs/audit/M1_EXTENDED_CONTROLLED_OBSERVATION_EVIDENCE.md \
             > /tmp/campaign-generation.log 2>&1
