@@ -68,6 +68,17 @@ campaign, require byte-identical canonical JSON, recalculate event/replay/failur
 and granularity totals, and require the committed report to equal the renderer
 output for that raw hash.
 
+Generated artifact pins:
+
+```text
+raw artifact SHA-256: 91f1234437fb0f85af188dcd66fe0c4a41534b846fa415d557096cd58f191503
+source evidence SHA-256: 7de175692c88b7f25bdd6b846802afa71aa01990b3a10bbc3f2cc932ab5f5438
+```
+
+The one-shot bootstrap workflow was removed in the generated evidence commit.
+The final permanent exact-head validation therefore runs against only the six
+reviewed package files.
+
 ## Gate boundary
 
 This PR must leave all of the following unchanged:
