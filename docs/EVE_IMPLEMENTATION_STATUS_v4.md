@@ -2,27 +2,29 @@
 
 Active constitution: **EVE v4.1**
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
-Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A/M1-B/M1-C are shadow-only and not production-integrated**
+Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A/M1-B/M1-C/M1-D are shadow-only or declaration-only and not production-integrated**
 Previous v3/v3.1 documents: historical reference only
 M0 status: **closed**
 Forward-gate status: **implemented and enforced by exact-head validation**
 M1-A status: **completed by PR #146**
 M1-B status: **completed by PR #147**
-M1-C status: **completed by the merge carrying this STATUS update**
-Current next step: **M1-D — lifecycle ownership, failure propagation, and registered bridge contracts without cutover**
+M1-C status: **completed by PR #148**
+M1-D status: **completed by the merge carrying this STATUS update**
+Current next step: **M1-E — bounded shadow-observation window and human-reviewed M1 acceptance evidence**
 Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
 M1-A merge baseline: `1a3da9aee41c0bed065bb0bbbcc2e8e577aa50f9`
 M1-B merge baseline: `15e993780d4c2744047237f877f5add1f7f66339`
+M1-C merge baseline: `2546548a4bf757d0fc7b915be1dac7749e7c9824`
 
 ## Current state
 
 EVE v4.1 is the active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime and persistence authority.
 
-M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream.
+M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains.
 
-None of M1-A through M1-C is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced.
+None of M1-A through M1-D is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. M1-D names legacy source modules as evidence only and imports, constructs, calls, patches, or activates none of them. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced.
 
 ## M1-A implementation record
 
@@ -62,7 +64,7 @@ eve.shadow-equivalence-report.v1
 
 The bounded projection stores only immutable tuples for the registered stream's `calls` and `learned` state plus consumed sequence/event digest metadata.
 
-The reducer accepts only the exact M1-B target, stream, event types, causal-context shape, target metadata, and success/failure outcome contract. It then requires:
+The reducer accepts only the exact M1-B producer/version, target, stream, event types, causal-context shape, target metadata, and success/failure outcome contract. Every snapshot must keep `learned` as an ordered subsequence of `calls`. A transition then requires:
 
 - one-based contiguous projection sequence;
 - event `before` snapshot equal to current projection state;
@@ -71,7 +73,7 @@ The reducer accepts only the exact M1-B target, stream, event types, causal-cont
 - success → attempted pair appended exactly once to learned state;
 - failure → learned state unchanged.
 
-Malformed scope, state mismatch, sequence gap, and invalid transition raise visible typed errors before a new projection state is returned. Because states are immutable, failed reduction leaves the prior projection unchanged.
+Malformed scope, state mismatch, sequence gap, impossible learned-state ordering, and invalid transition raise visible typed errors before a new projection state is returned. Because states are immutable, failed reduction leaves the prior projection unchanged.
 
 Cross-stream causation metadata is preserved in the envelope but not reinterpreted by the bounded projection. M1-C ordering authority is limited to the registered stream sequence.
 
@@ -87,6 +89,47 @@ M1-C does **not** claim:
 - durable persistence or crash recovery;
 - retry, suppression, recovery, or mutation authority;
 - event-store cutover or general equivalence.
+
+## M1-D implementation record
+
+`core/shadow_lifecycle.py` defines four versioned declaration families:
+
+```text
+eve.shadow-lifecycle-owner.v1
+eve.shadow-bridge-contract.v1
+eve.shadow-bridge-registry.v1
+eve.shadow-bridge-failure.v1
+```
+
+The exact reviewed domain/source/disposition registry is immutable:
+
+```text
+activity → adapters/agency_adapter.py → WRAP
+chat     → language/streaming.py      → REWRITE
+goal     → adapters/goal_adapter.py   → WRAP
+memory   → adapters/memory_adapter.py → WRAP
+```
+
+Every bridge is fixed to:
+
+```text
+lifecycle_status:    declared_disconnected
+integration_mode:    disconnected
+default_enabled:     false
+authority:           none
+emitted_event_types: ()
+required_capabilities: ()
+persistence_mode:    none
+retry_policy:        forbidden
+suppression_policy:  forbidden
+rollback_scope:      shadow_state_only
+```
+
+Every owner explicitly declares initialization, shutdown, interruption, failure propagation, provenance, and rollback responsibilities. Unknown owners, bridges, or domains fail closed. Missing, duplicate, cross-domain, source-spoofed, disposition-spoofed, authority-bearing, event-emitting, capability-bearing, persistence-bearing, retrying, or suppressing declarations are rejected at construction.
+
+`BridgeFailureSignal` records bridge, owner, domain, stage, error type, and SHA-256 of the error message without retaining the raw message. It requires original failure propagation and forbids retry, suppression, or legacy-authority changes. Direct construction cannot spoof bridge/owner/domain ownership.
+
+M1-D imports, constructs, calls, patches, or activates no reviewed legacy module. It grants no runtime integration, event emission, persistence, recovery, scheduler, external-effect, or cutover authority.
 
 ## Merged source-of-truth evidence
 
@@ -146,9 +189,10 @@ Reviewed additions are registered by introducing PR:
 - PR #145: forward scanner and focused gate tests;
 - PR #146: M1-A kernel and focused tests;
 - PR #147: M1-B observer and focused tests;
-- PR #148: M1-C projection and focused tests.
+- PR #148: M1-C projection and focused tests;
+- PR #149: M1-D lifecycle declarations and focused tests.
 
-PR #148 adds no registered direct-write, silent-broad, or raw-capability finding. Registration is review evidence, not automatic runtime authority.
+PR #149 registers 17 fingerprints / 24 occurrences: 8 / 12 in `core/shadow_lifecycle.py` and 9 / 12 in `tests/test_v4_m1_d_shadow_lifecycle.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 234 occurrences. Registration is review evidence, not automatic runtime authority.
 
 ## Governance registry
 
@@ -209,14 +253,14 @@ M1-E acceptance grants only eligibility to open a human-reviewed v4.2 amendment 
 
 ## Current next step
 
-Begin **M1-D** only after M1-C merges. M1-D must:
+Begin **M1-E** only after M1-D merges. M1-E must:
 
-1. define versioned lifecycle-owner and bridge-registration schemas for bounded chat, activity, memory, and goal domains;
-2. distinguish bridge ownership from legacy runtime authority and from event-store authority;
-3. specify initialization, shutdown, interruption, failure propagation, provenance, and rollback responsibilities;
-4. keep every bridge disconnected or explicitly shadow-only with no default activation;
-5. expose unsupported/unowned bridge states and failures visibly;
-6. preserve existing outputs, ordering, persistence behavior, and defaults;
-7. add no SQLite/file persistence, cutover, retry, suppression, external effect, or autonomous scheduler activation;
+1. define a versioned, deterministic, bounded observation-window schema and explicit acceptance criteria;
+2. use only explicit test/dry-run invocation with no production hook, default activation, clock-derived ordering, scheduler, or autonomous loop;
+3. cover the registered `ActivationAdapter.learn_pair` candidate/reducer stream and all four M1-D lifecycle declarations without claiming unimplemented bridge execution;
+4. record candidate success/failure visibility, sequence continuity, replay equivalence, checkpoint/rollback evidence, lifecycle ownership coverage, and zero unauthorized effects;
+5. preserve legacy outputs, exception identity, call ordering, state, persistence behavior, and defaults;
+6. produce an immutable human-review packet whose acceptance is explicit and never automatic;
+7. add no SQLite/file event persistence, retry, suppression, recovery, external effect, scheduler activation, cutover, or v4.2 authority;
 8. register every justified scanner finding in the same PR;
-9. pass focused lifecycle/bridge tests, the forward gate, historical audit invariance, collection, and the full suite.
+9. pass focused M1-E tests, the forward gate, historical audit invariance, collection, and the full suite.
