@@ -2,37 +2,41 @@
 
 Active constitution: **EVE v4.1**
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
-Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A/M1-B/M1-C/M1-D are shadow-only or declaration-only and not production-integrated**
+Runtime status: **pre-kernel legacy runtime remains authoritative; M1-A through M1-D remain shadow/declaration-only, and M1-E is machine-evidence-only with no production integration**
 Previous v3/v3.1 documents: historical reference only
 M0 status: **closed**
 Forward-gate status: **implemented and enforced by exact-head validation**
 M1-A status: **completed by PR #146**
 M1-B status: **completed by PR #147**
 M1-C status: **completed by PR #148**
-M1-D status: **completed by the merge carrying this STATUS update**
-Current next step: **M1-E — bounded shadow-observation window and human-reviewed M1 acceptance evidence**
+M1-D status: **completed by PR #149**
+M1-E status: **machine-evidence implementation completed by the merge carrying this STATUS update; explicit human acceptance has not been performed**
+Current next step: **explicit human review of M1 shadow-acceptance evidence; v4.2 remains ineligible until that separate decision**
 Frozen work: open implementation PRs #109, #86, #84, #82, #11, #7, and #4
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
 M1-A merge baseline: `1a3da9aee41c0bed065bb0bbbcc2e8e577aa50f9`
 M1-B merge baseline: `15e993780d4c2744047237f877f5add1f7f66339`
 M1-C merge baseline: `2546548a4bf757d0fc7b915be1dac7749e7c9824`
+M1-D merge baseline: `dadc9be7ea67aa9a7f95499d2c874677b00cbcbb`
 
-## Current state
+## Current authority
 
 EVE v4.1 is the active constitutional authority. The existing application remains the **pre-kernel legacy runtime** and retains all current runtime and persistence authority.
 
-M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains.
+M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains. M1-E provides a deterministic in-memory evaluator and immutable machine-review packet for explicitly supplied M1-B through M1-D evidence.
 
-None of M1-A through M1-D is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. M1-D names legacy source modules as evidence only and imports, constructs, calls, patches, or activates none of them. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced.
+None of M1-A through M1-E is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. M1-D names legacy source modules as evidence only. M1-E imports or calls no legacy module and installs no observer or bridge. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced.
 
-## M1-A implementation record
+## M1 implementation records
 
-- `EventEnvelope`: frozen versioned schema, bounded canonical JSON, deterministic digest, caller-supplied identifiers/ordering, fixed `shadow_only` authority.
+### M1-A — event kernel
+
+- `EventEnvelope`: frozen versioned schema, bounded canonical JSON, deterministic digest, caller-supplied identifiers and ordering, fixed `shadow_only` authority.
 - `InMemoryEventKernel`: append-only in-memory ordering, duplicate-ID rejection, contiguous stream sequences, known-causation checks, immutable reads, and explicit reducer replay.
 - No persistence, runtime hook, clock, thread, randomness, recovery, or legacy mutation authority.
 
-## M1-B implementation record
+### M1-B — registered legacy observer
 
 The only registered target is:
 
@@ -52,9 +56,9 @@ Candidate types remain diagnostic only:
 - `shadow.legacy_mutation_observed_candidate`;
 - `shadow.legacy_mutation_failed_candidate`.
 
-## M1-C implementation record
+### M1-C — bounded projection and replay
 
-`core/shadow_projection.py` defines three versioned contracts:
+`core/shadow_projection.py` defines:
 
 ```text
 eve.shadow-projection.activation-learn-pair.v1
@@ -62,9 +66,9 @@ eve.shadow-projection-checkpoint.v1
 eve.shadow-equivalence-report.v1
 ```
 
-The bounded projection stores only immutable tuples for the registered stream's `calls` and `learned` state plus consumed sequence/event digest metadata.
+The reducer accepts only the exact M1-B producer/version, target, stream, event types, causal-context shape, target metadata, and success/failure outcome contract. Every snapshot keeps `learned` as an ordered subsequence of `calls`.
 
-The reducer accepts only the exact M1-B producer/version, target, stream, event types, causal-context shape, target metadata, and success/failure outcome contract. Every snapshot must keep `learned` as an ordered subsequence of `calls`. A transition then requires:
+A valid transition requires:
 
 - one-based contiguous projection sequence;
 - event `before` snapshot equal to current projection state;
@@ -73,26 +77,11 @@ The reducer accepts only the exact M1-B producer/version, target, stream, event 
 - success → attempted pair appended exactly once to learned state;
 - failure → learned state unchanged.
 
-Malformed scope, state mismatch, sequence gap, impossible learned-state ordering, and invalid transition raise visible typed errors before a new projection state is returned. Because states are immutable, failed reduction leaves the prior projection unchanged.
+Malformed scope, state mismatch, sequence gap, impossible learned-state ordering, and invalid transition fail closed before a new immutable state is returned. Equivalence comparison is read-only. Checkpoint and rollback are immutable in-memory values only and have no durable recovery authority.
 
-Cross-stream causation metadata is preserved in the envelope but not reinterpreted by the bounded projection. M1-C ordering authority is limited to the registered stream sequence.
+### M1-D — disconnected lifecycle contracts
 
-Equivalence comparison returns an immutable report containing deterministic projected and expected snapshot digests plus explicit `calls_mismatch` and/or `learned_mismatch` codes. A mismatch does not alter legacy state or projection state.
-
-Checkpoint and rollback boundaries are immutable in-memory values only. A checkpoint contains a caller-supplied canonical ID, bounded projection state, and verified state digest. Restore/rollback performs no I/O and cannot roll forward to a future checkpoint.
-
-M1-C does **not** claim:
-
-- coverage beyond `ActivationAdapter.learn_pair`;
-- reconstruction of the full legacy runtime;
-- production observation or automatic replay;
-- durable persistence or crash recovery;
-- retry, suppression, recovery, or mutation authority;
-- event-store cutover or general equivalence.
-
-## M1-D implementation record
-
-`core/shadow_lifecycle.py` defines four versioned declaration families:
+`core/shadow_lifecycle.py` defines:
 
 ```text
 eve.shadow-lifecycle-owner.v1
@@ -101,7 +90,7 @@ eve.shadow-bridge-registry.v1
 eve.shadow-bridge-failure-signal.v1
 ```
 
-The exact reviewed domain/source/disposition registry is immutable:
+The immutable reviewed registry is:
 
 ```text
 activity → adapters/agency_adapter.py → WRAP
@@ -113,23 +102,65 @@ memory   → adapters/memory_adapter.py → WRAP
 Every bridge is fixed to:
 
 ```text
-lifecycle_status:    declared_disconnected
-integration_mode:    disconnected
-default_enabled:     false
-authority:           none
-emitted_event_types: ()
+lifecycle_status:      declared_disconnected
+integration_mode:      disconnected
+default_enabled:       false
+authority:             none
+emitted_event_types:   ()
 required_capabilities: ()
-persistence_mode:    none
-retry_policy:        forbidden
-suppression_policy:  forbidden
-rollback_scope:      shadow_state_only
+persistence_mode:      none
+retry_policy:          forbidden
+suppression_policy:    forbidden
+rollback_scope:        shadow_state_only
 ```
 
-Every owner explicitly declares initialization, shutdown, interruption, failure propagation, provenance, and rollback responsibilities. Unknown owners, bridges, or domains fail closed. Missing, duplicate, cross-domain, source-spoofed, disposition-spoofed, authority-bearing, event-emitting, capability-bearing, persistence-bearing, retrying, or suppressing declarations are rejected at construction.
+Every owner declares construction, shutdown, interruption, failure propagation, provenance, and rollback responsibilities. Missing, duplicate, unknown, cross-domain, source-spoofed, disposition-spoofed, authority-bearing, event-emitting, capability-bearing, persistence-bearing, retrying, or suppressing declarations fail closed.
 
-`BridgeFailureSignal` records bridge, owner, domain, stage, error type, and SHA-256 of the error message without retaining the raw message. It requires original failure propagation and forbids retry, suppression, or legacy-authority changes. Direct construction cannot spoof bridge/owner/domain ownership.
+`BridgeFailureSignal` retains bridge, owner, domain, stage, error type, and SHA-256 of the error message without retaining the raw message. It cannot authorize retry, suppression, swallowing, recovery, or legacy-authority changes.
 
-M1-D imports, constructs, calls, patches, or activates no reviewed legacy module. It grants no runtime integration, event emission, persistence, recovery, scheduler, external-effect, or cutover authority.
+### M1-E — machine shadow-acceptance evidence
+
+`core/shadow_acceptance.py` defines:
+
+```text
+eve.m1-shadow-observation-window.v1
+eve.m1-legacy-preservation-evidence.v1
+eve.m1-shadow-acceptance-criterion.v1
+eve.m1-shadow-acceptance-packet.v1
+```
+
+The evaluator accepts only explicit in-memory M1-B event and observer-failure evidence, an explicit M1-C initial state and expected final snapshot, explicit legacy-preservation evidence, and the exact M1-D disconnected lifecycle registry. It imports or calls no legacy module and installs no production hook.
+
+The immutable packet contains ten machine criteria:
+
+```text
+event_count_exact
+success_failure_visible
+observer_failure_visible
+sequence_contiguous
+replay_equivalent
+checkpoint_restore_verified
+rollback_verified
+lifecycle_registry_complete
+legacy_behavior_preserved
+zero_unauthorized_effects
+```
+
+Legacy-preservation evidence is bound to the exact event and observer-failure IDs in the evaluated window. Machine completion requires preserved return values, exception identity, call order, legacy state, persistence behavior, defaults, and external-effect behavior. Raw legacy and observer error messages are not retained in the packet.
+
+A complete machine packet may set only `eligible_for_human_review=true`. The schema permanently fixes:
+
+```text
+human_review_status: required_not_performed
+human_accepted: false
+v4_2_eligible: false
+authority: shadow_only
+runtime_integrated: false
+persistence_mode: none
+unauthorized_effects_detected: false
+```
+
+M1-E therefore supplies review evidence but cannot accept itself, activate a bridge, grant persistence or recovery authority, perform cutover, or open v4.2 automatically. Explicit human acceptance remains a separate constitutional decision.
 
 ## Merged source-of-truth evidence
 
@@ -190,9 +221,10 @@ Reviewed additions are registered by introducing PR:
 - PR #146: M1-A kernel and focused tests;
 - PR #147: M1-B observer and focused tests;
 - PR #148: M1-C projection and focused tests;
-- PR #149: M1-D lifecycle declarations and focused tests.
+- PR #149: M1-D lifecycle declarations and focused tests;
+- PR #150: M1-E machine acceptance evidence and focused tests.
 
-PR #149 registers 17 fingerprints / 24 occurrences: 8 / 12 in `core/shadow_lifecycle.py` and 9 / 12 in `tests/test_v4_m1_d_shadow_lifecycle.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 234 occurrences. Registration is review evidence, not automatic runtime authority.
+PR #150 registers 37 fingerprints / 41 occurrences: 11 / 11 in `core/shadow_acceptance.py` and 26 / 30 in `tests/test_v4_m1_e_shadow_acceptance.py`. It adds no registered direct-write, silent-broad, or raw-capability finding. Total registered additions are 275 occurrences. Registration and machine completion are review evidence, not human acceptance or runtime authority.
 
 ## Governance registry
 
@@ -253,14 +285,14 @@ M1-E acceptance grants only eligibility to open a human-reviewed v4.2 amendment 
 
 ## Current next step
 
-Begin **M1-E** only after M1-D merges. M1-E must:
+M1-E machine evidence may be merged only as a non-authoritative review package. After merge, the remaining M1 exit condition is an **explicit human accept/reject decision** over the final PR #150 head and evidence artifact.
 
-1. define a versioned, deterministic, bounded observation-window schema and explicit acceptance criteria;
-2. use only explicit test/dry-run invocation with no production hook, default activation, clock-derived ordering, scheduler, or autonomous loop;
-3. cover the registered `ActivationAdapter.learn_pair` candidate/reducer stream and all four M1-D lifecycle declarations without claiming unimplemented bridge execution;
-4. record candidate success/failure visibility, sequence continuity, replay equivalence, checkpoint/rollback evidence, lifecycle ownership coverage, and zero unauthorized effects;
-5. preserve legacy outputs, exception identity, call ordering, state, persistence behavior, and defaults;
-6. produce an immutable human-review packet whose acceptance is explicit and never automatic;
-7. add no SQLite/file event persistence, retry, suppression, recovery, external effect, scheduler activation, cutover, or v4.2 authority;
-8. register every justified scanner finding in the same PR;
-9. pass focused M1-E tests, the forward gate, historical audit invariance, collection, and the full suite.
+Until that decision is separately recorded:
+
+1. `human_accepted` remains `false`;
+2. `v4_2_eligible` remains `false`;
+3. no v4.2 amendment review is opened;
+4. no M2 implementation, persistence activation, bridge installation, scheduler, recovery, external effect, or cutover is authorized;
+5. the pre-kernel legacy runtime remains authoritative.
+
+A future human acceptance record must cite the exact validated head and artifact, state the reviewed criteria, remain external to the immutable machine packet, and pass its own reviewed exact-head change. Rejection or requested changes keep M1-E open without weakening any criterion.
