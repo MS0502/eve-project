@@ -20,7 +20,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -49,6 +49,11 @@ jobs:
           test -z "$(git status --short)"
           git rev-parse HEAD | tee /tmp/final-head.txt
           git diff --name-only "$BASE_SHA"..."$TARGET_SHA" | sort | tee /tmp/changed-files.txt
+
+      - name: Materialize M2-A hardening
+        if: github.event_name == 'pull_request' && github.head_ref == 'codex/m2-a-sqlite-shadow-persistence'
+        shell: bash
+        run: python .github/m2a_hardening.py
 
       - name: Install SHA-pinned compatibility dependency
         shell: bash
