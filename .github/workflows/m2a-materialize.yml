@@ -1,0 +1,27 @@
+name: Temporary M2-A materialization
+
+on:
+  push:
+    branches:
+      - codex/m2-a-sqlite-shadow-persistence
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/m2-a-sqlite-shadow-persistence
+          fetch-depth: 0
+
+      - name: Materialize reviewed M2-A candidate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/m2a_materialize.py
