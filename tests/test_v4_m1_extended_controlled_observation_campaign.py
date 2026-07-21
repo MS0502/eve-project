@@ -67,13 +67,44 @@ def test_all_m0_a_mutation_forms_are_observed_and_replay_matched(evidence):
     assert {row["form"] for row in rows} == set(REQUIRED_MUTATION_FORMS)
     assert len(rows) == len(REQUIRED_MUTATION_FORMS)
     assert all(row["observed"] is True for row in rows)
+    assert all(row["state_changed"] is True for row in rows)
+    assert all(row["before_value"] != row["after_value"] for row in rows)
+    assert all(len(row["transition_sha256"]) == 64 for row in rows)
     assert all(row["replay_matches"] is True for row in rows)
     assert all(row["event_ids"] for row in rows)
+    assert {row["form"]: row["state_field"] for row in rows} == {
+        "attribute_assignment": "last_emit_time",
+        "subscript_assignment": "weights",
+        "augmented_assignment": "processed_input_count",
+        "mutating_method_call": "neighbors",
+        "direct_write": "files",
+    }
     assert {row["path"] for row in rows} == {
         "adapters/live_loop.py",
         "adapters/persistence_adapter.py",
         "legacy/eve_modules/spreading_activation.py",
     }
+
+
+def test_each_mutation_form_snapshot_contains_the_changed_state(evidence):
+    events = {event["event_id"]: event for event in evidence["events"]}
+    live = events["m1-extended:event:live-drain:001"]["payload"]
+    activation = events["m1-extended:event:activation:001"]["payload"]
+    persistence = events["m1-extended:event:persistence-save:001"]["payload"]
+
+    assert live["before"]["last_emit_time"] == 0.0
+    assert live["after"]["last_emit_time"] == 4242.0
+    assert live["before"]["processed_input_count"] == 0
+    assert live["after"]["processed_input_count"] == 1
+    assert activation["before"]["weights"] == []
+    assert activation["after"]["weights"] == [["alpha", "beta", 0.25]]
+    assert activation["before"]["neighbors"] == []
+    assert activation["after"]["neighbors"] == [
+        ["alpha", ["beta"]],
+        ["beta", ["alpha"]],
+    ]
+    assert persistence["before"]["files"] == []
+    assert persistence["after"]["files"][0]["relative_path"] == "state.v41sidecar"
 
 
 def test_source_rows_correspond_to_real_ast_mutation_shapes(evidence):

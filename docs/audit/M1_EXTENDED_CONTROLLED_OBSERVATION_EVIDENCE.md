@@ -6,7 +6,7 @@ Campaign ID: `m1:extended-controlled-observation:mechanism:v1`
 
 Baseline: `main` at `847621bcd61634958ce505108ade491c50ced0d4`
 
-Raw observation artifact SHA-256: `91f1234437fb0f85af188dcd66fe0c4a41534b846fa415d557096cd58f191503`
+Raw observation artifact SHA-256: `3618b948cb2e864741412713b5c724632ae9fd72a214479b970d8c4aeeafcaac`
 
 Status: **extended mechanism machine evidence complete; M1 human acceptance not performed**
 
@@ -22,16 +22,17 @@ temporary roots and both roots are removed before the campaign returns.
 
 ### Mutation forms
 
-| M0-A form | Executed source | Observed target | Replay match |
-|---|---|---|---|
-| `attribute_assignment` | `adapters/live_loop.py:101-105` | `legacy.live_loop.drain_user_inputs` | `true` |
-| `subscript_assignment` | `legacy/eve_modules/spreading_activation.py:239-243` | `legacy.activation.learn_pair` | `true` |
-| `augmented_assignment` | `adapters/live_loop.py:68-77` | `legacy.live_loop.drain_user_inputs` | `true` |
-| `mutating_method_call` | `legacy/eve_modules/spreading_activation.py:241-243` | `legacy.activation.learn_pair` | `true` |
-| `direct_write` | `adapters/persistence_adapter.py:65-74` | `legacy.persistence.save` | `true` |
+| M0-A form | Executed source | Observed target | State field | Changed | Replay match |
+|---|---|---|---|---|---|
+| `attribute_assignment` | `adapters/live_loop.py:101-105` | `legacy.live_loop.drain_user_inputs` | `last_emit_time` | `true` | `true` |
+| `subscript_assignment` | `legacy/eve_modules/spreading_activation.py:239-243` | `legacy.activation.learn_pair` | `weights` | `true` | `true` |
+| `augmented_assignment` | `adapters/live_loop.py:68-77` | `legacy.live_loop.drain_user_inputs` | `processed_input_count` | `true` | `true` |
+| `mutating_method_call` | `legacy/eve_modules/spreading_activation.py:241-243` | `legacy.activation.learn_pair` | `neighbors` | `true` | `true` |
+| `direct_write` | `adapters/persistence_adapter.py:65-74` | `legacy.persistence.save` | `files` | `true` | `true` |
 
-All five required forms were executed at least once and tied to raw before/after
-events. The rows are mechanism evidence, not a claim that all historical mutation
+All five required forms were executed at least once. Each row identifies the
+mutated state field and records its exact raw before/after values plus a transition
+digest. The rows are mechanism evidence, not a claim that all historical mutation
 sites are covered or safe.
 
 ### Multiple adapter dispositions

@@ -14,7 +14,7 @@
       },
       "causation_id": null,
       "correlation_id": "corr:m1-extended-controlled-observation",
-      "digest": "d83753f801cca88cbc656c81153985467042194cdbbc09bab40e7dfd15d4a2c5",
+      "digest": "9355d6bff5a1f4e34b3f4c41b97554f0d00e2b90937a013e43d4c6fb9325a187",
       "event_id": "m1-extended:event:live-drain:001",
       "event_type": "shadow.legacy_mutation_observed_candidate",
       "payload": {
@@ -22,11 +22,13 @@
           "emissions": [
             "controlled reply"
           ],
+          "last_emit_time": 4242.0,
           "processed_input_count": 1,
           "queue_size": 0
         },
         "before": {
           "emissions": [],
+          "last_emit_time": 0.0,
           "processed_input_count": 0,
           "queue_size": 1
         },
@@ -100,7 +102,7 @@
       },
       "causation_id": "m1-extended:event:persistence-save:001",
       "correlation_id": "corr:m1-extended-controlled-observation",
-      "digest": "f38565f2b4baa3187f31f7a4f3b13f74c134177585e085e496b1423821391850",
+      "digest": "1b8a86fcad549b10fada6e6b79be50fcb51932b50e642a9b2f89d29b02c6f9b4",
       "event_id": "m1-extended:event:activation:001",
       "event_type": "shadow.legacy_mutation_observed_candidate",
       "payload": {
@@ -118,11 +120,34 @@
               "beta",
               0.25
             ]
+          ],
+          "neighbors": [
+            [
+              "alpha",
+              [
+                "beta"
+              ]
+            ],
+            [
+              "beta",
+              [
+                "alpha"
+              ]
+            ]
+          ],
+          "weights": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
           ]
         },
         "before": {
           "calls": [],
-          "learned": []
+          "learned": [],
+          "neighbors": [],
+          "weights": []
         },
         "legacy_outcome": {
           "error_type": null,
@@ -151,7 +176,7 @@
       },
       "causation_id": "m1-extended:event:activation:001",
       "correlation_id": "corr:m1-extended-controlled-observation",
-      "digest": "469d4f200a9787559ea48e8b543e0225b2c1d5d406dd49522939e35b52455e2b",
+      "digest": "2be99a196e796e7fa380bb3dae0dc64c2cb9430e01eb75f290f7acb38adc3392",
       "event_id": "m1-extended:event:activation:002",
       "event_type": "shadow.legacy_mutation_failed_candidate",
       "payload": {
@@ -174,6 +199,27 @@
               "beta",
               0.25
             ]
+          ],
+          "neighbors": [
+            [
+              "alpha",
+              [
+                "beta"
+              ]
+            ],
+            [
+              "beta",
+              [
+                "alpha"
+              ]
+            ]
+          ],
+          "weights": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
           ]
         },
         "before": {
@@ -185,6 +231,27 @@
             ]
           ],
           "learned": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ],
+          "neighbors": [
+            [
+              "alpha",
+              [
+                "beta"
+              ]
+            ],
+            [
+              "beta",
+              [
+                "alpha"
+              ]
+            ]
+          ],
+          "weights": [
             [
               "alpha",
               "beta",
@@ -259,6 +326,8 @@
     ],
     "rows": [
       {
+        "after_value": 4242.0,
+        "before_value": 0.0,
         "call_path": "LiveLoop._drain_user_inputs -> LiveLoop._handle_user_input",
         "event_ids": [
           "m1-extended:event:live-drain:001"
@@ -268,9 +337,20 @@
         "observed": true,
         "path": "adapters/live_loop.py",
         "replay_matches": true,
-        "target_id": "legacy.live_loop.drain_user_inputs"
+        "state_changed": true,
+        "state_field": "last_emit_time",
+        "target_id": "legacy.live_loop.drain_user_inputs",
+        "transition_sha256": "428fb2a868fc0ba291209871b1829294beb657102fd86185807ce686a81a617b"
       },
       {
+        "after_value": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ],
+        "before_value": [],
         "call_path": "ActivationAdapter.learn_pair -> SpreadingActivation.learn_pair",
         "event_ids": [
           "m1-extended:event:activation:001"
@@ -280,9 +360,14 @@
         "observed": true,
         "path": "legacy/eve_modules/spreading_activation.py",
         "replay_matches": true,
-        "target_id": "legacy.activation.learn_pair"
+        "state_changed": true,
+        "state_field": "weights",
+        "target_id": "legacy.activation.learn_pair",
+        "transition_sha256": "610d7f0e254f589b228764e26ffaafc41033ddd00b56e4eecf7f0e7c1c26398b"
       },
       {
+        "after_value": 1,
+        "before_value": 0,
         "call_path": "LiveLoop._drain_user_inputs",
         "event_ids": [
           "m1-extended:event:live-drain:001"
@@ -292,9 +377,27 @@
         "observed": true,
         "path": "adapters/live_loop.py",
         "replay_matches": true,
-        "target_id": "legacy.live_loop.drain_user_inputs"
+        "state_changed": true,
+        "state_field": "processed_input_count",
+        "target_id": "legacy.live_loop.drain_user_inputs",
+        "transition_sha256": "7adda20ec7eceaeccd532026d0e3896d6efc6dac40f9eb49307837645a80ca1e"
       },
       {
+        "after_value": [
+          [
+            "alpha",
+            [
+              "beta"
+            ]
+          ],
+          [
+            "beta",
+            [
+              "alpha"
+            ]
+          ]
+        ],
+        "before_value": [],
         "call_path": "ActivationAdapter.learn_pair -> SpreadingActivation.learn_pair",
         "event_ids": [
           "m1-extended:event:activation:001"
@@ -304,9 +407,20 @@
         "observed": true,
         "path": "legacy/eve_modules/spreading_activation.py",
         "replay_matches": true,
-        "target_id": "legacy.activation.learn_pair"
+        "state_changed": true,
+        "state_field": "neighbors",
+        "target_id": "legacy.activation.learn_pair",
+        "transition_sha256": "1aa501b1d5031ba42733829c2f02a3be6dfb0aa1831f452b033a0f4f22f98ae7"
       },
       {
+        "after_value": [
+          {
+            "relative_path": "state.v41sidecar",
+            "sha256": "d24724c1fc0c95bd34a37258811ac626c4d0cb1fc201e9f3552e114324e57d44",
+            "size_bytes": 27
+          }
+        ],
+        "before_value": [],
         "call_path": "PersistenceAdapter.save",
         "event_ids": [
           "m1-extended:event:persistence-save:001"
@@ -316,7 +430,10 @@
         "observed": true,
         "path": "adapters/persistence_adapter.py",
         "replay_matches": true,
-        "target_id": "legacy.persistence.save"
+        "state_changed": true,
+        "state_field": "files",
+        "target_id": "legacy.persistence.save",
+        "transition_sha256": "a2b8fd309c0df6759a5e64cf279d03c041f0f1381a391b636a1c4c6662008f88"
       }
     ]
   },
@@ -364,6 +481,48 @@
   "raw_observations": {
     "activation": {
       "actual_state_matches_unobserved": true,
+      "event_boundary_snapshot": {
+        "calls": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ],
+          [
+            "beta",
+            "gamma",
+            0.5
+          ]
+        ],
+        "learned": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ],
+        "neighbors": [
+          [
+            "alpha",
+            [
+              "beta"
+            ]
+          ],
+          [
+            "beta",
+            [
+              "alpha"
+            ]
+          ]
+        ],
+        "weights": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ]
+      },
       "event_ids": [
         "m1-extended:event:activation:001",
         "m1-extended:event:activation:002"
@@ -383,6 +542,27 @@
           ]
         ],
         "learned": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ],
+        "neighbors": [
+          [
+            "alpha",
+            [
+              "beta"
+            ]
+          ],
+          [
+            "beta",
+            [
+              "alpha"
+            ]
+          ]
+        ],
+        "weights": [
           [
             "alpha",
             "beta",
@@ -419,6 +599,7 @@
         "emissions": [
           "controlled reply"
         ],
+        "last_emit_time": 4242.0,
         "processed_input_count": 1,
         "queue_size": 0
       },
@@ -428,6 +609,7 @@
         "emissions": [
           "controlled reply"
         ],
+        "last_emit_time": 4242.0,
         "processed_input_count": 1,
         "queue_size": 0
       },
@@ -476,14 +658,14 @@
     "divergences": [],
     "final_equivalence": [
       {
-        "actual_digest": "ff5dd1814ef0f784f04bddc0dfb8bf399e6e27a431c870a3cf805f3d6ff87a76",
-        "expected_digest": "ff5dd1814ef0f784f04bddc0dfb8bf399e6e27a431c870a3cf805f3d6ff87a76",
+        "actual_digest": "0c7233bcb8f5bc661c3944e6182093ea3a6c00559ca26f9cd7b5e819aa77200c",
+        "expected_digest": "0c7233bcb8f5bc661c3944e6182093ea3a6c00559ca26f9cd7b5e819aa77200c",
         "matches": true,
         "target_id": "legacy.activation.learn_pair"
       },
       {
-        "actual_digest": "060ef95499f38f369b23771e175869ffd730ca743dd88bebe24d84b7ef38f7b6",
-        "expected_digest": "060ef95499f38f369b23771e175869ffd730ca743dd88bebe24d84b7ef38f7b6",
+        "actual_digest": "49c42f8d92f960b7a1a8b17bd8f13ce19e49031e6de4635c4dd96f28776d5173",
+        "expected_digest": "49c42f8d92f960b7a1a8b17bd8f13ce19e49031e6de4635c4dd96f28776d5173",
         "matches": true,
         "target_id": "legacy.live_loop.drain_user_inputs"
       },
@@ -501,7 +683,7 @@
     },
     "rows": [
       {
-        "event_digest": "d83753f801cca88cbc656c81153985467042194cdbbc09bab40e7dfd15d4a2c5",
+        "event_digest": "9355d6bff5a1f4e34b3f4c41b97554f0d00e2b90937a013e43d4c6fb9325a187",
         "event_id": "m1-extended:event:live-drain:001",
         "matches": true,
         "mismatch_codes": [],
@@ -519,7 +701,7 @@
         "target_id": "legacy.persistence.save"
       },
       {
-        "event_digest": "f38565f2b4baa3187f31f7a4f3b13f74c134177585e085e496b1423821391850",
+        "event_digest": "1b8a86fcad549b10fada6e6b79be50fcb51932b50e642a9b2f89d29b02c6f9b4",
         "event_id": "m1-extended:event:activation:001",
         "matches": true,
         "mismatch_codes": [],
@@ -528,7 +710,7 @@
         "target_id": "legacy.activation.learn_pair"
       },
       {
-        "event_digest": "469d4f200a9787559ea48e8b543e0225b2c1d5d406dd49522939e35b52455e2b",
+        "event_digest": "2be99a196e796e7fa380bb3dae0dc64c2cb9430e01eb75f290f7acb38adc3392",
         "event_id": "m1-extended:event:activation:002",
         "matches": true,
         "mismatch_codes": [],
@@ -538,7 +720,7 @@
       }
     ]
   },
-  "source_evidence_sha256": "7de175692c88b7f25bdd6b846802afa71aa01990b3a10bbc3f2cc932ab5f5438",
+  "source_evidence_sha256": "06984c653ed2a655f45c7cb27d0777b1c93c6aee872f2cb9c7d1f5a898d9af86",
   "success_event_count": 3,
   "unauthorized_effects": {
     "defaults_changed": false,

@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+import adapters.live_loop as live_loop_module
 import adapters.persistence_adapter as persistence_module
 from adapters.activation_adapter import ActivationAdapter
 from adapters.live_loop import LiveLoop
@@ -28,11 +29,6 @@ from core.shadow_observer import (
     SUCCESS_EVENT_TYPE,
     LegacyFunnelShadowObserver,
     ShadowTarget,
-)
-from core.shadow_projection import (
-    ActivationLearnPairShadowState,
-    ShadowProjectionError,
-    reduce_activation_learn_pair,
 )
 from legacy.eve_modules.spreading_activation import SpreadingActivation
 
@@ -152,6 +148,14 @@ class _DelegatingObservedSpreadingActivation:
         return {
             "calls": [list(item) for item in self.calls],
             "learned": [list(item) for item in self.learned],
+            "neighbors": [
+                [category, sorted(values)]
+                for category, values in sorted(self.inner.neighbors.items())
+            ],
+            "weights": [
+                [left, right, float(weight)]
+                for (left, right), weight in sorted(self.inner.weights.items())
+            ],
         }
 
     def actual_state(self) -> dict[str, Any]:
@@ -244,6 +248,7 @@ class _ThreadEngine:
 def _live_snapshot(loop: LiveLoop, emissions: list[str]) -> dict[str, Any]:
     return {
         "emissions": list(emissions),
+        "last_emit_time": float(loop._last_emit_time),
         "processed_input_count": int(loop.processed_input_count),
         "queue_size": int(loop._user_input_queue.qsize()),
     }
@@ -283,16 +288,21 @@ def _run_live_loop_drain(
         observed_trace.append("snapshot:after")
         return _live_snapshot(observed, observed_emissions)
 
-    observed_result = observer.observe_call(
-        LIVE_LOOP_DRAIN_TARGET.target_id,
-        event_id=event_id,
-        correlation_id=CORRELATION_ID,
-        causation_id=causation_id,
-        legacy_callable=observed._drain_user_inputs,
-        before_snapshot=before,
-        after_snapshot=after,
-    )
-    baseline_result = baseline._drain_user_inputs()
+    original_time = live_loop_module.time.time
+    live_loop_module.time.time = lambda: 4242.0
+    try:
+        observed_result = observer.observe_call(
+            LIVE_LOOP_DRAIN_TARGET.target_id,
+            event_id=event_id,
+            correlation_id=CORRELATION_ID,
+            causation_id=causation_id,
+            legacy_callable=observed._drain_user_inputs,
+            before_snapshot=before,
+            after_snapshot=after,
+        )
+        baseline_result = baseline._drain_user_inputs()
+    finally:
+        live_loop_module.time.time = original_time
     final = _live_snapshot(observed, observed_emissions)
     baseline_final = _live_snapshot(baseline, baseline_emissions)
     event_delta = len(kernel.events()) - before_count
@@ -500,6 +510,13 @@ def _run_concurrent_activation(
     if observed_outcome != baseline_outcome:
         raise ExtendedCampaignError("activation failure outcome diverged from baseline")
 
+    event_boundary_snapshot = observed_ledger.snapshot()
+    baseline_event_boundary_snapshot = baseline_ledger.snapshot()
+    if event_boundary_snapshot != baseline_event_boundary_snapshot:
+        raise ExtendedCampaignError(
+            "activation event-boundary state diverged from unobserved baseline"
+        )
+
     events_before_ticks = len(kernel.events())
     for _ in range(STANDALONE_TICK_STEPS):
         observed.tick(dt=1.0)
@@ -515,6 +532,7 @@ def _run_concurrent_activation(
 
     return initial, {
         "actual_state_matches_unobserved": actual_state_matches,
+        "event_boundary_snapshot": event_boundary_snapshot,
         "event_ids": [event_id_success, event_id_failure],
         "exception_identity_preserved": propagated_identity,
         "final_snapshot": final,
@@ -559,15 +577,20 @@ def _run_observer_failure_probe() -> dict[str, Any]:
     def broken_before() -> Mapping[str, Any]:
         raise RuntimeError("controlled extended observer snapshot failure")
 
-    observed_result = observer.observe_call(
-        LIVE_LOOP_DRAIN_TARGET.target_id,
-        event_id="m1-extended:observer-failure:001",
-        correlation_id=CORRELATION_ID,
-        legacy_callable=observed._drain_user_inputs,
-        before_snapshot=broken_before,
-        after_snapshot=lambda: _live_snapshot(observed, observed_emissions),
-    )
-    baseline_result = baseline._drain_user_inputs()
+    original_time = live_loop_module.time.time
+    live_loop_module.time.time = lambda: 4343.0
+    try:
+        observed_result = observer.observe_call(
+            LIVE_LOOP_DRAIN_TARGET.target_id,
+            event_id="m1-extended:observer-failure:001",
+            correlation_id=CORRELATION_ID,
+            legacy_callable=observed._drain_user_inputs,
+            before_snapshot=broken_before,
+            after_snapshot=lambda: _live_snapshot(observed, observed_emissions),
+        )
+        baseline_result = baseline._drain_user_inputs()
+    finally:
+        live_loop_module.time.time = original_time
     failures = observer.failures()
     if len(failures) != 1 or kernel.events():
         raise ExtendedCampaignError("observer failure visibility contract changed")
@@ -591,6 +614,7 @@ def _generic_replay_event(
     event: Any,
     target: ShadowTarget,
     expected_sequence: int,
+    expected_causation_id: str | None,
 ) -> tuple[dict[str, Any], list[str]]:
     mismatches: list[str] = []
     payload = event.payload
@@ -600,12 +624,47 @@ def _generic_replay_event(
         "module_path": target.module_path,
         "target_id": target.target_id,
     }
+    expected_context = {
+        "arguments_captured": False,
+        "legacy_result_captured": False,
+        "observation_phase": "after_the_fact",
+        "source_evidence_range": target.evidence_range,
+    }
+    if event.authority != SHADOW_AUTHORITY:
+        mismatches.append("authority")
+    if event.producer != "core.shadow_observer":
+        mismatches.append("producer")
+    if event.producer_version != "1.0.0":
+        mismatches.append("producer_version")
+    if event.schema_version != "eve.event-envelope.v1":
+        mismatches.append("schema_version")
+    if event.correlation_id != CORRELATION_ID:
+        mismatches.append("correlation_id")
+    if event.causation_id != expected_causation_id:
+        mismatches.append("causation_id")
+    if event.causal_context != expected_context:
+        mismatches.append("causal_context")
     if event.stream_id != target.stream_id:
         mismatches.append("stream_id")
     if event.sequence != expected_sequence:
         mismatches.append("sequence")
     if payload.get("target") != expected_target:
         mismatches.append("target_metadata")
+    outcome = payload.get("legacy_outcome")
+    if not isinstance(outcome, Mapping):
+        mismatches.append("legacy_outcome")
+    else:
+        expected_type = (
+            SUCCESS_EVENT_TYPE if outcome.get("succeeded") is True else FAILURE_EVENT_TYPE
+        )
+        if event.event_type != expected_type:
+            mismatches.append("event_type")
+        if outcome.get("succeeded") is True and outcome.get("error_type") is not None:
+            mismatches.append("success_error_type")
+        if outcome.get("succeeded") is False and not isinstance(
+            outcome.get("error_type"), str
+        ):
+            mismatches.append("failure_error_type")
     if payload.get("before") != dict(state):
         mismatches.append("before_snapshot")
     after = payload.get("after")
@@ -622,19 +681,14 @@ def _replay_all(
 ) -> dict[str, Any]:
     target_by_id = {target.target_id: target for target in EXTENDED_TARGETS}
     target_by_stream = {target.stream_id: target for target in EXTENDED_TARGETS}
-    generic_states = {
+    states = {
         target_id: dict(snapshot)
         for target_id, snapshot in initial_by_target.items()
-        if target_id != ACTIVATION_LEARN_PAIR_TARGET.target_id
     }
-    activation_state = ActivationLearnPairShadowState.from_initial_snapshot(
-        initial_by_target[ACTIVATION_LEARN_PAIR_TARGET.target_id]
-    )
-    generic_sequences = {
-        target_id: 0 for target_id in generic_states
-    }
+    sequences = {target_id: 0 for target_id in states}
     rows: list[dict[str, Any]] = []
     divergences: list[dict[str, Any]] = []
+    previous_event_id: str | None = None
     for event in events:
         target = target_by_stream.get(event.stream_id)
         mismatch_codes: list[str] = []
@@ -643,24 +697,14 @@ def _replay_all(
             target_id = "unknown"
         else:
             target_id = target.target_id
-            if target_id == ACTIVATION_LEARN_PAIR_TARGET.target_id:
-                try:
-                    activation_state = reduce_activation_learn_pair(
-                        activation_state,
-                        event,
-                    )
-                    if activation_state.snapshot != event.payload["after"]:
-                        mismatch_codes.append("projected_after")
-                except ShadowProjectionError as exc:
-                    mismatch_codes.append(f"reducer:{type(exc).__name__}")
-            else:
-                generic_sequences[target_id] += 1
-                generic_states[target_id], mismatch_codes = _generic_replay_event(
-                    generic_states[target_id],
-                    event,
-                    target,
-                    generic_sequences[target_id],
-                )
+            sequences[target_id] += 1
+            states[target_id], mismatch_codes = _generic_replay_event(
+                states[target_id],
+                event,
+                target,
+                sequences[target_id],
+                previous_event_id,
+            )
         row = {
             "event_digest": event.digest,
             "event_id": event.event_id,
@@ -673,14 +717,11 @@ def _replay_all(
         rows.append(row)
         if mismatch_codes:
             divergences.append(row)
+        previous_event_id = event.event_id
 
-    final_states: dict[str, Mapping[str, Any]] = {
-        ACTIVATION_LEARN_PAIR_TARGET.target_id: activation_state.snapshot,
-        **generic_states,
-    }
     final_rows = []
     for target_id in sorted(target_by_id):
-        actual = dict(final_states[target_id])
+        actual = dict(states[target_id])
         expected = dict(final_by_target[target_id])
         final_rows.append(
             {
@@ -708,11 +749,15 @@ def _replay_all(
     }
 
 
-def _mutation_form_rows(replay: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _mutation_form_rows(
+    replay: Mapping[str, Any],
+    events: tuple[Any, ...],
+) -> list[dict[str, Any]]:
     replay_matches = {
         row["event_id"]: bool(row["matches"])
         for row in replay["rows"]
     }
+    event_by_id = {event.event_id: event for event in events}
     rows = [
         {
             "form": "attribute_assignment",
@@ -721,6 +766,7 @@ def _mutation_form_rows(replay: Mapping[str, Any]) -> list[dict[str, Any]]:
             "call_path": "LiveLoop._drain_user_inputs -> LiveLoop._handle_user_input",
             "target_id": LIVE_LOOP_DRAIN_TARGET.target_id,
             "event_ids": ["m1-extended:event:live-drain:001"],
+            "state_field": "last_emit_time",
         },
         {
             "form": "subscript_assignment",
@@ -729,6 +775,7 @@ def _mutation_form_rows(replay: Mapping[str, Any]) -> list[dict[str, Any]]:
             "call_path": "ActivationAdapter.learn_pair -> SpreadingActivation.learn_pair",
             "target_id": ACTIVATION_LEARN_PAIR_TARGET.target_id,
             "event_ids": ["m1-extended:event:activation:001"],
+            "state_field": "weights",
         },
         {
             "form": "augmented_assignment",
@@ -737,6 +784,7 @@ def _mutation_form_rows(replay: Mapping[str, Any]) -> list[dict[str, Any]]:
             "call_path": "LiveLoop._drain_user_inputs",
             "target_id": LIVE_LOOP_DRAIN_TARGET.target_id,
             "event_ids": ["m1-extended:event:live-drain:001"],
+            "state_field": "processed_input_count",
         },
         {
             "form": "mutating_method_call",
@@ -745,6 +793,7 @@ def _mutation_form_rows(replay: Mapping[str, Any]) -> list[dict[str, Any]]:
             "call_path": "ActivationAdapter.learn_pair -> SpreadingActivation.learn_pair",
             "target_id": ACTIVATION_LEARN_PAIR_TARGET.target_id,
             "event_ids": ["m1-extended:event:activation:001"],
+            "state_field": "neighbors",
         },
         {
             "form": "direct_write",
@@ -753,12 +802,27 @@ def _mutation_form_rows(replay: Mapping[str, Any]) -> list[dict[str, Any]]:
             "call_path": "PersistenceAdapter.save",
             "target_id": PERSISTENCE_SAVE_TARGET.target_id,
             "event_ids": ["m1-extended:event:persistence-save:001"],
+            "state_field": "files",
         },
     ]
     for row in rows:
-        row["observed"] = True
+        event_id = row["event_ids"][0]
+        event = event_by_id[event_id]
+        field = row["state_field"]
+        before_value = event.payload["before"][field]
+        after_value = event.payload["after"][field]
+        state_changed = before_value != after_value
+        row["before_value"] = before_value
+        row["after_value"] = after_value
+        row["state_changed"] = state_changed
+        row["transition_sha256"] = _sha(
+            {"before": before_value, "after": after_value},
+            f"mutation-transition:{row['form']}",
+        )
+        row["observed"] = state_changed
         row["replay_matches"] = all(
-            replay_matches.get(event_id, False) for event_id in row["event_ids"]
+            replay_matches.get(candidate_id, False)
+            for candidate_id in row["event_ids"]
         )
     return rows
 
@@ -791,12 +855,12 @@ def run_extended_controlled_observation_campaign() -> dict[str, Any]:
         PERSISTENCE_SAVE_TARGET.target_id: persistence_initial,
     }
     final_by_target = {
-        ACTIVATION_LEARN_PAIR_TARGET.target_id: activation["final_snapshot"],
+        ACTIVATION_LEARN_PAIR_TARGET.target_id: activation["event_boundary_snapshot"],
         LIVE_LOOP_DRAIN_TARGET.target_id: live["final_snapshot"],
         PERSISTENCE_SAVE_TARGET.target_id: persistence["final_snapshot"],
     }
     replay = _replay_all(events, initial_by_target, final_by_target)
-    mutation_forms = _mutation_form_rows(replay)
+    mutation_forms = _mutation_form_rows(replay, events)
     success_count = sum(
         1 for event in events if event.event_type == SUCCESS_EVENT_TYPE
     )
@@ -984,7 +1048,9 @@ def render_evidence_markdown(
     targets = result["observation_window"]["adapter_call_paths"]
     form_lines = "\n".join(
         f"| `{row['form']}` | `{row['path']}:{row['line_range']}` | "
-        f"`{row['target_id']}` | `{str(row['replay_matches']).lower()}` |"
+        f"`{row['target_id']}` | `{row['state_field']}` | "
+        f"`{str(row['state_changed']).lower()}` | "
+        f"`{str(row['replay_matches']).lower()}` |"
         for row in forms
     )
     target_lines = "\n".join(
@@ -1016,12 +1082,13 @@ temporary roots and both roots are removed before the campaign returns.
 
 ### Mutation forms
 
-| M0-A form | Executed source | Observed target | Replay match |
-|---|---|---|---|
+| M0-A form | Executed source | Observed target | State field | Changed | Replay match |
+|---|---|---|---|---|---|
 {form_lines}
 
-All five required forms were executed at least once and tied to raw before/after
-events. The rows are mechanism evidence, not a claim that all historical mutation
+All five required forms were executed at least once. Each row identifies the
+mutated state field and records its exact raw before/after values plus a transition
+digest. The rows are mechanism evidence, not a claim that all historical mutation
 sites are covered or safe.
 
 ### Multiple adapter dispositions
