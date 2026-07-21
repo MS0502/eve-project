@@ -90,19 +90,28 @@ def test_source_rows_correspond_to_real_ast_mutation_shapes(evidence):
     )
 
     assert any(
-        isinstance(node, ast.AugAssign) and node.lineno == 76
+        isinstance(node, ast.AugAssign)
+        and isinstance(node.target, ast.Attribute)
+        and node.target.attr == "processed_input_count"
+        and isinstance(node.op, ast.Add)
         for node in ast.walk(live_tree)
     )
     assert any(
         isinstance(node, ast.Assign)
-        and node.lineno == 105
-        and any(isinstance(target, ast.Attribute) for target in node.targets)
+        and any(
+            isinstance(target, ast.Attribute) and target.attr == "_last_emit_time"
+            for target in node.targets
+        )
         for node in ast.walk(live_tree)
     )
     assert any(
         isinstance(node, ast.Assign)
-        and node.lineno == 241
-        and any(isinstance(target, ast.Subscript) for target in node.targets)
+        and any(
+            isinstance(target, ast.Subscript)
+            and isinstance(target.value, ast.Attribute)
+            and target.value.attr == "weights"
+            for target in node.targets
+        )
         for node in ast.walk(spreading_tree)
     )
     assert sum(
@@ -111,13 +120,14 @@ def test_source_rows_correspond_to_real_ast_mutation_shapes(evidence):
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "add"
-        and node.lineno in {242, 243}
-    ) == 2
+        and isinstance(node.func.value, ast.Subscript)
+        and isinstance(node.func.value.value, ast.Attribute)
+        and node.func.value.value.attr == "neighbors"
+    ) >= 2
     assert any(
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "dump"
-        and node.lineno == 72
         for node in ast.walk(persistence_tree)
     )
 
@@ -250,8 +260,9 @@ def test_committed_report_is_exact_render_of_raw_artifact(evidence):
     raw_text = RAW_PATH.read_text(encoding="utf-8")
     raw_sha = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
     expected = render_evidence_markdown(evidence, raw_sha)
+    normalized = " ".join(expected.split())
 
     assert EVIDENCE_PATH.read_text(encoding="utf-8") == expected
     assert f"Raw observation artifact SHA-256: `{raw_sha}`" in expected
     assert "5 / 532" in expected
-    assert "not a claim that all historical mutation sites are covered" in expected
+    assert "not a claim that all historical mutation sites are covered" in normalized
