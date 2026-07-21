@@ -38,7 +38,7 @@ Events must not be emitted to sample continuous values. A tick may emit an event
 
 ## Evidence recalculability
 
-Acceptance, gate, and cutover evidence packages must contain the raw observational data sufficient to independently recompute every claimed metric, or immutable content-addressed references bound into the same verification package. A reference must pin SHA-256 and schema version. State access restrictions and redaction rules explicitly; after redaction, authorized reviewers must still be able to recompute the claims. Green verdicts alone are not observation evidence. This rule is forward-binding from v4.2 and does not retroactively invalidate merged M0 evidence.
+Acceptance, gate, and cutover evidence packages must contain the raw observational data sufficient to independently recompute every claimed metric, or immutable content-addressed references bound into the same verification package. A reference must pin SHA-256 and schema version. Access restrictions and redaction rules must be stated explicitly; after redaction, authorized reviewers must still be able to recompute the claims. Green verdicts alone are not observation evidence. This rule is forward-binding from v4.2 and does not retroactively invalidate merged M0 evidence.
 
 ## Mutation-state fidelity
 
