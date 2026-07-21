@@ -1,0 +1,731 @@
+{
+  "authority": "shadow_only",
+  "baseline_sha": "847621bcd61634958ce505108ade491c50ced0d4",
+  "campaign_id": "m1:extended-controlled-observation:mechanism:v1",
+  "campaign_schema_version": "eve.m1-extended-controlled-observation.v1",
+  "events": [
+    {
+      "authority": "shadow_only",
+      "causal_context": {
+        "arguments_captured": false,
+        "legacy_result_captured": false,
+        "observation_phase": "after_the_fact",
+        "source_evidence_range": "68-77"
+      },
+      "causation_id": null,
+      "correlation_id": "corr:m1-extended-controlled-observation",
+      "digest": "9355d6bff5a1f4e34b3f4c41b97554f0d00e2b90937a013e43d4c6fb9325a187",
+      "event_id": "m1-extended:event:live-drain:001",
+      "event_type": "shadow.legacy_mutation_observed_candidate",
+      "payload": {
+        "after": {
+          "emissions": [
+            "controlled reply"
+          ],
+          "last_emit_time": 4242.0,
+          "processed_input_count": 1,
+          "queue_size": 0
+        },
+        "before": {
+          "emissions": [],
+          "last_emit_time": 0.0,
+          "processed_input_count": 0,
+          "queue_size": 1
+        },
+        "legacy_outcome": {
+          "error_type": null,
+          "succeeded": true
+        },
+        "target": {
+          "callable": "LiveLoop._drain_user_inputs",
+          "disposition": "REWRITE",
+          "module_path": "adapters/live_loop.py",
+          "target_id": "legacy.live_loop.drain_user_inputs"
+        }
+      },
+      "producer": "core.shadow_observer",
+      "producer_version": "1.0.0",
+      "schema_version": "eve.event-envelope.v1",
+      "sequence": 1,
+      "stream_id": "shadow:legacy.live_loop.drain_user_inputs"
+    },
+    {
+      "authority": "shadow_only",
+      "causal_context": {
+        "arguments_captured": false,
+        "legacy_result_captured": false,
+        "observation_phase": "after_the_fact",
+        "source_evidence_range": "54-80"
+      },
+      "causation_id": "m1-extended:event:live-drain:001",
+      "correlation_id": "corr:m1-extended-controlled-observation",
+      "digest": "ffd983634a849ae0ab055e6f30c1880da8db2854a8a362990428282861cb7432",
+      "event_id": "m1-extended:event:persistence-save:001",
+      "event_type": "shadow.legacy_mutation_observed_candidate",
+      "payload": {
+        "after": {
+          "files": [
+            {
+              "relative_path": "state.v41sidecar",
+              "sha256": "d24724c1fc0c95bd34a37258811ac626c4d0cb1fc201e9f3552e114324e57d44",
+              "size_bytes": 27
+            }
+          ]
+        },
+        "before": {
+          "files": []
+        },
+        "legacy_outcome": {
+          "error_type": null,
+          "succeeded": true
+        },
+        "target": {
+          "callable": "PersistenceAdapter.save",
+          "disposition": "REWRITE",
+          "module_path": "adapters/persistence_adapter.py",
+          "target_id": "legacy.persistence.save"
+        }
+      },
+      "producer": "core.shadow_observer",
+      "producer_version": "1.0.0",
+      "schema_version": "eve.event-envelope.v1",
+      "sequence": 1,
+      "stream_id": "shadow:legacy.persistence.save"
+    },
+    {
+      "authority": "shadow_only",
+      "causal_context": {
+        "arguments_captured": false,
+        "legacy_result_captured": false,
+        "observation_phase": "after_the_fact",
+        "source_evidence_range": "103-105"
+      },
+      "causation_id": "m1-extended:event:persistence-save:001",
+      "correlation_id": "corr:m1-extended-controlled-observation",
+      "digest": "1b8a86fcad549b10fada6e6b79be50fcb51932b50e642a9b2f89d29b02c6f9b4",
+      "event_id": "m1-extended:event:activation:001",
+      "event_type": "shadow.legacy_mutation_observed_candidate",
+      "payload": {
+        "after": {
+          "calls": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ],
+          "learned": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ],
+          "neighbors": [
+            [
+              "alpha",
+              [
+                "beta"
+              ]
+            ],
+            [
+              "beta",
+              [
+                "alpha"
+              ]
+            ]
+          ],
+          "weights": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ]
+        },
+        "before": {
+          "calls": [],
+          "learned": [],
+          "neighbors": [],
+          "weights": []
+        },
+        "legacy_outcome": {
+          "error_type": null,
+          "succeeded": true
+        },
+        "target": {
+          "callable": "ActivationAdapter.learn_pair",
+          "disposition": "WRAP",
+          "module_path": "adapters/activation_adapter.py",
+          "target_id": "legacy.activation.learn_pair"
+        }
+      },
+      "producer": "core.shadow_observer",
+      "producer_version": "1.0.0",
+      "schema_version": "eve.event-envelope.v1",
+      "sequence": 1,
+      "stream_id": "shadow:legacy.activation.learn_pair"
+    },
+    {
+      "authority": "shadow_only",
+      "causal_context": {
+        "arguments_captured": false,
+        "legacy_result_captured": false,
+        "observation_phase": "after_the_fact",
+        "source_evidence_range": "103-105"
+      },
+      "causation_id": "m1-extended:event:activation:001",
+      "correlation_id": "corr:m1-extended-controlled-observation",
+      "digest": "2be99a196e796e7fa380bb3dae0dc64c2cb9430e01eb75f290f7acb38adc3392",
+      "event_id": "m1-extended:event:activation:002",
+      "event_type": "shadow.legacy_mutation_failed_candidate",
+      "payload": {
+        "after": {
+          "calls": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ],
+            [
+              "beta",
+              "gamma",
+              0.5
+            ]
+          ],
+          "learned": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ],
+          "neighbors": [
+            [
+              "alpha",
+              [
+                "beta"
+              ]
+            ],
+            [
+              "beta",
+              [
+                "alpha"
+              ]
+            ]
+          ],
+          "weights": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ]
+        },
+        "before": {
+          "calls": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ],
+          "learned": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ],
+          "neighbors": [
+            [
+              "alpha",
+              [
+                "beta"
+              ]
+            ],
+            [
+              "beta",
+              [
+                "alpha"
+              ]
+            ]
+          ],
+          "weights": [
+            [
+              "alpha",
+              "beta",
+              0.25
+            ]
+          ]
+        },
+        "legacy_outcome": {
+          "error_type": "RuntimeError",
+          "succeeded": false
+        },
+        "target": {
+          "callable": "ActivationAdapter.learn_pair",
+          "disposition": "WRAP",
+          "module_path": "adapters/activation_adapter.py",
+          "target_id": "legacy.activation.learn_pair"
+        }
+      },
+      "producer": "core.shadow_observer",
+      "producer_version": "1.0.0",
+      "schema_version": "eve.event-envelope.v1",
+      "sequence": 2,
+      "stream_id": "shadow:legacy.activation.learn_pair"
+    }
+  ],
+  "failure_visibility": {
+    "legacy_failure_event_count": 1,
+    "legacy_failure_visible": true,
+    "observer_failure": {
+      "error_message_digest": "33b01519308cb8238969354223954cb8e51050b54aed97cf29b58ad4d84b32f9",
+      "error_type": "RuntimeError",
+      "event_count": 0,
+      "event_id": "m1-extended:observer-failure:001",
+      "legacy_state_preserved": true,
+      "return_value_preserved": true,
+      "stage": "before_snapshot",
+      "target_id": "legacy.live_loop.drain_user_inputs"
+    }
+  },
+  "granularity": {
+    "candidate_events": 4,
+    "discrete_observed_calls": 4,
+    "events_during_live_tick_before_mutation": 0,
+    "events_during_standalone_tick_steps": 0,
+    "max_events_per_observed_call": 1,
+    "standalone_tick_steps": 4
+  },
+  "human_gate": {
+    "eligible_for_human_review": true,
+    "human_accepted": false,
+    "human_review_status": "required_not_performed",
+    "v4_2_eligible": false
+  },
+  "legacy_preservation": {
+    "activation_actual_state_matches_unobserved": true,
+    "activation_exception_identity_preserved": true,
+    "activation_snapshot_matches_unobserved": true,
+    "live_loop_state_matches_unobserved": true,
+    "persistence_state_matches_unobserved": true
+  },
+  "machine_gate": {
+    "machine_passed": true,
+    "status": "extended_mechanism_evidence_complete"
+  },
+  "mutation_classification": {
+    "required_forms": [
+      "attribute_assignment",
+      "subscript_assignment",
+      "augmented_assignment",
+      "mutating_method_call",
+      "direct_write"
+    ],
+    "rows": [
+      {
+        "after_value": 4242.0,
+        "before_value": 0.0,
+        "call_path": "LiveLoop._drain_user_inputs -> LiveLoop._handle_user_input",
+        "event_ids": [
+          "m1-extended:event:live-drain:001"
+        ],
+        "form": "attribute_assignment",
+        "line_range": "101-105",
+        "observed": true,
+        "path": "adapters/live_loop.py",
+        "replay_matches": true,
+        "state_changed": true,
+        "state_field": "last_emit_time",
+        "target_id": "legacy.live_loop.drain_user_inputs",
+        "transition_sha256": "428fb2a868fc0ba291209871b1829294beb657102fd86185807ce686a81a617b"
+      },
+      {
+        "after_value": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ],
+        "before_value": [],
+        "call_path": "ActivationAdapter.learn_pair -> SpreadingActivation.learn_pair",
+        "event_ids": [
+          "m1-extended:event:activation:001"
+        ],
+        "form": "subscript_assignment",
+        "line_range": "239-243",
+        "observed": true,
+        "path": "legacy/eve_modules/spreading_activation.py",
+        "replay_matches": true,
+        "state_changed": true,
+        "state_field": "weights",
+        "target_id": "legacy.activation.learn_pair",
+        "transition_sha256": "610d7f0e254f589b228764e26ffaafc41033ddd00b56e4eecf7f0e7c1c26398b"
+      },
+      {
+        "after_value": 1,
+        "before_value": 0,
+        "call_path": "LiveLoop._drain_user_inputs",
+        "event_ids": [
+          "m1-extended:event:live-drain:001"
+        ],
+        "form": "augmented_assignment",
+        "line_range": "68-77",
+        "observed": true,
+        "path": "adapters/live_loop.py",
+        "replay_matches": true,
+        "state_changed": true,
+        "state_field": "processed_input_count",
+        "target_id": "legacy.live_loop.drain_user_inputs",
+        "transition_sha256": "7adda20ec7eceaeccd532026d0e3896d6efc6dac40f9eb49307837645a80ca1e"
+      },
+      {
+        "after_value": [
+          [
+            "alpha",
+            [
+              "beta"
+            ]
+          ],
+          [
+            "beta",
+            [
+              "alpha"
+            ]
+          ]
+        ],
+        "before_value": [],
+        "call_path": "ActivationAdapter.learn_pair -> SpreadingActivation.learn_pair",
+        "event_ids": [
+          "m1-extended:event:activation:001"
+        ],
+        "form": "mutating_method_call",
+        "line_range": "241-243",
+        "observed": true,
+        "path": "legacy/eve_modules/spreading_activation.py",
+        "replay_matches": true,
+        "state_changed": true,
+        "state_field": "neighbors",
+        "target_id": "legacy.activation.learn_pair",
+        "transition_sha256": "1aa501b1d5031ba42733829c2f02a3be6dfb0aa1831f452b033a0f4f22f98ae7"
+      },
+      {
+        "after_value": [
+          {
+            "relative_path": "state.v41sidecar",
+            "sha256": "d24724c1fc0c95bd34a37258811ac626c4d0cb1fc201e9f3552e114324e57d44",
+            "size_bytes": 27
+          }
+        ],
+        "before_value": [],
+        "call_path": "PersistenceAdapter.save",
+        "event_ids": [
+          "m1-extended:event:persistence-save:001"
+        ],
+        "form": "direct_write",
+        "line_range": "65-74",
+        "observed": true,
+        "path": "adapters/persistence_adapter.py",
+        "replay_matches": true,
+        "state_changed": true,
+        "state_field": "files",
+        "target_id": "legacy.persistence.save",
+        "transition_sha256": "a2b8fd309c0df6759a5e64cf279d03c041f0f1381a391b636a1c4c6662008f88"
+      }
+    ]
+  },
+  "observation_window": {
+    "adapter_call_paths": [
+      {
+        "callable": "ActivationAdapter.learn_pair",
+        "disposition": "WRAP",
+        "evidence_range": "103-105",
+        "module_path": "adapters/activation_adapter.py",
+        "stream_id": "shadow:legacy.activation.learn_pair",
+        "target_id": "legacy.activation.learn_pair"
+      },
+      {
+        "callable": "LiveLoop._drain_user_inputs",
+        "disposition": "REWRITE",
+        "evidence_range": "68-77",
+        "module_path": "adapters/live_loop.py",
+        "stream_id": "shadow:legacy.live_loop.drain_user_inputs",
+        "target_id": "legacy.live_loop.drain_user_inputs"
+      },
+      {
+        "callable": "PersistenceAdapter.save",
+        "disposition": "REWRITE",
+        "evidence_range": "54-80",
+        "module_path": "adapters/persistence_adapter.py",
+        "stream_id": "shadow:legacy.persistence.save",
+        "target_id": "legacy.persistence.save"
+      }
+    ],
+    "adapter_count": 3,
+    "controlled_direct_write": true,
+    "controlled_direct_write_cleanup_verified": true,
+    "production_observer_installed": false,
+    "production_persistence_enabled": false,
+    "runtime_integrated": false,
+    "scenario_count": 4,
+    "scenarios": [
+      "live_loop_discrete_drain_transition",
+      "persistence_ephemeral_direct_write_transition",
+      "activation_success_and_failure_during_live_tick_thread",
+      "observer_failure_isolation_on_rewrite_target"
+    ]
+  },
+  "raw_observations": {
+    "activation": {
+      "actual_state_matches_unobserved": true,
+      "event_boundary_snapshot": {
+        "calls": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ],
+          [
+            "beta",
+            "gamma",
+            0.5
+          ]
+        ],
+        "learned": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ],
+        "neighbors": [
+          [
+            "alpha",
+            [
+              "beta"
+            ]
+          ],
+          [
+            "beta",
+            [
+              "alpha"
+            ]
+          ]
+        ],
+        "weights": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ]
+      },
+      "event_ids": [
+        "m1-extended:event:activation:001",
+        "m1-extended:event:activation:002"
+      ],
+      "exception_identity_preserved": true,
+      "final_snapshot": {
+        "calls": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ],
+          [
+            "beta",
+            "gamma",
+            0.5
+          ]
+        ],
+        "learned": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ],
+        "neighbors": [
+          [
+            "alpha",
+            [
+              "beta"
+            ]
+          ],
+          [
+            "beta",
+            [
+              "alpha"
+            ]
+          ]
+        ],
+        "weights": [
+          [
+            "alpha",
+            "beta",
+            0.25
+          ]
+        ]
+      },
+      "legacy_snapshot_matches_unobserved": true,
+      "live_tick_event_delta": 0,
+      "mutation_event_delta_while_thread_alive": 1,
+      "standalone_tick_event_delta": 0,
+      "standalone_tick_steps": 4,
+      "thread_alive_after_mutation": true,
+      "thread_alive_before_mutation": true,
+      "thread_barrier_reached": true,
+      "thread_started": true,
+      "thread_stopped": true,
+      "thread_trace": [
+        "tick:entered",
+        "tick:released"
+      ],
+      "tick_count_at_barrier": 1,
+      "trace": [
+        "snapshot:before:1",
+        "legacy:1",
+        "snapshot:after:1",
+        "snapshot:before:2",
+        "legacy:2",
+        "snapshot:after:2"
+      ]
+    },
+    "live_loop": {
+      "baseline_snapshot": {
+        "emissions": [
+          "controlled reply"
+        ],
+        "last_emit_time": 4242.0,
+        "processed_input_count": 1,
+        "queue_size": 0
+      },
+      "event_delta": 1,
+      "event_id": "m1-extended:event:live-drain:001",
+      "final_snapshot": {
+        "emissions": [
+          "controlled reply"
+        ],
+        "last_emit_time": 4242.0,
+        "processed_input_count": 1,
+        "queue_size": 0
+      },
+      "observed_trace": [
+        "snapshot:before",
+        "chat:controlled input",
+        "snapshot:after"
+      ],
+      "state_matches_unobserved": true
+    },
+    "persistence": {
+      "baseline_snapshot": {
+        "files": [
+          {
+            "relative_path": "state.v41sidecar",
+            "sha256": "d24724c1fc0c95bd34a37258811ac626c4d0cb1fc201e9f3552e114324e57d44",
+            "size_bytes": 27
+          }
+        ]
+      },
+      "controlled_legacy_save_replaced": true,
+      "event_delta": 1,
+      "event_id": "m1-extended:event:persistence-save:001",
+      "final_snapshot": {
+        "files": [
+          {
+            "relative_path": "state.v41sidecar",
+            "sha256": "d24724c1fc0c95bd34a37258811ac626c4d0cb1fc201e9f3552e114324e57d44",
+            "size_bytes": 27
+          }
+        ]
+      },
+      "state_matches_unobserved": true,
+      "temporary_roots_removed": true,
+      "trace": [
+        "snapshot:before",
+        "legacy:persistence-save",
+        "snapshot:after",
+        "legacy:persistence-save"
+      ]
+    }
+  },
+  "replay_equivalence": {
+    "compared_events": 4,
+    "divergence_count": 0,
+    "divergences": [],
+    "final_equivalence": [
+      {
+        "actual_digest": "0c7233bcb8f5bc661c3944e6182093ea3a6c00559ca26f9cd7b5e819aa77200c",
+        "expected_digest": "0c7233bcb8f5bc661c3944e6182093ea3a6c00559ca26f9cd7b5e819aa77200c",
+        "matches": true,
+        "target_id": "legacy.activation.learn_pair"
+      },
+      {
+        "actual_digest": "49c42f8d92f960b7a1a8b17bd8f13ce19e49031e6de4635c4dd96f28776d5173",
+        "expected_digest": "49c42f8d92f960b7a1a8b17bd8f13ce19e49031e6de4635c4dd96f28776d5173",
+        "matches": true,
+        "target_id": "legacy.live_loop.drain_user_inputs"
+      },
+      {
+        "actual_digest": "ca9d095709d3f99a0e34b515f8b780382a7578619db395e26a726450ac657567",
+        "expected_digest": "ca9d095709d3f99a0e34b515f8b780382a7578619db395e26a726450ac657567",
+        "matches": true,
+        "target_id": "legacy.persistence.save"
+      }
+    ],
+    "match_rate": {
+      "denominator": 4,
+      "numerator": 4,
+      "value": 1.0
+    },
+    "rows": [
+      {
+        "event_digest": "9355d6bff5a1f4e34b3f4c41b97554f0d00e2b90937a013e43d4c6fb9325a187",
+        "event_id": "m1-extended:event:live-drain:001",
+        "matches": true,
+        "mismatch_codes": [],
+        "sequence": 1,
+        "stream_id": "shadow:legacy.live_loop.drain_user_inputs",
+        "target_id": "legacy.live_loop.drain_user_inputs"
+      },
+      {
+        "event_digest": "ffd983634a849ae0ab055e6f30c1880da8db2854a8a362990428282861cb7432",
+        "event_id": "m1-extended:event:persistence-save:001",
+        "matches": true,
+        "mismatch_codes": [],
+        "sequence": 1,
+        "stream_id": "shadow:legacy.persistence.save",
+        "target_id": "legacy.persistence.save"
+      },
+      {
+        "event_digest": "1b8a86fcad549b10fada6e6b79be50fcb51932b50e642a9b2f89d29b02c6f9b4",
+        "event_id": "m1-extended:event:activation:001",
+        "matches": true,
+        "mismatch_codes": [],
+        "sequence": 1,
+        "stream_id": "shadow:legacy.activation.learn_pair",
+        "target_id": "legacy.activation.learn_pair"
+      },
+      {
+        "event_digest": "2be99a196e796e7fa380bb3dae0dc64c2cb9430e01eb75f290f7acb38adc3392",
+        "event_id": "m1-extended:event:activation:002",
+        "matches": true,
+        "mismatch_codes": [],
+        "sequence": 2,
+        "stream_id": "shadow:legacy.activation.learn_pair",
+        "target_id": "legacy.activation.learn_pair"
+      }
+    ]
+  },
+  "source_evidence_sha256": "06984c653ed2a655f45c7cb27d0777b1c93c6aee872f2cb9c7d1f5a898d9af86",
+  "success_event_count": 3,
+  "unauthorized_effects": {
+    "defaults_changed": false,
+    "external_effects_outside_temporary_roots": false,
+    "legacy_authority_changed": false,
+    "production_persistence_changed": false
+  }
+}
