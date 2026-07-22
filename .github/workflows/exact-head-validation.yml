@@ -100,6 +100,29 @@ jobs:
             printf '%s\n' 'No focused tests selected.' | tee /tmp/focused.txt
           fi
 
+      - name: Generate M2-D recovery rehearsal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_d_rehearsal.py \
+            --output /tmp/m2-d-rehearsal.json \
+            --pretty
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          packet = json.loads(Path('/tmp/m2-d-rehearsal.json').read_text())
+          print(json.dumps({
+              'packet_digest': packet['packet_digest'],
+              'passed_count': packet['passed_count'],
+              'failed_count': packet['failed_count'],
+              'machine_passed': packet['machine_passed'],
+              'human_accepted': packet['human_accepted'],
+              'authoritative_recovery': packet['authoritative_recovery'],
+              'cutover_authorized': packet['cutover_authorized'],
+          }, sort_keys=True))
+          PY
+
       - name: Verify M0 audit invariance
         shell: bash
         run: |
@@ -143,8 +166,8 @@ jobs:
 
           report = json.loads(Path('/tmp/m2-b-read-capability-candidates.json').read_text())
           print(json.dumps({
-              'report_digest': report['report_digest'],
-              **report['summary'],
+            'report_digest': report['report_digest'],
+            **report['summary'],
           }, sort_keys=True))
           PY
 
@@ -204,6 +227,7 @@ jobs:
             /tmp/changed-files.txt
             /tmp/focused-paths.txt
             /tmp/focused.txt
+            /tmp/m2-d-rehearsal.json
             /tmp/invariance.txt
             /tmp/forward-regression.json
             /tmp/m2-b-read-capability-candidates.json
