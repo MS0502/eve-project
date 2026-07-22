@@ -18,7 +18,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Run unresolved boundary probe
-        run: python scripts/audit/_m2b_unresolved_probe.py
+        run: python -m scripts.audit._m2b_unresolved_probe
       - name: Upload probe evidence
         uses: actions/upload-artifact@v4
         with:
