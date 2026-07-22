@@ -19,6 +19,10 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: exact-head-validation-${{ github.event.pull_request.number || inputs.sha }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -203,9 +207,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          addition_args=()
+          if test -d docs/audit/m2_b_decision_additions; then
+            while IFS= read -r path; do
+              addition_args+=(--additions "$path")
+            done < <(find docs/audit/m2_b_decision_additions -type f -name '*.json' | sort)
+          fi
           python scripts/audit/m2_b_decision_groups.py \
             --candidate /tmp/m2-b-read-capability-candidates.json \
             --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            "${addition_args[@]}" \
             --output /tmp/m2-b-decision-validation.json \
             --pretty \
             --strict
