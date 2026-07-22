@@ -1,0 +1,28 @@
+name: M2-B unresolved boundary probe
+
+on:
+  pull_request:
+    branches: [codex/m2b-boundary-probe-base]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Run unresolved boundary probe
+        run: python scripts/audit/_m2b_unresolved_probe.py
+      - name: Upload probe evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2b-unresolved-probe-${{ github.event.pull_request.head.sha }}
+          path: m2b-unresolved-probe.json
+          if-no-files-found: error
+          retention-days: 7
