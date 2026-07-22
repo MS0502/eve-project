@@ -34,6 +34,7 @@ jobs:
           import subprocess
           import sys
           import tempfile
+          import textwrap
           from pathlib import Path
 
           root = Path.cwd()
@@ -42,24 +43,21 @@ jobs:
           manifest_path = root / "docs/audit/FORWARD_ADDITIONS_MANIFEST.json"
 
           core = core_path.read_text(encoding="utf-8")
-          old = '''        with self._connect() as connection:
-              rows = connection.execute("SELECT * FROM snapshots ORDER BY ordinal DESC").fetchall()
-              for row in rows:
-          '''
-          new = '''        with self._connect() as connection:
-              rows = connection.execute(
-                  "SELECT * FROM snapshots WHERE stream_id=? ORDER BY ordinal DESC",
-                  (stream_id,),
-              ).fetchall()
-              for row in rows:
-          '''
+          old = '            rows = connection.execute("SELECT * FROM snapshots ORDER BY ordinal DESC").fetchall()\n'
+          new = textwrap.dedent('''\
+                      rows = connection.execute(
+                          "SELECT * FROM snapshots WHERE stream_id=? ORDER BY ordinal DESC",
+                          (stream_id,),
+                      ).fetchall()
+          ''')
           if core.count(old) != 1:
-              raise SystemExit("unexpected restore snapshot selection block")
+              raise SystemExit("unexpected restore snapshot selection line")
           core_path.write_text(core.replace(old, new), encoding="utf-8")
 
           tests = test_path.read_text(encoding="utf-8")
           marker = "def test_restore_uses_fresh_canonical_start_state_for_each_replay(tmp_path: Path):\n"
-          addition = '''def test_restore_snapshot_selection_is_isolated_to_requested_stream(tmp_path: Path):
+          addition = textwrap.dedent('''\
+          def test_restore_snapshot_selection_is_isolated_to_requested_stream(tmp_path: Path):
               path = tmp_path / "shadow.sqlite3"
               store = SQLiteShadowStore(path)
               store.initialize()
@@ -106,11 +104,7 @@ jobs:
               assert result.rejected_snapshot_ids == ()
 
 
-          '''
-          addition = "\n".join(
-              line[10:] if line.startswith("          ") else line
-              for line in addition.splitlines()
-          ) + "\n"
+          ''')
           if tests.count(marker) != 1 or "test_restore_snapshot_selection_is_isolated_to_requested_stream" in tests:
               raise SystemExit("unexpected restore stream-isolation test insertion point")
           test_path.write_text(tests.replace(marker, addition + marker), encoding="utf-8")
