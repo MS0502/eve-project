@@ -13,7 +13,9 @@ from scripts.audit.m2_e_window_driver import (
 
 def test_synthetic_hard_kill_matrix_corruption_and_disk_pressure(tmp_path: Path):
     evidence = run_chaos(workspace=tmp_path / "chaos", repetitions=1)
-    assert evidence["machine_passed"] is True
+    assert evidence["machine_passed"] is True, json.dumps(
+        evidence, ensure_ascii=False, sort_keys=True, indent=2
+    )
     assert evidence["baseline_sha"] == WINDOW_BASELINE_SHA
     assert evidence["synthetic_store_only"] is True
     assert evidence["legacy_runtime_authoritative"] is True
