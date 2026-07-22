@@ -49,7 +49,7 @@ chmod 600 "$PRIVATE_ROOT/git-exclusion-proof.txt"
 cat > "$BOOT_HOOK" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
 export EVE_M2E_PRIVATE_ROOT=$(printf '%q' "$PRIVATE_ROOT")
-exec $(printf '%q' "$SUPERVISOR") --boot
+exec bash $(printf '%q' "$SUPERVISOR") --boot
 EOF
 chmod 700 "$BOOT_HOOK"
 
@@ -57,9 +57,9 @@ termux-wake-lock || true
 if [ -f "$PRIVATE_ROOT/supervisor.pid" ] && kill -0 "$(cat "$PRIVATE_ROOT/supervisor.pid")" 2>/dev/null; then
   echo "M2-E window supervisor already running"
 else
-  nohup "$SUPERVISOR" --boot >> "$PRIVATE_ROOT/supervisor.log" 2>&1 &
+  nohup bash "$SUPERVISOR" --boot >> "$PRIVATE_ROOT/supervisor.log" 2>&1 &
   echo "$!" > "$PRIVATE_ROOT/supervisor.pid"
   chmod 600 "$PRIVATE_ROOT/supervisor.pid" "$PRIVATE_ROOT/supervisor.log" 2>/dev/null || true
 fi
 
-"$REPO_ROOT/scripts/habitat/window_status.sh"
+bash "$REPO_ROOT/scripts/habitat/window_status.sh"
