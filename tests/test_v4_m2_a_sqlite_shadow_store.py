@@ -14,6 +14,7 @@ from core.sqlite_shadow_store import (
     BackupPolicyError,
     PersistedEventCorruption,
     SQLiteShadowStore,
+    SchemaMismatch,
     ShadowStoragePolicy,
     SnapshotCorruption,
     StoragePolicyExceeded,
@@ -22,9 +23,19 @@ from core.sqlite_shadow_store import (
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "core/sqlite_shadow_store.py"
+EVENT_UPDATE_TRIGGER = (
+    "CREATE TRIGGER events_no_update BEFORE UPDATE ON events "
+    "BEGIN SELECT RAISE(ABORT,'append-only events'); END"
+)
 
 
-def event(sequence: int, *, event_id: str | None = None, cause: str | None = None, stream: str = "shadow:test") -> EventEnvelope:
+def event(
+    sequence: int,
+    *,
+    event_id: str | None = None,
+    cause: str | None = None,
+    stream: str = "shadow:test",
+) -> EventEnvelope:
     return EventEnvelope.create(
         event_id=event_id or f"event:{sequence}",
         event_type="shadow.test",
@@ -56,18 +67,67 @@ def test_construction_is_io_free_and_initialize_is_explicit(tmp_path: Path):
     assert report.wal_enabled == (report.journal_mode == "wal")
 
 
+def test_initial_schema_install_rolls_back_as_one_transaction_and_can_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    path = tmp_path / "shadow.sqlite3"
+    original = SQLiteShadowStore._insert_initial_records
+
+    def fail_after_ddl(self: SQLiteShadowStore, connection: sqlite3.Connection) -> None:
+        raise sqlite3.OperationalError("injected initialization interruption")
+
+    monkeypatch.setattr(SQLiteShadowStore, "_insert_initial_records", fail_after_ddl)
+    with pytest.raises(sqlite3.OperationalError):
+        SQLiteShadowStore(path).initialize()
+
+    connection = sqlite3.connect(path)
+    try:
+        objects = connection.execute(
+            "SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'"
+        ).fetchall()
+    finally:
+        connection.close()
+    assert objects == []
+
+    monkeypatch.setattr(SQLiteShadowStore, "_insert_initial_records", original)
+    assert SQLiteShadowStore(path).initialize().schema_version == STORE_SCHEMA_VERSION
+
+
 def test_schema_migration_and_append_only_triggers_are_durable(tmp_path: Path):
     path = tmp_path / "shadow.sqlite3"
     SQLiteShadowStore(path).initialize()
     connection = sqlite3.connect(path)
     try:
-        assert connection.execute("SELECT value FROM metadata WHERE key='store_schema_version'").fetchone()[0] == STORE_SCHEMA_VERSION
+        assert connection.execute(
+            "SELECT value FROM metadata WHERE key='store_schema_version'"
+        ).fetchone()[0] == STORE_SCHEMA_VERSION
         assert connection.execute("SELECT COUNT(*) FROM migrations").fetchone()[0] == 1
         for table in ("metadata", "migrations"):
+            connection.execute("BEGIN")
             with pytest.raises(sqlite3.DatabaseError):
                 connection.execute(f"DELETE FROM {table}")
+            connection.rollback()
     finally:
         connection.close()
+
+
+def test_reopen_rejects_missing_or_redefined_append_only_trigger(tmp_path: Path):
+    path = tmp_path / "shadow.sqlite3"
+    store = SQLiteShadowStore(path)
+    store.initialize()
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("DROP TRIGGER events_no_update")
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(SchemaMismatch):
+        SQLiteShadowStore(path).initialize()
+    report = store.integrity_check()
+    assert report.valid is False
+    assert any(item.startswith("schema:") for item in report.errors)
 
 
 def test_append_is_atomic_readback_verified_and_hash_chained(tmp_path: Path):
@@ -149,6 +209,14 @@ def test_snapshot_due_binding_and_readback(tmp_path: Path):
             state={"sum": 1},
             state_schema_version="test.state.v1",
         )
+    with pytest.raises(SnapshotCorruption):
+        store.write_snapshot(
+            snapshot_id="snapshot:bad-state",
+            stream_id="shadow:test",
+            through_sequence=2,
+            state={1: "not-a-string-key"},  # type: ignore[dict-item]
+            state_schema_version="test.state.v1",
+        )
 
 
 def test_corrupt_newest_snapshot_falls_back_to_previous_valid_snapshot(tmp_path: Path):
@@ -156,14 +224,31 @@ def test_corrupt_newest_snapshot_falls_back_to_previous_valid_snapshot(tmp_path:
     store = SQLiteShadowStore(path)
     store.initialize()
     store.append(event(1))
-    store.write_snapshot(snapshot_id="snapshot:good", stream_id="shadow:test", through_sequence=1,
-                         state={"sum": 1}, state_schema_version="test.state.v1")
-    store.write_snapshot(snapshot_id="snapshot:bad", stream_id="shadow:test", through_sequence=1,
-                         state={"sum": 1}, state_schema_version="test.state.v1")
+    store.write_snapshot(
+        snapshot_id="snapshot:good",
+        stream_id="shadow:test",
+        through_sequence=1,
+        state={"sum": 1},
+        state_schema_version="test.state.v1",
+    )
+    store.write_snapshot(
+        snapshot_id="snapshot:bad",
+        stream_id="shadow:test",
+        through_sequence=1,
+        state={"sum": 1},
+        state_schema_version="test.state.v1",
+    )
     connection = sqlite3.connect(path)
     try:
         connection.execute("DROP TRIGGER snapshots_no_update")
-        connection.execute("UPDATE snapshots SET state_digest=? WHERE snapshot_id='snapshot:bad'", ("0" * 64,))
+        connection.execute(
+            "UPDATE snapshots SET state_digest=? WHERE snapshot_id='snapshot:bad'",
+            ("0" * 64,),
+        )
+        connection.execute(
+            "CREATE TRIGGER snapshots_no_update BEFORE UPDATE ON snapshots "
+            "BEGIN SELECT RAISE(ABORT,'append-only snapshots'); END"
+        )
         connection.commit()
     finally:
         connection.close()
@@ -187,8 +272,13 @@ def test_restore_replays_twice_from_valid_snapshot_and_is_reproducible(tmp_path:
     store = SQLiteShadowStore(tmp_path / "shadow.sqlite3")
     store.initialize()
     store.append(event(1))
-    store.write_snapshot(snapshot_id="snapshot:1", stream_id="shadow:test", through_sequence=1,
-                         state={"total": 1}, state_schema_version="test.state.v1")
+    store.write_snapshot(
+        snapshot_id="snapshot:1",
+        stream_id="shadow:test",
+        through_sequence=1,
+        state={"total": 1},
+        state_schema_version="test.state.v1",
+    )
     store.append(event(2, cause="event:1"))
     result = store.restore_verified(
         stream_id="shadow:test",
@@ -233,8 +323,9 @@ def test_reopen_after_uncommitted_external_transaction_preserves_committed_histo
     connection = sqlite3.connect(path)
     connection.execute("BEGIN IMMEDIATE")
     connection.execute(
-        "INSERT INTO events(event_id,stream_id,sequence,event_json,envelope_digest,event_bytes,previous_chain_digest,chain_digest) VALUES(?,?,?,?,?,?,?,?)",
-        ("uncommitted", "shadow:test", 2, "{}", "0" * 64, 2, "0" * 64, "0" * 64),
+        "INSERT INTO events(ordinal,event_id,stream_id,sequence,event_json,envelope_digest,event_bytes,previous_chain_digest,chain_digest) "
+        "VALUES(?,?,?,?,?,?,?,?,?)",
+        (2, "uncommitted", "shadow:test", 2, "{}", "0" * 64, 2, "0" * 64, "0" * 64),
     )
     connection.close()
     reopened = SQLiteShadowStore(path)
@@ -251,7 +342,10 @@ def test_event_corruption_is_visible_to_reads_and_integrity_report(tmp_path: Pat
     connection = sqlite3.connect(path)
     try:
         connection.execute("DROP TRIGGER events_no_update")
-        connection.execute("UPDATE events SET envelope_digest=? WHERE event_id='event:1'", ("0" * 64,))
+        connection.execute(
+            "UPDATE events SET envelope_digest=? WHERE event_id='event:1'", ("0" * 64,)
+        )
+        connection.execute(EVENT_UPDATE_TRIGGER)
         connection.commit()
     finally:
         connection.close()
@@ -259,7 +353,30 @@ def test_event_corruption_is_visible_to_reads_and_integrity_report(tmp_path: Pat
         store.events()
     report = store.integrity_check()
     assert report.valid is False
-    assert any(item.startswith("event:1:") for item in report.errors)
+    assert any(item.startswith("event:") for item in report.errors)
+
+
+def test_denormalized_event_index_corruption_is_not_accepted_as_valid(tmp_path: Path):
+    path = tmp_path / "shadow.sqlite3"
+    store = SQLiteShadowStore(path)
+    store.initialize()
+    store.append(event(1))
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("DROP TRIGGER events_no_update")
+        connection.execute(
+            "UPDATE events SET stream_id='shadow:wrong', sequence=7 WHERE event_id='event:1'"
+        )
+        connection.execute(EVENT_UPDATE_TRIGGER)
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(PersistedEventCorruption):
+        store.events()
+    report = store.integrity_check()
+    assert report.valid is False
+    assert any("index columns disagree" in item for item in report.errors)
 
 
 def test_verified_backups_are_bounded_without_touching_event_history(tmp_path: Path):
@@ -279,12 +396,63 @@ def test_verified_backups_are_bounded_without_touching_event_history(tmp_path: P
         "shadow-backup-00000002.sqlite3",
         "shadow-backup-00000003.sqlite3",
     ]
+    backup_store = SQLiteShadowStore(third.backup_path)
+    backup_store.initialize()
+    assert backup_store.integrity_check().valid is True
+    assert backup_store.events() == (event(1),)
     assert store.events() == (event(1),)
     with pytest.raises(BackupPolicyError):
         store.create_backup(backup_dir, backup_ordinal=3)
     with pytest.raises(BackupPolicyError):
         store.create_backup(backup_dir, backup_ordinal=1)
     assert not (backup_dir / "shadow-backup-00000001.sqlite3").exists()
+
+
+def test_backup_rejects_logically_corrupt_source_and_issues_no_receipt(tmp_path: Path):
+    path = tmp_path / "shadow.sqlite3"
+    store = SQLiteShadowStore(path)
+    store.initialize()
+    store.append(event(1))
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("DROP TRIGGER events_no_update")
+        connection.execute("UPDATE events SET stream_id='shadow:wrong' WHERE event_id='event:1'")
+        connection.execute(EVENT_UPDATE_TRIGGER)
+        connection.commit()
+    finally:
+        connection.close()
+
+    backup_dir = tmp_path / "backups"
+    with pytest.raises(BackupPolicyError, match="source logical integrity"):
+        store.create_backup(backup_dir, backup_ordinal=1)
+    assert list(backup_dir.iterdir()) == []
+
+
+def test_backup_candidate_must_pass_logical_verifier_before_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = SQLiteShadowStore(tmp_path / "shadow.sqlite3")
+    store.initialize()
+    store.append(event(1))
+    original = SQLiteShadowStore._verify_database_path
+
+    def reject_candidate(cls, path: Path, policy: ShadowStoragePolicy):
+        report = original(path, policy)
+        return type(report)(
+            False,
+            ("injected:logical-corruption",),
+            report.event_count,
+            report.snapshot_count,
+            report.chain_head_digest,
+            report.report_digest,
+        )
+
+    monkeypatch.setattr(SQLiteShadowStore, "_verify_database_path", classmethod(reject_candidate))
+    backup_dir = tmp_path / "backups"
+    with pytest.raises(BackupPolicyError, match="backup logical integrity"):
+        store.create_backup(backup_dir, backup_ordinal=1)
+    assert list(backup_dir.iterdir()) == []
 
 
 def test_module_has_no_default_activation_legacy_bridge_thread_clock_random_or_pickle_surface():
@@ -303,8 +471,17 @@ def test_module_has_no_default_activation_legacy_bridge_thread_clock_random_or_p
             elif isinstance(node.func, ast.Attribute):
                 calls.add(node.func.attr)
     assert not imports & {
-        "adapters", "asyncio", "datetime", "language", "main", "pickle",
-        "random", "secrets", "threading", "time", "uuid",
+        "adapters",
+        "asyncio",
+        "datetime",
+        "language",
+        "main",
+        "pickle",
+        "random",
+        "secrets",
+        "threading",
+        "time",
+        "uuid",
     }
     assert not calls & {"start", "sleep"}
     assert "dual-read" in source
