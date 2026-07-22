@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from core.event_kernel import EventEnvelope, SHADOW_AUTHORITY
-from core.m2_c_dual_read import (
+from core.m2_c_migration import (
     COMPARISON_AUTHORITY,
     DUAL_READ_REPORT_SCHEMA_VERSION,
     LEGACY_SOURCE_SCHEMA_VERSION,
@@ -22,11 +22,10 @@ from core.shadow_observer import (
     OBSERVER_VERSION,
     SUCCESS_EVENT_TYPE,
 )
-from core.shadow_projection import PROJECTION_SCHEMA_VERSION
 from core.sqlite_shadow_store import SQLiteShadowStore
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULE = ROOT / "core/m2_c_dual_read.py"
+MODULE = ROOT / "core/m2_c_migration.py"
 EMPTY = {"calls": [], "learned": []}
 PAIR = ["alpha", "beta", 0.4]
 AFTER_ONE = {"calls": [PAIR], "learned": [PAIR]}
@@ -90,7 +89,8 @@ def test_assessment_hashes_source_and_normalizes_only_bounded_snapshot():
     assert result.source_sha256 == hashlib.sha256(
         b"detached legacy sidecar fixture"
     ).hexdigest()
-    assert result.normalized_snapshot == AFTER_ONE
+    assert result.state is not None
+    assert result.state.snapshot == AFTER_ONE
     assert result.legacy_authority_retained is True
     assert result.runtime_integrated is False
 
@@ -108,15 +108,15 @@ def test_assessment_reports_empty_schema_and_snapshot_incompatibilities():
         "invalid_bounded_snapshot",
         "unsupported_source_schema",
     )
-    assert result.normalized_snapshot is None
-    assert result.normalized_snapshot_digest is None
+    assert result.state is None
 
 
 def test_migration_candidate_is_content_addressed_comparison_only():
     candidate = build_migration_candidate(assessment())
     assert candidate.authority == COMPARISON_AUTHORITY
-    assert candidate.projection_schema_version == PROJECTION_SCHEMA_VERSION
     assert candidate.stream_id == ACTIVATION_LEARN_PAIR_TARGET.stream_id
+    assert candidate.legacy_state.manifest_digest
+    assert candidate.source_schema_version == LEGACY_SOURCE_SCHEMA_VERSION
     assert candidate.writes_performed is False
     assert candidate.runtime_integrated is False
     assert candidate.legacy_authority_retained is True
@@ -148,6 +148,7 @@ def test_dual_read_matches_replayed_shadow_without_logical_write(tmp_path: Path)
 
     after = store.integrity_check()
     assert report.schema_version == DUAL_READ_REPORT_SCHEMA_VERSION
+    assert report.replay_verified is True
     assert report.matches is True
     assert report.mismatches == ()
     assert report.incompatibilities == ()
@@ -157,7 +158,14 @@ def test_dual_read_matches_replayed_shadow_without_logical_write(tmp_path: Path)
     assert report.comparison_authority == COMPARISON_AUTHORITY
     assert report.legacy_authority_retained is True
     assert report.runtime_integrated is False
+    assert report.state_changed is False
     assert report.writes_performed is False
+    assert len(report.transition_hash) == 64
+    assert report.legacy_state.snapshot_json
+    assert report.legacy_state.manifest_json
+    assert report.shadow_state is not None
+    assert report.shadow_state.snapshot_json
+    assert report.shadow_state.manifest_json
     assert before.report_digest == report.shadow_integrity_before_digest
     assert after.report_digest == report.shadow_integrity_after_digest
     assert before.report_digest == after.report_digest
@@ -173,6 +181,7 @@ def test_dual_read_reports_exact_state_mismatch_without_authority_change(tmp_pat
         store=store,
         initial_snapshot=EMPTY,
     )
+    assert report.replay_verified is True
     assert report.matches is False
     assert report.mismatches == ("learned_mismatch",)
     assert report.incompatibilities == ()
@@ -188,6 +197,7 @@ def test_uninitialized_store_is_visible_incompatibility_not_auto_initialized(tmp
         store=store,
         initial_snapshot=EMPTY,
     )
+    assert report.replay_verified is False
     assert report.matches is False
     assert any(
         item.startswith("shadow_integrity_before:sqlite:StoreNotInitialized:")
@@ -222,6 +232,7 @@ def test_replay_contract_failure_is_reported_fail_closed(tmp_path: Path):
         store=store,
         initial_snapshot=EMPTY,
     )
+    assert report.replay_verified is False
     assert report.matches is False
     assert report.mismatches == ()
     assert report.incompatibilities == ("shadow_replay:UnsupportedProjectionEvent",)
