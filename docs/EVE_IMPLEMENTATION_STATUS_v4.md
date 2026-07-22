@@ -14,9 +14,9 @@ M1-E status: **completed and explicitly human-accepted by PR #158; immutable mac
 M1 status: **closed for mechanism verification; coverage remains deferred to A2/M2 dual-read and cutover**
 v4.2 review status: **opened and closed by the v4.2 amendment; `v4_2_review_opened = true`; no outstanding constitutional objection**
 v4.2 review consensus: **6 objections accepted plus 1 refinement requiring supersession/revocation artifacts to pass the same exact-head and human-review regime as the decisions they change**
-M2-A status: **not started; eligible to be scoped next only as separate work after v4.2, with no implementation or authority granted by this amendment**
+M2-A status: **implemented as a bounded, explicit, disconnected SQLite shadow-persistence candidate in PR #161; not yet human-accepted or merged, with no runtime, recovery, cutover, or legacy-authority change**
 PR #158 gate wording retained for historical verification: **M2-A remains blocked until v4.2 approval**. This amendment satisfies that constitutional prerequisite only; it does not start M2-A.
-Current next step: **M2-A append-only SQLite shadow-persistence work may be separately scoped; no M2 pre-design or implementation is included here**
+Current next step: **complete exact-head validation and human review of PR #161; M2-B remains blocked until M2-A is accepted with its schemas and restore evidence stable**
 Frozen work: open REWRITE PRs #109, #86, #84, and #82 remain untouched; absorbed PRs #11, #7, and #4 are closed
 Constitution merge baseline: `8cd1a0ad0ed8aaa2810da0730c17b6168bd2fb7b`
 Forward-gate merge baseline: `1ed1093cfec05b44848ad0d117e45885a5669b69`
@@ -37,6 +37,8 @@ EVE v4.2 is the active constitutional authority. The existing application remain
 M1-A provides an immutable canonical `shadow_only` event envelope, append-only in-memory kernel, and explicit reducer boundary. M1-B provides a separately invoked after-the-fact observer for one registered `ActivationAdapter.learn_pair` legacy funnel. M1-C provides a versioned immutable shadow projection, deterministic bounded reducer/replay, explicit equivalence reports, and immutable in-memory checkpoint/rollback values for that same single stream. M1-D provides immutable lifecycle-owner, disconnected bridge-registry, reviewed source/disposition, and redacted failure-propagation declarations for bounded chat, activity, memory, and goal domains. M1-E provides a deterministic in-memory evaluator and immutable machine-review packet for explicitly supplied M1-B through M1-D evidence.
 
 None of M1-A through M1-E is connected to `main.py`, `language/streaming.py`, live/autonomous loops, production composition, persistence adapters, or default startup paths. M1-D names legacy source modules as evidence only. M1-E imports or calls no legacy module and installs no observer or bridge. No SQLite database, file event store, durable snapshot, checkpoint artifact, sidecar, WAL, backup, migration, model/vector activation, scheduler, external effect, cutover, or production authority is introduced by v4.2.
+
+PR #161 separately introduces `core/sqlite_shadow_store.py` as the M2-A candidate. Import and construction perform no I/O. A caller must explicitly initialize a concrete SQLite path and explicitly append immutable `shadow_only` envelopes or validated snapshots. The module is not imported by `main.py`, legacy persistence, live/autonomous loops, production composition, M1 observers, or lifecycle bridges. It grants no dual-read, authoritative recovery, migration cutover, scheduler, model/vector activation, or production persistence authority.
 
 ## M1 implementation records
 
@@ -151,6 +153,27 @@ The review accepted all six objections raised against the initial C1-C4 draft an
 
 This amendment records `v4_2_review_opened=true` and closes that review on constitutional merge. It does not set `m2_started=true`.
 
+## M2-A implementation candidate — PR #161
+
+`core/sqlite_shadow_store.py` defines the bounded durable contracts:
+
+```text
+eve.sqlite-shadow-store.v1
+eve.sqlite-shadow-migration.v1
+eve.sqlite-shadow-snapshot.v1
+eve.sqlite-shadow-append-receipt.v1
+eve.sqlite-shadow-snapshot-receipt.v1
+eve.sqlite-shadow-integrity-report.v1
+eve.sqlite-shadow-restore-report.v1
+eve.sqlite-shadow-backup-receipt.v1
+```
+
+The candidate provides explicit file initialization, a WAL request with visible fallback reporting, explicit SQLite transactions, immutable migration history, update/delete rejection triggers for durable tables, canonical envelope digests, a chained durable event digest, computed before/after count and chain evidence, readback verification before commit, bounded event/byte/snapshot/backup policy, periodic snapshot eligibility, snapshots bound to the current stream head, newest-valid-snapshot selection with corrupt-snapshot fallback, repeated deterministic restore verification, SQLite plus logical integrity reports, and verified bounded backups. Historical events are never pruned; storage-limit exhaustion rejects the new append instead of deleting prior history.
+
+The candidate remains limited to the accepted M1 event-envelope contract and caller-supplied pure reducer/state codecs. It does not install the M1-B observer, connect an M1-D bridge, read legacy sidecars, compare dual reads, become the recovery authority, alter defaults, or perform cutover. Those boundaries remain assigned to later M2 milestones and separate human-reviewed decisions.
+
+`tests/test_v4_m2_a_sqlite_shadow_store.py` provides focused evidence for explicit creation, WAL/schema/migration contracts, append ordering and hash-chain fidelity, atomic rollback, append-only enforcement, bounded storage, validated snapshots, corrupt-snapshot fallback, repeated replay, reopen after an uncommitted write, integrity-failure visibility, bounded backups, and absence of production integration.
+
 ## Merged source-of-truth evidence
 
 - `docs/audit/M0_A_RUNTIME_ENTRYPOINT_AND_MUTATION_MAP.md`: 7,842 in-memory mutation sites; 283 direct-write sites. Its 13,341 total is an evidence-entry count, not an object count.
@@ -209,7 +232,7 @@ raw_capability:       170
 
 The gate enforces **unregistered delta = 0**. It rejects unregistered findings, new parse errors, baseline drift, stale or over-counted registrations, metadata mismatches, and wrong-PR provenance.
 
-Reviewed additions are registered by introducing PR: #145 forward scanner; #146 M1-A; #147 M1-B; #148 M1-C; #149 M1-D; #150 M1-E; #151 evidence-gap documentation; #152 controlled evidence; #153 corrected expanded evidence; and #158 external human acceptance. Registration is review evidence, not automatic runtime authority.
+Reviewed additions are registered by introducing PR: #145 forward scanner; #146 M1-A; #147 M1-B; #148 M1-C; #149 M1-D; #150 M1-E; #151 evidence-gap documentation; #152 controlled evidence; #153 corrected expanded evidence; #158 external human acceptance; and candidate PR #161 M2-A SQLite shadow persistence. Registration is review evidence, not automatic runtime authority.
 
 ## Governance registry
 
@@ -266,14 +289,15 @@ This registry may be adjusted by a reviewed STATUS update without a constitution
 
 ## Promotion rule
 
-M1-E machine evidence did not itself grant promotion. PR #158 separately closed M1 mechanism verification and made the project eligible to open v4.2 review. The v4.2 amendment has now opened and closed that review through its own exact-head validation, human review, and constitutional merge. This does not start M2 or activate any runtime capability.
+M1-E machine evidence did not itself grant promotion. PR #158 separately closed M1 mechanism verification and made the project eligible to open v4.2 review. The v4.2 amendment has now opened and closed that review through its own exact-head validation, human review, and constitutional merge. PR #161 starts only the bounded M2-A implementation candidate. It does not activate a runtime bridge, dual-read path, recovery authority, cutover, or any production capability.
 
 ## Current next step
 
-M2-A is next and must be a separate, tightly scoped task. Until a later M2 change is independently reviewed and accepted:
+M2-A is now implemented only as the separate candidate in PR #161. Until that exact head is independently validated, human-reviewed, and merged:
 
-1. `m2_started` remains false;
-2. no bridge, persistence path, scheduler, recovery behavior, cutover, or production hook may be activated;
-3. the pre-kernel legacy runtime remains authoritative;
-4. the 527 unobserved historical sites remain tracked debt, not safe coverage;
-5. A9-A12 bind all future M2 evidence and decision artifacts.
+1. M2-A remains `shadow_only`, disconnected, and non-authoritative;
+2. no observer, bridge, default persistence path, scheduler, recovery behavior, dual-read, cutover, or production hook may be activated;
+3. the pre-kernel legacy runtime and legacy persistence remain authoritative;
+4. M2-B and later M2 work remain blocked;
+5. the 527 unobserved historical sites remain tracked debt, not safe coverage;
+6. A9-A12 bind all M2 evidence, acceptance, supersession, and revocation artifacts.
