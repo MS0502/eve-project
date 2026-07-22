@@ -26,7 +26,7 @@ jobs:
           actual="$(sha256sum /tmp/m2d-payload.tar.gz | cut -d' ' -f1)"
           echo "payload_sha256=$actual"
           test "$actual" = '85b5ea378018bc9717dfa8fa21acdb8799637d5905769da6e004fd1eebe5eac1'
-      - name: Extract reviewed package
+      - name: Extract reviewed non-workflow package
         shell: bash
         run: |
           set -euo pipefail
@@ -35,16 +35,19 @@ jobs:
           test -f scripts/audit/m2_d_rehearsal.py
           test -f tests/test_v4_m2_d_rehearsal.py
           test -f docs/audit/M2_D_RECOVERY_REHEARSAL_CANDIDATE.md
-          test -f .github/workflows/exact-head-validation.yml
+          git restore .github/workflows/exact-head-validation.yml
           rm -rf .m2d-payload
-          rm .github/workflows/m2-d-bootstrap.yml
-      - name: Commit materialized package
+      - name: Commit materialized non-workflow package
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add core/m2_d_rehearsal.py
+          git add scripts/audit/m2_d_rehearsal.py
+          git add tests/test_v4_m2_d_rehearsal.py
+          git add docs/audit/M2_D_RECOVERY_REHEARSAL_CANDIDATE.md
+          git add -u .m2d-payload
           git status --short
           git commit -m 'M2-D: add bounded recovery rehearsal candidate'
           git push origin HEAD:codex/m2-d-recovery-rehearsal
