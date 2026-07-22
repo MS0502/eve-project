@@ -344,6 +344,53 @@ def test_restore_rejects_semantically_invalid_snapshot_and_falls_back(tmp_path: 
     assert result.state_digest == result.repeated_state_digest
 
 
+def test_restore_snapshot_selection_is_isolated_to_requested_stream(tmp_path: Path):
+    path = tmp_path / "shadow.sqlite3"
+    store = SQLiteShadowStore(path)
+    store.initialize()
+    store.append(event(1))
+    store.write_snapshot(
+        snapshot_id="snapshot:requested",
+        stream_id="shadow:test",
+        through_sequence=1,
+        state={"total": 1},
+        state_schema_version="test.state.v1",
+    )
+    store.append(event(1, event_id="other:event:1", stream="shadow:other"))
+    store.write_snapshot(
+        snapshot_id="snapshot:other",
+        stream_id="shadow:other",
+        through_sequence=1,
+        state={"total": 1},
+        state_schema_version="test.state.v1",
+    )
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("DROP TRIGGER snapshots_no_update")
+        connection.execute(
+            "UPDATE snapshots SET state_digest=? WHERE snapshot_id='snapshot:other'",
+            ("0" * 64,),
+        )
+        connection.execute(
+            "CREATE TRIGGER snapshots_no_update BEFORE UPDATE ON snapshots "
+            "BEGIN SELECT RAISE(ABORT,'append-only snapshots'); END"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    result = store.restore_verified(
+        stream_id="shadow:test",
+        initial_state=State(0),
+        reducer=reduce_state,
+        state_to_mapping=lambda state: {"total": state.total},
+        state_from_mapping=lambda value: State(int(value["total"])),
+    )
+    assert result.state == State(1)
+    assert result.snapshot_id == "snapshot:requested"
+    assert result.rejected_snapshot_ids == ()
+
+
 def test_restore_uses_fresh_canonical_start_state_for_each_replay(tmp_path: Path):
     store = SQLiteShadowStore(tmp_path / "shadow.sqlite3")
     store.initialize()

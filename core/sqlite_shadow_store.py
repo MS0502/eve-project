@@ -900,7 +900,10 @@ class SQLiteShadowStore:
         rejected: list[str] = []
         selected: Snapshot | None = None
         with self._connect() as connection:
-            rows = connection.execute("SELECT * FROM snapshots ORDER BY ordinal DESC").fetchall()
+            rows = connection.execute(
+                "SELECT * FROM snapshots WHERE stream_id=? ORDER BY ordinal DESC",
+                (stream_id,),
+            ).fetchall()
             for row in rows:
                 try:
                     snapshot = self._snapshot_from_row(connection, row)
