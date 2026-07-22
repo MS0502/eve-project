@@ -35,11 +35,11 @@ _DIGEST = re.compile(r"^[0-9a-f]{64}$")
 
 
 class M2CDualReadError(ValueError):
-    pass
+    """Base error for malformed or out-of-scope M2-C inputs."""
 
 
 class LegacySidecarIncompatible(M2CDualReadError):
-    pass
+    """Raised when incompatible evidence is promoted to a candidate."""
 
 
 def _canon(value: Mapping[str, Any], field: str) -> str:
@@ -67,10 +67,28 @@ def _require_source(label: str, digest: str, count: int, schema: str) -> None:
     if not isinstance(label, str) or not label.strip():
         raise M2CDualReadError("source_label must be non-empty")
     _require_digest(digest, "source_sha256")
-    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
-        raise M2CDualReadError("source_byte_count must be non-negative")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+        raise M2CDualReadError("source_byte_count must be positive")
     if schema != LEGACY_SOURCE_SCHEMA_VERSION:
         raise M2CDualReadError("unsupported legacy source schema")
+
+
+def _state_manifest(snapshot_json: str, snapshot: Mapping[str, Any]) -> str:
+    return _canon(
+        {
+            "canonical_bytes": len(snapshot_json.encode("utf-8")),
+            "collection_counts": {
+                "calls": len(snapshot["calls"]),
+                "learned": len(snapshot["learned"]),
+            },
+            "hash_algorithm": "sha256",
+            "key_domain": ["calls", "learned"],
+            "serialization_schema": STATE_SERIALIZATION_SCHEMA_VERSION,
+            "state_schema_version": PROJECTION_SCHEMA_VERSION,
+            "top_level_key_count": 2,
+        },
+        "m2_c_state_manifest",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,26 +106,17 @@ class StateEvidence:
         _require_digest(self.manifest_digest, "manifest_digest")
         if _sha_text(self.snapshot_json) != self.snapshot_digest:
             raise M2CDualReadError("snapshot digest mismatch")
-        value = json.loads(self.snapshot_json)
-        if not isinstance(value, dict) or set(value) != {"calls", "learned"}:
-            raise M2CDualReadError("bounded snapshot requires calls and learned")
-        if not isinstance(value["calls"], list) or not isinstance(value["learned"], list):
-            raise M2CDualReadError("bounded snapshot collections must be lists")
-        expected_manifest = _canon(
-            {
-                "canonical_bytes": len(self.snapshot_json.encode("utf-8")),
-                "collection_counts": {
-                    "calls": len(value["calls"]),
-                    "learned": len(value["learned"]),
-                },
-                "hash_algorithm": "sha256",
-                "key_domain": ["calls", "learned"],
-                "serialization_schema": STATE_SERIALIZATION_SCHEMA_VERSION,
-                "state_schema_version": PROJECTION_SCHEMA_VERSION,
-                "top_level_key_count": 2,
-            },
-            "m2_c_state_manifest",
-        )
+        try:
+            decoded = json.loads(self.snapshot_json)
+            if not isinstance(decoded, Mapping):
+                raise M2CDualReadError("state evidence must decode to an object")
+            state = ActivationLearnPairShadowState.from_initial_snapshot(decoded)
+        except (json.JSONDecodeError, ShadowProjectionError, TypeError, ValueError) as exc:
+            raise M2CDualReadError("invalid bounded state evidence") from exc
+        canonical = _canon(state.snapshot, "m2_c_state")
+        if self.snapshot_json != canonical:
+            raise M2CDualReadError("snapshot_json must use the canonical serialization")
+        expected_manifest = _state_manifest(canonical, state.snapshot)
         if (
             self.manifest_json != expected_manifest
             or self.manifest_digest != _sha_text(expected_manifest)
@@ -116,29 +125,17 @@ class StateEvidence:
 
     @classmethod
     def from_snapshot(cls, snapshot: Mapping[str, Any]) -> "StateEvidence":
-        state = ActivationLearnPairShadowState.from_initial_snapshot(snapshot)
+        try:
+            state = ActivationLearnPairShadowState.from_initial_snapshot(snapshot)
+        except (ShadowProjectionError, TypeError, ValueError) as exc:
+            raise M2CDualReadError("invalid bounded state evidence") from exc
         snapshot_json = _canon(state.snapshot, "m2_c_state")
-        value = json.loads(snapshot_json)
-        manifest_json = _canon(
-            {
-                "canonical_bytes": len(snapshot_json.encode("utf-8")),
-                "collection_counts": {
-                    "calls": len(value["calls"]),
-                    "learned": len(value["learned"]),
-                },
-                "hash_algorithm": "sha256",
-                "key_domain": ["calls", "learned"],
-                "serialization_schema": STATE_SERIALIZATION_SCHEMA_VERSION,
-                "state_schema_version": PROJECTION_SCHEMA_VERSION,
-                "top_level_key_count": 2,
-            },
-            "m2_c_state_manifest",
-        )
+        manifest_json = _state_manifest(snapshot_json, state.snapshot)
         return cls(
-            snapshot_json,
-            _sha_text(snapshot_json),
-            manifest_json,
-            _sha_text(manifest_json),
+            snapshot_json=snapshot_json,
+            snapshot_digest=_sha_text(snapshot_json),
+            manifest_json=manifest_json,
+            manifest_digest=_sha_text(manifest_json),
         )
 
     @property
@@ -185,8 +182,8 @@ class LegacySidecarAssessment:
                 self.source_byte_count,
                 self.source_schema_version,
             )
-            if self.source_byte_count == 0 or not isinstance(self.state, StateEvidence):
-                raise M2CDualReadError("compatible evidence requires source bytes and state")
+            if not isinstance(self.state, StateEvidence):
+                raise M2CDualReadError("compatible evidence requires bounded state")
         elif self.state is not None:
             raise M2CDualReadError("incompatible evidence cannot expose migration state")
         if self.legacy_authority_retained is not True or self.runtime_integrated is not False:
@@ -215,6 +212,8 @@ class MigrationCandidate:
             self.source_byte_count,
             self.source_schema_version,
         )
+        if not isinstance(self.legacy_state, StateEvidence):
+            raise M2CDualReadError("migration candidate requires StateEvidence")
         _require_digest(self.candidate_digest, "candidate_digest")
         if (
             self.schema_version != MIGRATION_CANDIDATE_SCHEMA_VERSION
@@ -223,9 +222,9 @@ class MigrationCandidate:
             raise M2CDualReadError("migration candidate scope mismatch")
         if (
             self.authority != COMPARISON_AUTHORITY
-            or self.writes_performed
-            or self.runtime_integrated
-            or not self.legacy_authority_retained
+            or self.writes_performed is not False
+            or self.runtime_integrated is not False
+            or self.legacy_authority_retained is not True
         ):
             raise M2CDualReadError("migration candidate changed authority or effects")
         if _digest(_candidate_material(self), "migration_candidate") != self.candidate_digest:
@@ -280,6 +279,10 @@ class DualReadReport:
             self.source_byte_count,
             self.source_schema_version,
         )
+        if not isinstance(self.legacy_state, StateEvidence):
+            raise M2CDualReadError("dual-read report requires legacy StateEvidence")
+        if self.shadow_state is not None and not isinstance(self.shadow_state, StateEvidence):
+            raise M2CDualReadError("shadow_state must be StateEvidence or None")
         for field in (
             "shadow_integrity_before_digest",
             "shadow_integrity_after_digest",
@@ -310,13 +313,15 @@ class DualReadReport:
         ):
             raise M2CDualReadError("matches disagrees with replay and findings")
         changed = self.shadow_integrity_before_digest != self.shadow_integrity_after_digest
-        if self.state_changed != changed or self.writes_performed != changed:
-            raise M2CDualReadError("state-change flags disagree with before/after evidence")
+        if self.state_changed != changed:
+            raise M2CDualReadError("state_changed disagrees with before/after evidence")
+        if self.writes_performed is not False:
+            raise M2CDualReadError("comparison-only reports cannot claim writes")
         if (
             self.comparison_authority != COMPARISON_AUTHORITY
             or self.shadow_authority != SHADOW_AUTHORITY
-            or not self.legacy_authority_retained
-            or self.runtime_integrated
+            or self.legacy_authority_retained is not True
+            or self.runtime_integrated is not False
         ):
             raise M2CDualReadError("dual-read report changed authority")
         if _digest(_transition_material(self), "dual_read_transition") != self.transition_hash:
@@ -398,17 +403,17 @@ def assess_legacy_sidecar(
     else:
         try:
             state = StateEvidence.from_snapshot(decoded_snapshot)
-        except (ShadowProjectionError, M2CDualReadError, TypeError, ValueError):
+        except (M2CDualReadError, TypeError, ValueError):
             problems.append("invalid_bounded_snapshot")
     findings = tuple(sorted(set(problems)))
     return LegacySidecarAssessment(
-        source_label,
-        _sha_bytes(raw),
-        len(raw),
-        source_schema_version,
-        None if findings else state,
-        not findings,
-        findings,
+        source_label=source_label,
+        source_sha256=_sha_bytes(raw),
+        source_byte_count=len(raw),
+        source_schema_version=source_schema_version,
+        state=None if findings else state,
+        compatible=not findings,
+        incompatibilities=findings,
     )
 
 
@@ -432,13 +437,13 @@ def build_migration_candidate(assessment: LegacySidecarAssessment) -> MigrationC
         "stream_id": ACTIVATION_LEARN_PAIR_TARGET.stream_id,
     }
     return MigrationCandidate(
-        assessment.source_label,
-        assessment.source_sha256,
-        assessment.source_byte_count,
-        assessment.source_schema_version,
-        assessment.state,
-        ACTIVATION_LEARN_PAIR_TARGET.stream_id,
-        _digest(material, "migration_candidate"),
+        source_label=assessment.source_label,
+        source_sha256=assessment.source_sha256,
+        source_byte_count=assessment.source_byte_count,
+        source_schema_version=assessment.source_schema_version,
+        legacy_state=assessment.state,
+        stream_id=ACTIVATION_LEARN_PAIR_TARGET.stream_id,
+        candidate_digest=_digest(material, "migration_candidate"),
     )
 
 
@@ -451,7 +456,11 @@ def compare_dual_read(
     candidate = build_migration_candidate(assessment)
     if not isinstance(store, SQLiteShadowStore):
         raise M2CDualReadError("store must be SQLiteShadowStore")
-    initial = ActivationLearnPairShadowState.from_initial_snapshot(initial_snapshot)
+    try:
+        initial = ActivationLearnPairShadowState.from_initial_snapshot(initial_snapshot)
+    except (ShadowProjectionError, TypeError, ValueError) as exc:
+        raise M2CDualReadError("invalid initial snapshot") from exc
+
     before = store.integrity_check()
     problems: list[str] = []
     mismatches: tuple[str, ...] = ()
@@ -541,25 +550,25 @@ def compare_dual_read(
         "source_sha256": candidate.source_sha256,
         "state_changed": changed,
         "transition_hash": transition_hash,
-        "writes_performed": changed,
+        "writes_performed": False,
     }
     return DualReadReport(
-        candidate.source_label,
-        candidate.source_sha256,
-        candidate.source_byte_count,
-        candidate.source_schema_version,
-        candidate.legacy_state,
-        shadow_state,
-        event_count,
-        sequence,
-        before.report_digest,
-        after.report_digest,
-        replay_verified,
-        matches,
-        mismatches,
-        incompatibilities,
-        changed,
-        changed,
-        transition_hash,
-        _digest(report_material, "dual_read_report"),
+        source_label=candidate.source_label,
+        source_sha256=candidate.source_sha256,
+        source_byte_count=candidate.source_byte_count,
+        source_schema_version=candidate.source_schema_version,
+        legacy_state=candidate.legacy_state,
+        shadow_state=shadow_state,
+        shadow_event_count=event_count,
+        shadow_sequence=sequence,
+        shadow_integrity_before_digest=before.report_digest,
+        shadow_integrity_after_digest=after.report_digest,
+        replay_verified=replay_verified,
+        matches=matches,
+        mismatches=mismatches,
+        incompatibilities=incompatibilities,
+        state_changed=changed,
+        writes_performed=False,
+        transition_hash=transition_hash,
+        report_digest=_digest(report_material, "dual_read_report"),
     )
