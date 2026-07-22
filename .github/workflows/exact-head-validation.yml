@@ -19,16 +19,30 @@ jobs:
         with:
           ref: codex/m2-a-sqlite-shadow-persistence
           fetch-depth: 0
+          show-progress: false
 
       - name: Apply staged hardening payload
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          set -euo pipefail
-          cat .github/m2a-snapshot-fix.part* | base64 -d | python
+          set -uo pipefail
+          cat .github/m2a-snapshot-fix.part* | base64 -d > /tmp/apply-m2a.py
+          python /tmp/apply-m2a.py > /tmp/apply-output.txt 2>&1
+          status=$?
+          if test "$status" -ne 0; then
+            cp /tmp/apply-output.txt docs/.m2a-apply-error.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/.m2a-apply-error.txt
+            git commit -m "Record M2-A staged apply failure"
+            git push origin HEAD:codex/m2-a-sqlite-shadow-persistence
+            cat /tmp/apply-output.txt
+            exit "$status"
+          fi
           rm -f .github/m2a-snapshot-fix.part*
           git show "$BASE_SHA:.github/workflows/exact-head-validation.yml" > .github/workflows/exact-head-validation.yml
+          rm -f docs/.m2a-apply-error.txt
 
       - name: Commit final four-file candidate
         shell: bash
