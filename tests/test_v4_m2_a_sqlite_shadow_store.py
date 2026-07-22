@@ -219,6 +219,24 @@ def test_snapshot_due_binding_and_readback(tmp_path: Path):
         )
 
 
+def test_snapshot_byte_policy_rejects_unbounded_snapshot_storage(tmp_path: Path):
+    store = SQLiteShadowStore(
+        tmp_path / "shadow.sqlite3",
+        policy=ShadowStoragePolicy(max_snapshot_bytes=1),
+    )
+    store.initialize()
+    store.append(event(1))
+    with pytest.raises(StoragePolicyExceeded, match="snapshot bytes"):
+        store.write_snapshot(
+            snapshot_id="snapshot:oversized",
+            stream_id="shadow:test",
+            through_sequence=1,
+            state={"sum": 1},
+            state_schema_version="test.state.v1",
+        )
+    assert store.latest_valid_snapshot("shadow:test").selected is None
+
+
 def test_corrupt_newest_snapshot_falls_back_to_previous_valid_snapshot(tmp_path: Path):
     path = tmp_path / "shadow.sqlite3"
     store = SQLiteShadowStore(path)
@@ -291,6 +309,39 @@ def test_restore_replays_twice_from_valid_snapshot_and_is_reproducible(tmp_path:
     assert result.replayed_event_count == 1
     assert result.state_digest == result.repeated_state_digest
     assert result.verified is True
+
+
+def test_restore_rejects_semantically_invalid_snapshot_and_falls_back(tmp_path: Path):
+    store = SQLiteShadowStore(tmp_path / "shadow.sqlite3")
+    store.initialize()
+    store.append(event(1))
+    store.write_snapshot(
+        snapshot_id="snapshot:good",
+        stream_id="shadow:test",
+        through_sequence=1,
+        state={"total": 1},
+        state_schema_version="test.state.v1",
+    )
+    store.write_snapshot(
+        snapshot_id="snapshot:semantically-wrong",
+        stream_id="shadow:test",
+        through_sequence=1,
+        state={"total": 99},
+        state_schema_version="test.state.v1",
+    )
+    store.append(event(2, cause="event:1"))
+
+    result = store.restore_verified(
+        stream_id="shadow:test",
+        initial_state=State(0),
+        reducer=reduce_state,
+        state_to_mapping=lambda state: {"total": state.total},
+        state_from_mapping=lambda value: State(int(value["total"])),
+    )
+    assert result.state == State(3)
+    assert result.snapshot_id == "snapshot:good"
+    assert result.rejected_snapshot_ids == ("snapshot:semantically-wrong",)
+    assert result.state_digest == result.repeated_state_digest
 
 
 def test_restore_uses_fresh_canonical_start_state_for_each_replay(tmp_path: Path):

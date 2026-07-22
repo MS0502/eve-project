@@ -90,12 +90,37 @@ def _normalize_sql(value: str) -> str:
     return " ".join(value.strip().rstrip(";").split())
 
 
+_SNAPSHOT_STORAGE_FIELDS = (
+    "ordinal",
+    "snapshot_id",
+    "stream_id",
+    "through_sequence",
+    "through_event_id",
+    "through_event_digest",
+    "state_schema_version",
+    "state_json",
+    "state_digest",
+    "manifest_json",
+    "manifest_digest",
+    "snapshot_digest",
+)
+
+
+def _snapshot_storage_bytes(values: Mapping[str, Any]) -> int:
+    return sum(
+        len(str(values[field]).encode("utf-8"))
+        for field in _SNAPSHOT_STORAGE_FIELDS
+        if values.get(field) is not None
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class ShadowStoragePolicy:
     snapshot_interval_events: int = 100
     max_event_count: int = 1_000_000
     max_event_bytes: int = 268_435_456
     max_snapshot_count: int = 10_000
+    max_snapshot_bytes: int = 268_435_456
     max_backups: int = 3
 
     def __post_init__(self) -> None:
@@ -631,9 +656,13 @@ class SQLiteShadowStore:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 self._event_state(connection)
-                count = int(connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
+                snapshot_rows = connection.execute("SELECT * FROM snapshots ORDER BY ordinal").fetchall()
+                count = len(snapshot_rows)
                 if count >= self._policy.max_snapshot_count:
                     raise StoragePolicyExceeded("snapshot count exceeds bounded policy")
+                existing_snapshot_bytes = sum(
+                    _snapshot_storage_bytes(dict(row)) for row in snapshot_rows
+                )
                 head = connection.execute(
                     "SELECT * FROM events WHERE stream_id=? ORDER BY sequence DESC LIMIT 1", (stream_id,)
                 ).fetchone()
@@ -662,6 +691,25 @@ class SQLiteShadowStore:
                     "snapshot_material",
                 )
                 ordinal = count + 1
+                snapshot_row_material = {
+                    "ordinal": ordinal,
+                    "snapshot_id": snapshot_id,
+                    "stream_id": stream_id,
+                    "through_sequence": through_sequence,
+                    "through_event_id": event_id,
+                    "through_event_digest": event_digest,
+                    "state_schema_version": state_schema_version,
+                    "state_json": state_json,
+                    "state_digest": state_digest,
+                    "manifest_json": manifest_json,
+                    "manifest_digest": manifest_digest,
+                    "snapshot_digest": snapshot_digest,
+                }
+                if (
+                    existing_snapshot_bytes + _snapshot_storage_bytes(snapshot_row_material)
+                    > self._policy.max_snapshot_bytes
+                ):
+                    raise StoragePolicyExceeded("snapshot bytes exceed bounded policy")
                 connection.execute(
                     "INSERT INTO snapshots(ordinal,snapshot_id,stream_id,through_sequence,through_event_id,through_event_digest,state_schema_version,state_json,state_digest,manifest_json,manifest_digest,snapshot_digest) "
                     "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -810,55 +858,104 @@ class SQLiteShadowStore:
     ) -> RestoreReport[StateT]:
         if not callable(reducer) or not callable(state_to_mapping) or not callable(state_from_mapping):
             raise RestoreVerificationError("restore requires explicit state codecs and reducer")
-        selection = self.latest_valid_snapshot(stream_id)
-        if selection.selected is None:
-            start_mapping = state_to_mapping(initial_state)
-            after, snapshot_id = 0, None
-        else:
-            start_mapping = selection.selected.state
-            after = selection.selected.through_sequence
-            snapshot_id = selection.selected.snapshot_id
         try:
-            start_json = _canon(start_mapping, "restore_start_state")
+            initial_json = _canon(state_to_mapping(initial_state), "restore_initial_state")
         except (TypeError, ValueError, InvalidEventEnvelope) as exc:
-            raise RestoreVerificationError("restore start state must be a canonical mapping") from exc
-        events = self.events(stream_id=stream_id, after_sequence=after)
+            raise RestoreVerificationError("restore initial state must be a canonical mapping") from exc
+        all_events = self.events(stream_id=stream_id)
 
-        def replay() -> tuple[StateT, str]:
+        def replay(
+            start_json: str,
+            replay_events: tuple[EventEnvelope, ...],
+        ) -> tuple[StateT, str, tuple[tuple[int, str], ...]]:
             decoded = json.loads(start_json)
             if not isinstance(decoded, dict):
                 raise RestoreVerificationError("restore start state must be an object")
             state = state_from_mapping(decoded)
-            for event in events:
+            trace: list[tuple[int, str]] = []
+            for event in replay_events:
                 state = reducer(state, event)
                 if state is None:
                     raise RestoreVerificationError("reducer returned None")
+                try:
+                    state_digest = _sha(_canon(state_to_mapping(state), "restored_state"))
+                except (TypeError, ValueError, InvalidEventEnvelope) as exc:
+                    raise RestoreVerificationError(
+                        "restored state must be a canonical mapping"
+                    ) from exc
+                trace.append((event.sequence, state_digest))
             try:
-                digest = _sha(_canon(state_to_mapping(state), "restored_state"))
+                final_digest = _sha(_canon(state_to_mapping(state), "restored_state"))
             except (TypeError, ValueError, InvalidEventEnvelope) as exc:
                 raise RestoreVerificationError("restored state must be a canonical mapping") from exc
-            return state, digest
+            return state, final_digest, tuple(trace)
 
-        left, left_digest = replay()
-        _right, right_digest = replay()
-        if left_digest != right_digest:
-            raise RestoreVerificationError("repeated replay produced different state")
+        full_left, full_digest, full_trace = replay(initial_json, all_events)
+        _full_right, repeated_full_digest, repeated_full_trace = replay(initial_json, all_events)
+        if full_digest != repeated_full_digest or full_trace != repeated_full_trace:
+            raise RestoreVerificationError("repeated full replay produced different history")
+
+        prefix_digests = {0: _sha(initial_json)}
+        prefix_digests.update(full_trace)
+        rejected: list[str] = []
+        selected: Snapshot | None = None
+        with self._connect() as connection:
+            rows = connection.execute("SELECT * FROM snapshots ORDER BY ordinal DESC").fetchall()
+            for row in rows:
+                try:
+                    snapshot = self._snapshot_from_row(connection, row)
+                except SnapshotCorruption:
+                    rejected.append(str(row["snapshot_id"]))
+                    continue
+                if snapshot.stream_id != stream_id:
+                    continue
+                if prefix_digests.get(snapshot.through_sequence) != snapshot.state_digest:
+                    rejected.append(snapshot.snapshot_id)
+                    continue
+                selected = snapshot
+                break
+
+        selection_material = {
+            "rejected_snapshot_ids": rejected,
+            "selected_snapshot_id": None if selected is None else selected.snapshot_id,
+        }
+        selection_digest = _digest(selection_material, "snapshot_selection")
+        if selected is None:
+            state = full_left
+            restored_digest = full_digest
+            repeated_digest = repeated_full_digest
+            replayed_events = all_events
+            snapshot_id = None
+        else:
+            replayed_events = tuple(
+                event for event in all_events if event.sequence > selected.through_sequence
+            )
+            state, restored_digest, trace = replay(selected.state_json, replayed_events)
+            _repeated_state, repeated_digest, repeated_trace = replay(
+                selected.state_json, replayed_events
+            )
+            if restored_digest != repeated_digest or trace != repeated_trace:
+                raise RestoreVerificationError("repeated snapshot replay produced different history")
+            if restored_digest != full_digest:
+                raise RestoreVerificationError("snapshot restore diverges from full replay")
+            snapshot_id = selected.snapshot_id
+
         transition = _digest(
             {
-                "final_state_digest": left_digest,
-                "replayed_event_count": len(events),
-                "selection_digest": selection.selection_digest,
+                "final_state_digest": restored_digest,
+                "replayed_event_count": len(replayed_events),
+                "selection_digest": selection_digest,
                 "stream_id": stream_id,
             },
             "restore_transition",
         )
         return RestoreReport(
-            left,
-            left_digest,
-            right_digest,
-            len(events),
+            state,
+            restored_digest,
+            repeated_digest,
+            len(replayed_events),
             snapshot_id,
-            selection.rejected_snapshot_ids,
+            tuple(rejected),
             transition,
             True,
         )
@@ -892,8 +989,11 @@ class SQLiteShadowStore:
                 errors.append("storage_policy:event_limit")
             snapshots = connection.execute("SELECT * FROM snapshots ORDER BY ordinal").fetchall()
             snapshot_count = len(snapshots)
+            snapshot_bytes = sum(_snapshot_storage_bytes(dict(row)) for row in snapshots)
             if snapshot_count > policy.max_snapshot_count:
                 errors.append("storage_policy:snapshot_limit")
+            if snapshot_bytes > policy.max_snapshot_bytes:
+                errors.append("storage_policy:snapshot_byte_limit")
             for expected_ordinal, row in enumerate(snapshots, 1):
                 try:
                     if int(row["ordinal"]) != expected_ordinal:
