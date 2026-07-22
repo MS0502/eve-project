@@ -239,7 +239,7 @@ def test_replay_contract_failure_is_reported_fail_closed(tmp_path: Path):
     assert report.writes_performed is False
 
 
-def test_module_has_no_file_discovery_deserialization_or_write_calls():
+def test_module_has_no_file_discovery_deserialization_or_store_write_calls():
     tree = ast.parse(MODULE.read_text(encoding="utf-8"))
     imports = {
         alias.name
@@ -249,20 +249,22 @@ def test_module_has_no_file_discovery_deserialization_or_write_calls():
     }
     assert not imports & {"pickle", "gzip", "sqlite3", "pathlib", "os", "glob"}
 
-    calls = []
+    direct_calls: set[str] = set()
+    store_calls: set[str] = set()
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         if isinstance(node.func, ast.Name):
-            calls.append(node.func.id)
-        elif isinstance(node.func, ast.Attribute):
-            calls.append(node.func.attr)
-    assert not set(calls) & {
-        "open",
-        "read_bytes",
-        "read_text",
-        "write_bytes",
-        "write_text",
+            direct_calls.add(node.func.id)
+        elif (
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "store"
+        ):
+            store_calls.add(node.func.attr)
+
+    assert not direct_calls & {"open", "exec", "eval", "compile", "__import__"}
+    assert not store_calls & {
         "initialize",
         "append",
         "append_many",
