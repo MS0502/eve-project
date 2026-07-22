@@ -1,8 +1,9 @@
 name: M2-D one-shot bootstrap
 
 on:
-  push:
-    branches: [codex/m2-d-recovery-rehearsal]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
