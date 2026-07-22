@@ -2,16 +2,22 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from core.event_kernel import EventEnvelope, SHADOW_AUTHORITY
+from core.event_kernel import EventEnvelope, SHADOW_AUTHORITY, canonical_json_object
 from core.m2_c_migration import (
     COMPARISON_AUTHORITY,
     DUAL_READ_REPORT_SCHEMA_VERSION,
     LEGACY_SOURCE_SCHEMA_VERSION,
+    STATE_SERIALIZATION_SCHEMA_VERSION,
     LegacySidecarIncompatible,
+    M2CDualReadError,
+    MigrationCandidate,
+    StateEvidence,
     assess_legacy_sidecar,
     build_migration_candidate,
     compare_dual_read,
@@ -22,6 +28,7 @@ from core.shadow_observer import (
     OBSERVER_VERSION,
     SUCCESS_EVENT_TYPE,
 )
+from core.shadow_projection import PROJECTION_SCHEMA_VERSION
 from core.sqlite_shadow_store import SQLiteShadowStore
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,6 +89,29 @@ def initialized_store(tmp_path: Path) -> SQLiteShadowStore:
     return store
 
 
+def state_evidence_parts(snapshot: dict, *, canonical: bool = True) -> tuple[str, str]:
+    if canonical:
+        snapshot_json = canonical_json_object(snapshot, field="test_state")
+    else:
+        snapshot_json = json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True)
+    manifest_json = canonical_json_object(
+        {
+            "canonical_bytes": len(snapshot_json.encode("utf-8")),
+            "collection_counts": {
+                "calls": len(snapshot["calls"]),
+                "learned": len(snapshot["learned"]),
+            },
+            "hash_algorithm": "sha256",
+            "key_domain": ["calls", "learned"],
+            "serialization_schema": STATE_SERIALIZATION_SCHEMA_VERSION,
+            "state_schema_version": PROJECTION_SCHEMA_VERSION,
+            "top_level_key_count": 2,
+        },
+        field="test_manifest",
+    )
+    return snapshot_json, manifest_json
+
+
 def test_assessment_hashes_source_and_normalizes_only_bounded_snapshot():
     result = assessment()
     assert result.compatible is True
@@ -111,6 +141,29 @@ def test_assessment_reports_empty_schema_and_snapshot_incompatibilities():
     assert result.state is None
 
 
+def test_state_evidence_revalidates_nested_bounded_state_on_direct_construction():
+    malformed = {"calls": [["alpha"]], "learned": []}
+    snapshot_json, manifest_json = state_evidence_parts(malformed)
+    with pytest.raises(M2CDualReadError, match="invalid bounded state evidence"):
+        StateEvidence(
+            snapshot_json=snapshot_json,
+            snapshot_digest=hashlib.sha256(snapshot_json.encode()).hexdigest(),
+            manifest_json=manifest_json,
+            manifest_digest=hashlib.sha256(manifest_json.encode()).hexdigest(),
+        )
+
+
+def test_state_evidence_rejects_noncanonical_json_even_with_matching_manifest():
+    snapshot_json, manifest_json = state_evidence_parts(AFTER_ONE, canonical=False)
+    with pytest.raises(M2CDualReadError, match="canonical serialization"):
+        StateEvidence(
+            snapshot_json=snapshot_json,
+            snapshot_digest=hashlib.sha256(snapshot_json.encode()).hexdigest(),
+            manifest_json=manifest_json,
+            manifest_digest=hashlib.sha256(manifest_json.encode()).hexdigest(),
+        )
+
+
 def test_migration_candidate_is_content_addressed_comparison_only():
     candidate = build_migration_candidate(assessment())
     assert candidate.authority == COMPARISON_AUTHORITY
@@ -121,6 +174,20 @@ def test_migration_candidate_is_content_addressed_comparison_only():
     assert candidate.runtime_integrated is False
     assert candidate.legacy_authority_retained is True
     assert len(candidate.candidate_digest) == 64
+
+
+def test_migration_candidate_requires_positive_source_bytes():
+    candidate = build_migration_candidate(assessment())
+    with pytest.raises(M2CDualReadError, match="source_byte_count must be positive"):
+        MigrationCandidate(
+            source_label=candidate.source_label,
+            source_sha256=candidate.source_sha256,
+            source_byte_count=0,
+            source_schema_version=candidate.source_schema_version,
+            legacy_state=candidate.legacy_state,
+            stream_id=candidate.stream_id,
+            candidate_digest=candidate.candidate_digest,
+        )
 
 
 def test_incompatible_evidence_cannot_become_migration_candidate():
@@ -187,6 +254,34 @@ def test_dual_read_reports_exact_state_mismatch_without_authority_change(tmp_pat
     assert report.incompatibilities == ()
     assert report.writes_performed is False
     assert report.legacy_authority_retained is True
+
+
+def test_external_store_change_is_not_attributed_as_comparison_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = initialized_store(tmp_path)
+    store.append(observed_event(1, before=EMPTY, after=AFTER_ONE))
+    original = SQLiteShadowStore.integrity_check
+    calls = 0
+
+    def changed_on_second_check(self: SQLiteShadowStore):
+        nonlocal calls
+        calls += 1
+        report = original(self)
+        if calls == 2:
+            return replace(report, report_digest="f" * 64)
+        return report
+
+    monkeypatch.setattr(SQLiteShadowStore, "integrity_check", changed_on_second_check)
+    report = compare_dual_read(
+        assessment=assessment(),
+        store=store,
+        initial_snapshot=EMPTY,
+    )
+    assert report.state_changed is True
+    assert report.writes_performed is False
+    assert report.matches is False
+    assert report.incompatibilities == ("shadow_store_changed_during_comparison",)
 
 
 def test_uninitialized_store_is_visible_incompatibility_not_auto_initialized(tmp_path: Path):
