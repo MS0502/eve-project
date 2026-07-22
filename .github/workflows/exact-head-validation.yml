@@ -129,20 +129,6 @@ jobs:
           test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
-      - name: Verify forward regression gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=()
-          if test -n "$CURRENT_PR"; then
-            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
-          fi
-          python scripts/audit/forward_regression_bundle.py \
-            --output /tmp/forward-regression.json \
-            --pretty \
-            "${args[@]}"
-          cat /tmp/forward-regression.json
-
       - name: Extract M2-B read-capability candidates
         if: always()
         shell: bash
@@ -161,6 +147,33 @@ jobs:
               **report['summary'],
           }, sort_keys=True))
           PY
+
+      - name: Validate exact M2-B technical decisions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_b_decision_groups.py \
+            --candidate /tmp/m2-b-read-capability-candidates.json \
+            --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            --output /tmp/m2-b-decision-validation.json \
+            --pretty \
+            --strict
+          cat /tmp/m2-b-decision-validation.json
+
+      - name: Verify forward regression gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if test -n "$CURRENT_PR"; then
+            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
+          fi
+          python scripts/audit/forward_regression_bundle.py \
+            --output /tmp/forward-regression.json \
+            --pretty \
+            "${args[@]}"
+          cat /tmp/forward-regression.json
 
       - name: Collect full suite
         shell: bash
@@ -194,6 +207,7 @@ jobs:
             /tmp/invariance.txt
             /tmp/forward-regression.json
             /tmp/m2-b-read-capability-candidates.json
+            /tmp/m2-b-decision-validation.json
             /tmp/base-a.json
             /tmp/head-a.json
             /tmp/base-b.json
