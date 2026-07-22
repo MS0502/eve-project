@@ -44,12 +44,12 @@ jobs:
 
           core = core_path.read_text(encoding="utf-8")
           old = '            rows = connection.execute("SELECT * FROM snapshots ORDER BY ordinal DESC").fetchall()\n'
-          new = textwrap.dedent('''\
-                      rows = connection.execute(
-                          "SELECT * FROM snapshots WHERE stream_id=? ORDER BY ordinal DESC",
-                          (stream_id,),
-                      ).fetchall()
-          ''')
+          new = (
+              '            rows = connection.execute(\n'
+              '                "SELECT * FROM snapshots WHERE stream_id=? ORDER BY ordinal DESC",\n'
+              '                (stream_id,),\n'
+              '            ).fetchall()\n'
+          )
           if core.count(old) != 1:
               raise SystemExit("unexpected restore snapshot selection line")
           core_path.write_text(core.replace(old, new), encoding="utf-8")
