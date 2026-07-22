@@ -123,6 +123,33 @@ jobs:
           }, sort_keys=True))
           PY
 
+      - name: Generate M2-E cutover candidate evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_e_cutover.py \
+            --m2-d-packet /tmp/m2-d-rehearsal.json \
+            --candidate-head "$TARGET_SHA" \
+            --workflow "${{ github.run_id }}" \
+            --output /tmp/m2-e-cutover-candidate.json \
+            --pretty
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          packet = json.loads(Path('/tmp/m2-e-cutover-candidate.json').read_text())
+          print(json.dumps({
+              'candidate_head': packet['candidate_head'],
+              'workflow': packet['workflow'],
+              'packet_digest': packet['packet_digest'],
+              'machine_passed': packet['machine_passed'],
+              'eligible_for_human_review': packet['eligible_for_human_review'],
+              'human_accepted': packet['human_accepted'],
+              'cutover_authorized': packet['cutover_authorized'],
+              'event_store_authority': packet['event_store_authority'],
+          }, sort_keys=True))
+          PY
+
       - name: Verify M0 audit invariance
         shell: bash
         run: |
@@ -228,6 +255,7 @@ jobs:
             /tmp/focused-paths.txt
             /tmp/focused.txt
             /tmp/m2-d-rehearsal.json
+            /tmp/m2-e-cutover-candidate.json
             /tmp/invariance.txt
             /tmp/forward-regression.json
             /tmp/m2-b-read-capability-candidates.json
