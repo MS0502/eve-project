@@ -1,0 +1,214 @@
+name: M2-E window driver
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact commit SHA to exercise
+        required: true
+        type: string
+
+concurrency:
+  group: m2-e-window-driver-${{ github.event.pull_request.number || inputs.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  chaos:
+    name: chaos-${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+    steps:
+      - name: Checkout exact target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+      - name: Verify exact synthetic-only target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git status --short)"
+          test ! -e "$RUNNER_TEMP/m2e-chaos-workspace"
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Run hard-kill and corruption matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_e_window_driver.py chaos \
+            --workspace "$RUNNER_TEMP/m2e-chaos-workspace" \
+            --repetitions 3 \
+            --output "$RUNNER_TEMP/m2e-chaos-evidence.json" \
+            --pretty
+          python - "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+          root = pathlib.Path(sys.argv[1])
+          evidence = root / "m2e-chaos-evidence.json"
+          payload = {
+              "files": {evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()},
+              "raw_store_source": "synthetic_only",
+              "target_sha": "${{ env.TARGET_SHA }}",
+          }
+          (root / "m2e-chaos-artifact-hashes.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Upload chaos evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2e-chaos-${{ runner.os }}-${{ env.TARGET_SHA }}
+          path: |
+            ${{ runner.temp }}/m2e-chaos-evidence.json
+            ${{ runner.temp }}/m2e-chaos-artifact-hashes.json
+          if-no-files-found: error
+
+  portability-create:
+    name: portability-create-${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+    steps:
+      - name: Checkout exact target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Create portable synthetic backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_e_window_driver.py portability-create \
+            --workspace "$RUNNER_TEMP/m2e-portability-source" \
+            --backup-output "$RUNNER_TEMP/portable-shadow.sqlite3" \
+            --manifest-output "$RUNNER_TEMP/portable-manifest.json" \
+            --pretty
+          python - "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+          root = pathlib.Path(sys.argv[1])
+          names = ["portable-shadow.sqlite3", "portable-manifest.json"]
+          payload = {
+              "files": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names},
+              "source_os": "${{ runner.os }}",
+              "target_sha": "${{ env.TARGET_SHA }}",
+          }
+          (root / "portable-artifact-hashes.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Upload portability source
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2e-portability-${{ runner.os }}-${{ env.TARGET_SHA }}
+          path: |
+            ${{ runner.temp }}/portable-shadow.sqlite3
+            ${{ runner.temp }}/portable-manifest.json
+            ${{ runner.temp }}/portable-artifact-hashes.json
+          if-no-files-found: error
+
+  portability-verify:
+    name: portability-${{ matrix.source }}-to-${{ matrix.target }}
+    needs: portability-create
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - source: Linux
+            target: Windows
+            runs_on: windows-latest
+          - source: Windows
+            target: Linux
+            runs_on: ubuntu-latest
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 20
+    env:
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+    steps:
+      - name: Checkout exact target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+      - name: Download opposite-OS backup
+        uses: actions/download-artifact@v4
+        with:
+          name: m2e-portability-${{ matrix.source }}-${{ env.TARGET_SHA }}
+          path: ${{ runner.temp }}/portable-input
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Restore and replay on target OS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_e_window_driver.py portability-verify \
+            --backup "$RUNNER_TEMP/portable-input/portable-shadow.sqlite3" \
+            --manifest "$RUNNER_TEMP/portable-input/portable-manifest.json" \
+            --workspace "$RUNNER_TEMP/m2e-portability-target" \
+            --output "$RUNNER_TEMP/portability-verification.json" \
+            --pretty
+          python - "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import json
+          import pathlib
+          import sys
+          root = pathlib.Path(sys.argv[1])
+          evidence = root / "portability-verification.json"
+          payload = {
+              "files": {evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()},
+              "source_os": "${{ matrix.source }}",
+              "target_os": "${{ matrix.target }}",
+              "target_sha": "${{ env.TARGET_SHA }}",
+          }
+          (root / "portability-verification-hashes.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Upload portability verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2e-portability-${{ matrix.source }}-to-${{ matrix.target }}-${{ env.TARGET_SHA }}
+          path: |
+            ${{ runner.temp }}/portability-verification.json
+            ${{ runner.temp }}/portability-verification-hashes.json
+          if-no-files-found: error
