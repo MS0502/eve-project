@@ -1,0 +1,116 @@
+name: Temporary M2-A manifest sync
+
+on:
+  push:
+    branches: [codex/m2-a-sqlite-shadow-persistence]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.repository == 'MS0502/eve-project'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/m2-a-sqlite-shadow-persistence
+          fetch-depth: 0
+
+      - name: Generate exact reviewed manifest and remove temporary files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          root = Path.cwd()
+          manifest_path = root / "docs/audit/FORWARD_ADDITIONS_MANIFEST.json"
+          paths = {
+              "core/sqlite_shadow_store.py",
+              "tests/test_v4_m2_a_sqlite_shadow_store.py",
+          }
+          with tempfile.TemporaryDirectory() as directory:
+              suggested_path = Path(directory) / "suggested.json"
+              subprocess.run(
+                  [
+                      sys.executable,
+                      str(root / "scripts/audit/forward_regression_gate.py"),
+                      "--suggest-manifest-for-pr",
+                      "161",
+                      "--output",
+                      str(suggested_path),
+                  ],
+                  cwd=root,
+                  check=True,
+              )
+              current = json.loads(manifest_path.read_text(encoding="utf-8"))
+              suggested = json.loads(suggested_path.read_text(encoding="utf-8"))
+
+          current_by_path = {
+              group["path"]: group
+              for group in current["registered_addition_groups"]
+              if group.get("introduced_by_pr") == 161 and group.get("path") in paths
+          }
+          suggested_by_path = {
+              group["path"]: group
+              for group in suggested["registered_addition_groups"]
+              if group.get("path") in paths
+          }
+          if set(current_by_path) != paths or set(suggested_by_path) != paths:
+              raise SystemExit("missing expected PR #161 manifest groups")
+
+          replacements = []
+          for path in sorted(paths):
+              replacement = dict(suggested_by_path[path])
+              existing = current_by_path[path]
+              replacement["rationale"] = existing["rationale"]
+              replacement["owner"] = existing["owner"]
+              replacement["disposition"] = existing["disposition"]
+              replacements.append(replacement)
+
+          current["registered_addition_groups"] = sorted(
+              [
+                  group
+                  for group in current["registered_addition_groups"]
+                  if not (
+                      group.get("introduced_by_pr") == 161
+                      and group.get("path") in paths
+                  )
+              ]
+              + replacements,
+              key=lambda group: (group["introduced_by_pr"], group["path"]),
+          )
+          manifest_path.write_text(
+              json.dumps(
+                  current,
+                  ensure_ascii=False,
+                  sort_keys=True,
+                  separators=(",", ":"),
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          (root / "tests/test_tmp_m2a_manifest_generator.py").unlink()
+          (root / ".github/workflows/m2a-manifest-sync.yml").unlink()
+          PY
+
+      - name: Commit synchronized manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/audit/FORWARD_ADDITIONS_MANIFEST.json \
+            tests/test_tmp_m2a_manifest_generator.py \
+            .github/workflows/m2a-manifest-sync.yml
+          git commit -m "Refresh M2-A forward manifest"
+          git push origin HEAD:codex/m2-a-sqlite-shadow-persistence
