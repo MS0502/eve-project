@@ -129,6 +129,38 @@ jobs:
           test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
+      - name: Extract M2-B read-capability candidates
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_b_read_capability_manifest.py \
+            --output /tmp/m2-b-read-capability-candidates.json \
+            --pretty
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('/tmp/m2-b-read-capability-candidates.json').read_text())
+          print(json.dumps({
+              'report_digest': report['report_digest'],
+              **report['summary'],
+          }, sort_keys=True))
+          PY
+
+      - name: Validate exact M2-B technical decisions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_b_decision_groups.py \
+            --candidate /tmp/m2-b-read-capability-candidates.json \
+            --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            --output /tmp/m2-b-decision-validation.json \
+            --pretty \
+            --strict
+          cat /tmp/m2-b-decision-validation.json
+
       - name: Verify forward regression gate
         shell: bash
         run: |
@@ -137,7 +169,7 @@ jobs:
           if test -n "$CURRENT_PR"; then
             args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
           fi
-          python scripts/audit/forward_regression_gate.py \
+          python scripts/audit/forward_regression_bundle.py \
             --output /tmp/forward-regression.json \
             --pretty \
             "${args[@]}"
@@ -174,6 +206,8 @@ jobs:
             /tmp/focused.txt
             /tmp/invariance.txt
             /tmp/forward-regression.json
+            /tmp/m2-b-read-capability-candidates.json
+            /tmp/m2-b-decision-validation.json
             /tmp/base-a.json
             /tmp/head-a.json
             /tmp/base-b.json
