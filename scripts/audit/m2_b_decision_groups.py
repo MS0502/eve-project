@@ -19,7 +19,7 @@ try:
 except ModuleNotFoundError:  # direct execution from scripts/audit
     import m2_b_read_capability_manifest as manifest
 
-SCHEMA_VERSION = "eve.m2-b-read-capability-decision-groups.v1"
+SCHEMA_VERSION = "eve.m2-b-read-capability-decision-groups.v2"
 EDGE_SHARED_FIELDS = manifest.DECISION_FIELDS - {"edge_id"}
 FINDING_SHARED_FIELDS = manifest.REVIEW_FIELDS
 SURFACE_FIELDS = (
@@ -85,6 +85,11 @@ def expand_decisions(report: Mapping[str, Any], compact: Mapping[str, Any]) -> t
         errors.append("compact decision schema_version mismatch")
     if not _sha256(compact.get("candidate_report_digest")):
         errors.append("compact candidate_report_digest must be a lowercase SHA-256")
+    expected_surface_digest = candidate_surface_digest(report)
+    if not _sha256(compact.get("candidate_surface_digest")):
+        errors.append("compact candidate_surface_digest must be a lowercase SHA-256")
+    elif compact.get("candidate_surface_digest") != expected_surface_digest:
+        errors.append("compact candidate_surface_digest mismatch")
     edge_decisions = _expand_groups(
         compact.get("edge_decision_groups", []),
         ids_field="edge_ids",

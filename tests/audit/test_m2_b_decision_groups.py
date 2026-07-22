@@ -23,6 +23,7 @@ def compact_for(value):
     return {
         "schema_version": SCHEMA_VERSION,
         "candidate_report_digest": value["report_digest"],
+        "candidate_surface_digest": candidate_surface_digest(value),
         "edge_decision_groups": [{
             "edge_ids": [edge_id],
             "decision": "LEGACY_REWRITE",
@@ -81,6 +82,15 @@ def test_origin_report_digest_must_be_sha256(tmp_path):
     result = validate_compact_decisions(value, compact)
     assert result["valid"] is False
     assert "compact candidate_report_digest must be a lowercase SHA-256" in result["errors"]
+
+
+def test_capability_surface_digest_must_match(tmp_path):
+    value = report(tmp_path)
+    compact = compact_for(value)
+    compact["candidate_surface_digest"] = "0" * 64
+    result = validate_compact_decisions(value, compact)
+    assert result["valid"] is False
+    assert "compact candidate_surface_digest mismatch" in result["errors"]
 
 
 def test_non_surface_metadata_does_not_invalidate_exact_id_coverage(tmp_path):

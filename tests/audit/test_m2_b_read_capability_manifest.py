@@ -116,6 +116,24 @@ def test_non_tainted_sink_argument_does_not_form_an_edge(tmp_path: Path):
     assert report["candidate_edges"] == []
 
 
+def test_taint_survives_method_call_on_tainted_receiver(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def respond(input_text):\n"
+        "    normalized = input_text.strip()\n"
+        "    return generate(normalized)\n",
+    )
+    report = extract_candidates(tmp_path)
+    assert report["summary"]["candidate_edge_count"] == 1
+    assert report["candidate_edges"][0]["sink"]["evidence"]["target"] == "generate"
+    assert any(
+        finding["boundary_call"]["target"] == "input_text.strip"
+        and finding["boundary_call"]["tainted_receiver"] is True
+        for finding in report["unresolved_boundary_calls"]
+    )
+
+
 def test_cognition_candidate_return_is_not_expression_sink(tmp_path: Path):
     write(
         tmp_path,
@@ -124,6 +142,29 @@ def test_cognition_candidate_return_is_not_expression_sink(tmp_path: Path):
     )
     report = extract_candidates(tmp_path)
     assert report["candidate_edges"] == []
+
+
+def test_receiver_name_does_not_turn_transform_into_sink(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def relay(input_text):\n"
+        "    qwen_response = input_text\n"
+        "    return qwen_response.strip()\n",
+    )
+    report = extract_candidates(tmp_path)
+    assert report["candidate_edges"] == []
+
+
+def test_speech_predicate_is_not_expression_sink(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def inspect(input_text):\n    return detector.is_speech(input_text)\n",
+    )
+    report = extract_candidates(tmp_path)
+    assert report["candidate_edges"] == []
+    assert report["summary"]["unresolved_boundary_call_count"] == 1
 
 
 def test_raw_source_call_matching_is_exact_not_token_overlap(tmp_path: Path):
@@ -142,6 +183,38 @@ def test_external_sink_is_terminal_evidence_not_hidden_boundary(tmp_path: Path):
     assert report["summary"]["candidate_edge_count"] == 1
     assert report["unresolved_boundary_calls"] == []
     assert report["candidate_edges"][0]["sink"]["evidence"]["target"] == "external.send"
+
+
+def test_say_is_an_expression_sink(tmp_path: Path):
+    write(tmp_path, "app.py", "def relay(input_text):\n    return eve.say(input_text)\n")
+    report = extract_candidates(tmp_path)
+    assert report["summary"]["candidate_edge_count"] == 1
+    assert report["summary"]["unresolved_boundary_call_count"] == 0
+    assert report["candidate_edges"][0]["sink"]["evidence"]["target"] == "eve.say"
+
+
+def test_unresolved_tainted_call_is_fail_closed_finding(tmp_path: Path):
+    write(tmp_path, "app.py", "def accept(input_text):\n    opaque_boundary(input_text)\n")
+    report = extract_candidates(tmp_path)
+    assert report["candidate_edges"] == []
+    assert report["summary"]["unresolved_boundary_call_count"] == 1
+    finding = report["unresolved_boundary_calls"][0]
+    assert finding["boundary_call"]["target"] == "opaque_boundary"
+    assert finding["boundary_call"]["tainted_positional_indexes"] == [0]
+    assert finding["review_status"] == "REVIEW_REQUIRED"
+
+
+def test_resolved_local_call_is_not_unresolved(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def accept(input_text):\n"
+        "    helper(input_text)\n\n"
+        "def helper(value):\n"
+        "    return len(value)\n",
+    )
+    report = extract_candidates(tmp_path)
+    assert report["unresolved_boundary_calls"] == []
 
 
 def test_decisions_require_exact_non_stale_coverage(tmp_path: Path):
@@ -170,6 +243,21 @@ def test_parse_errors_require_explicit_exact_decisions(tmp_path: Path):
     rejected = validate_decisions(report, decisions)
     assert rejected["valid"] is False
     assert "missing parse_error decisions: 1" in rejected["errors"]
+
+
+def test_unresolved_calls_require_explicit_valid_decisions(tmp_path: Path):
+    write(tmp_path, "app.py", "def accept(input_text):\n    opaque_boundary(input_text)\n")
+    report = extract_candidates(tmp_path)
+    decisions = reviewed_decisions(report)
+    accepted = validate_decisions(report, decisions)
+    assert accepted["valid"] is True
+    decisions["unresolved_call_decisions"][0]["decision"] = "AUTO_APPROVED"
+    rejected = validate_decisions(report, decisions)
+    assert rejected["valid"] is False
+    assert any(
+        error.startswith("invalid unresolved_call decision:")
+        for error in rejected["errors"]
+    )
 
 
 def test_build_output_pins_decision_report_digest(tmp_path: Path):

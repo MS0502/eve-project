@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 
-SCHEMA_VERSION = "eve.m2-b-read-capability-candidates.v2"
-DECISION_SCHEMA_VERSION = "eve.m2-b-read-capability-decisions.v2"
+SCHEMA_VERSION = "eve.m2-b-read-capability-candidates.v3"
+DECISION_SCHEMA_VERSION = "eve.m2-b-read-capability-decisions.v3"
 AUTHORITY = "audit_only"
 REVIEW_REQUIRED = "REVIEW_REQUIRED"
 MAX_CALL_DEPTH = 16
@@ -46,14 +46,23 @@ RAW_SOURCE_LEAVES = {
 }
 SINK_TOKENS = {
     "chat", "emit", "express", "expression", "generate", "output", "publish",
-    "render", "reply", "respond", "response", "send", "speak", "speech", "stream",
+    "render", "reply", "respond", "response", "say", "send", "speak", "speech", "stream",
 }
 SINK_EXCLUSIONS = {
     "analyze", "candidate", "candidates", "classify", "count", "decide", "digest",
-    "graph", "length", "meaning", "metric", "observe", "plan", "policy", "record",
+    "graph", "header", "length", "meaning", "metric", "observe", "plan", "policy", "record",
     "score", "scoring", "state", "status", "trace", "validate",
 }
-EXACT_EXTERNAL_SINKS = {"print", "send", "send_text", "speak"}
+EXACT_EXTERNAL_SINKS = {"print", "say", "send", "send_text", "speak"}
+TRANSPARENT_TAINT_CALLS = {
+    "abs", "all", "any", "bool", "deepcopy", "dict", "enumerate", "float",
+    "getattr", "hasattr", "int", "isinstance", "iter", "len", "list", "max",
+    "min", "next", "ord", "range", "round", "set", "sorted", "str", "sum",
+    "tuple", "type",
+    "ast.iter_child_nodes", "ast.parse", "ast.walk", "json.dumps", "json.loads",
+    "math.isfinite", "np.clip", "np.dot", "np.linalg.norm", "np.mean",
+    "re.match", "re.search", "re.sub",
+}
 MARKERS = {
     "provenance": {"confidence", "origin", "provenance", "source_id", "source_type", "verification", "version"},
     "quarantine": {"canonical", "claim", "meaning", "normalize", "parse", "quarantine", "sanitize", "semantic", "understand", "validate"},
@@ -64,6 +73,10 @@ DECISIONS = {
     "APPROVED_QUARANTINED", "DENIED_NO_CAPABILITY", "LEGACY_REWRITE",
     "NOT_RAW_TEXT_FALSE_POSITIVE",
 }
+UNRESOLVED_DECISIONS = {
+    "DENIED_NO_CAPABILITY", "LEGACY_REWRITE", "NOT_CAPABILITY_BOUNDARY",
+}
+PARSE_DECISIONS = {"DENIED_NO_CAPABILITY", "LEGACY_REWRITE"}
 DECISION_FIELDS = {
     "edge_id", "decision", "capability", "provenance", "quarantine", "quotation",
     "denial_semantics", "rationale", "owner",
@@ -183,13 +196,26 @@ def raw_source_call(target: str) -> bool:
 
 
 def sink_name(value: str) -> bool:
-    parts = tokens(value.rsplit(":", 1)[-1])
+    leaf = value.rsplit(":", 1)[-1].rsplit(".", 1)[-1]
+    if leaf.startswith(("can_", "has_", "is_", "should_")):
+        return False
+    parts = tokens(leaf)
     return bool(parts & SINK_TOKENS) and not bool(parts & SINK_EXCLUSIONS)
 
 
 def external_sink(target: str) -> bool:
     leaf = target.rsplit(".", 1)[-1].lower()
     return leaf in EXACT_EXTERNAL_SINKS or sink_name(target)
+
+
+def transparent_taint_call(target: str) -> bool:
+    """Return true only for exact, reviewed value-transform calls.
+
+    This is deliberately an exact-name allowlist. Receiver-wide or leaf-only
+    matching would hide newly introduced opaque calls behind a familiar method
+    name and would violate the fail-closed capability boundary.
+    """
+    return target in TRANSPARENT_TAINT_CALLS
 
 
 @dataclass(frozen=True)
@@ -347,6 +373,18 @@ class FlowAnalyzer:
         }
         return positional, keywords
 
+    def call_receiver_tainted(
+        self,
+        call: ast.Call,
+        env: Mapping[str, bool],
+        seed: SourceSeed,
+        info: FunctionInfo,
+    ) -> bool:
+        return (
+            isinstance(call.func, ast.Attribute)
+            and self.expr_tainted(call.func.value, env, seed, info)
+        )
+
     def mapped_tainted_parameters(self, destination: FunctionInfo, target: str, positional: list[bool], keywords: Mapping[str, bool]) -> tuple[int, ...]:
         offset = 1 if destination.args and destination.args[0] in {"self", "cls"} and target.startswith(("self.", "cls.")) else 0
         indexes: set[int] = set()
@@ -374,15 +412,25 @@ class FlowAnalyzer:
             if seed.kind == "raw_source_call" and info.key == seed.function_key and target == seed.evidence and node.lineno == seed.line_start:
                 return True
             positional, keywords = self.call_argument_taint(node, env, seed, info)
-            return any(positional) or any(keywords.values())
+            return (
+                self.call_receiver_tainted(node, env, seed, info)
+                or any(positional)
+                or any(keywords.values())
+            )
         if isinstance(node, ast.Lambda):
             return False
         return any(self.expr_tainted(child, env, seed, info) for child in ast.iter_child_nodes(node))
 
-    def analyze(self, info: FunctionInfo, tainted_parameters: tuple[int, ...], seed: SourceSeed) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
+    def analyze(
+        self,
+        info: FunctionInfo,
+        tainted_parameters: tuple[int, ...],
+        seed: SourceSeed,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], bool]:
         env = {name: index in tainted_parameters for index, name in enumerate(info.args)}
         next_calls: list[dict[str, Any]] = []
         sinks: list[dict[str, Any]] = []
+        unresolved_calls: list[dict[str, Any]] = []
         returned_tainted = False
 
         def process(statements: Iterable[ast.stmt], current: dict[str, bool]) -> dict[str, bool]:
@@ -476,7 +524,10 @@ class FlowAnalyzer:
                     continue
                 target = dotted(child.func)
                 positional, keywords = self.call_argument_taint(child, current, seed, info)
-                if not (any(positional) or any(keywords.values())):
+                receiver_tainted = self.call_receiver_tainted(
+                    child, current, seed, info
+                )
+                if not (receiver_tainted or any(positional) or any(keywords.values())):
                     continue
                 destination_key = resolve(info, target, self.functions, self.leaf_index)
                 if destination_key is not None:
@@ -490,6 +541,23 @@ class FlowAnalyzer:
                         })
                 elif external_sink(target):
                     sinks.append(sink_record(info, child, "external_expression_call", target))
+                elif transparent_taint_call(target):
+                    continue
+                else:
+                    unresolved_calls.append({
+                        "path": info.path,
+                        "symbol": info.qualname,
+                        "target": target,
+                        "line_start": child.lineno,
+                        "line_end": int(getattr(child, "end_lineno", child.lineno)),
+                        "tainted_positional_indexes": [
+                            index for index, tainted in enumerate(positional) if tainted
+                        ],
+                        "tainted_keyword_names": sorted(
+                            name for name, tainted in keywords.items() if tainted
+                        ),
+                        "tainted_receiver": receiver_tainted,
+                    })
 
         process(info.node.body, env)
         unique_calls = {
@@ -500,9 +568,19 @@ class FlowAnalyzer:
             (item["path"], item["symbol"], item["evidence"]["line_start"], item["evidence"]["kind"], item["evidence"]["target"]): item
             for item in sinks
         }
+        unique_unresolved = {
+            (
+                item["path"], item["symbol"], item["target"], item["line_start"],
+                tuple(item["tainted_positional_indexes"]),
+                tuple(item["tainted_keyword_names"]),
+                item["tainted_receiver"],
+            ): item
+            for item in unresolved_calls
+        }
         return (
             [unique_calls[key] for key in sorted(unique_calls)],
             [unique_sinks[key] for key in sorted(unique_sinks)],
+            [unique_unresolved[key] for key in sorted(unique_unresolved)],
             returned_tainted,
         )
 
@@ -554,7 +632,9 @@ def extract_candidates(root: Path) -> dict[str, Any]:
             seen.add(state)
             analyzed_state_count += 1
             info = functions[function_key]
-            next_calls, sinks, _returned_tainted = analyzer.analyze(info, tainted_parameters, seed)
+            next_calls, sinks, unresolved_calls, _returned_tainted = analyzer.analyze(
+                info, tainted_parameters, seed
+            )
             for sink in sinks:
                 material = {
                     "source_id": seed.source_id,
@@ -586,6 +666,34 @@ def extract_candidates(root: Path) -> dict[str, Any]:
                     "mechanical_confidence": "high" if len(path) == 1 else "medium",
                     "review_status": REVIEW_REQUIRED,
                 }
+            for call in unresolved_calls:
+                material = {
+                    "source_id": seed.source_id,
+                    "source_function": seed.function_key,
+                    "source_kind": seed.kind,
+                    "source_evidence": seed.evidence,
+                    "call_path": list(path),
+                    "call_evidence": list(call_evidence),
+                    "boundary_call": call,
+                }
+                finding_id = digest(material)
+                unresolved[finding_id] = {
+                    "finding_id": finding_id,
+                    "source": {
+                        "source_id": seed.source_id,
+                        "path": functions[seed.function_key].path,
+                        "symbol": functions[seed.function_key].qualname,
+                        "kind": seed.kind,
+                        "evidence": seed.evidence,
+                        "line_start": seed.line_start,
+                        "line_end": seed.line_end,
+                    },
+                    "call_path": list(path),
+                    "call_evidence": list(call_evidence),
+                    "boundary_call": call,
+                    "semantic_markers": merged_markers(path, functions),
+                    "review_status": REVIEW_REQUIRED,
+                }
             for call in next_calls:
                 destination = call["destination"]
                 if destination in path:
@@ -600,13 +708,6 @@ def extract_candidates(root: Path) -> dict[str, Any]:
                         "line_end": call["line_end"],
                     },),
                 ))
-                if destination not in functions:
-                    material = {"source_id": seed.source_id, **call}
-                    finding_id = digest(material)
-                    unresolved[finding_id] = {
-                        "finding_id": finding_id, **material,
-                        "review_status": REVIEW_REQUIRED,
-                    }
     report: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "authority": AUTHORITY,
@@ -670,9 +771,35 @@ def validate_decisions(report: Mapping[str, Any], payload: Mapping[str, Any]) ->
             if isinstance(value, dict) and value.get("decision") not in DECISIONS:
                 errors.append(f"invalid edge decision: {value.get('edge_id')}")
     unresolved_expected = {item["finding_id"] for item in report["unresolved_boundary_calls"]}
-    unresolved_seen = validate_exact_review_set(unresolved_expected, payload.get("unresolved_call_decisions", []), "finding_id", REVIEW_FIELDS, "unresolved_call", errors)
+    unresolved_values = payload.get("unresolved_call_decisions", [])
+    unresolved_seen = validate_exact_review_set(
+        unresolved_expected,
+        unresolved_values,
+        "finding_id",
+        REVIEW_FIELDS,
+        "unresolved_call",
+        errors,
+    )
+    if isinstance(unresolved_values, list):
+        for value in unresolved_values:
+            if isinstance(value, dict) and value.get("decision") not in UNRESOLVED_DECISIONS:
+                errors.append(
+                    f"invalid unresolved_call decision: {value.get('finding_id')}"
+                )
     parse_expected = {item["finding_id"] for item in report["parse_errors"]}
-    parse_seen = validate_exact_review_set(parse_expected, payload.get("parse_error_decisions", []), "finding_id", REVIEW_FIELDS, "parse_error", errors)
+    parse_values = payload.get("parse_error_decisions", [])
+    parse_seen = validate_exact_review_set(
+        parse_expected,
+        parse_values,
+        "finding_id",
+        REVIEW_FIELDS,
+        "parse_error",
+        errors,
+    )
+    if isinstance(parse_values, list):
+        for value in parse_values:
+            if isinstance(value, dict) and value.get("decision") not in PARSE_DECISIONS:
+                errors.append(f"invalid parse_error decision: {value.get('finding_id')}")
     result: dict[str, Any] = {
         "schema_version": DECISION_SCHEMA_VERSION,
         "candidate_report_digest": report["report_digest"],
