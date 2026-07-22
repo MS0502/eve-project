@@ -170,7 +170,7 @@ def test_habitat_has_no_intentional_kill_scheduler_or_legacy_runtime_import():
     assert "kill -9" not in supervisor
     assert "pkill" not in supervisor
     assert "termux-job-scheduler" not in supervisor + setup
-    assert "git check-ignore --no-index" in setup
+    assert "check-ignore --no-index" in setup
     assert "termux-wake-lock" in supervisor + setup
 
 
