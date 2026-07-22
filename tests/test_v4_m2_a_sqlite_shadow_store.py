@@ -397,11 +397,11 @@ def test_filtered_stream_read_and_restore_do_not_hide_index_corruption(tmp_path:
         store.events(stream_id="shadow:test")
     with pytest.raises(PersistedEventCorruption):
         store.restore_verified(
-  stream_id="shadow:test",
-  initial_state=State(0),
-  reducer=reduce_state,
-  state_to_mapping=lambda state: {"total": state.total},
-  state_from_mapping=lambda value: State(int(value["total"])),
+            stream_id="shadow:test",
+            initial_state=State(0),
+            reducer=reduce_state,
+            state_to_mapping=lambda state: {"total": state.total},
+            state_from_mapping=lambda value: State(int(value["total"])),
         )
 
 
