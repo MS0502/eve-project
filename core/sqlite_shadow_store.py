@@ -568,6 +568,7 @@ class SQLiteShadowStore:
         if stream_id is None and after_sequence:
             raise ValueError("after_sequence requires an explicit stream_id")
         with self._connect() as connection:
+            self._event_state(connection)
             if stream_id is None:
                 rows = connection.execute("SELECT * FROM events ORDER BY ordinal").fetchall()
             else:

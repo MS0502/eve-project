@@ -379,6 +379,32 @@ def test_denormalized_event_index_corruption_is_not_accepted_as_valid(tmp_path: 
     assert any("index columns disagree" in item for item in report.errors)
 
 
+def test_filtered_stream_read_and_restore_do_not_hide_index_corruption(tmp_path: Path):
+    path = tmp_path / "shadow.sqlite3"
+    store = SQLiteShadowStore(path)
+    store.initialize()
+    store.append(event(1))
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("DROP TRIGGER events_no_update")
+        connection.execute("UPDATE events SET stream_id='shadow:wrong' WHERE event_id='event:1'")
+        connection.execute(EVENT_UPDATE_TRIGGER)
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(PersistedEventCorruption):
+        store.events(stream_id="shadow:test")
+    with pytest.raises(PersistedEventCorruption):
+        store.restore_verified(
+  stream_id="shadow:test",
+  initial_state=State(0),
+  reducer=reduce_state,
+  state_to_mapping=lambda state: {"total": state.total},
+  state_from_mapping=lambda value: State(int(value["total"])),
+        )
+
+
 def test_verified_backups_are_bounded_without_touching_event_history(tmp_path: Path):
     store = SQLiteShadowStore(
         tmp_path / "shadow.sqlite3",
