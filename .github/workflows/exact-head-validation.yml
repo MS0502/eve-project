@@ -3,7 +3,7 @@ name: Exact-head validation
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       sha:
@@ -18,6 +18,10 @@ on:
         description: Optional newline-separated tests paths
         required: false
         type: string
+
+concurrency:
+  group: exact-head-validation-${{ github.event.pull_request.number || inputs.sha }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -123,6 +127,33 @@ jobs:
           }, sort_keys=True))
           PY
 
+      - name: Generate M2-E cutover candidate evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_e_cutover.py \
+            --m2-d-packet /tmp/m2-d-rehearsal.json \
+            --candidate-head "$TARGET_SHA" \
+            --workflow "${{ github.run_id }}" \
+            --output /tmp/m2-e-cutover-candidate.json \
+            --pretty
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          packet = json.loads(Path('/tmp/m2-e-cutover-candidate.json').read_text())
+          print(json.dumps({
+              'candidate_head': packet['candidate_head'],
+              'workflow': packet['workflow'],
+              'packet_digest': packet['packet_digest'],
+              'machine_passed': packet['machine_passed'],
+              'eligible_for_human_review': packet['eligible_for_human_review'],
+              'human_accepted': packet['human_accepted'],
+              'cutover_authorized': packet['cutover_authorized'],
+              'event_store_authority': packet['event_store_authority'],
+          }, sort_keys=True))
+          PY
+
       - name: Verify M0 audit invariance
         shell: bash
         run: |
@@ -176,9 +207,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          addition_args=()
+          if test -d docs/audit/m2_b_decision_additions; then
+            while IFS= read -r path; do
+              addition_args+=(--additions "$path")
+            done < <(find docs/audit/m2_b_decision_additions -type f -name '*.json' | sort)
+          fi
           python scripts/audit/m2_b_decision_groups.py \
             --candidate /tmp/m2-b-read-capability-candidates.json \
             --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            "${addition_args[@]}" \
             --output /tmp/m2-b-decision-validation.json \
             --pretty \
             --strict
@@ -228,6 +266,7 @@ jobs:
             /tmp/focused-paths.txt
             /tmp/focused.txt
             /tmp/m2-d-rehearsal.json
+            /tmp/m2-e-cutover-candidate.json
             /tmp/invariance.txt
             /tmp/forward-regression.json
             /tmp/m2-b-read-capability-candidates.json
