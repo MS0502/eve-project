@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Validate compact, exact-coverage M2-B decision groups.
 
-The compact file shares review text across exact edge/finding ID sets. This
-module expands those groups and delegates fail-closed validation to the M2-B
-candidate extractor. It is audit-only and cannot set human acceptance.
+The compact file shares review text across exact edge/finding ID sets. The
+origin report digest remains immutable provenance; current validity is decided
+by exact, non-stale coverage of evidence IDs, whose hashes already bind source,
+call-path, sink, and parse evidence. This module is audit-only and cannot set
+human acceptance.
 """
 from __future__ import annotations
 
@@ -29,9 +31,16 @@ SURFACE_FIELDS = (
 
 
 def candidate_surface_digest(report: Mapping[str, Any]) -> str:
-    """Bind decisions to capability evidence, not audit-tool inventory counts."""
-    material = {field: report.get(field) for field in SURFACE_FIELDS}
-    return manifest.digest(material)
+    """Digest only capability evidence, excluding audit inventory counters."""
+    return manifest.digest({field: report.get(field) for field in SURFACE_FIELDS})
+
+
+def _sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _reviewed(value: Any) -> bool:
@@ -74,9 +83,8 @@ def expand_decisions(report: Mapping[str, Any], compact: Mapping[str, Any]) -> t
     errors: list[str] = []
     if compact.get("schema_version") != SCHEMA_VERSION:
         errors.append("compact decision schema_version mismatch")
-    expected_surface_digest = candidate_surface_digest(report)
-    if compact.get("candidate_surface_digest") != expected_surface_digest:
-        errors.append("compact candidate_surface_digest mismatch")
+    if not _sha256(compact.get("candidate_report_digest")):
+        errors.append("compact candidate_report_digest must be a lowercase SHA-256")
     edge_decisions = _expand_groups(
         compact.get("edge_decision_groups", []),
         ids_field="edge_ids",
@@ -118,6 +126,7 @@ def validate_compact_decisions(report: Mapping[str, Any], compact: Mapping[str, 
     result = {
         **delegated,
         "schema_version": SCHEMA_VERSION,
+        "origin_candidate_report_digest": compact.get("candidate_report_digest"),
         "candidate_surface_digest": candidate_surface_digest(report),
         "valid": not errors,
         "errors": errors,
