@@ -18,7 +18,7 @@ def write(root: Path, path: str, content: str) -> None:
     target.write_text(content, encoding="utf-8")
 
 
-def approved_decisions(report: dict) -> dict:
+def reviewed_decisions(report: dict) -> dict:
     return {
         "schema_version": DECISION_SCHEMA_VERSION,
         "candidate_report_digest": report["report_digest"],
@@ -26,12 +26,12 @@ def approved_decisions(report: dict) -> dict:
             {
                 "edge_id": edge["edge_id"],
                 "decision": "LEGACY_REWRITE",
-                "capability": "legacy raw-input capability retained only as mapped evidence",
-                "provenance": "caller-supplied raw input; source identity not yet authoritative",
-                "quarantine": "not structurally enforced in legacy path",
+                "capability": "legacy raw-input dependency retained only as mapped evidence",
+                "provenance": "caller-supplied raw input; no new authority is inferred",
+                "quarantine": "not structurally guaranteed by this legacy edge",
                 "quotation": "no quotation capability is granted by this decision",
-                "denial_semantics": "new raw-text edges remain denied pending replacement",
-                "rationale": "test decision covers the exact extracted edge without activation",
+                "denial_semantics": "new raw-text access remains denied pending replacement",
+                "rationale": "test review covers this exact extracted edge without activation",
                 "owner": "tests.m2b",
             }
             for edge in report["candidate_edges"]
@@ -39,35 +39,42 @@ def approved_decisions(report: dict) -> dict:
         "unresolved_call_decisions": [
             {
                 "finding_id": item["finding_id"],
-                "decision": "LEGACY_REWRITE",
-                "rationale": "unresolved external boundary remains denied and scheduled for rewrite",
+                "decision": "DENIED_NO_CAPABILITY",
+                "rationale": "unresolved boundary remains denied",
                 "owner": "tests.m2b",
-                "denial_semantics": "no new capability is approved",
+                "denial_semantics": "no capability is approved",
             }
             for item in report["unresolved_boundary_calls"]
+        ],
+        "parse_error_decisions": [
+            {
+                "finding_id": item["finding_id"],
+                "decision": "LEGACY_REWRITE",
+                "rationale": "legacy parse failure is explicit and cannot hide new approval",
+                "owner": "tests.m2b",
+                "denial_semantics": "the unparsed file grants no M2-B capability",
+            }
+            for item in report["parse_errors"]
         ],
     }
 
 
-def test_direct_raw_parameter_to_expression_sink_is_extracted(tmp_path: Path):
+def test_direct_tainted_argument_to_expression_sink_is_extracted(tmp_path: Path):
     write(tmp_path, "app.py", "def respond(input_text):\n    return generate(input_text)\n")
     report = extract_candidates(tmp_path)
     assert report["authority"] == AUTHORITY
     assert report["human_accepted"] is False
     assert report["runtime_integrated"] is False
-    assert report["summary"]["candidate_edge_count"] >= 1
-    edge = next(
-        edge
-        for edge in report["candidate_edges"]
-        if edge["source"]["symbol"] == "respond"
-        and edge["sink"]["symbol"] == "respond"
-    )
+    assert report["summary"]["candidate_edge_count"] == 1
+    edge = report["candidate_edges"][0]
+    assert edge["source"]["symbol"] == "respond"
+    assert edge["sink"]["evidence"]["target"] == "generate"
     assert edge["call_path"] == ["app:respond"]
     assert edge["mechanical_confidence"] == "high"
     assert edge["review_status"] == "REVIEW_REQUIRED"
 
 
-def test_interprocedural_shortest_path_records_cognition_hop(tmp_path: Path):
+def test_interprocedural_taint_records_only_actual_call_path(tmp_path: Path):
     write(
         tmp_path,
         "app.py",
@@ -79,14 +86,10 @@ def test_interprocedural_shortest_path_records_cognition_hop(tmp_path: Path):
         "    return value\n",
     )
     report = extract_candidates(tmp_path)
-    edge = next(
-        edge
-        for edge in report["candidate_edges"]
-        if edge["source"]["symbol"] == "accept"
-        and edge["sink"]["symbol"] == "respond"
-    )
+    edge = report["candidate_edges"][0]
     assert edge["call_path"] == ["app:accept", "app:think", "app:respond"]
     assert edge["cognition_hops"] == [{"path": "app.py", "symbol": "think"}]
+    assert [item["target"] for item in edge["call_evidence"]] == ["think", "respond"]
     assert edge["mechanical_confidence"] == "medium"
 
 
@@ -98,35 +101,53 @@ def test_disconnected_source_and_sink_do_not_form_an_edge(tmp_path: Path):
         "def emit():\n    return 'fixed'\n",
     )
     report = extract_candidates(tmp_path)
-    assert not any(
-        edge["source"]["symbol"] == "accept"
-        and edge["sink"]["symbol"] == "emit"
-        for edge in report["candidate_edges"]
+    assert report["candidate_edges"] == []
+
+
+def test_non_tainted_sink_argument_does_not_form_an_edge(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def respond(input_text):\n"
+        "    ignored = len(input_text)\n"
+        "    return generate('fixed')\n",
     )
+    report = extract_candidates(tmp_path)
+    assert report["candidate_edges"] == []
 
 
-def test_unresolved_source_or_sink_boundary_is_visible(tmp_path: Path):
+def test_cognition_candidate_return_is_not_expression_sink(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def generate_candidates(input_text):\n    return len(input_text)\n",
+    )
+    report = extract_candidates(tmp_path)
+    assert report["candidate_edges"] == []
+
+
+def test_raw_source_call_matching_is_exact_not_token_overlap(tmp_path: Path):
+    write(tmp_path, "app.py", "def status():\n    return sensory.stt_available()\n")
+    report = extract_candidates(tmp_path)
+    assert report["summary"]["source_seed_count"] == 0
+
+
+def test_external_sink_is_terminal_evidence_not_hidden_boundary(tmp_path: Path):
     write(
         tmp_path,
         "app.py",
         "def respond(input_text):\n    return external.send(input_text)\n",
     )
     report = extract_candidates(tmp_path)
-    assert report["summary"]["unresolved_boundary_call_count"] == 1
-    finding = report["unresolved_boundary_calls"][0]
-    assert finding["target"] == "external.send"
-    assert finding["review_status"] == "REVIEW_REQUIRED"
-    assert len(finding["finding_id"]) == 64
+    assert report["summary"]["candidate_edge_count"] == 1
+    assert report["unresolved_boundary_calls"] == []
+    assert report["candidate_edges"][0]["sink"]["evidence"]["target"] == "external.send"
 
 
 def test_decisions_require_exact_non_stale_coverage(tmp_path: Path):
-    write(
-        tmp_path,
-        "app.py",
-        "def respond(input_text):\n    return external.send(input_text)\n",
-    )
+    write(tmp_path, "app.py", "def respond(input_text):\n    return generate(input_text)\n")
     report = extract_candidates(tmp_path)
-    decisions = approved_decisions(report)
+    decisions = reviewed_decisions(report)
     result = validate_decisions(report, decisions)
     assert result["valid"] is True
     assert result["eligible_for_human_review"] is True
@@ -135,15 +156,26 @@ def test_decisions_require_exact_non_stale_coverage(tmp_path: Path):
     decisions["edge_decisions"] = []
     rejected = validate_decisions(report, decisions)
     assert rejected["valid"] is False
-    assert any(
-        error.startswith("missing edge decisions:") for error in rejected["errors"]
-    )
+    assert "missing edge decisions: 1" in rejected["errors"]
+
+
+def test_parse_errors_require_explicit_exact_decisions(tmp_path: Path):
+    write(tmp_path, "broken.py", "def broken(:\n")
+    report = extract_candidates(tmp_path)
+    assert len(report["parse_errors"]) == 1
+    decisions = reviewed_decisions(report)
+    accepted = validate_decisions(report, decisions)
+    assert accepted["valid"] is True
+    decisions["parse_error_decisions"] = []
+    rejected = validate_decisions(report, decisions)
+    assert rejected["valid"] is False
+    assert "missing parse_error decisions: 1" in rejected["errors"]
 
 
 def test_build_output_pins_decision_report_digest(tmp_path: Path):
     write(tmp_path, "app.py", "def respond(input_text):\n    return generate(input_text)\n")
     report = extract_candidates(tmp_path)
-    decisions = approved_decisions(report)
+    decisions = reviewed_decisions(report)
     path = tmp_path / "decisions.json"
     path.write_text(json.dumps(decisions), encoding="utf-8")
     output = build_output(tmp_path, path)
@@ -165,15 +197,4 @@ def test_extraction_is_deterministic_and_excludes_non_runtime_roots(tmp_path: Pa
     right = extract_candidates(tmp_path)
     assert left == right
     assert left["report_digest"] == right["report_digest"]
-    assert all(
-        edge["source"]["path"] == "app.py" for edge in left["candidate_edges"]
-    )
-
-
-def test_parse_errors_block_decision_eligibility(tmp_path: Path):
-    write(tmp_path, "broken.py", "def broken(:\n")
-    report = extract_candidates(tmp_path)
-    decisions = approved_decisions(report)
-    result = validate_decisions(report, decisions)
-    assert result["valid"] is False
-    assert "candidate report contains parse errors" in result["errors"]
+    assert all(edge["source"]["path"] == "app.py" for edge in left["candidate_edges"])
