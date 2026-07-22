@@ -15,6 +15,7 @@ M1 status: **closed for mechanism verification; coverage remains deferred to A2/
 v4.2 review status: **opened and closed by the v4.2 amendment; `v4_2_review_opened = true`; no outstanding constitutional objection**
 v4.2 review consensus: **6 objections accepted plus 1 refinement requiring supersession/revocation artifacts to pass the same exact-head and human-review regime as the decisions they change**
 M2-A status: **implemented as a bounded, explicit, disconnected SQLite shadow-persistence candidate in PR #161; not yet human-accepted or merged, with no runtime, recovery, cutover, or legacy-authority change**
+M3-A drive-dynamics design status: **documentation-only parallel candidate in PR #169; binds the 63-axis Affect Migration Plan to 8 drives, 32 semantic states, and 48 bidirectional named transitions; no runtime integration, no scheduler or M3-E authority, and integration eligibility only after persistence cutover**
 PR #158 gate wording retained for historical verification: **M2-A remains blocked until v4.2 approval**. This amendment satisfies that constitutional prerequisite only; it does not start M2-A.
 Current next step: **complete exact-head validation and human review of PR #161; M2-B remains blocked until M2-A is accepted with its schemas and restore evidence stable**
 Frozen work: open REWRITE PRs #109, #86, #84, and #82 remain untouched; absorbed PRs #11, #7, and #4 are closed
@@ -173,6 +174,14 @@ The candidate provides explicit file initialization, a WAL request with visible 
 The candidate remains limited to the accepted M1 event-envelope contract and caller-supplied pure reducer/state codecs. It does not install the M1-B observer, connect an M1-D bridge, read legacy sidecars, compare dual reads, become the recovery authority, alter defaults, or perform cutover. Those boundaries remain assigned to later M2 milestones and separate human-reviewed decisions.
 
 `tests/test_v4_m2_a_sqlite_shadow_store.py` provides focused evidence for explicit creation, WAL/schema/migration contracts, append ordering and hash-chain fidelity, atomic rollback, append-only enforcement, bounded storage, validated snapshots, corrupt-snapshot fallback, repeated replay, reopen after an uncommitted write, integrity-failure visibility, bounded backups, and absence of production integration.
+
+## M3-A drive-dynamics documentation-only candidate — PR #169
+
+`docs/audit/M3_A_DRIVE_DYNAMICS_DESIGN.md` fixes a versioned bounded continuous equation and the complete parameter set for `energy`, `safety`, `affiliation`, `curiosity`, `agency`, `coherence`, `competence`, and `expression`. It defines 32 semantic states, 24 hysteresis boundaries, 48 bidirectional named transitions, exact cooldowns, the transition-candidate lifecycle, and the A9 no-duplicate proof.
+
+`scripts/audit/m3_a_drive_dynamics_check.py` is a standard-library static checker. It parses the merged 63-axis Affect Migration Plan directly and requires all 59 `MAPPED` axes to land in versioned drive/appraisal/derived-emotion targets while all 4 `PROPOSED-DROP` axes retain historical preservation with no future behavioral target. Focused tests verify deterministic output, exact catalog coverage, and the authority boundary.
+
+This candidate is documentation-only and runs in parallel with the M2-E observation-window work. It performs no runtime integration, affect or drive mutation, event emission, persistence access, scheduler integration, goal or expression integration, cutover, production-default change, or M3-E authorization. The legacy runtime remains authoritative. Integration eligibility only after persistence cutover means that this design cannot activate or promote itself before a separate approved cutover and later reviewed M3 implementation.
 
 ## Merged source-of-truth evidence
 
