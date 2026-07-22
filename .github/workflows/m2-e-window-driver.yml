@@ -18,6 +18,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+
 jobs:
   chaos:
     name: chaos-${{ matrix.os }}
@@ -42,10 +46,25 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test -z "$(git status --short)"
           test ! -e "$RUNNER_TEMP/m2e-chaos-workspace"
-      - name: Install dependencies
+      - name: Install SHA-pinned compatibility dependency
         shell: bash
         run: |
           set -euo pipefail
+          python - "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          root = pathlib.Path(sys.argv[1])
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = root / 'markdown_strings-3.4.0.tar.gz'
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
           python -m pip install -r requirements.txt
           python -m pip check
       - name: Run hard-kill and corruption matrix
@@ -99,11 +118,26 @@ jobs:
         with:
           ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
-      - name: Install dependencies
+      - name: Install SHA-pinned compatibility dependency
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          python - "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          root = pathlib.Path(sys.argv[1])
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = root / 'markdown_strings-3.4.0.tar.gz'
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
           python -m pip install -r requirements.txt
           python -m pip check
       - name: Create portable synthetic backup
@@ -169,11 +203,26 @@ jobs:
         with:
           name: m2e-portability-${{ matrix.source }}-${{ env.TARGET_SHA }}
           path: ${{ runner.temp }}/portable-input
-      - name: Install dependencies
+      - name: Install SHA-pinned compatibility dependency
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          python - "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          root = pathlib.Path(sys.argv[1])
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = root / 'markdown_strings-3.4.0.tar.gz'
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
           python -m pip install -r requirements.txt
           python -m pip check
       - name: Restore and replay on target OS
