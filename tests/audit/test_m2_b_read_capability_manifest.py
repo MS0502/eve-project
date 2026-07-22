@@ -198,3 +198,15 @@ def test_extraction_is_deterministic_and_excludes_non_runtime_roots(tmp_path: Pa
     assert left == right
     assert left["report_digest"] == right["report_digest"]
     assert all(edge["source"]["path"] == "app.py" for edge in left["candidate_edges"])
+
+
+def test_semantic_or_governance_parameters_are_not_raw_sources(tmp_path: Path):
+    write(
+        tmp_path,
+        "app.py",
+        "def write_decision(source_decision, input_understanding):\n"
+        "    return path.write_text(str(source_decision) + str(input_understanding))\n",
+    )
+    report = extract_candidates(tmp_path)
+    assert report["summary"]["source_seed_count"] == 0
+    assert report["candidate_edges"] == []
