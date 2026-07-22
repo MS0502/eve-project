@@ -1,66 +1,245 @@
-name: M2-D focused correction
+name: Exact-head validation
 
 on:
   pull_request:
     branches: [main]
-    types: [synchronize]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact commit SHA to validate
+        required: true
+        type: string
+      base_sha:
+        description: Base commit SHA for scope and invariance checks
+        required: true
+        type: string
+      focused_tests:
+        description: Optional newline-separated tests paths
+        required: false
+        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  correct:
+  validate:
     runs-on: ubuntu-24.04
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    timeout-minutes: 45
+    env:
+      TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
+      BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base_sha }}
+      CURRENT_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+      REQUESTED_FOCUSED_TESTS: ${{ inputs.focused_tests }}
+      PIP_INDEX_URL: https://pypi.org/simple
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact target
+        uses: actions/checkout@v4
         with:
-          ref: codex/m2-d-recovery-rehearsal
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
-      - name: Apply reviewed M2-D corrections
+
+      - name: Verify exact head and clean worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git cat-file -e "$BASE_SHA^{commit}"
+          test -z "$(git status --short)"
+          git rev-parse HEAD | tee /tmp/final-head.txt
+          git diff --name-only "$BASE_SHA"..."$TARGET_SHA" | sort | tee /tmp/changed-files.txt
+
+      - name: Install SHA-pinned compatibility dependency
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
+          import hashlib
+          import pathlib
+          import subprocess
+          import sys
+          import urllib.request
+
+          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
+          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
+          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          urllib.request.urlretrieve(url, target)
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
+          PY
+          python -m pip install -r requirements.txt
+          python -m pip check
+
+      - name: Compile changed Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed_python < <(grep -E '\.py$' /tmp/changed-files.txt || true)
+          if ((${#changed_python[@]})); then
+            python -m compileall -q "${changed_python[@]}"
+          fi
+
+      - name: Run focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            grep -E '^tests/.*\.py$' /tmp/changed-files.txt || true
+            printf '%s\n' "$REQUESTED_FOCUSED_TESTS"
+          } | sed '/^[[:space:]]*$/d' | sort -u > /tmp/focused-paths.txt
+          if test -s /tmp/focused-paths.txt; then
+            mapfile -t focused < /tmp/focused-paths.txt
+            set +e
+            python -m pytest -q --tb=short "${focused[@]}" > /tmp/focused.txt 2>&1
+            status=$?
+            set -e
+            cat /tmp/focused.txt
+            exit "$status"
+          else
+            printf '%s\n' 'No focused tests selected.' | tee /tmp/focused.txt
+          fi
+
+      - name: Generate M2-D recovery rehearsal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_d_rehearsal.py \
+            --output /tmp/m2-d-rehearsal.json \
+            --pretty
+          python - <<'PY'
+          import json
           from pathlib import Path
 
-          path = Path('core/m2_d_rehearsal.py')
-          text = path.read_text(encoding='utf-8')
-
-          replacements = [
-              (
-                  '''        probe = replay_activation_learn_pair(\n            ActivationLearnPairShadowState.from_initial_snapshot(final.snapshot),\n            (rollback_probe_event,),\n        )''',
-                  '''        probe = replay_activation_learn_pair(final, (rollback_probe_event,))''',
-              ),
-              (
-                  '''def _restore(store: SQLiteShadowStore, initial_snapshot: Mapping[str, Any]):\n    initial = ActivationLearnPairShadowState.from_initial_snapshot(initial_snapshot)\n    return store.restore_verified(\n        stream_id=ACTIVATION_LEARN_PAIR_TARGET.stream_id,\n        initial_state=initial,\n        reducer=lambda state, envelope: replay_activation_learn_pair(state, (envelope,)),\n        state_to_mapping=lambda state: state.snapshot,\n        state_from_mapping=ActivationLearnPairShadowState.from_initial_snapshot,\n    )''',
-                  '''def _restore(store: SQLiteShadowStore, initial_snapshot: Mapping[str, Any]):\n    initial = ActivationLearnPairShadowState.from_initial_snapshot(initial_snapshot)\n    events_by_sequence = {\n        envelope.sequence: envelope\n        for envelope in store.events(stream_id=ACTIVATION_LEARN_PAIR_TARGET.stream_id)\n    }\n\n    def reducer(\n        state: ActivationLearnPairShadowState,\n        envelope: EventEnvelope,\n    ) -> ActivationLearnPairShadowState:\n        if state.sequence == 0 and envelope.sequence > 1:\n            previous = events_by_sequence.get(envelope.sequence - 1)\n            if previous is None:\n                raise M2DRehearsalError(\n                    "snapshot replay boundary has no preceding accepted event"\n                )\n            state = ActivationLearnPairShadowState(\n                calls=state.calls,\n                learned=state.learned,\n                sequence=previous.sequence,\n                last_event_id=previous.event_id,\n                last_event_digest=previous.digest,\n            )\n        return replay_activation_learn_pair(state, (envelope,))\n\n    return store.restore_verified(\n        stream_id=ACTIVATION_LEARN_PAIR_TARGET.stream_id,\n        initial_state=initial,\n        reducer=reducer,\n        state_to_mapping=lambda state: state.snapshot,\n        state_from_mapping=ActivationLearnPairShadowState.from_initial_snapshot,\n    )''',
-              ),
-              (
-                  '''    script = """\nimport sqlite3\nimport sys''',
-                  '''    script = """\nimport os\nimport sqlite3\nimport sys''',
-              ),
-              (
-                  '''    events, initial = _validate_window_inputs(\n        window=window,\n        baseline_events=baseline_events,\n        rollback_probe_event=rollback_probe_event,\n        initial_snapshot=initial_snapshot,\n    )\n    root = Path(workspace)\n    if str(workspace) == ":memory:" or root.name == "" or root.exists():\n        raise M2DRehearsalError("workspace must be a new concrete path")\n    root.mkdir(parents=True, exist_ok=False)''',
-                  '''    root = Path(workspace)\n    if str(workspace) == ":memory:" or root.name == "" or root.exists():\n        raise M2DRehearsalError("workspace must be a new concrete path")\n    events, initial = _validate_window_inputs(\n        window=window,\n        baseline_events=baseline_events,\n        rollback_probe_event=rollback_probe_event,\n        initial_snapshot=initial_snapshot,\n    )\n    root.mkdir(parents=True, exist_ok=False)''',
-              ),
-              (
-                  '''    full_replay = ScenarioEvidence.create(\n        scenario_id="full_replay_equivalence",\n        checks={\n            "expected_final_state": left.digest == window.expected_final_state.snapshot_digest,\n            "repeated_digest_equal": left.digest == right.digest,\n            "repeated_snapshot_equal": left.snapshot == right.snapshot,\n            "restore_matches_full_replay": baseline_restore.state_digest == left.digest,\n        },\n        observations={\n            "event_count": len(events),\n            "expected_state_digest": window.expected_final_state.snapshot_digest,\n            "first_replay_digest": left.digest,\n            "restore_state_digest": baseline_restore.state_digest,\n            "second_replay_digest": right.digest,\n        },''',
-                  '''    left_state_digest = StateEvidence.from_snapshot(left.snapshot).snapshot_digest\n    right_state_digest = StateEvidence.from_snapshot(right.snapshot).snapshot_digest\n    full_replay = ScenarioEvidence.create(\n        scenario_id="full_replay_equivalence",\n        checks={\n            "expected_final_state": left_state_digest\n            == window.expected_final_state.snapshot_digest,\n            "repeated_digest_equal": left.digest == right.digest,\n            "repeated_snapshot_equal": left.snapshot == right.snapshot,\n            "restore_matches_full_replay": baseline_restore.state_digest\n            == left_state_digest,\n        },\n        observations={\n            "event_count": len(events),\n            "expected_state_digest": window.expected_final_state.snapshot_digest,\n            "first_projection_digest": left.digest,\n            "first_state_digest": left_state_digest,\n            "restore_state_digest": baseline_restore.state_digest,\n            "second_projection_digest": right.digest,\n            "second_state_digest": right_state_digest,\n        },''',
-              ),
-          ]
-
-          for old, new in replacements:
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'expected exactly one replacement, found {count}: {old[:80]!r}')
-              text = text.replace(old, new)
-          path.write_text(text, encoding='utf-8')
+          packet = json.loads(Path('/tmp/m2-d-rehearsal.json').read_text())
+          print(json.dumps({
+              'packet_digest': packet['packet_digest'],
+              'passed_count': packet['passed_count'],
+              'failed_count': packet['failed_count'],
+              'machine_passed': packet['machine_passed'],
+              'human_accepted': packet['human_accepted'],
+              'authoritative_recovery': packet['authoritative_recovery'],
+              'cutover_authorized': packet['cutover_authorized'],
+          }, sort_keys=True))
           PY
-          python -m py_compile core/m2_d_rehearsal.py
-          git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add core/m2_d_rehearsal.py
-          git commit -m 'Fix M2-D replay boundary and evidence digests'
-          git push origin HEAD:codex/m2-d-recovery-rehearsal
+
+      - name: Verify M0 audit invariance
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in base head; do
+            if test "$phase" = base; then
+              sha="$BASE_SHA"
+            else
+              sha="$TARGET_SHA"
+            fi
+            git checkout --detach "$sha"
+            test -z "$(git status --short)"
+            for item in \
+              a:scripts/audit/m0_a_runtime_inventory.py \
+              b:scripts/audit/m0_b_controlflow_concurrency_inventory.py \
+              c:scripts/audit/m0_c_persistence_state_inventory.py \
+              d:scripts/audit/m0_d_component_inventory.py; do
+              name="${item%%:*}"
+              script="${item#*:}"
+              python "$script" --output "/tmp/${phase}-${name}.json"
+            done
+          done
+          git checkout --detach "$TARGET_SHA"
+          for name in a b c d; do
+            diff -u "/tmp/base-${name}.json" "/tmp/head-${name}.json"
+          done
+          test -z "$(git status --short)"
+          printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
+
+      - name: Extract M2-B read-capability candidates
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_b_read_capability_manifest.py \
+            --output /tmp/m2-b-read-capability-candidates.json \
+            --pretty
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('/tmp/m2-b-read-capability-candidates.json').read_text())
+          print(json.dumps({
+            'report_digest': report['report_digest'],
+            **report['summary'],
+          }, sort_keys=True))
+          PY
+
+      - name: Validate exact M2-B technical decisions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_b_decision_groups.py \
+            --candidate /tmp/m2-b-read-capability-candidates.json \
+            --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            --output /tmp/m2-b-decision-validation.json \
+            --pretty \
+            --strict
+          cat /tmp/m2-b-decision-validation.json
+
+      - name: Verify forward regression gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if test -n "$CURRENT_PR"; then
+            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
+          fi
+          python scripts/audit/forward_regression_bundle.py \
+            --output /tmp/forward-regression.json \
+            --pretty \
+            "${args[@]}"
+          cat /tmp/forward-regression.json
+
+      - name: Collect full suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest --collect-only -q | tee /tmp/collect.txt
+
+      - name: Run full suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q | tee /tmp/full.txt
+
+      - name: Verify final worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git status --short)"
+
+      - name: Upload exact-head evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exact-head-validation-${{ env.TARGET_SHA }}
+          path: |
+            /tmp/final-head.txt
+            /tmp/changed-files.txt
+            /tmp/focused-paths.txt
+            /tmp/focused.txt
+            /tmp/m2-d-rehearsal.json
+            /tmp/invariance.txt
+            /tmp/forward-regression.json
+            /tmp/m2-b-read-capability-candidates.json
+            /tmp/m2-b-decision-validation.json
+            /tmp/base-a.json
+            /tmp/head-a.json
+            /tmp/base-b.json
+            /tmp/head-b.json
+            /tmp/base-c.json
+            /tmp/head-c.json
+            /tmp/base-d.json
+            /tmp/head-d.json
+            /tmp/collect.txt
+            /tmp/full.txt
+          if-no-files-found: error
