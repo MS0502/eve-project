@@ -17,35 +17,34 @@ jobs:
         with:
           ref: codex/m2-d-recovery-rehearsal
           fetch-depth: 0
-      - name: Materialize reviewed M2-D package
+      - name: Verify compressed package
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import base64
-          import hashlib
-          import io
-          import pathlib
-          import shutil
-          import tarfile
-
-          root = pathlib.Path.cwd()
-          encoded = ''.join(
-              path.read_text(encoding='utf-8')
-              for path in sorted((root / '.m2d-payload').glob('part-*'))
-          )
-          payload = base64.b64decode(encoded, validate=True)
-          expected = '85b5ea378018bc9717dfa8fa21acdb8799637d5905769da6e004fd1eebe5eac1'
-          actual = hashlib.sha256(payload).hexdigest()
-          if actual != expected:
-              raise SystemExit(f'payload digest mismatch: {actual}')
-          with tarfile.open(fileobj=io.BytesIO(payload), mode='r:gz') as archive:
-              archive.extractall(path=root, filter='data')
-          shutil.rmtree(root / '.m2d-payload')
-          (root / '.github/workflows/m2-d-bootstrap.yml').unlink()
-          PY
+          cat .m2d-payload/part-* > /tmp/m2d-payload.b64
+          base64 --decode /tmp/m2d-payload.b64 > /tmp/m2d-payload.tar.gz
+          actual="$(sha256sum /tmp/m2d-payload.tar.gz | cut -d' ' -f1)"
+          echo "payload_sha256=$actual"
+          test "$actual" = '85b5ea378018bc9717dfa8fa21acdb8799637d5905769da6e004fd1eebe5eac1'
+      - name: Extract reviewed package
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -xzf /tmp/m2d-payload.tar.gz
+          test -f core/m2_d_rehearsal.py
+          test -f scripts/audit/m2_d_rehearsal.py
+          test -f tests/test_v4_m2_d_rehearsal.py
+          test -f docs/audit/M2_D_RECOVERY_REHEARSAL_CANDIDATE.md
+          test -f .github/workflows/exact-head-validation.yml
+          rm -rf .m2d-payload
+          rm .github/workflows/m2-d-bootstrap.yml
+      - name: Commit materialized package
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
+          git status --short
           git commit -m 'M2-D: add bounded recovery rehearsal candidate'
           git push origin HEAD:codex/m2-d-recovery-rehearsal
