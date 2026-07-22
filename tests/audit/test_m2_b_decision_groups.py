@@ -22,7 +22,7 @@ def compact_for(value):
     edge_id = value["candidate_edges"][0]["edge_id"]
     return {
         "schema_version": SCHEMA_VERSION,
-        "candidate_surface_digest": candidate_surface_digest(value),
+        "candidate_report_digest": value["report_digest"],
         "edge_decision_groups": [{
             "edge_ids": [edge_id],
             "decision": "LEGACY_REWRITE",
@@ -74,16 +74,16 @@ def test_unreviewed_shared_field_is_rejected(tmp_path):
     assert any("fields require review: quarantine" in error for error in result["errors"])
 
 
-def test_surface_digest_mismatch_is_rejected(tmp_path):
+def test_origin_report_digest_must_be_sha256(tmp_path):
     value = report(tmp_path)
     compact = compact_for(value)
-    compact["candidate_surface_digest"] = "0" * 64
+    compact["candidate_report_digest"] = "not-a-digest"
     result = validate_compact_decisions(value, compact)
     assert result["valid"] is False
-    assert "compact candidate_surface_digest mismatch" in result["errors"]
+    assert "compact candidate_report_digest must be a lowercase SHA-256" in result["errors"]
 
 
-def test_non_surface_metadata_does_not_invalidate_decisions(tmp_path):
+def test_non_surface_metadata_does_not_invalidate_exact_id_coverage(tmp_path):
     value = report(tmp_path)
     compact = compact_for(value)
     changed = deepcopy(value)
@@ -93,4 +93,5 @@ def test_non_surface_metadata_does_not_invalidate_decisions(tmp_path):
     changed["report_digest"] = "f" * 64
     result = validate_compact_decisions(changed, compact)
     assert result["valid"] is True
-    assert result["candidate_surface_digest"] == compact["candidate_surface_digest"]
+    assert result["origin_candidate_report_digest"] == compact["candidate_report_digest"]
+    assert result["candidate_surface_digest"] == candidate_surface_digest(value)
