@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Synthetic-only M2-E window-driver chaos and portability evidence CLI.
 
-The CLI operates only in an explicit caller-supplied disposable workspace. It
-never discovers production state, imports the legacy runtime, or grants cutover,
-recovery, or M3 authority.
+Every workspace is caller-selected and disposable. The CLI never discovers real
+memory, imports the legacy runtime, grants recovery authority, or authorizes
+cutover/M3.
 """
 from __future__ import annotations
 
@@ -41,10 +41,7 @@ from core.shadow_observer import (
     OBSERVER_VERSION,
     SUCCESS_EVENT_TYPE,
 )
-from core.shadow_projection import (
-    ActivationLearnPairShadowState,
-    replay_activation_learn_pair,
-)
+from core.shadow_projection import ActivationLearnPairShadowState, replay_activation_learn_pair
 from core.sqlite_shadow_store import (
     PersistedEventCorruption,
     SQLiteShadowStore,
@@ -56,6 +53,7 @@ CHAOS_EVIDENCE_SCHEMA = "eve.m2-e-window-chaos-evidence.v1"
 PORTABILITY_MANIFEST_SCHEMA = "eve.m2-e-window-portability-manifest.v1"
 PORTABILITY_VERIFY_SCHEMA = "eve.m2-e-window-portability-verification.v1"
 _SYNTHETIC_MARKER = "eve.m2-e.synthetic-only.v1"
+_EMPTY = {"calls": [], "learned": []}
 _SNAPSHOT_UPDATE_TRIGGER = (
     "CREATE TRIGGER snapshots_no_update BEFORE UPDATE ON snapshots "
     "BEGIN SELECT RAISE(ABORT,'append-only snapshots'); END"
@@ -64,7 +62,6 @@ _EVENT_UPDATE_TRIGGER = (
     "CREATE TRIGGER events_no_update BEFORE UPDATE ON events "
     "BEGIN SELECT RAISE(ABORT,'append-only events'); END"
 )
-_EMPTY = {"calls": [], "learned": []}
 
 
 class WindowDriverCLIError(RuntimeError):
@@ -104,13 +101,16 @@ def _new_workspace(path: str | Path) -> Path:
     if str(path) == ":memory:" or root.name == "" or root.exists():
         raise WindowDriverCLIError("workspace must be a new concrete path")
     root.mkdir(parents=True, exist_ok=False)
-    marker = root / "SYNTHETIC_ONLY"
-    marker.write_text(_SYNTHETIC_MARKER + "\n", encoding="utf-8")
+    (root / "SYNTHETIC_ONLY").write_text(_SYNTHETIC_MARKER + "\n", encoding="utf-8")
     return root
 
 
 def _pair(sequence: int) -> list[Any]:
-    return [f"synthetic-left-{sequence:04d}", f"synthetic-right-{sequence:04d}", sequence / 1000.0]
+    return [
+        f"synthetic-left-{sequence:04d}",
+        f"synthetic-right-{sequence:04d}",
+        sequence / 1000.0,
+    ]
 
 
 def _snapshot_for(sequence: int) -> dict[str, Any]:
@@ -119,9 +119,6 @@ def _snapshot_for(sequence: int) -> dict[str, Any]:
 
 
 def _event(sequence: int) -> EventEnvelope:
-    before = _snapshot_for(sequence - 1)
-    after = _snapshot_for(sequence)
-    previous = None if sequence == 1 else f"m2e-window:event:{sequence - 1:04d}"
     return EventEnvelope.create(
         event_id=f"m2e-window:event:{sequence:04d}",
         event_type=SUCCESS_EVENT_TYPE,
@@ -130,10 +127,10 @@ def _event(sequence: int) -> EventEnvelope:
         producer=OBSERVER_PRODUCER,
         producer_version=OBSERVER_VERSION,
         correlation_id="m2e-window:synthetic",
-        causation_id=previous,
+        causation_id=None if sequence == 1 else f"m2e-window:event:{sequence - 1:04d}",
         payload={
-            "after": after,
-            "before": before,
+            "after": _snapshot_for(sequence),
+            "before": _snapshot_for(sequence - 1),
             "legacy_outcome": {"error_type": None, "succeeded": True},
             "target": {
                 "callable": ACTIVATION_LEARN_PAIR_TARGET.callable_name,
@@ -154,13 +151,13 @@ def _event(sequence: int) -> EventEnvelope:
 
 def _restore(store: SQLiteShadowStore):
     initial = ActivationLearnPairShadowState.from_initial_snapshot(_EMPTY)
-    events_by_sequence = {
+    by_sequence = {
         envelope.sequence: envelope for envelope in store.events(stream_id=BOUNDED_STREAM)
     }
 
     def reducer(state: ActivationLearnPairShadowState, envelope: EventEnvelope):
         if state.sequence == 0 and envelope.sequence > 1:
-            previous = events_by_sequence.get(envelope.sequence - 1)
+            previous = by_sequence.get(envelope.sequence - 1)
             if previous is None:
                 raise WindowDriverCLIError("snapshot suffix lacks preceding synthetic event")
             state = ActivationLearnPairShadowState(
@@ -176,15 +173,22 @@ def _restore(store: SQLiteShadowStore):
         stream_id=BOUNDED_STREAM,
         initial_state=initial,
         reducer=reducer,
-        state_to_mapping=lambda value: value.snapshot,
+        state_to_mapping=lambda state: state.snapshot,
         state_from_mapping=ActivationLearnPairShadowState.from_initial_snapshot,
     )
 
 
-def _create_baseline(root: Path, *, policy: ShadowStoragePolicy | None = None) -> tuple[Path, Path, str]:
+def _create_baseline(
+    root: Path,
+    *,
+    policy: ShadowStoragePolicy | None = None,
+) -> tuple[Path, Path, str]:
     store_path = root / "baseline.sqlite3"
     backup_dir = root / "backups"
-    store = SQLiteShadowStore(store_path, policy=policy or ShadowStoragePolicy(snapshot_interval_events=2))
+    store = SQLiteShadowStore(
+        store_path,
+        policy=policy or ShadowStoragePolicy(snapshot_interval_events=2),
+    )
     store.initialize()
     first = (_event(1), _event(2))
     store.append_many(first)
@@ -229,7 +233,11 @@ def _remove_sidecars(path: Path) -> None:
         Path(f"{path}{suffix}").unlink(missing_ok=True)
 
 
-def _wait_for_marker(path: Path, process: subprocess.Popen[Any], timeout: float = 15.0) -> None:
+def _wait_for_marker(
+    path: Path,
+    process: subprocess.Popen[Any],
+    timeout: float = 15.0,
+) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if path.exists():
@@ -245,7 +253,7 @@ def _wait_for_marker(path: Path, process: subprocess.Popen[Any], timeout: float 
 
 def _hard_kill(process: subprocess.Popen[Any]) -> str:
     if os.name == "nt":
-        process.kill()  # TerminateProcess: Windows hard-kill equivalent to SIGKILL.
+        process.kill()
         mechanism = "windows_terminate_process"
     else:
         os.kill(process.pid, signal.SIGKILL)
@@ -255,7 +263,10 @@ def _hard_kill(process: subprocess.Popen[Any]) -> str:
 
 
 def _child_phase(database: Path, phase: str, marker: Path, partial: Path) -> int:
-    store = SQLiteShadowStore(database, policy=ShadowStoragePolicy(snapshot_interval_events=2))
+    store = SQLiteShadowStore(
+        database,
+        policy=ShadowStoragePolicy(snapshot_interval_events=2),
+    )
     store.initialize()
     if phase == "idle":
         marker.write_text("ready\n", encoding="utf-8")
@@ -264,8 +275,20 @@ def _child_phase(database: Path, phase: str, marker: Path, partial: Path) -> int
         connection.execute("PRAGMA synchronous=FULL")
         connection.execute("BEGIN IMMEDIATE")
         connection.execute(
-            "INSERT INTO events(ordinal,event_id,stream_id,sequence,event_json,envelope_digest,event_bytes,previous_chain_digest,chain_digest) VALUES(?,?,?,?,?,?,?,?,?)",
-            (5, "m2e-window:uncommitted", BOUNDED_STREAM, 5, "{}", "0" * 64, 2, "0" * 64, "0" * 64),
+            "INSERT INTO events(ordinal,event_id,stream_id,sequence,event_json,"
+            "envelope_digest,event_bytes,previous_chain_digest,chain_digest) "
+            "VALUES(?,?,?,?,?,?,?,?,?)",
+            (
+                5,
+                "m2e-window:uncommitted",
+                BOUNDED_STREAM,
+                5,
+                "{}",
+                "0" * 64,
+                2,
+                "0" * 64,
+                "0" * 64,
+            ),
         )
         marker.write_text("ready\n", encoding="utf-8")
     elif phase == "mid-snapshot":
@@ -273,8 +296,24 @@ def _child_phase(database: Path, phase: str, marker: Path, partial: Path) -> int
         connection.execute("PRAGMA synchronous=FULL")
         connection.execute("BEGIN IMMEDIATE")
         connection.execute(
-            "INSERT INTO snapshots(ordinal,snapshot_id,stream_id,through_sequence,through_event_id,through_event_digest,state_schema_version,state_json,state_digest,manifest_json,manifest_digest,snapshot_digest) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-            (3, "m2e-window:uncommitted-snapshot", BOUNDED_STREAM, 4, None, None, STATE_SCHEMA_VERSION, "{}", "0" * 64, "{}", "0" * 64, "0" * 64),
+            "INSERT INTO snapshots(ordinal,snapshot_id,stream_id,through_sequence,"
+            "through_event_id,through_event_digest,state_schema_version,state_json,"
+            "state_digest,manifest_json,manifest_digest,snapshot_digest) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                3,
+                "m2e-window:uncommitted-snapshot",
+                BOUNDED_STREAM,
+                4,
+                None,
+                None,
+                STATE_SCHEMA_VERSION,
+                "{}",
+                "0" * 64,
+                "{}",
+                "0" * 64,
+                "0" * 64,
+            ),
         )
         marker.write_text("ready\n", encoding="utf-8")
     elif phase == "mid-consolidation":
@@ -290,7 +329,12 @@ def _child_phase(database: Path, phase: str, marker: Path, partial: Path) -> int
         time.sleep(60)
 
 
-def _run_kill_matrix(root: Path, backup: Path, expected_digest: str, repetitions: int) -> list[dict[str, Any]]:
+def _run_kill_matrix(
+    root: Path,
+    backup: Path,
+    expected_digest: str,
+    repetitions: int,
+) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     script = Path(__file__).resolve()
     for phase in CHAOS_PHASES:
@@ -324,18 +368,18 @@ def _run_kill_matrix(root: Path, backup: Path, expected_digest: str, repetitions
             partial.unlink(missing_ok=True)
             _remove_sidecars(partial)
             recovered = SQLiteShadowStore(
-                database, policy=ShadowStoragePolicy(snapshot_interval_events=2)
+                database,
+                policy=ShadowStoragePolicy(snapshot_interval_events=2),
             )
             recovered.initialize()
             integrity = recovered.integrity_check()
             restore = _restore(recovered)
-            digest_match = restore.state_digest == expected_digest
             checks = {
                 "child_hard_killed": process.returncode not in (None, 0),
-                "integrity_valid": integrity.valid,
-                "recovery_digest_match": digest_match,
                 "event_count_unchanged": integrity.event_count == 4,
+                "integrity_valid": integrity.valid,
                 "partial_publication_not_authoritative": not partial.exists(),
+                "recovery_digest_match": restore.state_digest == expected_digest,
             }
             results.append(
                 {
@@ -394,7 +438,8 @@ def _run_corruption(root: Path, backup: Path, expected_digest: str) -> dict[str,
     _copy_database(backup, snapshot_path)
     _corrupt_snapshot(snapshot_path)
     snapshot_store = SQLiteShadowStore(
-        snapshot_path, policy=ShadowStoragePolicy(snapshot_interval_events=2)
+        snapshot_path,
+        policy=ShadowStoragePolicy(snapshot_interval_events=2),
     )
     snapshot_store.initialize()
     selection = snapshot_store.latest_valid_snapshot(BOUNDED_STREAM)
@@ -404,7 +449,8 @@ def _run_corruption(root: Path, backup: Path, expected_digest: str) -> dict[str,
     _copy_database(backup, event_path)
     _corrupt_event(event_path)
     event_store = SQLiteShadowStore(
-        event_path, policy=ShadowStoragePolicy(snapshot_interval_events=2)
+        event_path,
+        policy=ShadowStoragePolicy(snapshot_interval_events=2),
     )
     event_store.initialize()
     event_integrity = event_store.integrity_check()
@@ -417,19 +463,24 @@ def _run_corruption(root: Path, backup: Path, expected_digest: str) -> dict[str,
     recovered_path = root / "recovered-from-backup.sqlite3"
     _copy_database(backup, recovered_path)
     recovered_store = SQLiteShadowStore(
-        recovered_path, policy=ShadowStoragePolicy(snapshot_interval_events=2)
+        recovered_path,
+        policy=ShadowStoragePolicy(snapshot_interval_events=2),
     )
     recovered_store.initialize()
     recovered = _restore(recovered_store)
 
     checks = {
-        "corrupt_snapshot_rejected": "m2e-window:snapshot:0004" in selection.rejected_snapshot_ids,
-        "valid_snapshot_fallback_selected": selection.selected is not None
-        and selection.selected.snapshot_id == "m2e-window:snapshot:0002",
-        "snapshot_restore_digest_match": snapshot_restore.state_digest == expected_digest,
+        "backup_recovery_digest_match": recovered.state_digest == expected_digest,
         "corrupt_event_integrity_rejected": not event_integrity.valid,
         "corrupt_event_restore_failed_closed": restore_error == "PersistedEventCorruption",
-        "backup_recovery_digest_match": recovered.state_digest == expected_digest,
+        "corrupt_snapshot_rejected": (
+            "m2e-window:snapshot:0004" in selection.rejected_snapshot_ids
+        ),
+        "snapshot_restore_digest_match": snapshot_restore.state_digest == expected_digest,
+        "valid_snapshot_fallback_selected": (
+            selection.selected is not None
+            and selection.selected.snapshot_id == "m2e-window:snapshot:0002"
+        ),
     }
     return {
         "checks": checks,
@@ -440,33 +491,24 @@ def _run_corruption(root: Path, backup: Path, expected_digest: str) -> dict[str,
         "recovered_digest": recovered.state_digest,
         "recovered_sha256": _sha_file(recovered_path),
         "rejected_snapshot_ids": list(selection.rejected_snapshot_ids),
-        "selected_snapshot_id": None if selection.selected is None else selection.selected.snapshot_id,
+        "selected_snapshot_id": (
+            None if selection.selected is None else selection.selected.snapshot_id
+        ),
     }
 
 
 def _run_disk_pressure(root: Path, expected_digest: str) -> dict[str, Any]:
     pressure_root = root / "disk-pressure"
     pressure_root.mkdir()
-    path, _backup, baseline_digest = _create_baseline(
-        pressure_root,
-        policy=ShadowStoragePolicy(
-            snapshot_interval_events=2,
-            max_event_count=4,
-            max_event_bytes=4_000_000,
-            max_snapshot_count=10,
-            max_snapshot_bytes=4_000_000,
-        ),
+    policy = ShadowStoragePolicy(
+        snapshot_interval_events=2,
+        max_event_count=4,
+        max_event_bytes=4_000_000,
+        max_snapshot_count=10,
+        max_snapshot_bytes=4_000_000,
     )
-    store = SQLiteShadowStore(
-        path,
-        policy=ShadowStoragePolicy(
-            snapshot_interval_events=2,
-            max_event_count=4,
-            max_event_bytes=4_000_000,
-            max_snapshot_count=10,
-            max_snapshot_bytes=4_000_000,
-        ),
-    )
+    path, _backup, baseline_digest = _create_baseline(pressure_root, policy=policy)
+    store = SQLiteShadowStore(path, policy=policy)
     store.initialize()
     rejected = False
     try:
@@ -476,10 +518,12 @@ def _run_disk_pressure(root: Path, expected_digest: str) -> dict[str, Any]:
     integrity = store.integrity_check()
     restored = _restore(store)
     checks = {
-        "pressure_append_rejected": rejected,
         "event_count_preserved": integrity.event_count == 4,
         "integrity_valid": integrity.valid,
-        "recovery_digest_preserved": restored.state_digest == expected_digest == baseline_digest,
+        "pressure_append_rejected": rejected,
+        "recovery_digest_preserved": (
+            restored.state_digest == expected_digest == baseline_digest
+        ),
     }
     return {
         "checks": checks,
@@ -501,14 +545,16 @@ def run_chaos(*, workspace: str | Path, repetitions: int) -> dict[str, Any]:
     disk_pressure = _run_disk_pressure(root, expected_digest)
     checks = {
         "all_kills_recovered": all(item["passed"] for item in kill_matrix),
-        "kill_matrix_complete": len(kill_matrix) == len(CHAOS_PHASES) * repetitions,
         "corruption_rejected_and_recovered": corruption["passed"],
+        "cutover_not_authorized": True,
         "disk_pressure_guarded": disk_pressure["passed"],
-        "synthetic_store_only": (root / "SYNTHETIC_ONLY").read_text(encoding="utf-8").strip()
-        == _SYNTHETIC_MARKER,
-        "legacy_runtime_authoritative": True,
-        "cutover_authorized": False,
-        "m3_authority_open": False,
+        "kill_matrix_complete": len(kill_matrix) == len(CHAOS_PHASES) * repetitions,
+        "legacy_runtime_authority_retained": True,
+        "m3_authority_closed": True,
+        "synthetic_store_only": (
+            (root / "SYNTHETIC_ONLY").read_text(encoding="utf-8").strip()
+            == _SYNTHETIC_MARKER
+        ),
     }
     material: dict[str, Any] = {
         "accepted_m2_e_decision_digest": ACCEPTED_M2_E_DECISION_DIGEST,
@@ -559,7 +605,12 @@ def create_portability(*, workspace: str | Path) -> tuple[dict[str, Any], Path]:
     return material, backup
 
 
-def verify_portability(*, backup: str | Path, manifest_path: str | Path, workspace: str | Path) -> dict[str, Any]:
+def verify_portability(
+    *,
+    backup: str | Path,
+    manifest_path: str | Path,
+    workspace: str | Path,
+) -> dict[str, Any]:
     source = Path(backup)
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or manifest.get("schema_version") != PORTABILITY_MANIFEST_SCHEMA:
@@ -571,21 +622,31 @@ def verify_portability(*, backup: str | Path, manifest_path: str | Path, workspa
         raise WindowDriverCLIError("portability manifest digest mismatch")
     if _sha_file(source) != manifest.get("backup_sha256"):
         raise WindowDriverCLIError("portable backup digest mismatch")
+
     root = _new_workspace(workspace)
     target = root / "restored.sqlite3"
     _copy_database(source, target)
-    store = SQLiteShadowStore(target, policy=ShadowStoragePolicy(snapshot_interval_events=2))
+    store = SQLiteShadowStore(
+        target,
+        policy=ShadowStoragePolicy(snapshot_interval_events=2),
+    )
     store.initialize()
     integrity = store.integrity_check()
     restored = _restore(store)
     checks = {
         "backup_digest_match": _sha_file(source) == manifest["backup_sha256"],
-        "integrity_valid": integrity.valid,
         "event_count_match": integrity.event_count == manifest["expected_event_count"],
-        "replay_digest_match": restored.state_digest == manifest["expected_recovery_digest"],
+        "integrity_valid": integrity.valid,
+        "no_cutover_or_m3": (
+            not manifest["cutover_authorized"] and not manifest["m3_authority_open"]
+        ),
+        "replay_digest_match": (
+            restored.state_digest == manifest["expected_recovery_digest"]
+        ),
         "synthetic_store_only": manifest["synthetic_store_only"] is True,
-        "legacy_runtime_authoritative": manifest["legacy_runtime_authoritative"] is True,
-        "no_cutover_or_m3": not manifest["cutover_authorized"] and not manifest["m3_authority_open"],
+        "legacy_runtime_authoritative": (
+            manifest["legacy_runtime_authoritative"] is True
+        ),
     }
     result: dict[str, Any] = {
         "authority": "portability_evidence_only",
@@ -596,7 +657,10 @@ def verify_portability(*, backup: str | Path, manifest_path: str | Path, workspa
         "restored_database_sha256": _sha_file(target),
         "schema_version": PORTABILITY_VERIFY_SCHEMA,
     }
-    result["verification_digest"] = _digest(result, "m2_e_portability_verification")
+    result["verification_digest"] = _digest(
+        result,
+        "m2_e_portability_verification",
+    )
     return result
 
 
@@ -634,11 +698,27 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.command == "_child-phase":
-        return _child_phase(Path(args.database), args.phase, Path(args.marker), Path(args.partial))
+        return _child_phase(
+            Path(args.database),
+            args.phase,
+            Path(args.marker),
+            Path(args.partial),
+        )
     if args.command == "chaos":
-        evidence = run_chaos(workspace=args.workspace, repetitions=args.repetitions)
+        evidence = run_chaos(
+            workspace=args.workspace,
+            repetitions=args.repetitions,
+        )
         _write_json(Path(args.output), evidence, pretty=args.pretty)
-        print(json.dumps({"machine_passed": evidence["machine_passed"], "evidence_digest": evidence["evidence_digest"]}, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "evidence_digest": evidence["evidence_digest"],
+                    "machine_passed": evidence["machine_passed"],
+                },
+                sort_keys=True,
+            )
+        )
         return 0 if evidence["machine_passed"] else 1
     if args.command == "portability-create":
         manifest, backup = create_portability(workspace=args.workspace)
@@ -648,7 +728,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         if _sha_file(backup_output) != manifest["backup_sha256"]:
             raise WindowDriverCLIError("published portability backup digest changed")
         _write_json(Path(args.manifest_output), manifest, pretty=args.pretty)
-        print(json.dumps({"backup_sha256": manifest["backup_sha256"], "manifest_digest": manifest["manifest_digest"]}, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "backup_sha256": manifest["backup_sha256"],
+                    "manifest_digest": manifest["manifest_digest"],
+                },
+                sort_keys=True,
+            )
+        )
         return 0
     result = verify_portability(
         backup=args.backup,
@@ -656,7 +744,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         workspace=args.workspace,
     )
     _write_json(Path(args.output), result, pretty=args.pretty)
-    print(json.dumps({"machine_passed": result["machine_passed"], "verification_digest": result["verification_digest"]}, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "machine_passed": result["machine_passed"],
+                "verification_digest": result["verification_digest"],
+            },
+            sort_keys=True,
+        )
+    )
     return 0 if result["machine_passed"] else 1
 
 
