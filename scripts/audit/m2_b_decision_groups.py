@@ -20,6 +20,18 @@ except ModuleNotFoundError:  # direct execution from scripts/audit
 SCHEMA_VERSION = "eve.m2-b-read-capability-decision-groups.v1"
 EDGE_SHARED_FIELDS = manifest.DECISION_FIELDS - {"edge_id"}
 FINDING_SHARED_FIELDS = manifest.REVIEW_FIELDS
+SURFACE_FIELDS = (
+    "schema_version",
+    "candidate_edges",
+    "unresolved_boundary_calls",
+    "parse_errors",
+)
+
+
+def candidate_surface_digest(report: Mapping[str, Any]) -> str:
+    """Bind decisions to capability evidence, not audit-tool inventory counts."""
+    material = {field: report.get(field) for field in SURFACE_FIELDS}
+    return manifest.digest(material)
 
 
 def _reviewed(value: Any) -> bool:
@@ -62,8 +74,9 @@ def expand_decisions(report: Mapping[str, Any], compact: Mapping[str, Any]) -> t
     errors: list[str] = []
     if compact.get("schema_version") != SCHEMA_VERSION:
         errors.append("compact decision schema_version mismatch")
-    if compact.get("candidate_report_digest") != report.get("report_digest"):
-        errors.append("compact candidate_report_digest mismatch")
+    expected_surface_digest = candidate_surface_digest(report)
+    if compact.get("candidate_surface_digest") != expected_surface_digest:
+        errors.append("compact candidate_surface_digest mismatch")
     edge_decisions = _expand_groups(
         compact.get("edge_decision_groups", []),
         ids_field="edge_ids",
@@ -90,7 +103,7 @@ def expand_decisions(report: Mapping[str, Any], compact: Mapping[str, Any]) -> t
     )
     expanded = {
         "schema_version": manifest.DECISION_SCHEMA_VERSION,
-        "candidate_report_digest": compact.get("candidate_report_digest"),
+        "candidate_report_digest": report.get("report_digest"),
         "edge_decisions": edge_decisions,
         "unresolved_call_decisions": unresolved,
         "parse_error_decisions": parse_errors,
@@ -105,6 +118,7 @@ def validate_compact_decisions(report: Mapping[str, Any], compact: Mapping[str, 
     result = {
         **delegated,
         "schema_version": SCHEMA_VERSION,
+        "candidate_surface_digest": candidate_surface_digest(report),
         "valid": not errors,
         "errors": errors,
         "eligible_for_human_review": not errors,
