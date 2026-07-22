@@ -6,50 +6,22 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-m2a-snapshot-hardening:
+  diagnose-m2a-snapshot-hardening:
     if: github.event.pull_request.number == 161
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: codex/m2-a-sqlite-shadow-persistence
-          fetch-depth: 0
-          show-progress: false
-
-      - name: Apply staged hardening payload
+      - name: Run staged payload with concise diagnostics
         shell: bash
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
+          git clone --quiet --branch codex/m2-a-sqlite-shadow-persistence \
+            "https://x-access-token:${GH_TOKEN}@github.com/MS0502/eve-project.git" repo
+          cd repo
           cat .github/m2a-snapshot-fix.part* | base64 -d > /tmp/apply-m2a.py
-          python /tmp/apply-m2a.py > /tmp/apply-output.txt 2>&1
-          status=$?
-          if test "$status" -ne 0; then
-            cp /tmp/apply-output.txt docs/.m2a-apply-error.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add docs/.m2a-apply-error.txt
-            git commit -m "Record M2-A staged apply failure"
-            git push origin HEAD:codex/m2-a-sqlite-shadow-persistence
-            cat /tmp/apply-output.txt
-            exit "$status"
-          fi
-          rm -f .github/m2a-snapshot-fix.part*
-          git show "$BASE_SHA:.github/workflows/exact-head-validation.yml" > .github/workflows/exact-head-validation.yml
-          rm -f docs/.m2a-apply-error.txt
-
-      - name: Commit final four-file candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Verify snapshot semantics and bound snapshot bytes"
-          git push origin HEAD:codex/m2-a-sqlite-shadow-persistence
+          python /tmp/apply-m2a.py
