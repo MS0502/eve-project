@@ -246,3 +246,26 @@ def test_module_has_no_runtime_bridge_default_activation_or_unsafe_decoder_surfa
     assert "authoritative_recovery: bool = False" in source
     assert "cutover_authorized: bool = False" in source
     assert "production_dual_read: bool = False" in source
+
+
+def test_audit_cli_runs_from_repo_root_and_writes_packet(tmp_path: Path):
+    output = tmp_path / "m2-d-rehearsal.json"
+    result = __import__("subprocess").run(
+        [
+            __import__("sys").executable,
+            str(ROOT / "scripts/audit/m2_d_rehearsal.py"),
+            "--output",
+            str(output),
+            "--pretty",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    packet = __import__("json").loads(output.read_text(encoding="utf-8"))
+    assert packet["machine_passed"] is True
+    assert packet["human_accepted"] is False
+    assert packet["authoritative_recovery"] is False
+    assert packet["cutover_authorized"] is False
