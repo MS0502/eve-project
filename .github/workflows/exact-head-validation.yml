@@ -143,6 +143,24 @@ jobs:
             "${args[@]}"
           cat /tmp/forward-regression.json
 
+      - name: Extract M2-B read-capability candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/audit/m2_b_read_capability_manifest.py \
+            --output /tmp/m2-b-read-capability-candidates.json \
+            --pretty
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('/tmp/m2-b-read-capability-candidates.json').read_text())
+          print(json.dumps({
+              'report_digest': report['report_digest'],
+              **report['summary'],
+          }, sort_keys=True))
+          PY
+
       - name: Collect full suite
         shell: bash
         run: |
@@ -174,6 +192,7 @@ jobs:
             /tmp/focused.txt
             /tmp/invariance.txt
             /tmp/forward-regression.json
+            /tmp/m2-b-read-capability-candidates.json
             /tmp/base-a.json
             /tmp/head-a.json
             /tmp/base-b.json
