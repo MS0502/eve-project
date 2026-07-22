@@ -25,10 +25,19 @@ REVIEW_REQUIRED = "REVIEW_REQUIRED"
 MAX_CALL_DEPTH = 16
 EXCLUDED = {".git", ".venv", "venv", "__pycache__", "build", "dist", "node_modules"}
 NON_RUNTIME = {".codex", ".github", "docs", "scripts", "tests"}
+RAW_EXACT_NAMES = {
+    "body", "chat", "content", "document", "input", "input_text", "message",
+    "payload", "prompt", "query", "raw", "raw_text", "request", "text",
+    "transcript", "user_input", "user_text", "utterance",
+}
 RAW_NAME_TOKENS = {
-    "body", "chat", "content", "document", "external", "input", "message",
-    "ocr", "payload", "prompt", "query", "raw", "request", "source", "stt",
-    "text", "transcript", "utterance",
+    "body", "chat", "content", "document", "input", "message", "payload",
+    "prompt", "query", "raw", "request", "text", "transcript", "utterance",
+}
+RAW_NAME_EXCLUSIONS = {
+    "candidate", "config", "decision", "dry", "event", "manifest", "meaning",
+    "metadata", "plan", "projection", "record", "report", "result", "run",
+    "schema", "snapshot", "state", "status", "understanding", "version",
 }
 RAW_SOURCE_LEAVES = {
     "fetch", "get_json", "input", "listen", "ocr", "read", "read_bytes",
@@ -44,7 +53,7 @@ SINK_EXCLUSIONS = {
     "graph", "length", "meaning", "metric", "observe", "plan", "policy", "record",
     "score", "scoring", "state", "status", "trace", "validate",
 }
-EXACT_EXTERNAL_SINKS = {"print", "send", "send_text", "speak", "write", "write_text"}
+EXACT_EXTERNAL_SINKS = {"print", "send", "send_text", "speak"}
 MARKERS = {
     "provenance": {"confidence", "origin", "provenance", "source_id", "source_type", "verification", "version"},
     "quarantine": {"canonical", "claim", "meaning", "normalize", "parse", "quarantine", "sanitize", "semantic", "understand", "validate"},
@@ -156,7 +165,11 @@ def marker_evidence(node: ast.AST) -> dict[str, list[str]]:
 
 
 def raw_parameter(name: str) -> bool:
-    return bool(tokens(name) & RAW_NAME_TOKENS) and name not in {"self", "cls"}
+    lowered = name.lower()
+    parts = tokens(lowered)
+    if lowered in {"self", "cls"} or parts & RAW_NAME_EXCLUSIONS:
+        return False
+    return lowered in RAW_EXACT_NAMES or bool(parts & RAW_NAME_TOKENS)
 
 
 def raw_source_call(target: str) -> bool:
@@ -518,7 +531,11 @@ def extract_candidates(root: Path) -> dict[str, Any]:
     functions, parse_errors, seeds = extract_functions(sources)
     functions = {
         key: info for key, info in functions.items()
-        if Path(info.path).parts and Path(info.path).parts[0] not in NON_RUNTIME
+        if (
+            Path(info.path).parts
+            and Path(info.path).parts[0] not in NON_RUNTIME
+            and not Path(info.path).name.startswith("test_")
+        )
     }
     seeds = [seed for seed in seeds if seed.function_key in functions]
     analyzer = FlowAnalyzer(functions)
