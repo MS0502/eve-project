@@ -15,7 +15,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from scripts.audit import forward_regression_gate as gate
+try:
+    from scripts.audit import forward_regression_gate as gate
+except ModuleNotFoundError:  # direct script execution from scripts/audit
+    import forward_regression_gate as gate
 
 FRAGMENT_SCHEMA_VERSION = "1.0.0-forward-additions-fragment"
 DEFAULT_FRAGMENT_DIR = Path("docs/audit/forward_additions")
