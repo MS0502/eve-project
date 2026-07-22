@@ -39,13 +39,22 @@ jobs:
               done
             done
           } | base64 -d > /tmp/m2b/generate.py
-          sha256sum /tmp/m2b/corrected.patch /tmp/m2b/generate.py
+          echo "972ac4bf8496b2087ab4cdcc650c707c91edda8f5a577841e11a781e5512cca0  /tmp/m2b/corrected.patch" | sha256sum -c -
+          echo "c76f9a21c5fed547cac049a4d9721fc73d6d6dc25b381c3f72ce58b3e3c70523  /tmp/m2b/generate.py" | sha256sum -c -
 
-      - name: Apply corrected patch and regenerate evidence
+      - name: Apply corrected patch
         run: |
-          git apply --check /tmp/m2b/corrected.patch
+          git apply --check --verbose /tmp/m2b/corrected.patch
           git apply /tmp/m2b/corrected.patch
-          PYTHONPATH="$PWD" python /tmp/m2b/generate.py | tee /tmp/m2b-generation-summary.json
+          git diff --stat | tee /tmp/patch-stat.txt
+
+      - name: Regenerate exact evidence
+        run: |
+          set +e
+          PYTHONPATH="$PWD" python /tmp/m2b/generate.py > /tmp/m2b-generation.log 2>&1
+          status=$?
+          cat /tmp/m2b-generation.log
+          exit $status
 
       - name: Focused validation only
         run: |
@@ -82,16 +91,20 @@ jobs:
           git push origin HEAD:codex/m2b-corrected-staging
           git rev-parse HEAD | tee /tmp/staging-head.txt
 
-      - name: Upload focused staging evidence
+      - name: Upload staging diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m2b-corrected-staging-${{ github.event.pull_request.head.sha }}
           path: |
+            /tmp/m2b/corrected.patch
+            /tmp/m2b/generate.py
+            /tmp/patch-stat.txt
+            /tmp/m2b-generation.log
             /tmp/focused.txt
-            /tmp/m2b-generation-summary.json
             /tmp/m2-b-read-capability-candidates.json
             /tmp/m2-b-decision-validation.json
             /tmp/forward-regression.json
             /tmp/staging-head.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
