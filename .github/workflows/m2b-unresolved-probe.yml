@@ -39,6 +39,16 @@ jobs:
               done
             done
           } | base64 -d > /tmp/m2b/generate.py
+          python - <<'PY'
+          from pathlib import Path
+          patch = Path('/tmp/m2b/corrected.patch')
+          data = patch.read_bytes()
+          patch.write_bytes(data[:5250] + data[5583:])
+          generator = Path('/tmp/m2b/generate.py')
+          data = bytearray(generator.read_bytes())
+          data[1519] = ord('E')
+          generator.write_bytes(data)
+          PY
           echo "972ac4bf8496b2087ab4cdcc650c707c91edda8f5a577841e11a781e5512cca0  /tmp/m2b/corrected.patch" | sha256sum -c -
           echo "c76f9a21c5fed547cac049a4d9721fc73d6d6dc25b381c3f72ce58b3e3c70523  /tmp/m2b/generate.py" | sha256sum -c -
 
