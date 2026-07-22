@@ -44,7 +44,7 @@ Even an accepted decision is bounded to the one reviewed stream and schema. The 
 
 ## Evidence requirements
 
-The exact-head workflow must generate `m2-e-cutover-candidate.json` from the already generated M2-D packet and bind it to:
+The exact-head workflow generates `m2-e-cutover-candidate.json` from the already generated M2-D packet and binds it to:
 
 - the checked-out target head;
 - the workflow run ID;
@@ -52,7 +52,7 @@ The exact-head workflow must generate `m2-e-cutover-candidate.json` from the alr
 
 An informed human acceptance may be recorded only after the artifact ZIP has been downloaded independently and its SHA-256 verified. The decision must pin the exact head, workflow, artifact, artifact SHA-256, and candidate packet digest.
 
-Post-cutover observation evidence must retain raw recalculable inputs rather than verdicts alone:
+Post-cutover observation evidence retains raw recalculable inputs rather than verdicts alone:
 
 - integrity report fields before and after the bounded event window;
 - event-count change;
@@ -63,12 +63,44 @@ Post-cutover observation evidence must retain raw recalculable inputs rather tha
 
 Any replay mismatch, invalid integrity report, absent event advance, failed rollback, wrong candidate pin, or rejected decision fails closed.
 
+## Final technical-evidence pin
+
+- exact head: `7cbb3fbe91bbc934b977b317c2e08666eb81b466`
+- workflow: `29920848851`
+- artifact: `exact-head-validation-7cbb3fbe91bbc934b977b317c2e08666eb81b466`
+- artifact ZIP SHA-256: `4522dc4e16251c2ad76a9617258b99686d854d7597cfa7ec9c70b1a569479ce0`
+- M2-E candidate packet digest: `5bbdc03196c69b67d96f1cc7cd9a4062baa357b89928fc5ffe146d83f9b530b1`
+- focused: `16 passed`
+- collected/full: `2,808 / 2,808 passed`
+- M2-D scenarios: `6 / 6 passed`
+- M0-A through M0-D: byte-identical
+- M2-B exact decisions: `381` edges, `3,741` unresolved calls, `2` parse blockers
+- forward gate: zero unregistered additions, stale registrations, same-PR errors, and new parse errors
+- final worktree: exact head and clean
+
+The artifact ZIP was downloaded independently and its SHA-256 matched the GitHub artifact digest.
+
 ## Two-stage promotion rule
 
-This technical PR may become Ready and merge only after its exact technical evidence is independently reviewed and the project owner explicitly accepts that exact pin. Its merge establishes the bounded M2-E contract; it does not by itself prove that a production post-cutover observation window has occurred.
+This technical PR may become Ready and merge only after its exact technical evidence is independently reviewed and the project owner explicitly accepts the final pin above. Its merge establishes the bounded M2-E contract; it does not by itself prove that a production post-cutover observation window has occurred.
 
 Actual authority use and any production integration remain separate, explicit, rollbackable work. No later M3 authority may be inferred from a candidate packet or from a PR being green.
 
+## Current status
+
+- technical evidence: green
+- human acceptance for the final exact pin: not performed
+- Draft: required
+- Ready/merge: blocked
+- event-store authority: `shadow_only`
+- legacy authority: retained
+- runtime integration: false
+- cutover authorization: false
+- authoritative recovery: false
+- M3 authority: blocked
+
 ## Validation reuse
 
-Do not rerun the full suite for PR-body edits, comments, review metadata, or Draft/Ready-only changes while the exact head, workflow, artifact digest, and validation scope are unchanged. Rerun only after a head change, artifact loss or corruption, digest mismatch, or required validation-scope change.
+Do not rerun the full suite for PR-body edits, comments, review metadata, or Draft/Ready-only changes while the exact head, workflow, artifact digest, and validation scope are unchanged. `ready_for_review` is deliberately not a workflow trigger. Concurrency cancels duplicate runs for the same PR.
+
+Rerun only after a head change, artifact loss or corruption, digest mismatch, or required validation-scope change.
