@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from core.event_kernel import canonical_json_object
 from core.m2_c_migration import StateEvidence
 from core.m2_e_cutover import (
     ACCEPTED_M2_D_PACKET_DIGEST,
@@ -118,14 +120,16 @@ def test_tampered_m2_d_packet_is_not_eligible(accepted_m2_d_record: dict) -> Non
 
 
 def test_candidate_value_cannot_self_promote(accepted_m2_d_record: dict) -> None:
-    from core.event_kernel import canonical_json_object
-
     candidate = _candidate(accepted_m2_d_record)
     record = candidate.record
     record["human_accepted"] = True
     record["cutover_authorized"] = True
+    text = canonical_json_object(record, field="tampered_candidate")
+    digest = hashlib.sha256(
+        canonical_json_object(record, field="m2_e_candidate_packet").encode("utf-8")
+    ).hexdigest()
     with pytest.raises(M2ECutoverError, match="cannot self-promote"):
-        type(candidate)(canonical_json_object(record, field="tampered"), candidate.packet_digest)
+        type(candidate)(text, digest)
 
 
 def test_external_human_decision_is_exact_pin_bound(accepted_m2_d_record: dict) -> None:
