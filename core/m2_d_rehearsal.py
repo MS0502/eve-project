@@ -468,10 +468,7 @@ def _validate_window_inputs(
     try:
         initial = ActivationLearnPairShadowState.from_initial_snapshot(initial_snapshot)
         final = replay_activation_learn_pair(initial, events)
-        probe = replay_activation_learn_pair(
-            ActivationLearnPairShadowState.from_initial_snapshot(final.snapshot),
-            (rollback_probe_event,),
-        )
+        probe = replay_activation_learn_pair(final, (rollback_probe_event,))
     except (ShadowProjectionError, TypeError, ValueError) as exc:
         raise M2DRehearsalError("event window is not valid M1-C projection input") from exc
     if StateEvidence.from_snapshot(final.snapshot).snapshot_digest != window.expected_final_state.snapshot_digest:
@@ -483,10 +480,34 @@ def _validate_window_inputs(
 
 def _restore(store: SQLiteShadowStore, initial_snapshot: Mapping[str, Any]):
     initial = ActivationLearnPairShadowState.from_initial_snapshot(initial_snapshot)
+    events_by_sequence = {
+        envelope.sequence: envelope
+        for envelope in store.events(stream_id=ACTIVATION_LEARN_PAIR_TARGET.stream_id)
+    }
+
+    def reducer(
+        state: ActivationLearnPairShadowState,
+        envelope: EventEnvelope,
+    ) -> ActivationLearnPairShadowState:
+        if state.sequence == 0 and envelope.sequence > 1:
+            previous = events_by_sequence.get(envelope.sequence - 1)
+            if previous is None:
+                raise M2DRehearsalError(
+                    "snapshot replay boundary has no preceding accepted event"
+                )
+            state = ActivationLearnPairShadowState(
+                calls=state.calls,
+                learned=state.learned,
+                sequence=previous.sequence,
+                last_event_id=previous.event_id,
+                last_event_digest=previous.digest,
+            )
+        return replay_activation_learn_pair(state, (envelope,))
+
     return store.restore_verified(
         stream_id=ACTIVATION_LEARN_PAIR_TARGET.stream_id,
         initial_state=initial,
-        reducer=lambda state, envelope: replay_activation_learn_pair(state, (envelope,)),
+        reducer=reducer,
         state_to_mapping=lambda state: state.snapshot,
         state_from_mapping=ActivationLearnPairShadowState.from_initial_snapshot,
     )
@@ -541,6 +562,7 @@ def _corrupt_event(path: Path, event_id: str) -> None:
 
 def _force_uncommitted_process_exit(path: Path, *, ordinal: int, sequence: int) -> int:
     script = """
+import os
 import sqlite3
 import sys
 path, ordinal, sequence = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
@@ -577,15 +599,15 @@ def run_recovery_rehearsal(
     production path and never changes legacy/runtime authority.
     """
 
+    root = Path(workspace)
+    if str(workspace) == ":memory:" or root.name == "" or root.exists():
+        raise M2DRehearsalError("workspace must be a new concrete path")
     events, initial = _validate_window_inputs(
         window=window,
         baseline_events=baseline_events,
         rollback_probe_event=rollback_probe_event,
         initial_snapshot=initial_snapshot,
     )
-    root = Path(workspace)
-    if str(workspace) == ":memory:" or root.name == "" or root.exists():
-        raise M2DRehearsalError("workspace must be a new concrete path")
     root.mkdir(parents=True, exist_ok=False)
 
     policy = ShadowStoragePolicy(snapshot_interval_events=1, max_backups=2)
@@ -650,20 +672,26 @@ def run_recovery_rehearsal(
     right = replay_activation_learn_pair(
         ActivationLearnPairShadowState.from_initial_snapshot(initial.snapshot), events
     )
+    left_state_digest = StateEvidence.from_snapshot(left.snapshot).snapshot_digest
+    right_state_digest = StateEvidence.from_snapshot(right.snapshot).snapshot_digest
     full_replay = ScenarioEvidence.create(
         scenario_id="full_replay_equivalence",
         checks={
-            "expected_final_state": left.digest == window.expected_final_state.snapshot_digest,
+            "expected_final_state": left_state_digest
+            == window.expected_final_state.snapshot_digest,
             "repeated_digest_equal": left.digest == right.digest,
             "repeated_snapshot_equal": left.snapshot == right.snapshot,
-            "restore_matches_full_replay": baseline_restore.state_digest == left.digest,
+            "restore_matches_full_replay": baseline_restore.state_digest
+            == left_state_digest,
         },
         observations={
             "event_count": len(events),
             "expected_state_digest": window.expected_final_state.snapshot_digest,
-            "first_replay_digest": left.digest,
+            "first_projection_digest": left.digest,
+            "first_state_digest": left_state_digest,
             "restore_state_digest": baseline_restore.state_digest,
-            "second_replay_digest": right.digest,
+            "second_projection_digest": right.digest,
+            "second_state_digest": right_state_digest,
         },
         before_integrity_digest=baseline_integrity.report_digest,
         after_integrity_digest=baseline.integrity_check().report_digest,
