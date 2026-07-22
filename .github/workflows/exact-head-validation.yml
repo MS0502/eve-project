@@ -137,13 +137,14 @@ jobs:
           if test -n "$CURRENT_PR"; then
             args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
           fi
-          python scripts/audit/forward_regression_gate.py \
+          python scripts/audit/forward_regression_bundle.py \
             --output /tmp/forward-regression.json \
             --pretty \
             "${args[@]}"
           cat /tmp/forward-regression.json
 
       - name: Extract M2-B read-capability candidates
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
