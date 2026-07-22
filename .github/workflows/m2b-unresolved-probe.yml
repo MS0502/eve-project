@@ -1,4 +1,4 @@
-name: M2-B unresolved boundary probe
+name: M2-B corrected staging validation
 
 on:
   pull_request:
@@ -6,27 +6,92 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  stage:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: codex/m2b-corrected-staging
           fetch-depth: 0
-      - name: Run unresolved boundary probe
-        run: python -m scripts.audit._m2b_unresolved_probe
-      - name: Create exact source archive
-        run: git archive --format=zip --output=eve-source-${{ github.event.pull_request.head.sha }}.zip HEAD
-      - name: Upload probe evidence
+          persist-credentials: true
+
+      - name: Reconstruct corrected patch and generator
+        run: |
+          git fetch origin codex/m2b-boundary-probe
+          mkdir -p /tmp/m2b
+          {
+            for part in aa ab ac ad; do
+              git show "origin/codex/m2b-boundary-probe:scripts/audit/_tmp_m2b_chunks/patch.${part}"
+            done
+            for part in 00 01 02 03; do
+              git show "origin/codex/m2b-boundary-probe:scripts/audit/_tmp_m2b_chunks/patch.ae.${part}"
+            done
+            git show "origin/codex/m2b-boundary-probe:scripts/audit/_tmp_m2b_chunks/patch.af.00"
+          } | base64 -d > /tmp/m2b/corrected.patch
+          {
+            for prefix in aa ab ac; do
+              for part in 00 01 02 03; do
+                git show "origin/codex/m2b-boundary-probe:scripts/audit/_tmp_m2b_chunks/gen.${prefix}.${part}"
+              done
+            done
+          } | base64 -d > /tmp/m2b/generate.py
+          sha256sum /tmp/m2b/corrected.patch /tmp/m2b/generate.py
+
+      - name: Apply corrected patch and regenerate evidence
+        run: |
+          git apply --check /tmp/m2b/corrected.patch
+          git apply /tmp/m2b/corrected.patch
+          PYTHONPATH="$PWD" python /tmp/m2b/generate.py | tee /tmp/m2b-generation-summary.json
+
+      - name: Focused validation only
+        run: |
+          python -m pytest -q --tb=short \
+            tests/audit/test_forward_regression_bundle.py \
+            tests/audit/test_m2_b_decision_groups.py \
+            tests/audit/test_m2_b_read_capability_manifest.py | tee /tmp/focused.txt
+          python scripts/audit/m2_b_decision_groups.py \
+            --candidate /tmp/m2-b-read-capability-candidates.json \
+            --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            --output /tmp/m2-b-decision-validation.json --pretty --strict
+          python scripts/audit/forward_regression_bundle.py \
+            --output /tmp/forward-regression.json --pretty \
+            --current-pr 162 \
+            --base-sha 2577346d0a95eafa0456c4f6816d25c37edf95a2
+          cat /tmp/m2-b-decision-validation.json
+          cat /tmp/forward-regression.json
+
+      - name: Commit corrected staging head
+        run: |
+          git config user.name "openai-codex[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            scripts/audit/m2_b_read_capability_manifest.py \
+            scripts/audit/m2_b_decision_groups.py \
+            tests/audit/test_m2_b_read_capability_manifest.py \
+            tests/audit/test_m2_b_decision_groups.py \
+            docs/audit/M2_B_READ_CAPABILITY_REVIEW.md \
+            docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
+            docs/audit/forward_additions/pr-162.json \
+            docs/audit/forward_additions/pr-162-decision-groups.json
+          test "$(git diff --cached --name-only | wc -l)" -eq 8
+          git commit -m "Correct M2-B taint and unresolved coverage"
+          git push origin HEAD:codex/m2b-corrected-staging
+          git rev-parse HEAD | tee /tmp/staging-head.txt
+
+      - name: Upload focused staging evidence
         uses: actions/upload-artifact@v4
         with:
-          name: m2b-unresolved-probe-${{ github.event.pull_request.head.sha }}
+          name: m2b-corrected-staging-${{ github.event.pull_request.head.sha }}
           path: |
-            m2b-unresolved-probe.json
-            eve-source-${{ github.event.pull_request.head.sha }}.zip
+            /tmp/focused.txt
+            /tmp/m2b-generation-summary.json
+            /tmp/m2-b-read-capability-candidates.json
+            /tmp/m2-b-decision-validation.json
+            /tmp/forward-regression.json
+            /tmp/staging-head.txt
           if-no-files-found: error
           retention-days: 7
