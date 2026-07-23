@@ -202,6 +202,22 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         ("registry_owner_source", lambda: replace(sample, registry_owner_source=True)),
         ("runtime_polled", lambda: replace(sample, runtime_polled=True)),
         (
+            "noncanonical_acquisition_method",
+            lambda: replace(sample, acquisition_method="unverified_caller_claim"),
+        ),
+        (
+            "noncanonical_verification_method",
+            lambda: replace(sample, verification_method="none"),
+        ),
+        (
+            "noncanonical_model_or_rule_version",
+            lambda: replace(sample, model_or_rule_version="unversioned"),
+        ),
+        (
+            "noncanonical_source_family",
+            lambda: replace(sample, source_family="synthetic_operational_metrics"),
+        ),
+        (
             "insufficient_record_count",
             lambda: derive_operational_axis_evidence(
                 (_record("energy_budget", 1), _record("energy_budget", 2))
@@ -242,6 +258,15 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "raw_digest_recalculation_verified": (
             sample.raw_observation_digest
             == sample.recalculated_raw_observation_digest
+        ),
+        "canonical_provenance_rejection_verified": all(
+            rejection_checks[name]
+            for name in (
+                "noncanonical_acquisition_method",
+                "noncanonical_verification_method",
+                "noncanonical_model_or_rule_version",
+                "noncanonical_source_family",
+            )
         ),
         "rejection_checks": rejection_checks,
         "static_surface": static,
