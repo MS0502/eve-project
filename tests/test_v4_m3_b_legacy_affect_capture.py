@@ -10,6 +10,7 @@ import core.m3_b_legacy_affect_capture as capture_module
 from hormone_system import Hormone, HormoneSystem
 
 from core.event_kernel import SHADOW_AUTHORITY
+from core.m3_b_affect_projection import AffectProjectionError
 from core.m3_b_legacy_affect_capture import (
     CAPTURE_SCHEMA_VERSION,
     LEGACY_AXIS_ORDER,
@@ -61,11 +62,11 @@ def test_capture_is_detached_deterministic_and_does_not_mutate_source():
 
 
 def test_capture_preserves_exact_axis_fields_and_builds_m3_b_observations():
-    source = HormoneSystem(phase=3, developmental_stage="newborn")
+    source = HormoneSystem(phase=3, developmental_stage="adult")
     result = capture(source)
     assert tuple(axis.axis for axis in result.axes) == LEGACY_AXIS_ORDER
     assert result.source_phase == 3
-    assert result.source_stage == "newborn"
+    assert result.source_stage == "adult"
     assert result.active_hormones == tuple(
         axis for axis in LEGACY_AXIS_ORDER if source.hormones[axis].phase <= 3
     )
@@ -77,6 +78,16 @@ def test_capture_preserves_exact_axis_fields_and_builds_m3_b_observations():
     assert all(observation.source_integrity_digest == result.source_integrity_digest for observation in observations)
     assert all(observation.floor == 0.0 and observation.ceiling == 1.0 for observation in observations)
     assert all(observation.confidence == 1.0 for observation in observations)
+
+
+def test_capture_preserves_boundary_baselines_and_projection_bridge_fails_closed():
+    source = HormoneSystem(phase=3, developmental_stage="newborn")
+    result = capture(source)
+    by_axis = {axis.axis: axis for axis in result.axes}
+    assert by_axis["estrogen"].baseline == by_axis["estrogen"].floor == 0.0
+    assert by_axis["testosterone"].baseline == by_axis["testosterone"].floor == 0.0
+    with pytest.raises(AffectProjectionError, match="floor < baseline < ceiling"):
+        result.to_axis_observations()
 
 
 def test_capture_calls_no_update_or_stimulate_surface(monkeypatch: pytest.MonkeyPatch):
@@ -114,7 +125,7 @@ def test_capture_rejects_non_exact_source_type_and_catalog_drift():
 def test_capture_rejects_invalid_numeric_or_identity_fields():
     source = HormoneSystem()
     source.hormones["dopamine"].level = 1.01
-    with pytest.raises(LegacyAffectCaptureError, match="outside \[0,1\]"):
+    with pytest.raises(LegacyAffectCaptureError, match=r"outside \[0,1\]"):
         capture(source)
 
     source = HormoneSystem()
