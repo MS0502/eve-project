@@ -92,7 +92,7 @@ def _definitions() -> dict[str, dict[str, Any]]:
     registry = affect_hormone_axis_registry()
     if tuple(registry) != REGISTRY_AXIS_ORDER:
         raise RegistryAffectOwnerError("registry definitions must preserve exact 37-axis order")
-    if len(registry) != len(set(registry)) != 37:
+    if len(registry) != 37 or len(set(registry)) != 37:
         raise RegistryAffectOwnerError("registry definitions must contain 37 unique axes")
     return registry
 
@@ -338,7 +338,7 @@ def create_registry_affect_owner(
             baseline=float(registry[axis]["baseline"]),
             floor=float(registry[axis]["min"]),
             ceiling=float(registry[axis]["max"]),
-            confidence=1.0,
+            confidence=0.0,
             last_impulse_tick=0,
             update_count=0,
             last_source_kind="deterministic_registry_baseline_genesis_not_observation",
@@ -440,8 +440,8 @@ def apply_validated_registry_proposal(
     if not isinstance(proposed_axis_deltas, Mapping) or not proposed_axis_deltas:
         raise RegistryAffectOwnerError("proposal must contain at least one axis delta")
     confidence = _finite(proposal_confidence, "proposal_confidence")
-    if not 0.0 <= confidence <= 1.0:
-        raise RegistryAffectOwnerError("proposal confidence must remain within [0,1]")
+    if not 0.0 < confidence <= 1.0:
+        raise RegistryAffectOwnerError("proposal confidence must remain within (0,1]")
     deltas: dict[str, float] = {}
     for axis, value in proposed_axis_deltas.items():
         if not isinstance(axis, str) or axis not in REGISTRY_AXIS_ORDER:
@@ -481,7 +481,7 @@ def apply_validated_registry_proposal(
                 baseline=axis_state.baseline,
                 floor=axis_state.floor,
                 ceiling=axis_state.ceiling,
-                confidence=min(axis_state.confidence, confidence),
+                confidence=confidence if axis_state.confidence == 0.0 else min(axis_state.confidence, confidence),
                 last_impulse_tick=owner.logical_tick,
                 update_count=axis_state.update_count + 1,
                 last_source_kind="validated_detached_event_proposal",
