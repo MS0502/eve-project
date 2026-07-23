@@ -172,6 +172,9 @@ def test_habitat_has_no_intentional_kill_scheduler_or_legacy_runtime_import():
     assert "termux-job-scheduler" not in supervisor + setup
     assert "check-ignore --no-index" in setup
     assert "termux-wake-lock" in supervisor + setup
+    assert "is_live_supervisor_pid" in supervisor
+    assert "/proc/$candidate_pid/cmdline" in supervisor
+    assert "rm -f \"$PRIVATE_ROOT/supervisor.pid\"" in supervisor
 
 
 def test_core_contract_import_has_no_io_thread_or_runtime_activation_surface():
