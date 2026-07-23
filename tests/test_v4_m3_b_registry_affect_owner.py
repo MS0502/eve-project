@@ -58,12 +58,13 @@ def test_genesis_materializes_exact_37_axis_current_state_without_calling_it_obs
     assert current.proposal_metadata_is_current_state is False
     assert current.logical_tick == current.state_sequence == 0
     assert all(axis.value == registry[axis.axis]["baseline"] for axis in current.axes)
+    assert all(axis.confidence == 0.0 for axis in current.axes)
     assert all(axis.last_source_kind.endswith("genesis_not_observation") for axis in current.axes)
     registry["energy_budget"]["baseline"] = 0.01
     assert current.value_for("energy_budget") != 0.01
 
 
-def test_genesis_and_observation_snapshot_are_deterministic_and_complete():
+def test_genesis_snapshot_is_deterministic_complete_and_explicitly_unknown():
     first = owner()
     second = owner()
     assert first.to_mapping() == second.to_mapping()
@@ -74,7 +75,7 @@ def test_genesis_and_observation_snapshot_are_deterministic_and_complete():
     assert all(item.source_family == "read_only_affect_registry" for item in observations)
     assert all(item.source_snapshot_id == first.source_snapshot_id for item in observations)
     assert all(item.source_integrity_digest == first.state_digest for item in observations)
-    assert all(item.confidence == 1.0 for item in observations)
+    assert all(item.confidence == 0.0 for item in observations)
 
 
 def test_validated_proposal_returns_new_owner_and_preserves_old_owner():
@@ -89,6 +90,9 @@ def test_validated_proposal_returns_new_owner_and_preserves_old_owner():
     assert after.value_for("competence_drive") == pytest.approx(0.54)
     assert after.value_for("social_trust") == pytest.approx(0.68)
     assert after.value_for("energy_budget") == before.value_for("energy_budget")
+    assert after.axes[REGISTRY_AXIS_ORDER.index("competence_drive")].confidence == 0.8
+    assert after.axes[REGISTRY_AXIS_ORDER.index("social_trust")].confidence == 0.8
+    assert after.axes[REGISTRY_AXIS_ORDER.index("energy_budget")].confidence == 0.0
     assert after.prior_state_digest == before.state_digest
     assert after.state_sequence == 1
     assert after.applied_proposal_ids == ("proposal:praise:1",)
@@ -98,7 +102,7 @@ def test_validated_proposal_returns_new_owner_and_preserves_old_owner():
     assert after.live_drive_mutated is False
 
 
-def test_proposal_replay_stale_digest_and_sequence_fail_closed():
+def test_proposal_replay_stale_digest_sequence_and_zero_confidence_fail_closed():
     first = owner()
     second = apply(first, proposal_id="proposal:praise:1")
     with pytest.raises(RegistryAffectOwnerError, match="duplicate proposal id"):
@@ -133,6 +137,17 @@ def test_proposal_replay_stale_digest_and_sequence_fail_closed():
             proposal_confidence=0.8,
             expected_owner_digest=second.state_digest,
             operator_authorization_id="operator:gap",
+        )
+    with pytest.raises(RegistryAffectOwnerError, match=r"within \(0,1\]"):
+        apply_validated_registry_proposal(
+            first,
+            event_category="praise",
+            proposed_axis_deltas={"competence_drive": 0.04},
+            proposal_id="proposal:zero-confidence:1",
+            proposal_sequence=1,
+            proposal_confidence=0.0,
+            expected_owner_digest=first.state_digest,
+            operator_authorization_id="operator:zero-confidence",
         )
 
 
@@ -177,8 +192,10 @@ def test_saturation_is_deterministic_and_bounded():
     current = owner()
     for index in range(20):
         current = apply(current, proposal_id=f"proposal:praise:{index}")
+    competence = current.axes[REGISTRY_AXIS_ORDER.index("competence_drive")]
     assert current.value_for("competence_drive") == 1.0
-    assert current.axes[REGISTRY_AXIS_ORDER.index("competence_drive")].update_count == 20
+    assert competence.confidence == 0.8
+    assert competence.update_count == 20
     assert current.state_sequence == 20
 
 
@@ -199,6 +216,7 @@ def test_caller_invoked_cadence_honors_refractory_then_decays_toward_baseline():
         expected_owner_digest=early.state_digest,
     )
     assert 0.50 < later.value_for("competence_drive") < stimulated.value_for("competence_drive")
+    assert later.axes[REGISTRY_AXIS_ORDER.index("competence_drive")].confidence == 0.8
     assert later.logical_tick == 20
     assert later.last_transition_kind == "deterministic_caller_invoked_cadence"
     assert later.scheduler_installed is False
