@@ -1,7 +1,7 @@
 """Explicit combined 63-axis M3-B read-only observation packet.
 
 The packet combines one caller-invoked exact legacy 26-axis capture with one
-already-existing detached registry 37-axis owner snapshot.  It installs no hook,
+already-existing detached registry 37-axis owner snapshot. It installs no hook,
 observer, scheduler, persistence route, event append path, projection mutation,
 observation window, M3-C, cutover, or M3-E authority.
 """
@@ -15,7 +15,7 @@ from typing import Any, Mapping
 from hormone_system import HormoneSystem
 
 from core.event_kernel import SHADOW_AUTHORITY
-from core.m3_b_affect_projection import AxisObservation
+from core.m3_b_affect_projection import AffectProjectionError, AxisObservation
 from core.m3_b_legacy_affect_capture import (
     LEGACY_AXIS_ORDER,
     LegacyAffectCaptureError,
@@ -34,7 +34,6 @@ EXPECTED_LEGACY_COUNT = 26
 EXPECTED_REGISTRY_COUNT = 37
 WINDOW_BLOCKER_REGISTRY_CONFIDENCE = "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE"
 WINDOW_BLOCKER_LEGACY_CONFIDENCE = "LEGACY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE"
-WINDOW_BLOCKER_STRUCTURAL = "COMBINED_63_AXIS_PACKET_STRUCTURALLY_INCOMPLETE"
 
 
 class M3BObservationPacketError(ValueError):
@@ -183,11 +182,9 @@ class M3BCombinedObservationPacket:
         if tuple(self.zero_confidence_axes) != zero:
             raise M3BObservationPacketError("zero-confidence axis catalog is not derived from observations")
         expected_blockers: list[str] = []
-        legacy_zero = tuple(axis for axis in zero if axis in LEGACY_AXIS_ORDER)
-        registry_zero = tuple(axis for axis in zero if axis in REGISTRY_AXIS_ORDER)
-        if legacy_zero:
+        if any(axis in LEGACY_AXIS_ORDER for axis in zero):
             expected_blockers.append(WINDOW_BLOCKER_LEGACY_CONFIDENCE)
-        if registry_zero:
+        if any(axis in REGISTRY_AXIS_ORDER for axis in zero):
             expected_blockers.append(WINDOW_BLOCKER_REGISTRY_CONFIDENCE)
         if tuple(self.window_blockers) != tuple(expected_blockers):
             raise M3BObservationPacketError("window blockers are not derived from packet evidence")
@@ -250,15 +247,24 @@ class M3BCombinedObservationPacket:
 
     @property
     def structurally_complete(self) -> bool:
-        return self.axis_count == EXPECTED_AXIS_COUNT and not self.window_blockers[:0]
+        return all(
+            (
+                self.axis_count == EXPECTED_AXIS_COUNT,
+                self.exact_axis_order_verified,
+                self.source_integrity_verified,
+                self.source_ownership_verified,
+                self.legacy_capture_no_mutation_verified,
+                self.registry_owner_unchanged_verified,
+            )
+        )
 
     @property
     def strict_projection_input_ready(self) -> bool:
-        return self.axis_count == EXPECTED_AXIS_COUNT
+        return self.structurally_complete
 
     @property
     def observation_window_start_eligible(self) -> bool:
-        return not self.window_blockers and self.zero_confidence_count == 0
+        return self.structurally_complete and not self.window_blockers and self.zero_confidence_count == 0
 
     def to_mapping(self) -> dict[str, Any]:
         return {
@@ -336,8 +342,10 @@ def build_m3_b_observation_packet(
             source_snapshot_id=legacy_source_snapshot_id,
         )
         legacy_observations = legacy_capture.to_axis_observations()
-    except LegacyAffectCaptureError as exc:
-        raise M3BObservationPacketError("legacy source cannot produce the strict v1 observation envelope") from exc
+    except (LegacyAffectCaptureError, AffectProjectionError) as exc:
+        raise M3BObservationPacketError(
+            "legacy source cannot produce the strict v1 observation envelope"
+        ) from exc
     registry_observations = registry_owner.to_axis_observations()
     registry_after_digest = registry_owner.state_digest
     if registry_before_digest != registry_after_digest:
