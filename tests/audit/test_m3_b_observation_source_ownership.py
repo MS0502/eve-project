@@ -86,7 +86,7 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
         "read_only_affect_registry": 37,
         "total": 63,
     }
-    assert tuple(report["blockers"]) == EXPECTED_BLOCKERS, report["registry_usage"]
+    assert tuple(report["blockers"]) == EXPECTED_BLOCKERS
     assert report["errors"] == []
     assert report["source_family_readiness"] == {
         "legacy_mutable_hormone": "READABLE_UNVERSIONED_LEGACY_CONTAINER",
@@ -100,15 +100,18 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
     assert report["m3_c_open"] is False
 
 
-def test_proposal_maps_are_visible_but_not_misclassified_as_current_value_ownership():
-    usage = audit_repository(ROOT)["registry_usage"]
-    assert usage["proposal_rule_candidate_count"] == 27, usage
-    assert usage["proposal_rule_candidates"]
+def test_proposal_map_covers_27_unique_axes_but_is_not_current_value_ownership():
+    report = audit_repository(ROOT)
+    proposal = report["registry_proposal_metadata"]
+    usage = report["registry_usage"]
+    assert proposal["proposal_rule_unique_axis_count"] == 27
+    assert proposal["proposal_rule_occurrence_count"] > 27
+    assert len(proposal["proposal_rule_unique_axes"]) == 27
     assert {
-        row["path"] for row in usage["proposal_rule_candidates"]
+        row["path"] for row in proposal["proposal_rule_occurrences"]
     } == {"adapters/affect_event_to_axis_proposal_map.py"}
-    assert usage["proposal_rules_are_not_current_axis_values"] is True
-    assert usage["observed_value_owner_found"] is False, usage
+    assert proposal["proposal_rules_are_not_current_axis_values"] is True
+    assert usage["observed_value_owner_found"] is False
     assert usage["observed_value_store_candidate_count"] == 0
     assert usage["observed_value_store_candidates"] == []
     assert usage["tracked_parse_errors_are_not_source_ownership_evidence"] is True
