@@ -140,7 +140,7 @@ def test_binding_set_has_exact_two_axes_and_total_progress_is_six_of_thirty_seve
         assert binding.appraisal_required is True
         assert binding.quarantine_required is False
         assert binding.hardware_direct_input_allowed is False
-        assert binding.authority == "SHADOW_ONLY"
+        assert binding.authority == "shadow_only"
         assert binding.production_capture_present is False
         assert binding.runtime_capture_installed is False
         assert binding.observation_window_started is False
@@ -271,7 +271,11 @@ def test_derivation_requires_minimum_count_unique_ids_and_one_source_contract():
     changed_source = _rebuilt(third, source_instance_id="other-source")
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="share one source_instance_id"):
         derive_appraised_survival_axis_evidence((first, second, changed_source))
-    mixed_axis = (_record("stress_load", 1), _record("stress_load", 2), _record("stability_need", 3))
+    mixed_axis = (
+        _record("stress_load", 1),
+        _record("stress_load", 2),
+        _record("stability_need", 3),
+    )
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="cannot mix axes"):
         derive_appraised_survival_axis_evidence(mixed_axis)
 
