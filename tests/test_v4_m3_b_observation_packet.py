@@ -17,6 +17,7 @@ from core.m3_b_observation_packet import (
     build_m3_b_observation_packet,
 )
 from core.m3_b_registry_affect_owner import (
+    RegistryAffectOwnerState,
     apply_validated_registry_proposal,
     create_registry_affect_owner,
 )
@@ -25,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE_MODULE = ROOT / "core/m3_b_observation_packet.py"
 
 
-def registry_owner():
+def registry_owner() -> RegistryAffectOwnerState:
     return create_registry_affect_owner(
         owner_instance_id="test:registry-owner:v1",
         genesis_source_id="test:registry-genesis:v1",
@@ -53,10 +54,12 @@ def packet(
 
 
 def test_genesis_packet_is_exact_63_axis_structurally_complete_and_window_blocked():
-    result = packet(HormoneSystem(developmental_stage="adult"), registry_owner())
+    owner = registry_owner()
+    result = packet(HormoneSystem(developmental_stage="adult"), owner)
     assert result.axis_count == 63
     assert result.legacy_axis_count == 26
     assert result.registry_axis_count == 37
+    assert result.logical_tick == owner.logical_tick == 0
     assert tuple(item.axis for item in result.observations) == EXPECTED_AXIS_ORDER
     assert result.positive_confidence_count == 26
     assert result.zero_confidence_count == 37
@@ -101,6 +104,7 @@ def test_validated_registry_evidence_promotes_only_touched_axes_and_window_remai
         operator_authorization_id="test:operator:praise:1",
     )
     result = packet(HormoneSystem(developmental_stage="adult"), observed)
+    assert result.logical_tick == observed.logical_tick
     assert result.positive_confidence_count == 28
     assert result.zero_confidence_count == 35
     assert "competence_drive" in result.positive_confidence_axes
