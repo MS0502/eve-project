@@ -124,9 +124,13 @@ Identical source state plus identical caller-supplied identities must produce by
 
 ## M3-B projection bridge
 
-`LegacyHormoneCapture.to_axis_observations()` returns exactly 26 immutable `AxisObservation` values accepted by the merged M3-B projection contract.
+`LegacyHormoneCapture.to_axis_observations()` returns exactly 26 immutable `AxisObservation` values when every captured baseline is strictly inside its declared source range, as required by the merged M3-B v1 observation contract. The current default adult `HormoneSystem` satisfies that condition.
 
-Each observation contains:
+The immutable capture itself also accepts and exactly preserves valid developmental profiles whose baseline equals a source boundary. In particular, the newborn profile has estrogen and testosterone baseline/value `0.0`, equal to the exact source floor. The capture does not invent an epsilon or widen `[0,1]`.
+
+Conversion of such a boundary-baseline capture to the stricter merged v1 `AxisObservation` contract fails closed with `AffectProjectionError`. The detached immutable source envelope remains valid; no substitute observation or partial projection input is emitted.
+
+Each successful observation contains:
 
 - `source_family = legacy_mutable_hormone`;
 - exact original value, baseline, floor, and ceiling;
@@ -159,16 +163,16 @@ Capture rejects:
 - any axis-object replacement during capture;
 - any before/after source-state change.
 
-No fallback value or partial envelope is emitted.
+Projection conversion separately rejects a preserved source baseline that is not strictly interior to the merged v1 observation range. No epsilon, widened range, fallback value, partial envelope, or partial observation tuple is emitted.
 
 ## Audit harness
 
 `scripts/audit/m3_b_legacy_affect_capture.py`:
 
 - parses the authoritative 26-axis order directly from `hormone_system.py`;
-- constructs only a local synthetic legacy source for audit;
+- constructs only a local synthetic default-adult legacy source for audit;
 - captures it twice with identical deterministic identities;
-- proves exact 26-axis and `AxisObservation` coverage;
+- proves exact 26-axis and `AxisObservation` coverage for that admissible source;
 - proves source state is byte-material equivalent before, between, and after captures;
 - proves deterministic capture/digest equality;
 - proves all authority and side-effect fields remain false;
@@ -188,7 +192,8 @@ Focused tests cover:
 - exact source/catalog agreement;
 - deterministic detached capture and source immutability;
 - all preserved axis/source fields;
-- exact 26-value M3-B observation bridge;
+- exact 26-value M3-B observation bridge for the current default adult source;
+- exact preservation and fail-closed bridge behavior for boundary-baseline developmental profiles;
 - proof that update/stimulate surfaces are never called;
 - exact-type and catalog-drift rejection;
 - numeric and identity validation;
@@ -228,4 +233,4 @@ No production hook, automatic capture, observer installation, runtime scheduler,
 2. `scripts/audit/m3_b_legacy_affect_capture.py`
 3. `tests/test_v4_m3_b_legacy_affect_capture.py`
 4. `docs/audit/M3_B_LEGACY_26_AXIS_IMMUTABLE_CAPTURE_CANDIDATE.md`
-5. `docs/audit/forward_additions/pr-<this-pr>.json`
+5. `docs/audit/forward_additions/pr-172.json`
