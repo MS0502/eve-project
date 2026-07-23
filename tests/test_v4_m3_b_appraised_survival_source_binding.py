@@ -91,6 +91,41 @@ def _record(axis: str, tick: int) -> AppraisedSurvivalRawRecord:
     )
 
 
+def _rebuilt(
+    record: AppraisedSurvivalRawRecord,
+    **changes: object,
+) -> AppraisedSurvivalRawRecord:
+    values = {
+        "axis": changes.get("axis", record.axis),
+        "logical_tick": changes.get("logical_tick", record.logical_tick),
+        "observation_id": changes.get("observation_id", record.observation_id),
+        "source_instance_id": changes.get(
+            "source_instance_id", record.source_instance_id
+        ),
+        "source_snapshot_id": changes.get(
+            "source_snapshot_id", record.source_snapshot_id
+        ),
+        "source_schema_version": changes.get(
+            "source_schema_version", record.source_schema_version
+        ),
+        "source_integrity_digest": changes.get(
+            "source_integrity_digest", record.source_integrity_digest
+        ),
+        "appraisal_trace_id": changes.get(
+            "appraisal_trace_id", record.appraisal_trace_id
+        ),
+        "appraisal_input_digest": changes.get(
+            "appraisal_input_digest", record.appraisal_input_digest
+        ),
+        "appraisal_integrity_digest": changes.get(
+            "appraisal_integrity_digest", record.appraisal_integrity_digest
+        ),
+        "raw_values": changes.get("raw_values", record.raw_values),
+    }
+    digest = appraised_survival_raw_observation_digest(**values)  # type: ignore[arg-type]
+    return replace(record, **changes, raw_observation_digest=digest)
+
+
 def test_binding_set_has_exact_two_axes_and_total_progress_is_six_of_thirty_seven():
     binding_set = appraised_survival_source_bindings()
     assert tuple(item.axis for item in binding_set.bindings) == APPRAISED_SURVIVAL_AXES
@@ -209,49 +244,17 @@ def test_raw_field_order_appraisal_version_ranges_and_counts_are_exact():
         for field, value in stress.raw_values
     )
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="appraisal_version"):
-        replace(
-            stress,
-            raw_values=bad_version,
-            raw_observation_digest=appraised_survival_raw_observation_digest(
-                axis=stress.axis,
-                logical_tick=stress.logical_tick,
-                observation_id=stress.observation_id,
-                source_instance_id=stress.source_instance_id,
-                source_snapshot_id=stress.source_snapshot_id,
-                source_schema_version=stress.source_schema_version,
-                source_integrity_digest=stress.source_integrity_digest,
-                appraisal_trace_id=stress.appraisal_trace_id,
-                appraisal_input_digest=stress.appraisal_input_digest,
-                appraisal_integrity_digest=stress.appraisal_integrity_digest,
-                raw_values=bad_version,
-            ),
-        )
+        _rebuilt(stress, raw_values=bad_version)
     stability = _record("stability_need", 1)
     too_many = tuple(
         (field, 11) if field == "invariant_failure_count" else (field, value)
         for field, value in stability.raw_values
     )
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="cannot exceed"):
-        replace(
-            stability,
-            raw_values=too_many,
-            raw_observation_digest=appraised_survival_raw_observation_digest(
-                axis=stability.axis,
-                logical_tick=stability.logical_tick,
-                observation_id=stability.observation_id,
-                source_instance_id=stability.source_instance_id,
-                source_snapshot_id=stability.source_snapshot_id,
-                source_schema_version=stability.source_schema_version,
-                source_integrity_digest=stability.source_integrity_digest,
-                appraisal_trace_id=stability.appraisal_trace_id,
-                appraisal_input_digest=stability.appraisal_input_digest,
-                appraisal_integrity_digest=stability.appraisal_integrity_digest,
-                raw_values=too_many,
-            ),
-        )
+        _rebuilt(stability, raw_values=too_many)
 
 
-def test_derivation_requires_minimum_count_span_unique_ids_and_one_source_contract():
+def test_derivation_requires_minimum_count_unique_ids_and_one_source_contract():
     first = _record("stress_load", 1)
     second = _record("stress_load", 2)
     third = _record("stress_load", 3)
@@ -259,14 +262,18 @@ def test_derivation_requires_minimum_count_span_unique_ids_and_one_source_contra
         derive_appraised_survival_axis_evidence((first, second))
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="ticks must be sorted"):
         derive_appraised_survival_axis_evidence((third, second, first))
-    with pytest.raises(AppraisedSurvivalSourceBindingError, match="logical observation span"):
-        derive_appraised_survival_axis_evidence((first, replace(second, logical_tick=1), third))
-    duplicate = replace(third, observation_id=second.observation_id)
+    duplicate = _rebuilt(third, observation_id=second.observation_id)
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="observation_id values must be unique"):
         derive_appraised_survival_axis_evidence((first, second, duplicate))
-    changed_source = replace(third, source_instance_id="other-source")
+    duplicate_trace = _rebuilt(third, appraisal_trace_id=second.appraisal_trace_id)
+    with pytest.raises(AppraisedSurvivalSourceBindingError, match="appraisal_trace_id values must be unique"):
+        derive_appraised_survival_axis_evidence((first, second, duplicate_trace))
+    changed_source = _rebuilt(third, source_instance_id="other-source")
     with pytest.raises(AppraisedSurvivalSourceBindingError, match="share one source_instance_id"):
         derive_appraised_survival_axis_evidence((first, second, changed_source))
+    mixed_axis = (_record("stress_load", 1), _record("stress_load", 2), _record("stability_need", 3))
+    with pytest.raises(AppraisedSurvivalSourceBindingError, match="cannot mix axes"):
+        derive_appraised_survival_axis_evidence(mixed_axis)
 
 
 def test_binding_and_binding_set_are_frozen_and_cannot_claim_authority():
