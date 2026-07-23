@@ -79,6 +79,10 @@ def _digest(value: Mapping[str, Any], field: str) -> str:
     return hashlib.sha256(_canonical(value, field).encode("utf-8")).hexdigest()
 
 
+def _metadata(observation: AxisObservation) -> dict[str, str]:
+    return dict(observation.source_metadata)
+
+
 @dataclass(frozen=True, slots=True)
 class CombinedObservationSourceSet:
     legacy_source_instance_id: str
@@ -171,10 +175,43 @@ class M3BCombinedObservationPacket:
             raise M3BObservationPacketError("packet must preserve exact canonical 63-axis order")
         if len({item.axis for item in observations}) != EXPECTED_AXIS_COUNT:
             raise M3BObservationPacketError("packet axes must be unique")
-        if any(item.source_family != "legacy_mutable_hormone" for item in observations[:EXPECTED_LEGACY_COUNT]):
+        legacy_observations = observations[:EXPECTED_LEGACY_COUNT]
+        registry_observations = observations[EXPECTED_LEGACY_COUNT:]
+        if any(item.source_family != "legacy_mutable_hormone" for item in legacy_observations):
             raise M3BObservationPacketError("first 26 observations must be legacy source values")
-        if any(item.source_family != "read_only_affect_registry" for item in observations[EXPECTED_LEGACY_COUNT:]):
+        if any(item.source_family != "read_only_affect_registry" for item in registry_observations):
             raise M3BObservationPacketError("final 37 observations must be registry owner values")
+        legacy_metadata = tuple(_metadata(item) for item in legacy_observations)
+        registry_metadata = tuple(_metadata(item) for item in registry_observations)
+        if any(
+            (
+                item.source_snapshot_id != self.source_set.legacy_source_snapshot_id
+                or item.source_integrity_digest
+                != self.source_set.legacy_source_integrity_digest
+                or metadata.get("capture_digest")
+                != self.source_set.legacy_capture_digest
+                or metadata.get("source_instance_id")
+                != self.source_set.legacy_source_instance_id
+            )
+            for item, metadata in zip(legacy_observations, legacy_metadata)
+        ):
+            raise M3BObservationPacketError(
+                "legacy observations are not bound to the declared source set"
+            )
+        if any(
+            (
+                item.source_snapshot_id != self.source_set.registry_source_snapshot_id
+                or item.source_integrity_digest
+                != self.source_set.registry_owner_state_digest
+                or metadata.get("owner_instance_id")
+                != self.source_set.registry_owner_instance_id
+                or metadata.get("logical_tick") != str(self.logical_tick)
+            )
+            for item, metadata in zip(registry_observations, registry_metadata)
+        ):
+            raise M3BObservationPacketError(
+                "registry observations are not bound to the declared source set and logical tick"
+            )
         positive = tuple(item.axis for item in observations if item.confidence > 0.0)
         zero = tuple(item.axis for item in observations if item.confidence == 0.0)
         if tuple(self.positive_confidence_axes) != positive:
@@ -333,6 +370,10 @@ def build_m3_b_observation_packet(
         raise M3BObservationPacketError("legacy_source must be the exact HormoneSystem type")
     if type(registry_owner) is not RegistryAffectOwnerState:
         raise M3BObservationPacketError("registry_owner must be the exact RegistryAffectOwnerState type")
+    if logical_tick != registry_owner.logical_tick:
+        raise M3BObservationPacketError(
+            "logical_tick must equal the registry owner logical tick"
+        )
 
     registry_before_digest = registry_owner.state_digest
     try:
