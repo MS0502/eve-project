@@ -81,8 +81,9 @@ The bundle is rejected if it claims any runtime hook, scheduler, persistence acc
 3. rejects observations older than the predecessor owner;
 4. verifies that owner axis bounds still match the active registry definitions;
 5. returns a new immutable `RegistryAffectOwnerState` with the observed value and confidence for each axis;
-6. binds the owner transition digest to the evidence bundle digest;
-7. leaves the predecessor owner unchanged.
+6. preserves each axis' prior `last_impulse_tick`, because observation is not an affect impulse;
+7. binds the owner transition digest to the evidence bundle digest;
+8. leaves the predecessor owner unchanged.
 
 The returned owner remains disconnected and `shadow_only`. No storage, event log, scheduler, runtime route, or live state is touched.
 
@@ -93,6 +94,7 @@ The audit harness constructs a deterministic contract-only fixture containing al
 - exact 37-axis positive-confidence coverage;
 - deterministic bundle and owner digests;
 - predecessor owner immutability;
+- observation materialization creates no affect impulse;
 - rejection of zero-confidence, genesis, baseline, default, proposal-only, synthetic, and missing-raw-reference forms;
 - a combined fixture packet computes 63 positive-confidence axes and no confidence blocker;
 - despite that calculated eligibility, no production observation window is started or satisfied.
