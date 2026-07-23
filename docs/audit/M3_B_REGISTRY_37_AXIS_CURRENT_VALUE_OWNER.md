@@ -56,10 +56,11 @@ This is a deterministic genesis rule, not observation evidence:
 ```text
 genesis_is_observation_evidence = false
 proposal_metadata_is_current_state = false
+confidence = 0.0 for all 37 genesis axes
 last_source_kind = deterministic_registry_baseline_genesis_not_observation
 ```
 
-The registry definition dictionary remains detached policy data. It becomes owned current state only through explicit owner construction. No raw registry default is emitted directly as an observation without that owner-state boundary.
+The registry definition dictionary remains detached policy data. It becomes owned current state only through explicit owner construction. The baseline supplies a deterministic neutral starting value, but it does not claim that any axis has actually been observed. A genesis snapshot therefore emits the complete 37-axis shape with confidence `0.0`, not positive evidence.
 
 Genesis uses no wall clock, random value, process ID, filesystem state, persistence value, or runtime reference. Identical owner/genesis identities produce identical owner material and digest.
 
@@ -75,11 +76,11 @@ Genesis uses no wall clock, random value, process ID, filesystem state, persiste
 - exact expected prior owner digest;
 - exactly consecutive state sequence;
 - unique bounded proposal identity;
-- finite confidence within `[0,1]`.
+- finite positive confidence within `(0,1]`.
 
 The function returns a new frozen owner state. It never mutates the prior owner.
 
-Proposal metadata alone remains non-state. A proposal changes detached owner state only after all checks above pass.
+Proposal metadata alone remains non-state. A proposal changes detached owner state only after all checks above pass. Only touched axes gain positive observation confidence; untouched genesis axes remain explicit unknowns at confidence `0.0`.
 
 ## Range, confidence, and saturation
 
@@ -87,10 +88,11 @@ For an accepted axis delta:
 
 ```text
 new_value = clamp(old_value + validated_delta, floor, ceiling)
-new_confidence = min(old_confidence, proposal_confidence)
+new_confidence = proposal_confidence                      if old_confidence == 0.0
+                 min(old_confidence, proposal_confidence) otherwise
 ```
 
-Unknown axes, empty proposals, non-finite deltas, stale owner digests, sequence gaps, duplicate proposal IDs, validator failures, and exhausted proposal-ID ledgers fail closed.
+This allows the first validated source to establish confidence without letting a registry default masquerade as evidence. Later evidence cannot silently increase the retained confidence. Unknown axes, empty proposals, zero/non-finite confidence, non-finite deltas, stale owner digests, sequence gaps, duplicate proposal IDs, validator failures, and exhausted proposal-ID ledgers fail closed.
 
 No partial state is returned.
 
@@ -110,7 +112,7 @@ For each axis, decay begins only after its registry refractory interval and move
 value_t = baseline + (value_0 - baseline) * (1 - decay_rate) ** active_ticks
 ```
 
-The result is clamped to registry bounds. The impulse tick remains tied to the most recent accepted proposal. A repeated/non-monotonic tick or stale digest fails closed.
+The result is clamped to registry bounds. The impulse tick remains tied to the most recent accepted proposal. Cadence preserves the axis confidence and never turns an untouched zero-confidence genesis axis into observed evidence. A repeated/non-monotonic tick or stale digest fails closed.
 
 ## Replay and no-duplicate rule
 
@@ -121,7 +123,7 @@ An accepted proposal is bound to:
 - unique proposal ID;
 - operator authorization ID;
 - event category and canonical ordered deltas;
-- confidence and transition payload;
+- positive confidence and transition payload;
 - versioned transition schema.
 
 The transition digest covers the complete material. Reapplying the same proposal to the next state fails on duplicate ID; applying it to a different or stale state fails on digest/sequence.
@@ -144,7 +146,15 @@ Each observation carries:
 - per-axis state digest;
 - owner/genesis/source/update provenance metadata.
 
+A genesis snapshot is structurally complete but all 37 confidence values are `0.0`. After an accepted proposal, only the touched axes carry positive confidence. This preserves absence/unknown state explicitly instead of substituting registry defaults as observed facts.
+
 The conversion reads only the detached owner and performs no projection, drive mutation, named transition, event append, persistence access, or observation-window start.
+
+## M2-B read-capability ruling
+
+The scanner follows caller-supplied `transition_payload` through the existing proposal validator, local result inspection, and canonical SHA-256 transition evidence. PR #173 registers the exact findings append-only as `NOT_CAPABILITY_BOUNDARY`.
+
+This path performs no external source discovery or read, retains no conversational raw text for expression, and grants no quotation, generation, speech, publication, or runtime activation capability.
 
 ## Authority boundary
 
@@ -178,12 +188,13 @@ The focused suite covers:
 
 - exact canonical 37-axis ownership;
 - deterministic baseline genesis distinct from observation evidence;
+- zero-confidence genesis and positive-confidence touched-axis promotion;
 - detached definition data cannot alter owner state;
 - exact 37-value immutable observation snapshot;
 - validated proposal transition and unchanged prior owner;
-- stale digest, sequence gap, duplicate ID, unknown axis, and validator rejection;
+- stale digest, sequence gap, duplicate ID, zero confidence, unknown axis, and validator rejection;
 - deterministic saturation;
-- explicit refractory/cadence decay;
+- explicit refractory/cadence decay without confidence promotion;
 - cadence replay rejection;
 - frozen owner/axis state;
 - no I/O, persistence, scheduler, event, or runtime activation surface;
@@ -226,4 +237,5 @@ No production composition change, owner auto-construction, scheduler, callback, 
 3. `tests/test_v4_m3_b_registry_affect_owner.py`
 4. `tests/audit/test_m3_b_registry_affect_owner.py`
 5. `docs/audit/M3_B_REGISTRY_37_AXIS_CURRENT_VALUE_OWNER.md`
-6. `docs/audit/forward_additions/pr-<this-pr>.json`
+6. `docs/audit/m2_b_decision_additions/pr-173.json`
+7. `docs/audit/forward_additions/pr-173.json`
