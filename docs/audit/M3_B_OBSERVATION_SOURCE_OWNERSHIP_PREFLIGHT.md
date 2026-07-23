@@ -6,13 +6,7 @@ Status: static blocker-evidence candidate. This work does not install a source o
 
 ## Purpose
 
-PR #170 merged the disconnected caller-supplied M3-B projection contract. That contract deliberately does not decide who owns a real observation for each of the 63 source axes. Before a real read-only observation window can start, source ownership must be mechanically proved rather than inferred from defaults, proposal deltas, container access, or historical persistence.
-
-This preflight asks:
-
-1. Are all 26 legacy mutable hormone axes readable from one concrete runtime container?
-2. Does that read surface already provide the immutable source envelope required by M3-B?
-3. What exists for the 37 registry axes: definitions, proposal metadata, current values, or a real value owner?
+PR #170 merged a disconnected caller-supplied M3-B projection contract. It deliberately did not decide who owns a real observation for each of the 63 source axes. This preflight determines whether real read-only observation can start without confusing container readability, schema defaults, or proposal deltas with current source ownership.
 
 ## Result
 
@@ -33,26 +27,26 @@ LEGACY_IMMUTABLE_SOURCE_ENVELOPE_ABSENT
 REGISTRY_OBSERVED_VALUE_OWNER_ABSENT
 ```
 
-These blockers are the expected successful preflight result. They prevent a false-positive observation-window start.
+The blockers are the expected successful result. They prevent a false-positive observation-window start.
 
 ## Legacy 26-axis finding
 
-`HormoneAdapter` owns a reference to one `HormoneSystem`, and `HormoneAdapter.as_dict()` iterates `self.hs.hormones.items()` and reads every `h.level`. All 26 legacy current levels are mechanically readable from the live legacy container.
+`HormoneAdapter` owns one `HormoneSystem` reference. `HormoneAdapter.as_dict()` iterates `self.hs.hormones.items()` and reads every `h.level`, so all 26 legacy current levels are mechanically readable.
 
-That existing method is not yet an M3-B observation envelope. It does not bind the read to:
+That method is not yet an admissible M3-B source envelope. It lacks:
 
 - versioned source snapshot identity;
 - source schema version;
-- source integrity SHA-256;
+- canonical source integrity SHA-256;
 - explicit original floor and ceiling;
 - confidence and provenance metadata;
-- before/after no-mutation proof;
 - exact source-object identity;
+- before/after no-mutation proof;
 - observation-window sample identity.
 
-It also adds `stress`, `energy`, and `curiosity`. Those are derived compatibility keys rather than authoritative source axes and must not inflate 26 to 29.
+It also returns `stress`, `energy`, and `curiosity`. These are derived compatibility keys, not authoritative source axes, and must not inflate 26 to 29.
 
-The active persistence adapter passes the entire `HormoneSystem` as `self.hs`. Static inspection finds no independent axis-specific snapshot-key contract for the 26 axes. Existing persistence ownership is not reinterpreted as M3-B observation ownership.
+The active persistence adapter retains the whole `HormoneSystem` as `self.hs`. Static inspection finds no independent axis-specific snapshot-key contract for these 26 axes. Existing persistence ownership is not reinterpreted as M3-B observation ownership.
 
 ```text
 legacy_mutable_hormone = READABLE_UNVERSIONED_LEGACY_CONTAINER
@@ -60,26 +54,32 @@ legacy_mutable_hormone = READABLE_UNVERSIONED_LEGACY_CONTAINER
 
 ## Registry 37-axis finding
 
-The registry module defines exactly 37 unique axes with descriptions, defaults/baselines, min/max bounds, decay/spike/refractory policy, evidence requirements, and safety guards. Its factory returns detached definition data.
+The registry module defines exactly 37 unique axes with descriptions, defaults/baselines, bounds, decay/spike/refractory policy, evidence requirements, and safety guards. Its factory returns detached definition data.
 
-The first discovery scan also found an existing proposal layer:
+The repository also contains a bounded proposal layer:
 
-- `adapters/affect_event_to_axis_proposal_map.py` defines bounded event-to-axis **delta proposals**;
-- `adapters/affect_event_proposal_validator.py` validates detached proposals;
-- the interaction matrix and registry are consumed as read-only policy data;
-- module contracts explicitly prohibit live application, runtime mutation, persistence, speech, memory writes, and gate bypass.
+- `affect_event_to_axis_proposal_map.py` defines event-to-axis delta proposals;
+- `affect_event_proposal_validator.py` validates detached proposals;
+- interaction and registry data remain read-only policy inputs;
+- those modules explicitly prohibit live application, persistence, speech, memory writes, and gate bypass.
 
-The scan found exactly 27 axis-key proposal-rule literals in the event proposal map. These are important future producer-design inputs, but they are not current axis values. A rule such as `hardware_low_power → recovery_need +0.04` does not establish the current value of `recovery_need`, a value container, update history, snapshot identity, or ownership.
+Mechanical extraction from `_EVENT_ROWS` finds proposal metadata covering exactly **28 unique registry axes** across repeated event rules. These values are deltas, not current state. A rule such as `hardware_low_power → recovery_need +0.04` does not establish the current `recovery_need`, a current-value container, update history, snapshot identity, or owner.
 
-The checker therefore separates:
+The current-value scan intentionally excludes:
+
+- registry definition/default dictionaries;
+- detached result packets;
+- interaction matrices;
+- proposal maps and validators;
+- audit/test paths.
+
+An owner candidate must at minimum perform an exact-axis subscript write outside those paths. The scan finds:
 
 ```text
-proposal_rule_candidates          = 27
-observed_value_store_candidates    = 0
-observed_value_owner_found      = false
+proposal-rule unique axes:          28
+observed-value store candidates:     0
+observed-value owner found:       false
 ```
-
-Registry defaults are schema values. Proposal deltas are detached future transition metadata. Neither may be materialized as real observations.
 
 ```text
 read_only_affect_registry = PROPOSAL_METADATA_EXISTS_NO_OBSERVED_VALUE_OWNER
@@ -87,9 +87,9 @@ read_only_affect_registry = PROPOSAL_METADATA_EXISTS_NO_OBSERVED_VALUE_OWNER
 
 ## Why observation-ready count is zero
 
-The legacy values are readable but not yet admissible as A10-recalculable M3-B evidence because the immutable identity/schema/range/integrity/confidence envelope and no-mutation proof are absent.
+The 26 legacy levels are readable but lack the immutable identity/schema/range/integrity/confidence envelope and no-mutation proof required for A10-recalculable observation evidence.
 
-The registry axes have definitions and bounded proposal rules, but no current-value state owner. The preflight therefore counts neither source family as observation-ready.
+The 37 registry axes have definitions and bounded proposal rules, but no current-value lifecycle owner. Neither source family is therefore admissible for a strict 63-axis real observation window.
 
 ## Required next artifacts
 
@@ -101,14 +101,14 @@ A later PR may add a separately invoked, after-the-fact read-only capture around
 - read all and only the 26 authoritative axes;
 - preserve level, baseline, tier, phase, and source identity evidence;
 - bind a versioned schema and canonical integrity digest;
-- prove all source values and object state unchanged before/after capture;
-- exclude derived compatibility keys from the authoritative set;
+- prove source object and values unchanged before/after capture;
+- exclude derived compatibility keys;
 - install no production hook and access no persistence;
 - remain caller-invoked, `shadow_only`, and default-disabled.
 
 ### 2. Registry 37-axis current-value ownership design
 
-The existing proposal map should be reused as bounded candidate metadata, not mistaken for state. A separate design must define for every axis:
+The existing proposal map can be reused as bounded candidate metadata, not as state. A separate design must define for every axis:
 
 - current-value container and lifecycle owner;
 - deterministic initial-state rule distinct from observation evidence;
@@ -130,8 +130,8 @@ Only after both source families are admissible may a separate packet prove:
 - complete strict 63-axis coverage;
 - repeated identical projection for identical source snapshots;
 - source-integrity and missing-input fail-closed behavior;
-- source and target saturation metrics;
-- confidence distribution and bounded drive divergence;
+- source/target saturation and confidence metrics;
+- bounded drive divergence;
 - zero live affect/drive/goal/memory/expression effects;
 - zero event append and zero persistence access;
 - legacy runtime and persistence still authoritative.
@@ -142,12 +142,12 @@ Only after both source families are admissible may a separate packet prove:
 
 - parses the 26 legacy definitions from `HormoneSystem._init_all_hormones`;
 - parses the 37 registry definitions from `AXIS_GROUPS`;
+- extracts the exact 28-axis proposal coverage from `_EVENT_ROWS`;
 - inspects `HormoneAdapter.__init__` and `as_dict` for current-level readability;
 - checks legacy persistence only for exact legacy-axis snapshot keys;
-- scans tracked Python for registry-factory calls and exact-axis stores;
-- classifies reviewed proposal/config modules separately from current-value ownership;
-- records tracked parse errors separately because they are not source-ownership evidence;
-- emits deterministic canonical JSON with a recalculable report SHA-256;
+- scans tracked Python for registry-factory calls and exact-axis state writes;
+- separates reviewed proposal/config modules from current-value ownership;
+- emits deterministic canonical JSON with a recalculable SHA-256;
 - treats the exact two blockers as the expected successful result.
 
 It imports no EVE production module and invokes no runtime or persistence behavior.
@@ -165,7 +165,7 @@ Focused tests require:
 - full legacy readability but incomplete immutable envelope;
 - whole-container persistence evidence without axis-specific snapshot ownership;
 - registry defaults classified as definitions;
-- exact 27 proposal-rule candidates classified as metadata;
+- exact 28-axis proposal coverage classified as metadata;
 - zero observed-value store candidates;
 - exact two blockers and zero checker errors;
 - deterministic recalculable output;
@@ -183,7 +183,7 @@ M3-B merge SHA:        0d755c35c994fa5b1ed3f2768c7905cda83c9a95
 M2-E compatibility:    29977749585
 ```
 
-Do not rerun prerequisite workflows merely because work moves to a new chat. Rerun only if the pinned head, artifact digest, or validation scope changes, or the artifact is lost/corrupt.
+Do not rerun prerequisite workflows merely because work moves to another chat. Rerun only if the pinned head, artifact digest, or validation scope changes, or the artifact is lost/corrupt.
 
 The final exact-head run for this preflight will be pinned in PR #171 and reused under the same rule.
 
