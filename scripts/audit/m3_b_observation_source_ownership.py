@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Static M3-B source-ownership preflight for all 63 affect axes.
 
-The checker parses source text only. It imports no EVE production module, reads no
-live state, installs no observer, accesses no persistence, emits no event, and
-cannot start an observation window or grant M3-C/M3-E/cutover authority.
+This checker parses source text only. It imports no EVE production module, reads
+no live state, installs no observer, accesses no persistence, emits no event, and
+cannot start an observation window or grant M3-C, M3-E, or cutover authority.
 """
 from __future__ import annotations
 
@@ -41,6 +41,7 @@ REQUIRED_OBSERVATION_FIELDS = (
     "ceiling",
     "confidence",
 )
+EXPECTED_PROPOSAL_AXIS_COUNT = 28
 EXPECTED_BLOCKERS = (
     "LEGACY_IMMUTABLE_SOURCE_ENVELOPE_ABSENT",
     "REGISTRY_OBSERVED_VALUE_OWNER_ABSENT",
@@ -59,7 +60,9 @@ def _parse(root: Path, relative: Path) -> ast.AST:
 
 
 def _string(node: ast.AST | None) -> str | None:
-    return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
 
 
 def _name(node: ast.AST) -> str:
@@ -185,7 +188,7 @@ def extract_proposal_rule_axes(
     root: Path,
     registry_axes: Iterable[str],
 ) -> dict[str, Any]:
-    """Extract bounded `_EVENT_ROWS` proposal keys, never current state values."""
+    """Extract `_EVENT_ROWS` bounded proposal keys, never current values."""
     registry = frozenset(registry_axes)
     tree = _parse(root, PROPOSAL_MAP_PATH)
     occurrences: list[dict[str, Any]] = []
@@ -198,7 +201,7 @@ def extract_proposal_rule_axes(
                 delta_node = keyword.value
         if not isinstance(delta_node, ast.Dict):
             continue
-        event = _string(node.args[0]) if node.args else None
+        event_category = _string(node.args[0]) if node.args else None
         for key_node in delta_node.keys:
             axis = _string(key_node)
             if axis is None:
@@ -208,7 +211,7 @@ def extract_proposal_rule_axes(
             occurrences.append(
                 {
                     "axis": axis,
-                    "event_category": event,
+                    "event_category": event_category,
                     "path": PROPOSAL_MAP_PATH.as_posix(),
                     "line": int(getattr(key_node, "lineno", 1)),
                     "classification": "bounded_proposal_delta_metadata",
@@ -284,12 +287,11 @@ def inspect_persistence_container(root: Path, legacy_axes: Iterable[str]) -> dic
 
 
 def scan_registry_usage(root: Path, registry_axes: Iterable[str]) -> dict[str, Any]:
-    """Find explicit keyed writes outside definition/proposal/audit paths.
+    """Find exact-axis keyed writes outside definition/proposal/audit paths.
 
-    Dict literals are not treated as current-value ownership: they are commonly
-    schemas, detached result packets, interaction matrices, or proposal metadata.
-    A candidate owner must at least perform an exact-axis subscript Store outside
-    the reviewed policy-only and non-production paths.
+    Dict literals are not ownership: they are commonly schemas, detached packets,
+    matrices, or proposal metadata. A candidate must perform an exact-axis
+    subscript Store outside reviewed policy-only and non-production paths.
     """
     axes = frozenset(registry_axes)
     calls: list[dict[str, Any]] = []
@@ -320,11 +322,7 @@ def scan_registry_usage(root: Path, registry_axes: Iterable[str]) -> dict[str, A
             if not isinstance(node, ast.Subscript) or not isinstance(node.ctx, ast.Store):
                 continue
             axis = _string(node.slice)
-            if (
-                axis not in axes
-                or _nonproduction(relative)
-                or relative in PROPOSAL_POLICY_PATHS
-            ):
+            if axis not in axes or _nonproduction(relative) or relative in PROPOSAL_POLICY_PATHS:
                 continue
             observed_stores.append(
                 {
@@ -381,8 +379,10 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         errors.append("legacy persistence unexpectedly claims axis-specific snapshot ownership")
     if legacy_surface["axis_count_readable"] != 26:
         errors.append("legacy read surface does not expose all 26 axes")
-    if proposal_rules["proposal_rule_unique_axis_count"] != 27:
-        errors.append("proposal map must cover exactly 27 unique registry axes")
+    if proposal_rules["proposal_rule_unique_axis_count"] != EXPECTED_PROPOSAL_AXIS_COUNT:
+        errors.append(
+            f"proposal map must cover exactly {EXPECTED_PROPOSAL_AXIS_COUNT} unique registry axes"
+        )
 
     report: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
