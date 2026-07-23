@@ -7,11 +7,12 @@ append no event, access no persistence, and grant no behavioral or cutover autho
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
-from core.event_kernel import SHADOW_AUTHORITY, canonical_json_object
+from core.event_kernel import SHADOW_AUTHORITY
 
 PROJECTION_SCHEMA_VERSION = "eve.m3-b.affect-shadow-projection.v1"
 OBSERVATION_SCHEMA_VERSION = "eve.m3-b.affect-axis-observation.v1"
@@ -36,9 +37,8 @@ ALLOWED_SOURCE_FAMILIES = {"legacy_mutable_hormone", "read_only_affect_registry"
 ALLOWED_STATUSES = {"MAPPED", "PROPOSED-DROP"}
 CONFIDENCE_CAPS = {"high": 1.0, "medium": 0.75, "low": 0.50}
 
-# All mapped target pairs are positive unless listed here. Deficit, pressure,
-# inhibition, threat, and risk axes lower the achieved/readiness state of the
-# named target while their appraisal labels remain available for later review.
+# All mapped target pairs are positive unless listed here. These explicit
+# deficit/load/risk pairs lower the achieved/readiness value of the target.
 NEGATIVE_TARGET_PAIRS = frozenset(
     {
         ("norepinephrine", "safety"),
@@ -97,9 +97,27 @@ def _finite(value: Any, field: str) -> float:
     return result
 
 
+def _canonical_json(value: Mapping[str, Any], field: str) -> str:
+    """Canonical evidence JSON without the event-envelope payload size limit.
+
+    Event envelopes remain bounded by ``core.event_kernel``. A complete 63-axis
+    debug projection is a recalculable evidence object, not an event payload, so
+    applying the event-envelope byte cap here would make full coverage impossible.
+    """
+    try:
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise AffectProjectionError(f"{field} is not canonical JSON") from exc
+
+
 def _digest(value: Mapping[str, Any], field: str) -> str:
-    text = canonical_json_object(value, field=field)
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return hashlib.sha256(_canonical_json(value, field).encode("utf-8")).hexdigest()
 
 
 def _require_digest(value: str, field: str) -> str:
@@ -274,7 +292,11 @@ class DriveSpec:
     gain: float
     max_slew_per_second: float
     states: tuple[str, str, str, str]
-    boundaries: tuple[tuple[float, float, int], tuple[float, float, int], tuple[float, float, int]]
+    boundaries: tuple[
+        tuple[float, float, int],
+        tuple[float, float, int],
+        tuple[float, float, int],
+    ]
 
     def __post_init__(self) -> None:
         if self.drive not in ALLOWED_DRIVES:
@@ -551,10 +573,11 @@ class ShadowAffectProjection:
 
 
 def normalize_observation(observation: AxisObservation) -> tuple[float, bool]:
-    if observation.value >= observation.baseline:
-        denominator = observation.ceiling - observation.baseline
-    else:
-        denominator = observation.baseline - observation.floor
+    denominator = (
+        observation.ceiling - observation.baseline
+        if observation.value >= observation.baseline
+        else observation.baseline - observation.floor
+    )
     raw = (observation.value - observation.baseline) / denominator
     normalized = _clip(raw, -1.0, 1.0)
     return normalized, not math.isclose(raw, normalized, abs_tol=1e-12)
@@ -653,9 +676,8 @@ def _candidate(prior: DriveShadowPrior, next_value: float) -> DiagnosticTransiti
             PARAMETER_VERSION,
         )
     )
-    candidate_id = hashlib.sha256(material.encode("utf-8")).hexdigest()
     return DiagnosticTransitionCandidate(
-        candidate_id=candidate_id,
+        candidate_id=hashlib.sha256(material.encode("utf-8")).hexdigest(),
         transition_id=transition_id,
         drive=prior.drive,
         from_state=prior.named_state,
@@ -683,7 +705,6 @@ def _drive_projection(
     limit = spec.max_slew_per_second * elapsed_seconds
     bounded_delta = _clip(delta, -limit, limit)
     next_value = _clip(prior.value + bounded_delta, spec.floor, spec.ceiling)
-    candidate = _candidate(prior, next_value)
     return DriveShadowProjection(
         drive=prior.drive,
         previous_value=prior.value,
@@ -698,7 +719,7 @@ def _drive_projection(
         slew_limited=not math.isclose(delta, bounded_delta, abs_tol=1e-12),
         saturated=not math.isclose(unclipped_target, target, abs_tol=1e-12),
         pending_candidate_retained=prior.pending_candidate_id is not None,
-        candidate=candidate,
+        candidate=_candidate(prior, next_value),
     )
 
 
@@ -732,8 +753,7 @@ def project_shadow_affect(
     axis_rows = tuple(_axis_projection(row, observation_by_axis.get(row.axis)) for row in mapping_rows)
     by_drive: dict[str, list[DriveContribution]] = {drive: [] for drive in ALLOWED_DRIVES}
     for row in axis_rows:
-        by_drive_values = row.contributions
-        for contribution in by_drive_values:
+        for contribution in row.contributions:
             by_drive[contribution.drive].append(contribution)
     drive_rows = tuple(
         _drive_projection(
