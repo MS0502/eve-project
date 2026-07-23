@@ -86,11 +86,11 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
         "read_only_affect_registry": 37,
         "total": 63,
     }
-    assert tuple(report["blockers"]) == EXPECTED_BLOCKERS, report["registry_usage"]
+    assert tuple(report["blockers"]) == EXPECTED_BLOCKERS
     assert report["errors"] == []
     assert report["source_family_readiness"] == {
         "legacy_mutable_hormone": "READABLE_UNVERSIONED_LEGACY_CONTAINER",
-        "read_only_affect_registry": "DEFINITION_ONLY_NO_OBSERVED_VALUE_OWNER",
+        "read_only_affect_registry": "PROPOSAL_METADATA_EXISTS_NO_OBSERVED_VALUE_OWNER",
     }
     assert report["strict_63_axis_observation_ready"] is False
     assert report["observation_ready_axis_count"] == 0
@@ -100,13 +100,17 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
     assert report["m3_c_open"] is False
 
 
-def test_registry_scan_does_not_treat_defaults_or_projection_rules_as_value_ownership():
+def test_proposal_maps_are_visible_but_not_misclassified_as_current_value_ownership():
     usage = audit_repository(ROOT)["registry_usage"]
-    assert usage["observed_value_owner_found"] is False, usage[
-        "production_value_store_candidates"
-    ]
-    assert usage["production_value_store_candidate_count"] == 0
-    assert usage["production_value_store_candidates"] == []
+    assert usage["proposal_rule_candidate_count"] == 27
+    assert usage["proposal_rule_candidates"]
+    assert {
+        row["path"] for row in usage["proposal_rule_candidates"]
+    } == {"adapters/affect_event_to_axis_proposal_map.py"}
+    assert usage["proposal_rules_are_not_current_axis_values"] is True
+    assert usage["observed_value_owner_found"] is False
+    assert usage["observed_value_store_candidate_count"] == 0
+    assert usage["observed_value_store_candidates"] == []
     assert usage["tracked_parse_errors_are_not_source_ownership_evidence"] is True
 
 
