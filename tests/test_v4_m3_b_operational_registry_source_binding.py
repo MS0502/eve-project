@@ -76,20 +76,28 @@ def _record(
     *,
     source_instance_id: str = "test:operational-source:v1",
     source_schema_version: str = "test.operational-source.v1",
+    observation_id: str | None = None,
+    snapshot_id: str | None = None,
     raw_values: tuple[tuple[str, object], ...] | None = None,
 ) -> OperationalRegistryRawRecord:
     values = _raw_values(axis, tick) if raw_values is None else raw_values
-    observation_id = f"test:{axis}:observation:{tick}"
-    snapshot_id = f"test:{axis}:snapshot:{tick}"
+    resolved_observation_id = (
+        f"test:{axis}:observation:{tick}"
+        if observation_id is None
+        else observation_id
+    )
+    resolved_snapshot_id = (
+        f"test:{axis}:snapshot:{tick}" if snapshot_id is None else snapshot_id
+    )
     source_integrity_digest = _sha(
         f"source:{axis}:{tick}:{source_instance_id}:{source_schema_version}"
     )
     raw_digest = operational_raw_observation_digest(
         axis=axis,
         logical_tick=tick,
-        observation_id=observation_id,
+        observation_id=resolved_observation_id,
         source_instance_id=source_instance_id,
-        source_snapshot_id=snapshot_id,
+        source_snapshot_id=resolved_snapshot_id,
         source_schema_version=source_schema_version,
         source_integrity_digest=source_integrity_digest,
         raw_values=values,
@@ -97,9 +105,9 @@ def _record(
     return OperationalRegistryRawRecord(
         axis=axis,
         logical_tick=tick,
-        observation_id=observation_id,
+        observation_id=resolved_observation_id,
         source_instance_id=source_instance_id,
-        source_snapshot_id=snapshot_id,
+        source_snapshot_id=resolved_snapshot_id,
         source_schema_version=source_schema_version,
         source_integrity_digest=source_integrity_digest,
         raw_observation_digest=raw_digest,
@@ -213,7 +221,7 @@ def test_raw_record_rejects_missing_reordered_duplicate_and_out_of_range_fields(
     )
     with pytest.raises(
         OperationalRegistrySourceBindingError,
-        match="inside \[0,1\]",
+        match="inside \\[0,1\\]",
     ):
         _record("energy_budget", 1, raw_values=out_of_range)
 
@@ -247,40 +255,13 @@ def test_forbidden_raw_origins_fail_closed(field: str):
         replace(_record("energy_budget", 1), **{field: True})
 
 
-def test_derivation_rejects_insufficient_count_span_mixed_axis_and_order():
+def test_derivation_rejects_insufficient_count_mixed_axis_and_unsorted_ticks():
     energy = _records("energy_budget")
     with pytest.raises(
         OperationalRegistrySourceBindingError,
         match="insufficient raw record count",
     ):
         derive_operational_axis_evidence(energy[:2])
-    compressed = (
-        _record("energy_budget", 1),
-        _record("energy_budget", 2),
-        replace(
-            _record("energy_budget", 3),
-            logical_tick=2,
-            observation_id="test:energy_budget:observation:compressed",
-            source_snapshot_id="test:energy_budget:snapshot:compressed",
-            raw_observation_digest=operational_raw_observation_digest(
-                axis="energy_budget",
-                logical_tick=2,
-                observation_id="test:energy_budget:observation:compressed",
-                source_instance_id="test:operational-source:v1",
-                source_snapshot_id="test:energy_budget:snapshot:compressed",
-                source_schema_version="test.operational-source.v1",
-                source_integrity_digest=_record(
-                    "energy_budget", 3
-                ).source_integrity_digest,
-                raw_values=_record("energy_budget", 3).raw_values,
-            ),
-        ),
-    )
-    with pytest.raises(
-        OperationalRegistrySourceBindingError,
-        match="ticks must be unique",
-    ):
-        derive_operational_axis_evidence(compressed)
     with pytest.raises(
         OperationalRegistrySourceBindingError,
         match="cannot mix axes",
@@ -295,15 +276,39 @@ def test_derivation_rejects_insufficient_count_span_mixed_axis_and_order():
         derive_operational_axis_evidence((energy[1], energy[0], energy[2]))
 
 
-def test_derivation_rejects_duplicate_identity_and_mixed_source_contract():
-    records = list(_records("energy_budget"))
+def test_derivation_rejects_duplicate_ticks_ids_snapshots_and_mixed_source_contract():
+    records = _records("energy_budget")
+    duplicate_tick = _record(
+        "energy_budget",
+        2,
+        observation_id="test:energy_budget:observation:duplicate-tick",
+        snapshot_id="test:energy_budget:snapshot:duplicate-tick",
+    )
+    with pytest.raises(
+        OperationalRegistrySourceBindingError,
+        match="ticks must be unique",
+    ):
+        derive_operational_axis_evidence((records[0], records[1], duplicate_tick))
+    duplicate_id = _record(
+        "energy_budget",
+        3,
+        observation_id=records[0].observation_id,
+    )
     with pytest.raises(
         OperationalRegistrySourceBindingError,
         match="observation ids must be unique",
     ):
-        derive_operational_axis_evidence(
-            (records[0], replace(records[1], observation_id=records[0].observation_id), records[2])
-        )
+        derive_operational_axis_evidence((records[0], records[1], duplicate_id))
+    duplicate_snapshot = _record(
+        "energy_budget",
+        3,
+        snapshot_id=records[0].source_snapshot_id,
+    )
+    with pytest.raises(
+        OperationalRegistrySourceBindingError,
+        match="snapshots must be unique",
+    ):
+        derive_operational_axis_evidence((records[0], records[1], duplicate_snapshot))
     mixed_schema = _record(
         "energy_budget",
         3,
