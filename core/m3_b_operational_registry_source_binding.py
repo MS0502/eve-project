@@ -28,6 +28,9 @@ RAW_SCHEMA_VERSION = "eve.m3-b.operational-registry-raw-record.v1"
 BINDING_SCHEMA_VERSION = "eve.m3-b.operational-registry-source-binding.v1"
 BINDING_SET_SCHEMA_VERSION = "eve.m3-b.operational-registry-source-binding-set.v1"
 SOURCE_FAMILY = "operational_metrics_or_appraised_load_trace"
+ACQUISITION_METHOD = "explicit_caller_supplied_immutable_operational_record"
+VERIFICATION_METHOD = "exact_schema_range_and_digest_verification"
+RAW_MODEL_OR_RULE_VERSION = BINDING_SCHEMA_VERSION
 OPERATIONAL_AXES = (
     "energy_budget",
     "fatigue_pressure",
@@ -149,15 +152,19 @@ def operational_raw_observation_digest(
     values = tuple(raw_values)
     return _digest(
         {
+            "acquisition_method": ACQUISITION_METHOD,
             "axis": axis,
             "logical_tick": logical_tick,
+            "model_or_rule_version": RAW_MODEL_OR_RULE_VERSION,
             "observation_id": observation_id,
             "raw_values": [[field, value] for field, value in values],
             "schema_version": RAW_SCHEMA_VERSION,
+            "source_family": SOURCE_FAMILY,
             "source_instance_id": source_instance_id,
             "source_integrity_digest": source_integrity_digest,
             "source_schema_version": source_schema_version,
             "source_snapshot_id": source_snapshot_id,
+            "verification_method": VERIFICATION_METHOD,
         },
         "operational_raw_observation",
     )
@@ -269,9 +276,9 @@ class OperationalRegistryRawRecord:
     source_integrity_digest: str
     raw_observation_digest: str
     raw_values: tuple[tuple[str, Any], ...]
-    acquisition_method: str = "explicit_caller_supplied_immutable_operational_record"
-    verification_method: str = "exact_schema_range_and_digest_verification"
-    model_or_rule_version: str = BINDING_SCHEMA_VERSION
+    acquisition_method: str = ACQUISITION_METHOD
+    verification_method: str = VERIFICATION_METHOD
+    model_or_rule_version: str = RAW_MODEL_OR_RULE_VERSION
     source_family: str = SOURCE_FAMILY
     synthetic: bool = False
     proposal_only: bool = False
@@ -288,17 +295,21 @@ class OperationalRegistryRawRecord:
             "source_instance_id",
             "source_snapshot_id",
             "source_schema_version",
-            "acquisition_method",
-            "verification_method",
-            "model_or_rule_version",
         ):
             _identifier(getattr(self, field), field)
+        expected_provenance = {
+            "acquisition_method": ACQUISITION_METHOD,
+            "verification_method": VERIFICATION_METHOD,
+            "model_or_rule_version": RAW_MODEL_OR_RULE_VERSION,
+            "source_family": SOURCE_FAMILY,
+        }
+        for field, expected in expected_provenance.items():
+            if getattr(self, field) != expected:
+                raise OperationalRegistrySourceBindingError(
+                    f"raw record {field} does not match the canonical operational provenance contract"
+                )
         _digest_string(self.source_integrity_digest, "source_integrity_digest")
         _digest_string(self.raw_observation_digest, "raw_observation_digest")
-        if self.source_family != SOURCE_FAMILY:
-            raise OperationalRegistrySourceBindingError(
-                "raw record source family does not match operational manifest"
-            )
         values = tuple(self.raw_values)
         fields = tuple(field for field, _ in values)
         expected_fields = _manifest_entry(self.axis).required_raw_fields
@@ -319,7 +330,7 @@ class OperationalRegistryRawRecord:
         )
         if self.raw_observation_digest != expected_digest:
             raise OperationalRegistrySourceBindingError(
-                "raw observation digest does not match identity, time, and values"
+                "raw observation digest does not match identity, time, provenance, and values"
             )
         if any(
             (
@@ -413,9 +424,7 @@ class OperationalRegistrySourceBinding:
             "required_raw_fields": entry.required_raw_fields,
             "minimum_raw_record_count": entry.minimum_raw_record_count,
             "minimum_logical_span_ticks": entry.minimum_logical_span_ticks,
-            "derivation_rule_id": (
-                f"{BINDING_SCHEMA_VERSION}:{self.axis}:mean.v1"
-            ),
+            "derivation_rule_id": f"{BINDING_SCHEMA_VERSION}:{self.axis}:mean.v1",
             "confidence_rule_id": (
                 f"{BINDING_SCHEMA_VERSION}:{self.axis}:coverage-variance.v1"
             ),
@@ -578,9 +587,7 @@ def operational_registry_source_bindings() -> OperationalRegistrySourceBindingSe
                 required_raw_fields=entry.required_raw_fields,
                 minimum_raw_record_count=entry.minimum_raw_record_count,
                 minimum_logical_span_ticks=entry.minimum_logical_span_ticks,
-                derivation_rule_id=(
-                    f"{BINDING_SCHEMA_VERSION}:{axis}:mean.v1"
-                ),
+                derivation_rule_id=f"{BINDING_SCHEMA_VERSION}:{axis}:mean.v1",
                 confidence_rule_id=(
                     f"{BINDING_SCHEMA_VERSION}:{axis}:coverage-variance.v1"
                 ),
@@ -678,7 +685,7 @@ def derive_operational_axis_evidence(
         source_schema_version=RAW_SCHEMA_VERSION,
         source_integrity_digest=source_integrity_digest,
         raw_observation_digest=raw_bundle_digest,
-        acquisition_method=items[0].acquisition_method,
-        verification_method=items[0].verification_method,
+        acquisition_method=ACQUISITION_METHOD,
+        verification_method=VERIFICATION_METHOD,
         model_or_rule_version=binding.derivation_rule_id,
     )
