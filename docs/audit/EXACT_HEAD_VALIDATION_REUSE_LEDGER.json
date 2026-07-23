@@ -87,6 +87,21 @@
       "merge_method": "squash",
       "merge_sha": "03bf2de7294ae21cef0961cd50e516be85330d13",
       "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 178,
+      "title": "Registry 37-Axis Observation Source-Manifest Preflight",
+      "exact_head": "2f53ff914a650ef6f3c49893e4c05d85e0ac6017",
+      "exact_run": 29997660905,
+      "focused": "17 passed",
+      "full": "2916 passed",
+      "artifact_name": "exact-head-validation-2f53ff914a650ef6f3c49893e4c05d85e0ac6017",
+      "artifact_sha256": "b4acb582bbeb4877ee2260ec09902fcfe095d8c46aadf3410dbd9241d6840628",
+      "m2e_run": 29997661043,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "0c0cfdd5a32f25cab52f62e15895475ea64afd63",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
     }
   ],
   "superseded_or_nonreusable": [
@@ -102,8 +117,8 @@
     }
   ],
   "active_unmerged": {
-    "pr": 178,
+    "pr": 179,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "03bf2de7294ae21cef0961cd50e516be85330d13"
+    "baseline_sha": "0c0cfdd5a32f25cab52f62e15895475ea64afd63"
   }
 }
