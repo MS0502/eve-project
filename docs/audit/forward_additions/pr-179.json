@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_operational_registry_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "OperationalRegistryRawRecord.__post_init__",
+        "_digest",
+        "derive_operational_axis_evidence",
+        "operational_registry_source_bindings"
+      ],
+      "rationale": "Caller-invoked detached shadow source-binding construction only. Findings are canonical SHA-256 encoding, local set-based uniqueness checks, immutable dataclass validation, and local list assembly. The module has no hardware polling, runtime observer, scheduler, persistence, event append, owner mutation, production capture, observation-window transition, cutover, or M3-E authority.",
+      "owner": "M3-B operational four-axis source binding",
+      "disposition": "DISCONNECTED_SHADOW_SOURCE_BINDING_ONLY",
+      "introduced_by_pr": 179,
+      "fingerprints": {
+        "2df4d96481fe3290b1b7f7f042ec24cc8bc340d4e7689cbf11587a1159d856a2": 1,
+        "cae238d8518bcba94e346954ea731f1cf3f28e3eb38627c8a33411e883705c19": 1,
+        "d86f5d7aef224828e6ace670ce8bf209a90cc88cbbf007bb617070d0432089d8": 1,
+        "f07e940ffa9c9436abc548ca4c522f4f1c8e119706db0755adc3070a582d6d3d": 1
+      }
+    },
+    {
+      "path": "scripts/audit/m3_b_operational_registry_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "<module>",
+        "_digest",
+        "_sha",
+        "_static_surface",
+        "_write",
+        "audit_repository"
+      ],
+      "rationale": "Audit CLI only. Findings are local hash encoding, AST set accounting, rejection/error collection, sys.path setup, and caller-requested stdout/file report output. The audit fixture is explicitly non-production and cannot install capture, mutate registry state, start a window, authorize cutover, or open M3-E authority.",
+      "owner": "M3-B operational four-axis recalculable audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 179,
+      "fingerprints": {
+        "1707ec74a1356ea3c31333e3fecd25f10f65f94894d08cc6f9962c11ea3aea8f": 1,
+        "1fe3c4a1985cad34ffa2d0ffee3d99ec035c6df10fbb96aed5ff1ea5f544fcb5": 1,
+        "2910e787220dd93e6f91ee9bc49f82f75774157f9889165f3e8c3e9190626996": 1,
+        "38b827ea22b068ccda0a6c80c8ec235f1a3c30007b7c128afde33221261e1e34": 1,
+        "6a143443e15e44ad9eb6eea8a17c9863e1c8894020b4e3a409c6a246b8459838": 3,
+        "73a979984d5fd70bc1e49ad66a66cd6f9c6b1ad38bf87dc0de8ad55b13cabc68": 2,
+        "7707ca64df43d0cf188280c6bac5e6afe7cae296159bb12b1c44b07e72d9460d": 1,
+        "8a5f0a0c6ae2f97798a6c3b4cd48c2e1fc1a2c1635f616b6e6383052781aaf42": 1,
+        "956519a87f84833f8f0590d066d246bf0549d737c0b4fde449b62b314901270a": 1,
+        "9c553057a0275cf32ccc413a3d056ed99d1ddcdbcbbe1455992b25e7ad4a6a4f": 1,
+        "bc3db335728446e2b6dc5d4134f77d9501e352a792f94bc8c31011fe80f169ac": 2,
+        "c599a96793c6ee4a798d13defaf0cecdfa0834bea63e5dd0b5e2da005516e0a5": 1,
+        "c6c315120a625a9f3ab57f9908c2be436c8de2e02affe56876a80f6829b12ee8": 7
+      }
+    },
+    {
+      "path": "tests/audit/test_m3_b_operational_registry_source_binding.py",
+      "categories": [
+        "mutation"
+      ],
+      "symbols": [
+        "test_operational_source_binding_audit_is_deterministic_and_exact"
+      ],
+      "rationale": "Test-only set construction used to compare exact derived-evidence axis coverage. It executes no runtime capture, persistence, registry mutation, observation window, or authority transition.",
+      "owner": "M3-B operational source-binding audit tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 179,
+      "fingerprints": {
+        "0d66c06a5bc6f32688ebb509b0c0ff2ad6bfd42c46aa52a394e81c632c0dd794": 2
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_operational_registry_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "_sha",
+        "test_binding_and_binding_set_are_frozen_and_cannot_claim_authority",
+        "test_core_module_has_no_io_polling_scheduler_event_or_runtime_surface",
+        "test_tick_counts_cannot_exceed_sampling_window"
+      ],
+      "rationale": "Focused test evidence only. Findings are fixture hashing, local AST set accounting, deliberately rejected frozen-dataclass assignment, and local fixture mutation used to prove fail-closed range and authority boundaries.",
+      "owner": "M3-B operational four-axis focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 179,
+      "fingerprints": {
+        "516227790a041f0feed654dc00f717ca74a73a5a28550e475609d539dc4350a5": 1,
+        "554eb53888cd34763867557aba7d31258b0ec7ee151567f0811ccd8b47fbfc72": 2,
+        "6e137b337f5ee3517b105b5f3b81bf99fc4070c09862cdd7d95523838f055fb8": 1,
+        "8f99ca5a3c4337cdad669626846aa83840693e8617096019ca3b2947fdb3aad4": 1,
+        "93d8089804d7c7f840b2c147fa8439c933f807abbcf3bd6a2b4a9763fad4ebe3": 1,
+        "b6528c1b8495def7cb770fe56709b5fb0355af102cff908277f146fdb76529b5": 2,
+        "c4180d80f300e58071e5828aa814cc05e2b6b0a80774befa764bec5677255b0e": 2,
+        "fb85610fb7b8dbb66dd0d544d35261df6ac5dac24295d854c45774c49bc2c8c5": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_operational_registry_source_binding_provenance.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "_sha"
+      ],
+      "rationale": "Focused provenance-spoof rejection test fixture only. SHA-256 is used to create deterministic non-placeholder fixture digests; no adaptive state, external read, persistence, capture, or authority path exists.",
+      "owner": "M3-B operational provenance focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 179,
+      "fingerprints": {
+        "a526e832737a2228fb842894ec4a60ef9c81a35ceb0d24488413f7cb787f171d": 1
+      }
+    }
+  ]
+}
