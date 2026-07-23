@@ -113,10 +113,16 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         errors.append("registry owner genesis is not deterministic")
     if len(observations) != 37 or tuple(item.axis for item in observations) != REGISTRY_AXIS_ORDER:
         errors.append("registry owner observation snapshot is incomplete")
+    if any(item.confidence != 0.0 for item in observations):
+        errors.append("registry baseline genesis was incorrectly promoted to positive-confidence observation evidence")
     if first.genesis_is_observation_evidence or first.proposal_metadata_is_current_state:
         errors.append("definitions or proposal metadata masquerade as current observation")
     if proposed.value_for("competence_drive") <= first.value_for("competence_drive"):
         errors.append("validated proposal did not create a detached owner transition")
+    if proposed.axes[REGISTRY_AXIS_ORDER.index("competence_drive")].confidence != 0.9:
+        errors.append("validated proposal did not establish confidence for its touched axis")
+    if proposed.axes[REGISTRY_AXIS_ORDER.index("energy_budget")].confidence != 0.0:
+        errors.append("untouched genesis axis gained observation confidence")
     if not first.value_for("competence_drive") < advanced.value_for("competence_drive") < proposed.value_for("competence_drive"):
         errors.append("cadence did not decay the proposal state toward baseline")
     if not static["no_io_persistence_scheduler_event_or_runtime_surface"]:
@@ -146,17 +152,19 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "axis_count": len(REGISTRY_AXIS_ORDER),
         "axis_order": list(REGISTRY_AXIS_ORDER),
         "current_value_owner_contract_found": True,
-        "deterministic_initial_state_rule": "registry_baseline_genesis_materialized_as_current_state_not_observation_evidence",
+        "deterministic_initial_state_rule": "registry_baseline_genesis_materialized_as_zero_confidence_current_state_not_observation_evidence",
         "genesis_is_observation_evidence": first.genesis_is_observation_evidence,
+        "genesis_unknown_observation_count": sum(item.confidence == 0.0 for item in observations),
         "proposal_metadata_is_current_state": first.proposal_metadata_is_current_state,
-        "accepted_proposal_boundary": "existing_read_only_validator_plus_exact_digest_sequence_operator_authorization_identity",
+        "accepted_proposal_boundary": "existing_read_only_validator_plus_exact_digest_sequence_operator_authorization_identity_and_positive_confidence",
         "proposal_transition_old_state_unchanged": first.value_for("competence_drive") == 0.50,
         "proposal_transition_new_state_digest_changed": proposed.state_digest != first.state_digest,
+        "proposal_observed_axis_count": sum(axis.confidence > 0.0 for axis in proposed.axes),
         "proposal_duplicate_rule": "unique_proposal_id_plus_exact_prior_digest_plus_monotonic_sequence",
         "cadence_owner": "explicit_caller_invoked_logical_tick_no_scheduler",
         "cadence_decay_toward_baseline": first.value_for("competence_drive") < advanced.value_for("competence_drive") < proposed.value_for("competence_drive"),
-        "absence_unknown_policy": "missing_unknown_or_partial_axis_input_fails_closed_no_default_observation_substitution",
-        "range_confidence_saturation_policy": "registry_bounds_confidence_min_and_clamp_then_refractory_decay",
+        "absence_unknown_policy": "baseline_genesis_is_owned_state_with_zero_confidence; missing_unknown_or_partial_proposal_input_never_gains_positive_observation_confidence",
+        "range_confidence_saturation_policy": "registry_bounds; zero_confidence_genesis; positive_validated_proposal_confidence_then_min; clamp_then_refractory_decay",
         "snapshot_identity_schema_provenance_integrity_complete": len(observations) == 37 and all(item.source_integrity_digest == first.state_digest for item in observations),
         "read_only_observation_count": len(observations),
         "deterministic_genesis_equal": first.to_mapping() == second.to_mapping(),
@@ -218,6 +226,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "current_value_owner_contract_found": report["current_value_owner_contract_found"],
             "deterministic_genesis_equal": report["deterministic_genesis_equal"],
             "errors": report["errors"],
+            "genesis_unknown_observation_count": report["genesis_unknown_observation_count"],
             "m3_b_complete": report["m3_b_complete"],
             "next_required_artifact": report["next_required_artifact"],
             "observation_window_started": report["observation_window_started"],
