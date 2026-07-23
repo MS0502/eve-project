@@ -1,0 +1,22 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 179,
+  "base_candidate_surface_digest": "b96a59e6780372c417f029066316f94f5e2524a80ff67d4172a316b48e234ed2",
+  "candidate_surface_digest": "4e93f889caab2ecaa08c72fa89ca8cc0632883fc98abadbf67239cb5afba8be8",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "76e3ac89875cc533aad1dd8cec8d15f2c9139f9677e5c585cbc042e5fbf6bf3f",
+        "87954aee63c52d99cc9423d1a6cdd21ad35768d20896515106ce1086153cc4b3",
+        "8a011cc8a587dafa3ef8f294217edf20aef8c2bf0250990e23a72c6ac302448b",
+        "e547df60aa9260399e49f8f3e4c8d1da1b044450af54a34c6f24f9abcf2b27a7"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The extractor follows the raw_values parameter through canonical JSON encoding and local SHA-256 digest calculation, then conservatively collides the generic sha256 symbol with an unrelated legacy restore helper. These calls only create immutable integrity digests for detached operational records. They do not read external raw text, open the restore helper path, emit expression, install runtime capture, or grant a new read capability.",
+      "owner": "M3-B operational four-axis source binding",
+      "denial_semantics": "Digest construction is audit-visible integrity processing only and grants no runtime read, hardware polling, persistence, expression, observation-window, cutover, or M3-E authority."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
