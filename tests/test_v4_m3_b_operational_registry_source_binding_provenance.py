@@ -16,6 +16,7 @@ from core.m3_b_operational_registry_source_binding import (
     derive_operational_axis_evidence,
     operational_raw_observation_digest,
 )
+from scripts.audit.m3_b_operational_registry_source_binding import audit_repository
 
 
 def _sha(text: str) -> str:
@@ -79,7 +80,9 @@ def test_raw_record_rejects_noncanonical_provenance_metadata(
 
 
 def test_derived_evidence_uses_only_canonical_verified_provenance():
-    evidence = derive_operational_axis_evidence(tuple(_record(tick) for tick in (1, 2, 3)))
+    evidence = derive_operational_axis_evidence(
+        tuple(_record(tick) for tick in (1, 2, 3))
+    )
     assert evidence.source_family == SOURCE_FAMILY
     assert evidence.acquisition_method == ACQUISITION_METHOD
     assert evidence.verification_method == VERIFICATION_METHOD
@@ -87,3 +90,15 @@ def test_derived_evidence_uses_only_canonical_verified_provenance():
         f"{BINDING_SCHEMA_VERSION}:energy_budget:mean.v1"
     )
     assert RAW_MODEL_OR_RULE_VERSION == BINDING_SCHEMA_VERSION
+
+
+def test_recalculable_audit_covers_provenance_spoof_rejection():
+    report = audit_repository()
+    assert report["canonical_provenance_rejection_verified"] is True
+    for name in (
+        "noncanonical_acquisition_method",
+        "noncanonical_verification_method",
+        "noncanonical_model_or_rule_version",
+        "noncanonical_source_family",
+    ):
+        assert report["rejection_checks"][name] is True
