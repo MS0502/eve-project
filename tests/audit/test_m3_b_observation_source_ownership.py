@@ -5,6 +5,7 @@ import ast
 from scripts.audit.m3_b_observation_source_ownership import (
     BASELINE_SHA,
     EXPECTED_BLOCKERS,
+    EXPECTED_PROPOSAL_AXIS_COUNT,
     REGISTRY_PATH,
     ROOT,
     audit_repository,
@@ -100,13 +101,13 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
     assert report["m3_c_open"] is False
 
 
-def test_proposal_map_covers_27_unique_axes_but_is_not_current_value_ownership():
+def test_proposal_map_coverage_is_exact_but_not_current_value_ownership():
     report = audit_repository(ROOT)
     proposal = report["registry_proposal_metadata"]
     usage = report["registry_usage"]
-    assert proposal["proposal_rule_unique_axis_count"] == 27
-    assert proposal["proposal_rule_occurrence_count"] > 27
-    assert len(proposal["proposal_rule_unique_axes"]) == 27
+    assert proposal["proposal_rule_unique_axis_count"] == EXPECTED_PROPOSAL_AXIS_COUNT == 28
+    assert proposal["proposal_rule_occurrence_count"] > EXPECTED_PROPOSAL_AXIS_COUNT
+    assert len(proposal["proposal_rule_unique_axes"]) == EXPECTED_PROPOSAL_AXIS_COUNT
     assert {
         row["path"] for row in proposal["proposal_rule_occurrences"]
     } == {"adapters/affect_event_to_axis_proposal_map.py"}
