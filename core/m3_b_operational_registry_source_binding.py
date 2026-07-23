@@ -110,15 +110,57 @@ def _digest(value: Any, field: str) -> str:
 
 
 def _manifest_entry(axis: str) -> RegistryObservationSourceEntry:
-    manifest = registry_observation_source_manifest()
-    for entry in manifest.entries:
+    for entry in registry_observation_source_manifest().entries:
         if entry.axis == axis:
             return entry
-    raise OperationalRegistrySourceBindingError("operational axis missing from manifest")
+    raise OperationalRegistrySourceBindingError(
+        "operational axis missing from source manifest"
+    )
 
 
 def _raw_mapping(raw_values: tuple[tuple[str, Any], ...]) -> dict[str, Any]:
     return {field: value for field, value in raw_values}
+
+
+def operational_raw_observation_digest(
+    *,
+    axis: str,
+    logical_tick: int,
+    observation_id: str,
+    source_instance_id: str,
+    source_snapshot_id: str,
+    source_schema_version: str,
+    source_integrity_digest: str,
+    raw_values: tuple[tuple[str, Any], ...],
+) -> str:
+    """Return the canonical digest that must accompany one raw record."""
+
+    if axis not in OPERATIONAL_AXES:
+        raise OperationalRegistrySourceBindingError("unsupported operational axis")
+    _nonnegative_int(logical_tick, "logical_tick")
+    for field, value in (
+        ("observation_id", observation_id),
+        ("source_instance_id", source_instance_id),
+        ("source_snapshot_id", source_snapshot_id),
+        ("source_schema_version", source_schema_version),
+    ):
+        _identifier(value, field)
+    _digest_string(source_integrity_digest, "source_integrity_digest")
+    values = tuple(raw_values)
+    return _digest(
+        {
+            "axis": axis,
+            "logical_tick": logical_tick,
+            "observation_id": observation_id,
+            "raw_values": [[field, value] for field, value in values],
+            "schema_version": RAW_SCHEMA_VERSION,
+            "source_instance_id": source_instance_id,
+            "source_integrity_digest": source_integrity_digest,
+            "source_schema_version": source_schema_version,
+            "source_snapshot_id": source_snapshot_id,
+        },
+        "operational_raw_observation",
+    )
 
 
 def _validate_raw_values(axis: str, raw: Mapping[str, Any]) -> None:
@@ -134,8 +176,12 @@ def _validate_raw_values(axis: str, raw: Mapping[str, Any]) -> None:
         return
     if axis == "fatigue_pressure":
         window = _positive_int(raw["sampling_window_ticks"], "sampling_window_ticks")
-        active = _nonnegative_int(raw["active_processing_ticks"], "active_processing_ticks")
-        recovery = _nonnegative_int(raw["recovery_interval_ticks"], "recovery_interval_ticks")
+        active = _nonnegative_int(
+            raw["active_processing_ticks"], "active_processing_ticks"
+        )
+        recovery = _nonnegative_int(
+            raw["recovery_interval_ticks"], "recovery_interval_ticks"
+        )
         if active > window or recovery > window:
             raise OperationalRegistrySourceBindingError(
                 "fatigue tick counts cannot exceed sampling window"
@@ -145,17 +191,23 @@ def _validate_raw_values(axis: str, raw: Mapping[str, Any]) -> None:
         return
     if axis == "recovery_need":
         window = _positive_int(raw["sampling_window_ticks"], "sampling_window_ticks")
-        active = _nonnegative_int(raw["active_processing_ticks"], "active_processing_ticks")
+        active = _nonnegative_int(
+            raw["active_processing_ticks"], "active_processing_ticks"
+        )
         cooldown = _nonnegative_int(raw["cooldown_ticks"], "cooldown_ticks")
         if active > window or cooldown > window:
             raise OperationalRegistrySourceBindingError(
                 "recovery tick counts cannot exceed sampling window"
             )
         _nonnegative_int(raw["recent_overload_count"], "recent_overload_count")
-        _nonnegative_int(raw["successful_recovery_count"], "successful_recovery_count")
+        _nonnegative_int(
+            raw["successful_recovery_count"], "successful_recovery_count"
+        )
         return
     if axis == "overload_risk":
-        _nonnegative_int(raw["concurrent_demand_count"], "concurrent_demand_count")
+        _nonnegative_int(
+            raw["concurrent_demand_count"], "concurrent_demand_count"
+        )
         _unit(raw["latency_budget_ratio"], "latency_budget_ratio")
         _unit(raw["memory_pressure_ratio"], "memory_pressure_ratio")
         _nonnegative_int(raw["queue_depth"], "queue_depth")
@@ -249,24 +301,59 @@ class OperationalRegistryRawRecord:
             )
         values = tuple(self.raw_values)
         fields = tuple(field for field, _ in values)
-        expected = _manifest_entry(self.axis).required_raw_fields
-        if fields != expected or len(set(fields)) != len(fields):
+        expected_fields = _manifest_entry(self.axis).required_raw_fields
+        if fields != expected_fields or len(set(fields)) != len(fields):
             raise OperationalRegistrySourceBindingError(
                 "raw record fields do not match the canonical axis source plan"
             )
-        raw = _raw_mapping(values)
-        _validate_raw_values(self.axis, raw)
-        if any((self.synthetic, self.proposal_only, self.registry_owner_source, self.runtime_polled)):
+        _validate_raw_values(self.axis, _raw_mapping(values))
+        expected_digest = operational_raw_observation_digest(
+            axis=self.axis,
+            logical_tick=self.logical_tick,
+            observation_id=self.observation_id,
+            source_instance_id=self.source_instance_id,
+            source_snapshot_id=self.source_snapshot_id,
+            source_schema_version=self.source_schema_version,
+            source_integrity_digest=self.source_integrity_digest,
+            raw_values=values,
+        )
+        if self.raw_observation_digest != expected_digest:
+            raise OperationalRegistrySourceBindingError(
+                "raw observation digest does not match identity, time, and values"
+            )
+        if any(
+            (
+                self.synthetic,
+                self.proposal_only,
+                self.registry_owner_source,
+                self.runtime_polled,
+            )
+        ):
             raise OperationalRegistrySourceBindingError(
                 "operational evidence cannot be synthetic, proposal-only, circular, or runtime-polled here"
             )
         if self.schema_version != RAW_SCHEMA_VERSION:
-            raise OperationalRegistrySourceBindingError("unsupported operational raw schema")
+            raise OperationalRegistrySourceBindingError(
+                "unsupported operational raw schema"
+            )
         object.__setattr__(self, "raw_values", values)
 
     @property
     def raw_mapping(self) -> dict[str, Any]:
         return _raw_mapping(self.raw_values)
+
+    @property
+    def recalculated_raw_observation_digest(self) -> str:
+        return operational_raw_observation_digest(
+            axis=self.axis,
+            logical_tick=self.logical_tick,
+            observation_id=self.observation_id,
+            source_instance_id=self.source_instance_id,
+            source_snapshot_id=self.source_snapshot_id,
+            source_schema_version=self.source_schema_version,
+            source_integrity_digest=self.source_integrity_digest,
+            raw_values=self.raw_values,
+        )
 
     def to_mapping(self) -> dict[str, Any]:
         return {
@@ -326,21 +413,30 @@ class OperationalRegistrySourceBinding:
             "required_raw_fields": entry.required_raw_fields,
             "minimum_raw_record_count": entry.minimum_raw_record_count,
             "minimum_logical_span_ticks": entry.minimum_logical_span_ticks,
-            "derivation_rule_id": f"{BINDING_SCHEMA_VERSION}:{self.axis}:mean.v1",
-            "confidence_rule_id": f"{BINDING_SCHEMA_VERSION}:{self.axis}:coverage-variance.v1",
+            "derivation_rule_id": (
+                f"{BINDING_SCHEMA_VERSION}:{self.axis}:mean.v1"
+            ),
+            "confidence_rule_id": (
+                f"{BINDING_SCHEMA_VERSION}:{self.axis}:coverage-variance.v1"
+            ),
         }
-        for field, value in expected.items():
-            if getattr(self, field) != value:
+        for field, expected_value in expected.items():
+            if getattr(self, field) != expected_value:
                 raise OperationalRegistrySourceBindingError(
                     f"binding {field} does not match the canonical plan"
                 )
         _identifier(self.binding_id, "binding_id")
-        if self.schema_version != BINDING_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
+        if (
+            self.schema_version != BINDING_SCHEMA_VERSION
+            or self.authority != SHADOW_AUTHORITY
+        ):
             raise OperationalRegistrySourceBindingError(
                 "operational binding must use the exact shadow-only schema"
             )
         if self.binding_implemented is not True:
-            raise OperationalRegistrySourceBindingError("binding implementation flag must be true")
+            raise OperationalRegistrySourceBindingError(
+                "binding implementation flag must be true"
+            )
         if any(
             (
                 self.production_capture_present,
@@ -404,16 +500,21 @@ class OperationalRegistrySourceBindingSet:
 
     def __post_init__(self) -> None:
         bindings = tuple(self.bindings)
-        if len(bindings) != 4 or tuple(item.axis for item in bindings) != OPERATIONAL_AXES:
-            raise OperationalRegistrySourceBindingError(
-                "operational binding set must preserve exact four-axis order"
-            )
         if any(type(item) is not OperationalRegistrySourceBinding for item in bindings):
             raise OperationalRegistrySourceBindingError(
                 "binding set requires exact immutable binding types"
             )
-        if self.schema_version != BINDING_SET_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
-            raise OperationalRegistrySourceBindingError("unsupported binding-set schema")
+        if len(bindings) != 4 or tuple(item.axis for item in bindings) != OPERATIONAL_AXES:
+            raise OperationalRegistrySourceBindingError(
+                "operational binding set must preserve exact four-axis order"
+            )
+        if (
+            self.schema_version != BINDING_SET_SCHEMA_VERSION
+            or self.authority != SHADOW_AUTHORITY
+        ):
+            raise OperationalRegistrySourceBindingError(
+                "unsupported binding-set schema"
+            )
         if any(
             (
                 self.production_capture_present,
@@ -459,7 +560,9 @@ class OperationalRegistrySourceBindingSet:
 
     @property
     def binding_set_digest(self) -> str:
-        return _digest(self.to_mapping(), "operational_registry_source_binding_set")
+        return _digest(
+            self.to_mapping(), "operational_registry_source_binding_set"
+        )
 
 
 def operational_registry_source_bindings() -> OperationalRegistrySourceBindingSet:
@@ -475,8 +578,12 @@ def operational_registry_source_bindings() -> OperationalRegistrySourceBindingSe
                 required_raw_fields=entry.required_raw_fields,
                 minimum_raw_record_count=entry.minimum_raw_record_count,
                 minimum_logical_span_ticks=entry.minimum_logical_span_ticks,
-                derivation_rule_id=f"{BINDING_SCHEMA_VERSION}:{axis}:mean.v1",
-                confidence_rule_id=f"{BINDING_SCHEMA_VERSION}:{axis}:coverage-variance.v1",
+                derivation_rule_id=(
+                    f"{BINDING_SCHEMA_VERSION}:{axis}:mean.v1"
+                ),
+                confidence_rule_id=(
+                    f"{BINDING_SCHEMA_VERSION}:{axis}:coverage-variance.v1"
+                ),
             )
         )
     return OperationalRegistrySourceBindingSet(bindings=tuple(bindings))
@@ -495,34 +602,59 @@ def derive_operational_axis_evidence(
     axis = items[0].axis
     if any(item.axis != axis for item in items):
         raise OperationalRegistrySourceBindingError("records cannot mix axes")
-    if tuple(item.logical_tick for item in items) != tuple(
-        sorted(item.logical_tick for item in items)
-    ):
+    ticks = tuple(item.logical_tick for item in items)
+    if ticks != tuple(sorted(ticks)):
         raise OperationalRegistrySourceBindingError("record ticks must be sorted")
+    if len(set(ticks)) != len(ticks):
+        raise OperationalRegistrySourceBindingError("record ticks must be unique")
     if len({item.observation_id for item in items}) != len(items):
-        raise OperationalRegistrySourceBindingError("record observation ids must be unique")
+        raise OperationalRegistrySourceBindingError(
+            "record observation ids must be unique"
+        )
     if len({item.source_snapshot_id for item in items}) != len(items):
-        raise OperationalRegistrySourceBindingError("record snapshots must be unique")
-    if len({item.source_instance_id for item in items}) != 1:
-        raise OperationalRegistrySourceBindingError("records must share one source instance")
+        raise OperationalRegistrySourceBindingError(
+            "record snapshots must be unique"
+        )
+    shared_fields = (
+        "source_instance_id",
+        "source_schema_version",
+        "acquisition_method",
+        "verification_method",
+        "model_or_rule_version",
+    )
+    for field in shared_fields:
+        if len({getattr(item, field) for item in items}) != 1:
+            raise OperationalRegistrySourceBindingError(
+                f"records must share one {field}"
+            )
     binding = next(
-        item for item in operational_registry_source_bindings().bindings if item.axis == axis
+        item
+        for item in operational_registry_source_bindings().bindings
+        if item.axis == axis
     )
     span = items[-1].logical_tick - items[0].logical_tick
     if len(items) < binding.minimum_raw_record_count:
-        raise OperationalRegistrySourceBindingError("insufficient raw record count")
+        raise OperationalRegistrySourceBindingError(
+            "insufficient raw record count"
+        )
     if span < binding.minimum_logical_span_ticks:
-        raise OperationalRegistrySourceBindingError("insufficient logical observation span")
+        raise OperationalRegistrySourceBindingError(
+            "insufficient logical observation span"
+        )
     scores = tuple(_record_score(item) for item in items)
     value = float(sum(scores) / len(scores))
-    variance = float(sum((score - value) ** 2 for score in scores) / len(scores))
+    variance = float(
+        sum((score - value) ** 2 for score in scores) / len(scores)
+    )
     confidence = float(max(0.5, min(1.0, 1.0 - variance)))
-    raw_bundle = {
-        "axis": axis,
-        "binding_digest": binding.binding_digest,
-        "records": [item.to_mapping() for item in items],
-    }
-    raw_bundle_digest = _digest(raw_bundle, "operational_raw_bundle")
+    raw_bundle_digest = _digest(
+        {
+            "axis": axis,
+            "binding_digest": binding.binding_digest,
+            "records": [item.to_mapping() for item in items],
+        },
+        "operational_raw_bundle",
+    )
     source_integrity_digest = _digest(
         {
             "binding_digest": binding.binding_digest,
@@ -539,7 +671,10 @@ def derive_operational_axis_evidence(
         observation_id=f"operational:{axis}:{raw_bundle_digest[:24]}",
         source_family=SOURCE_FAMILY,
         source_instance_id=items[0].source_instance_id,
-        source_snapshot_id=f"operational:{axis}:{items[0].logical_tick}:{items[-1].logical_tick}",
+        source_snapshot_id=(
+            f"operational:{axis}:{items[0].logical_tick}:"
+            f"{items[-1].logical_tick}:{raw_bundle_digest[:16]}"
+        ),
         source_schema_version=RAW_SCHEMA_VERSION,
         source_integrity_digest=source_integrity_digest,
         raw_observation_digest=raw_bundle_digest,
