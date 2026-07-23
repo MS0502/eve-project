@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import copy
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
 import pytest
@@ -136,6 +136,44 @@ def test_exact_source_types_and_identity_fields_are_required():
             logical_tick=0,
             legacy_source_instance_id="test:legacy-owner:v1",
             legacy_source_snapshot_id="test:legacy-snapshot:1",
+        )
+
+
+def test_builder_requires_registry_owner_logical_tick():
+    owner = registry_owner()
+    with pytest.raises(
+        M3BObservationPacketError,
+        match="registry owner logical tick",
+    ):
+        packet(
+            HormoneSystem(developmental_stage="adult"),
+            owner,
+            logical_tick=1,
+        )
+
+
+def test_packet_rejects_unbound_source_set_and_logical_tick():
+    result = packet(
+        HormoneSystem(developmental_stage="adult"),
+        registry_owner(),
+    )
+    with pytest.raises(M3BObservationPacketError, match="legacy observations"):
+        replace(
+            result,
+            source_set=replace(
+                result.source_set,
+                legacy_source_snapshot_id="test:tampered-legacy-snapshot:v1",
+            ),
+        )
+    with pytest.raises(M3BObservationPacketError, match="registry observations"):
+        replace(result, logical_tick=1)
+    with pytest.raises(M3BObservationPacketError, match="registry observations"):
+        replace(
+            result,
+            source_set=replace(
+                result.source_set,
+                registry_owner_state_digest="0" * 64,
+            ),
         )
 
 
