@@ -1,0 +1,94 @@
+{
+  "schema_version": "eve.exact-head-validation-reuse-ledger.v1",
+  "policy": {
+    "purpose": "Prevent duplicate full-suite and compatibility validation across chat, PR-metadata, and operator-session changes.",
+    "reuse_required_when": [
+      "the exact validated code head is unchanged",
+      "the exact artifact exists and its SHA-256 matches",
+      "the validation workflow scope and pinned compatibility dependency are unchanged",
+      "the prerequisite PR is merged and its merge SHA is present in the current ancestry"
+    ],
+    "non_invalidating_changes": [
+      "chat or operator session change",
+      "PR body or title edit",
+      "PR comment or review metadata change",
+      "Draft or Ready transition",
+      "reporting-only reuse of an already pinned prerequisite"
+    ],
+    "invalidators": [
+      "code-head change affecting the validated tree",
+      "artifact loss, expiry without retained immutable copy, or corruption",
+      "artifact SHA-256 mismatch",
+      "validation workflow or test-scope change",
+      "pinned compatibility dependency change",
+      "base ancestry no longer contains the recorded merge SHA"
+    ],
+    "discovery_rule": "A new implementation PR runs compile, focused tests, M0 invariance, and M2-B validation before forward registration. Full-suite is blocked until exact fingerprints are registered. Full-suite runs once on the final registered head.",
+    "registration_only_rule": "Intermediate registration-only heads are not evidence. Workflow concurrency should cancel superseded runs; only the final registered exact head may be accepted.",
+    "manual_rerun_rule": "Do not manually rerun a green pinned prerequisite merely because work moved to another chat or PR. Record the reused entry in the new PR instead."
+  },
+  "merged_entries": [
+    {
+      "pr": 172,
+      "title": "Legacy 26-Axis Immutable Capture",
+      "exact_head": "effac41db02581c4d5521a839d6cbfbffcecad27",
+      "exact_run": 29984825031,
+      "focused": "11 passed",
+      "full": "2860 passed",
+      "artifact_name": "exact-head-validation-effac41db02581c4d5521a839d6cbfbffcecad27",
+      "artifact_sha256": "f79570993f0775382ca0a72a90692ac555758ab52d472cf72a300600fcaba481",
+      "m2e_run": 29984825029,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "f20951351b56c7102fdcf7c00f17cbcfac792205",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 173,
+      "title": "Registry 37-Axis Current-Value Owner",
+      "exact_head": "f3013486b5b5963dbe5b14e415adcd0a68134336",
+      "exact_run": 29987091687,
+      "focused": "12 passed",
+      "full": "2872 passed",
+      "artifact_name": "exact-head-validation-f3013486b5b5963dbe5b14e415adcd0a68134336",
+      "artifact_sha256": "4dbe065b1965b03436e7f214a787a691b7e969aefaf45f4c37d623fe7d5359f7",
+      "m2e_run": 29987091720,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "aab991f5c217baf9a6f6e5d2d6115feba9000f5a",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 176,
+      "title": "Combined 63-Axis Observation Packet Preflight",
+      "exact_head": "48793eec693ee887476e889cf36c3d2d7913b451",
+      "exact_run": 29993279809,
+      "focused": "11 passed",
+      "full": "2883 passed",
+      "artifact_name": "exact-head-validation-48793eec693ee887476e889cf36c3d2d7913b451",
+      "artifact_sha256": "b2f72ac4ceab9a50da0d5fa9a697a6a01d08558ac2595c5c1ebc6c483000b7b4",
+      "m2e_run": 29993279687,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "379d912c4e863b2a692d2c20f9f8113dfa7219cd",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    }
+  ],
+  "superseded_or_nonreusable": [
+    {
+      "pr": 174,
+      "reason": "GitHub PR head integration failure; full-suite was never executed.",
+      "reuse_status": "PROHIBITED"
+    },
+    {
+      "pr": 175,
+      "reason": "Closed unmerged with stale PR head; corrected implementation moved to PR 176.",
+      "reuse_status": "PROHIBITED"
+    }
+  ],
+  "active_unmerged": {
+    "pr": 177,
+    "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
+    "baseline_sha": "379d912c4e863b2a692d2c20f9f8113dfa7219cd"
+  }
+}
