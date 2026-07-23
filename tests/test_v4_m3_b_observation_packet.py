@@ -10,7 +10,6 @@ import pytest
 from hormone_system import HormoneSystem
 
 from core.event_kernel import SHADOW_AUTHORITY
-from core.m3_b_affect_projection import AffectProjectionError
 from core.m3_b_observation_packet import (
     EXPECTED_AXIS_ORDER,
     M3BObservationPacketError,
@@ -33,13 +32,21 @@ def registry_owner():
     )
 
 
-def packet(source: HormoneSystem, owner, *, packet_id: str = "test:packet:1", sequence: int = 1):
+def packet(
+    source: HormoneSystem,
+    owner,
+    *,
+    packet_id: str = "test:packet:1",
+    sequence: int = 1,
+    logical_tick: int | None = None,
+):
+    resolved_tick = owner.logical_tick if logical_tick is None else logical_tick
     return build_m3_b_observation_packet(
         source,
         owner,
         packet_id=packet_id,
         packet_sequence=sequence,
-        logical_tick=owner.logical_tick,
+        logical_tick=resolved_tick,
         legacy_source_instance_id="test:legacy-owner:v1",
         legacy_source_snapshot_id=f"test:legacy-snapshot:{sequence}",
     )
@@ -104,7 +111,7 @@ def test_validated_registry_evidence_promotes_only_touched_axes_and_window_remai
 
 
 def test_boundary_baseline_legacy_source_fails_closed_before_packet_emission():
-    with pytest.raises((AffectProjectionError, M3BObservationPacketError), match="floor < baseline < ceiling|strict v1"):
+    with pytest.raises(M3BObservationPacketError, match="strict v1"):
         packet(HormoneSystem(developmental_stage="newborn"), registry_owner())
 
 
@@ -115,7 +122,7 @@ def test_exact_source_types_and_identity_fields_are_required():
     with pytest.raises(M3BObservationPacketError, match="exact HormoneSystem"):
         packet(DerivedHormoneSystem(), registry_owner())
     with pytest.raises(M3BObservationPacketError, match="exact RegistryAffectOwnerState"):
-        packet(HormoneSystem(), object())
+        packet(HormoneSystem(), object(), logical_tick=0)
     with pytest.raises(M3BObservationPacketError, match="packet_id"):
         build_m3_b_observation_packet(
             HormoneSystem(),
