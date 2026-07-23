@@ -16,6 +16,7 @@ def test_registry_observation_evidence_audit_is_deterministic_and_exact():
     assert first["deterministic_bundle_equal"] is True
     assert first["deterministic_owner_equal"] is True
     assert first["predecessor_owner_unchanged"] is True
+    assert first["observation_materialization_created_impulse"] is False
     assert len(first["bundle_digest"]) == 64
     assert len(first["materialized_owner_digest"]) == 64
     assert len(first["report_digest"]) == 64
