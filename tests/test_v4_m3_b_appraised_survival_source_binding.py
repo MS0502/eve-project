@@ -165,12 +165,14 @@ def test_exact_verified_appraisals_derive_deterministic_positive_confidence_evid
     assert first.acquisition_method == ACQUISITION_METHOD
     assert first.verification_method == VERIFICATION_METHOD
     assert first.model_or_rule_version == f"{BINDING_SCHEMA_VERSION}:{axis}:mean.v1"
+    assert first.observation_kind == "verified_current_value_observation"
+    assert first.verification_status == "verified"
+    assert first.genesis_derived is False
+    assert first.baseline_derived is False
+    assert first.default_derived is False
     assert first.synthetic is False
     assert first.proposal_only is False
-    assert first.registry_owner_source is False
-    assert first.observation_window_started is False
-    assert first.affect_impulse_applied is False
-    assert first.memory_write_performed is False
+    assert first.recalculable_reference_present is True
 
 
 def test_raw_digest_binds_identity_time_source_appraisal_and_values():
