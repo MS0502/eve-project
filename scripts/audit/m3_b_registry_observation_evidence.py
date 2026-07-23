@@ -183,6 +183,8 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         errors.append("observed owner digest is not deterministic")
     if any(axis.confidence <= 0.0 for axis in first_owner.axes):
         errors.append("materialized registry owner contains non-positive confidence")
+    if any(axis.last_impulse_tick != 0 for axis in first_owner.axes):
+        errors.append("observation materialization incorrectly created an affect impulse")
     if packet.positive_confidence_count != 63 or packet.zero_confidence_count != 0:
         errors.append("verified fixture did not resolve calculated packet confidence coverage")
     if packet.window_blockers:
@@ -248,6 +250,9 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "deterministic_bundle_equal": first_bundle.to_mapping() == second_bundle.to_mapping(),
         "deterministic_owner_equal": first_owner.to_mapping() == second_owner.to_mapping(),
         "predecessor_owner_unchanged": owner_before == owner_middle == owner_after,
+        "observation_materialization_created_impulse": any(
+            axis.last_impulse_tick != 0 for axis in first_owner.axes
+        ),
         "bundle_digest": first_bundle.bundle_digest,
         "materialized_owner_digest": first_owner.state_digest,
         "fixture_packet_positive_confidence_count": packet.positive_confidence_count,
