@@ -72,6 +72,21 @@
       "merge_method": "squash",
       "merge_sha": "379d912c4e863b2a692d2c20f9f8113dfa7219cd",
       "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 177,
+      "title": "Registry 37-Axis Positive-Confidence Observation Evidence Contract",
+      "exact_head": "9b518c6f6f6d8f3a15fbaeaf8719f8a0a2c1c992",
+      "exact_run": 29996167860,
+      "focused": "16 passed",
+      "full": "2899 passed",
+      "artifact_name": "exact-head-validation-9b518c6f6f6d8f3a15fbaeaf8719f8a0a2c1c992",
+      "artifact_sha256": "48d9970d6b742ddaa7b9cd0812e95a67955d00fffbb93c75ff98ce547050935a",
+      "m2e_run": 29996167735,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "03bf2de7294ae21cef0961cd50e516be85330d13",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
     }
   ],
   "superseded_or_nonreusable": [
@@ -87,8 +102,8 @@
     }
   ],
   "active_unmerged": {
-    "pr": 177,
+    "pr": 178,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "379d912c4e863b2a692d2c20f9f8113dfa7219cd"
+    "baseline_sha": "03bf2de7294ae21cef0961cd50e516be85330d13"
   }
 }
