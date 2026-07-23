@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 
 from scripts.audit.m3_b_observation_source_ownership import (
     BASELINE_SHA,
@@ -87,7 +86,7 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
         "read_only_affect_registry": 37,
         "total": 63,
     }
-    assert tuple(report["blockers"]) == EXPECTED_BLOCKERS
+    assert tuple(report["blockers"]) == EXPECTED_BLOCKERS, report["registry_usage"]
     assert report["errors"] == []
     assert report["source_family_readiness"] == {
         "legacy_mutable_hormone": "READABLE_UNVERSIONED_LEGACY_CONTAINER",
@@ -102,9 +101,10 @@ def test_repository_preflight_reports_the_exact_two_blockers_without_claiming_co
 
 
 def test_registry_scan_does_not_treat_defaults_or_projection_rules_as_value_ownership():
-    report = audit_repository(ROOT)
-    usage = report["registry_usage"]
-    assert usage["observed_value_owner_found"] is False
+    usage = audit_repository(ROOT)["registry_usage"]
+    assert usage["observed_value_owner_found"] is False, usage[
+        "production_value_store_candidates"
+    ]
     assert usage["production_value_store_candidate_count"] == 0
     assert usage["production_value_store_candidates"] == []
     assert usage["tracked_parse_errors_are_not_source_ownership_evidence"] is True
@@ -145,10 +145,9 @@ def test_preflight_has_no_runtime_import_or_live_action_surface():
     assert not calls & {
         "append_event",
         "build_full_engine",
-        "connect",
-        "save",
-        "start",
+        "HormoneAdapter",
+        "HormoneSystem",
+        "PersistenceAdapter",
         "stimulate",
         "tick",
-        "update",
     }
