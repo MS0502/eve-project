@@ -1,0 +1,27 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 180,
+  "base_candidate_surface_digest": "4e93f889caab2ecaa08c72fa89ca8cc0632883fc98abadbf67239cb5afba8be8",
+  "candidate_surface_digest": "4d5047df2c7c579b37772d38a874dba5e265db9215cac217faec8a5658176efb",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "0774e89c2826a8388153c1ad081f04b08aaf79dcfc12028f91f5b4069be91e73",
+        "40e95452823bc21ca373734da9f4d323f55a1bab3c5ee4ad1b766005589dcc29",
+        "478eb83f728c5eb87112cb4f74cd3b08418942d5a7483202236bf2b677e4bffb",
+        "67d8335159ebe0214e4d72a679553340a8386b413d803a10faa64a5104cbd666",
+        "a91f2aafe0894914da3867f991b38f7af0b62f84046fca01269875d76d959421",
+        "aebd2e6e8f5f12017481e0fae1e211b07b1d4317c23275656986f85d02b54b3d",
+        "dd02e9ae19ea2756dce154885566e6926c1557d8f9770b18f807d93d141b09f6",
+        "dfec7ca4159360fe019a2420d5c80e83f1b8ce29d52768e877c61f401346ad01",
+        "f565102265c250127e215dd357dbc3ec8742e8cc00236b314e694adb09bb02b6"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The extractor follows caller-supplied raw/appraisal fields into fail-closed digest-format validation and canonical JSON-to-SHA-256 integrity construction, then conservatively collides the generic sha256 symbol with an unrelated legacy restore helper that performs path.open/fh.read. The appraised-survival module imports no path or file-read surface and never invokes that helper. These calls only validate or construct immutable detached trace digests; they do not acquire external raw text, ingest raw social feedback, poll hardware, emit expression, install runtime capture, or grant a read capability.",
+      "owner": "M3-B appraised survival source binding",
+      "denial_semantics": "Fail-closed digest rejection and local integrity hashing are audit-visible validation only. They grant no runtime read, hardware polling, raw-social ingestion, persistence, expression, observation-window, cutover, or M3-E authority."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
