@@ -23,11 +23,22 @@ Each `OperationalRegistryRawRecord` carries:
 - unique observation, source-instance, and source-snapshot identities;
 - source schema version and non-placeholder source-integrity SHA-256;
 - exact five-field payload from the PR #178 source manifest;
-- acquisition and verification methods;
-- model/rule version;
+- canonical acquisition and verification methods;
+- canonical model/rule version and source family;
 - raw-observation SHA-256.
 
-The raw-observation digest is recalculated from the axis, logical tick, observation ID, source instance, source snapshot, source schema, source-integrity digest, raw values, and raw schema version. A digest copied from another identity, tick, snapshot, source, or payload fails closed.
+The raw-observation digest is recalculated from the axis, logical tick, observation ID, source instance, source snapshot, source schema, source-integrity digest, exact raw values, raw schema version, source family, acquisition method, verification method, and model/rule version. A digest copied from another identity, tick, snapshot, source, provenance contract, or payload fails closed.
+
+The provenance fields are not caller-extensible labels. They must exactly equal:
+
+```text
+acquisition_method:    explicit_caller_supplied_immutable_operational_record
+verification_method:   exact_schema_range_and_digest_verification
+model_or_rule_version: eve.m3-b.operational-registry-source-binding.v1
+source_family:         operational_metrics_or_appraised_load_trace
+```
+
+This prevents arbitrary strings such as `unverified` or `none` from being promoted into a `verified_current_value_observation`.
 
 The record also rejects:
 
@@ -35,6 +46,7 @@ The record also rejects:
 - non-finite or out-of-range ratios;
 - tick counts outside their sampling window;
 - synthetic, proposal-only, circular registry-owner, or runtime-polled inputs;
+- noncanonical provenance metadata;
 - malformed or placeholder digests.
 
 ## Deterministic derivation
@@ -44,7 +56,8 @@ A binding requires the manifest's minimum count and logical span. Records must:
 - use one axis;
 - be sorted by unique logical tick;
 - have unique observation IDs and snapshots;
-- share one source instance, source schema, acquisition method, verification method, and model/rule version.
+- share one source instance and source schema;
+- retain the exact canonical acquisition, verification, source-family, and model/rule contract.
 
 The four values are derived as follows.
 
