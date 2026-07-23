@@ -30,3 +30,6 @@ seeds/subsets/*/vectors.npy
 
 # Operator-local vector artifacts (never commit)
 _operator_artifacts/
+
+# M2-E phone habitat private companion fallback (raw state never commits)
+.eve-m2e-window/
