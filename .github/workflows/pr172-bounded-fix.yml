@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - codex/m3-b-legacy-26-axis-immutable-capture
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.head_ref == 'codex/m3-b-legacy-26-axis-immutable-capture' || github.ref_name == 'codex/m3-b-legacy-26-axis-immutable-capture'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -113,8 +117,8 @@ jobs:
 
           doc = Path('docs/audit/M3_B_LEGACY_26_AXIS_IMMUTABLE_CAPTURE_CANDIDATE.md')
           text = doc.read_text(encoding='utf-8')
-          old = '''`LegacyHormoneCapture.to_axis_observations()` returns exactly 26 immutable `AxisObservation` values accepted by the merged M3-B projection contract.\n'''
-          new = '''`LegacyHormoneCapture.to_axis_observations()` returns exactly 26 immutable `AxisObservation` values when every captured baseline is strictly inside its declared source range, as required by the merged M3-B v1 projection contract. The current default adult `HormoneSystem` satisfies this condition.\n\nThe immutable capture itself also accepts and exactly preserves valid developmental profiles whose baseline equals a source boundary, including newborn estrogen/testosterone at `0.0`. It does not invent an epsilon or widen `[0,1]`. Conversion of such a capture to the stricter merged v1 projection observation fails closed with `LegacyAffectCaptureError`; the detached source envelope remains valid.\n'''
+          old = '`LegacyHormoneCapture.to_axis_observations()` returns exactly 26 immutable `AxisObservation` values accepted by the merged M3-B projection contract.\n'
+          new = '`LegacyHormoneCapture.to_axis_observations()` returns exactly 26 immutable `AxisObservation` values when every captured baseline is strictly inside its declared source range, as required by the merged M3-B v1 projection contract. The current default adult `HormoneSystem` satisfies this condition.\n\nThe immutable capture itself also accepts and exactly preserves valid developmental profiles whose baseline equals a source boundary, including newborn estrogen/testosterone at `0.0`. It does not invent an epsilon or widen `[0,1]`. Conversion of such a capture to the stricter merged v1 projection observation fails closed with `LegacyAffectCaptureError`; the detached source envelope remains valid.\n'
           assert text.count(old) == 1
           text = text.replace(old, new)
           old_fail = '- any before/after source-state change.\n'
