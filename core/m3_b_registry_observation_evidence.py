@@ -499,7 +499,7 @@ def materialize_registry_observed_owner(
             floor=prior_axes[axis].floor,
             ceiling=prior_axes[axis].ceiling,
             confidence=evidence_by_axis[axis].confidence,
-            last_impulse_tick=evidence_by_axis[axis].observed_tick,
+            last_impulse_tick=prior_axes[axis].last_impulse_tick,
             update_count=prior_axes[axis].update_count + 1,
             last_source_kind=VERIFIED_OBSERVATION_KIND,
             last_source_id=evidence_by_axis[axis].observation_id,
