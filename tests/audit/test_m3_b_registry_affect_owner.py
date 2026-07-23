@@ -12,7 +12,9 @@ def test_registry_owner_audit_is_deterministic_and_resolves_the_owner_contract_b
     assert first["current_value_owner_contract_found"] is True
     assert first["deterministic_genesis_equal"] is True
     assert first["genesis_is_observation_evidence"] is False
+    assert first["genesis_unknown_observation_count"] == 37
     assert first["proposal_metadata_is_current_state"] is False
+    assert first["proposal_observed_axis_count"] == 2
     assert first["read_only_observation_count"] == 37
     assert first["snapshot_identity_schema_provenance_integrity_complete"] is True
     assert first["remaining_source_ownership_blockers"] == []
