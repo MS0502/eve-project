@@ -96,6 +96,7 @@ def test_exact_37_axis_positive_confidence_bundle_materializes_detached_owner():
     assert observed.last_transition_kind == "detached_verified_observation_bundle"
     assert all(axis.confidence > 0.0 for axis in observed.axes)
     assert all(axis.update_count == 1 for axis in observed.axes)
+    assert all(axis.last_impulse_tick == 0 for axis in observed.axes)
     assert all(axis.last_source_kind == VERIFIED_OBSERVATION_KIND for axis in observed.axes)
     assert observed.runtime_hook_installed is False
     assert observed.scheduler_installed is False
