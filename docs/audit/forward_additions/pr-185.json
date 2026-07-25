@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_agp_bounded_expression_action_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation",
+        "raw_capability"
+      ],
+      "symbols": [
+        "AGPBoundedExpressionActionRawRecord.__post_init__",
+        "AGPBoundedExpressionActionRawRecord.recalculated_raw_observation_digest",
+        "_digest",
+        "agp_bounded_expression_action_raw_observation_digest",
+        "agp_bounded_expression_action_source_bindings",
+        "derive_agp_bounded_expression_action_axis_evidence"
+      ],
+      "rationale": "Caller-invoked detached shadow source-binding construction only. The raw-capability detector is triggered by function naming around expression-action evidence, but the functions only validate caller-supplied immutable AGP/appraisal records, recalculate SHA-256 digests, assemble local bindings, and return detached registry evidence. They do not consume raw user text, generate expression, execute actions/tools, poll runtime state, write memory/persistence, install production capture, start an observation window, authorize cutover, or open M3-E authority.",
+      "owner": "M3-B AGP-bounded expression-action six-axis source binding",
+      "disposition": "DISCONNECTED_SHADOW_SOURCE_BINDING_ONLY",
+      "introduced_by_pr": 185,
+      "fingerprints": {
+        "023cdce3ed503d06351b6da8386f43fe96bbbcdfb4b8dff2fa52f9af6244aa81": 1,
+        "559bc7757f11c600d4f2a541940af4588b32acf7331b741db484ed80a0633d68": 1,
+        "597ba769b0bd82dc94df602cf873659e9174370bd1cc6eba3ca6b4a54eefb5a3": 1,
+        "5c95410b36a13887a0fbf561ead1f023bac80ccb4768ba5334b1a3e0b787a43e": 1,
+        "6c4f33abfdbca70f9e0a5a3053c3a08732bf04d4c81468a9a3f5ce5a8338151a": 1,
+        "866de8d66c00753c650a52fd8a1aa47dcc8c303b34c8aa5cb9eddb4dd9808493": 1,
+        "afefaa13c29c15442bc9de7998034a97466828a3e9c94826150a0eee1ad23df9": 1,
+        "f6107c0ddd4f9e5dcd23a8a55132ebe06cf629dadd6f2f7969abe9bf1c2332fd": 1
+      }
+    },
+    {
+      "path": "scripts/audit/m3_b_agp_bounded_expression_action_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "<module>",
+        "_digest",
+        "_sha",
+        "audit_repository",
+        "main"
+      ],
+      "rationale": "Audit CLI only. Findings are deterministic fixture/report hashing, local rejection/error bookkeeping, sys.path setup, report-map assignment, and caller-requested stdout/file audit-report output. The fixture is explicitly non-production and cannot emit expression, execute actions, mutate memory, install capture, start a window, authorize cutover, or open M3-E authority.",
+      "owner": "M3-B AGP-bounded expression-action recalculable audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 185,
+      "fingerprints": {
+        "5cc37c5e7c74783bb877a41049dfb92df8b17be68a8b5e4fb6506bfb7b561187": 1,
+        "74a8c242dd8b67db7ecc5f21d31c9d2a4cd85e35602a8c9c52fcd522dab192ab": 3,
+        "86fe08ecc0612efa84f776fc83c5d96b8d58dd7ce973b6e9e4ba37feae7a6e7b": 1,
+        "8f186bb17a1083ab9b216159a9495641df7ee727ede668c8b83f5b2aff4577ba": 1,
+        "97356a77ec8afeb888e984c966baf527d109171c923082bdd5d3e0a3cdf328b3": 1,
+        "db0e4eccfdeff40099033653e8043b08c7524a90666484765da2355f0b15d994": 1,
+        "e9ff602bfcc0a9be85f05caad82a2729959c6c608b60a2643a8f8c8a25912721": 5,
+        "f9d117818a7c00155f8cef0d8ac9c324bfe2a199a9f3de7b470af850bdd8c4b5": 1
+      }
+    },
+    {
+      "path": "tests/audit/test_m3_b_agp_bounded_expression_action_source_binding.py",
+      "categories": [
+        "mutation"
+      ],
+      "symbols": [
+        "test_agp_bounded_expression_action_source_binding_audit_is_deterministic_and_exact"
+      ],
+      "rationale": "Test-only set construction for exact six-axis audit coverage. It executes no expression/action path, runtime capture, persistence, memory mutation, observation-window transition, or authority change.",
+      "owner": "M3-B expression-action audit tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 185,
+      "fingerprints": {
+        "e14ecfc41d069bc4ef425d69163b15be4a465e6cd310adf8bfb5c97617bbf488": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_agp_bounded_expression_action_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "_sha",
+        "test_expression_action_binding_objects_are_frozen_and_cannot_claim_execution_or_authority"
+      ],
+      "rationale": "Focused test evidence only. Findings are deterministic fixture hashing and a deliberately rejected frozen-dataclass assignment proving fail-closed execution/authority boundaries. No production expression/action, capture, persistence, or authority path exists.",
+      "owner": "M3-B expression-action focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 185,
+      "fingerprints": {
+        "2c790ce601e2471789be711ed86f11ffc03accd642acfb085b750aa4081a7456": 1,
+        "c4350cb6bf4d81f4da8813a06185f865db8e1eba111e77426c31d3115a851b17": 1
+      }
+    }
+  ]
+}
