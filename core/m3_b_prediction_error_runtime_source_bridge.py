@@ -242,11 +242,17 @@ class PredictionErrorRuntimeSourceSnapshot:
     def source_integrity_digest(self) -> str:
         return _digest(
             {
+                "authority": self.authority,
                 "bridge_schema_version": self.bridge_schema_version,
                 "error": self.error,
+                "fixture_only": self.fixture_only,
                 "logical_tick": self.logical_tick,
                 "prediction": self.prediction,
                 "prediction_id": self.prediction_id,
+                "production_origin_verified": self.production_origin_verified,
+                "production_verifier_registered": self.production_verifier_registered,
+                "retained_real_observation": self.retained_real_observation,
+                "runtime_source_read_only": self.runtime_source_read_only,
                 "source_instance_id": self.source_instance_id,
                 "source_schema_version": self.schema_version,
             },
