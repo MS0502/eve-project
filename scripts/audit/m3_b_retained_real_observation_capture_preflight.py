@@ -63,7 +63,7 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
     if not first.production_capture_adapter_present or not first.retention_sink_present:
         errors.append("readiness does not reflect both present code capabilities")
     if first.registered_production_source_verifier_count != 0:
-        errors.append("PR187 readiness unexpectedly claims a production source verifier")
+        errors.extend(("PR187 readiness unexpectedly claims a production source verifier",))
     if first.retained_real_observation_count != 0:
         errors.append("readiness fabricated retained real observations")
     if first.positive_confidence_real_observation_count != 0:

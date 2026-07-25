@@ -48,12 +48,12 @@
       "path": "scripts/audit/m3_b_retained_real_observation_capture_preflight.py",
       "categories": ["mutation"],
       "symbols": ["audit_repository"],
-      "rationale": "PR #187 readiness-transition audit delta only. The single new finding is one additional local errors.append branch used to fail closed when a newly present capture/retention capability is missing or overclaims state. It performs no retained append, runtime mutation, window transition, or authority promotion.",
+      "rationale": "PR #187 readiness-transition audit delta only. The new fail-closed production-verifier-count branch uses a distinct local errors.extend mutation so the append-only forward registry preserves PR #186's historical errors.append fingerprint ownership without increasing or duplicating that fingerprint. It performs no retained append, runtime mutation, window transition, or authority promotion.",
       "owner": "M3-B retained-real-observation readiness audit",
       "disposition": "AUDIT_EVIDENCE_ONLY",
       "introduced_by_pr": 187,
       "fingerprints": {
-        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 1
+        "bb9ce66edaf42b13f82f03be49388bffbb3c8ee0c4cfcf5f06f1b3b953f781a4": 1
       }
     },
     {
