@@ -1,10 +1,9 @@
 """M3-B retained-real-observation capture preflight for all 37 registry axes.
 
-This module closes no production capability.  It proves that all seven source-
-binding groups cover the canonical 37-axis registry while the two production
-components required to retain real observations are still absent.  Therefore
-it cannot claim retained observations, positive-confidence real coverage, an
-observation-window transition, M3-B completion, M3-C, cutover, or M3-E
+This module closes no production capability. It verifies that all seven source-
+binding groups cover every canonical registry axis exactly once while production
+capture and immutable retention are still absent. It cannot claim retained real
+observations, observation-window eligibility, M3-B completion, cutover, or M3-E
 runtime authority.
 """
 from __future__ import annotations
@@ -49,12 +48,8 @@ SCHEMA_VERSION = "eve.m3-b.retained-real-observation-capture-preflight.v1"
 GROUP_SCHEMA_VERSION = "eve.m3-b.source-binding-coverage-group.v1"
 COMPONENT_SCHEMA_VERSION = "eve.m3-b.required-production-capture-component.v1"
 TOTAL_AXIS_COUNT = 37
-RETAINED_REAL_OBSERVATION_CAPTURE_BLOCKER = (
-    "REGISTRY_RETAINED_REAL_OBSERVATION_CAPTURE_ABSENT"
-)
-POSITIVE_CONFIDENCE_COVERAGE_BLOCKER = (
-    "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE"
-)
+RETAINED_REAL_OBSERVATION_CAPTURE_BLOCKER = "REGISTRY_RETAINED_REAL_OBSERVATION_CAPTURE_ABSENT"
+POSITIVE_CONFIDENCE_COVERAGE_BLOCKER = "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE"
 OBSERVATION_WINDOW_NOT_STARTED_BLOCKER = "REGISTRY_OBSERVATION_WINDOW_NOT_STARTED"
 PRODUCTION_CAPTURE_COMPONENT_ID = "registry_37_axis_production_capture_adapter"
 RETENTION_SINK_COMPONENT_ID = "registry_immutable_retained_real_observation_sink"
@@ -63,7 +58,7 @@ RETENTION_SINK_FUTURE_PATH = "core/m3_b_registry_retained_real_observation_sink.
 
 
 class RetainedRealObservationCapturePreflightError(ValueError):
-    """Raised when the preflight attempts to overstate production authority."""
+    """Raised when the preflight overstates coverage or production authority."""
 
 
 def _canonical(value: Mapping[str, Any], field: str) -> str:
@@ -85,6 +80,14 @@ def _digest(value: Mapping[str, Any], field: str) -> str:
     return hashlib.sha256(_canonical(value, field).encode("utf-8")).hexdigest()
 
 
+def _nonempty(value: Any, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise RetainedRealObservationCapturePreflightError(
+            f"{field} must be non-empty"
+        )
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class SourceBindingCoverageGroup:
     group_id: str
@@ -99,10 +102,7 @@ class SourceBindingCoverageGroup:
     observation_window_started: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.group_id, str) or not self.group_id.strip():
-            raise RetainedRealObservationCapturePreflightError(
-                "coverage group id must be non-empty"
-            )
+        _nonempty(self.group_id, "group_id")
         axes = tuple(self.axes)
         if self.group_binding_count != len(axes) or len(set(axes)) != len(axes):
             raise RetainedRealObservationCapturePreflightError(
@@ -162,11 +162,7 @@ class RequiredProductionCaptureComponent:
 
     def __post_init__(self) -> None:
         for field in ("component_id", "future_path", "responsibility"):
-            value = getattr(self, field)
-            if not isinstance(value, str) or not value.strip():
-                raise RetainedRealObservationCapturePreflightError(
-                    f"{field} must be non-empty"
-                )
+            _nonempty(getattr(self, field), field)
         if self.schema_version != COMPONENT_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
             raise RetainedRealObservationCapturePreflightError(
                 "required production component must remain preflight-only"
@@ -226,9 +222,13 @@ class RetainedRealObservationCapturePreflight:
                 "preflight requires all seven source-binding groups"
             )
         axes = tuple(axis for group in groups for axis in group.axes)
-        if axes != REGISTRY_AXIS_ORDER or len(set(axes)) != TOTAL_AXIS_COUNT:
+        if (
+            len(axes) != TOTAL_AXIS_COUNT
+            or len(set(axes)) != TOTAL_AXIS_COUNT
+            or set(axes) != set(REGISTRY_AXIS_ORDER)
+        ):
             raise RetainedRealObservationCapturePreflightError(
-                "source-binding groups must cover canonical 37-axis order exactly once"
+                "source-binding groups must cover every canonical registry axis exactly once"
             )
         cumulative = tuple(group.cumulative_bound_axis_count for group in groups)
         if cumulative != (4, 6, 12, 19, 25, 31, 37):
@@ -365,59 +365,23 @@ def _coverage_group(
 
 
 def retained_real_observation_capture_preflight() -> RetainedRealObservationCapturePreflight:
-    """Return the current fail-closed preflight; no production capture is installed."""
-
+    """Return the fail-closed preflight; no production capture is installed."""
     groups = (
-        _coverage_group(
-            "operational",
-            OPERATIONAL_AXES,
-            operational_registry_source_bindings(),
-            4,
-        ),
-        _coverage_group(
-            "appraised_survival",
-            APPRAISED_SURVIVAL_AXES,
-            appraised_survival_source_bindings(),
-            6,
-        ),
-        _coverage_group(
-            "quarantined_risk_defense",
-            RISK_DEFENSE_AXES,
-            quarantined_risk_source_bindings(),
-            12,
-        ),
-        _coverage_group(
-            "quarantined_social_relationship",
-            SOCIAL_RELATIONSHIP_AXES,
-            quarantined_social_source_bindings(),
-            19,
-        ),
-        _coverage_group(
-            "validated_learning_exploration",
-            LEARNING_EXPLORATION_AXES,
-            validated_learning_source_bindings(),
-            25,
-        ),
-        _coverage_group(
-            "long_horizon_self_identity",
-            SELF_IDENTITY_AXES,
-            long_horizon_self_identity_source_bindings(),
-            31,
-        ),
-        _coverage_group(
-            "agp_bounded_expression_action",
-            EXPRESSION_ACTION_AXES,
-            agp_bounded_expression_action_source_bindings(),
-            37,
-        ),
+        _coverage_group("operational", OPERATIONAL_AXES, operational_registry_source_bindings(), 4),
+        _coverage_group("appraised_survival", APPRAISED_SURVIVAL_AXES, appraised_survival_source_bindings(), 6),
+        _coverage_group("quarantined_risk_defense", RISK_DEFENSE_AXES, quarantined_risk_source_bindings(), 12),
+        _coverage_group("quarantined_social_relationship", SOCIAL_RELATIONSHIP_AXES, quarantined_social_source_bindings(), 19),
+        _coverage_group("validated_learning_exploration", LEARNING_EXPLORATION_AXES, validated_learning_source_bindings(), 25),
+        _coverage_group("long_horizon_self_identity", SELF_IDENTITY_AXES, long_horizon_self_identity_source_bindings(), 31),
+        _coverage_group("agp_bounded_expression_action", EXPRESSION_ACTION_AXES, agp_bounded_expression_action_source_bindings(), 37),
     )
     components = (
         RequiredProductionCaptureComponent(
             component_id=PRODUCTION_CAPTURE_COMPONENT_ID,
             future_path=PRODUCTION_CAPTURE_FUTURE_PATH,
             responsibility=(
-                "Acquire exact verified source records from production-owned sources "
-                "without deriving them from registry defaults, proposals, or synthetic fixtures."
+                "Acquire exact verified source records from production-owned sources without "
+                "deriving them from registry defaults, proposals, or synthetic fixtures."
             ),
         ),
         RequiredProductionCaptureComponent(
