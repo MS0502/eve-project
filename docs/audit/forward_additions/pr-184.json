@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_long_horizon_self_identity_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "LongHorizonSelfIdentityRawRecord.__post_init__",
+        "_digest",
+        "derive_long_horizon_self_identity_axis_evidence",
+        "long_horizon_self_identity_source_bindings"
+      ],
+      "rationale": "Caller-invoked detached shadow long-horizon self-identity source-binding construction only. Findings are canonical SHA-256 encoding, immutable-record uniqueness checks, local binding-list assembly, and deterministic in-memory set checks. The module acquires no raw input, performs no identity/self-model/memory write, and has no raw-social ingestion, hardware polling, runtime observer, scheduler, persistence, event append, owner mutation, production capture, observation-window transition, cutover, or M3-E authority.",
+      "owner": "M3-B long-horizon self-identity six-axis source binding",
+      "disposition": "DISCONNECTED_SHADOW_SOURCE_BINDING_ONLY",
+      "introduced_by_pr": 184,
+      "fingerprints": {
+        "176d449cbe5b27fa9beda1373cd27e774c2080c80d7931ad609d9b20b90ac67f": 1,
+        "2f11be2f7aac5a14fdedcd6755a3b92f2055ff1c2165192d07dfa0dcfb0f3677": 1,
+        "b402554f623bc4b4842dff52b02bd46a74f481529a25e77931e3159955131c21": 1,
+        "f10e6f763a1bcb52c01785bf9962e3cc0c6ea4eec0c61713f6552f49cab3b3d1": 1
+      }
+    },
+    {
+      "path": "scripts/audit/m3_b_long_horizon_self_identity_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "<module>",
+        "_digest",
+        "_sha",
+        "audit_repository",
+        "main"
+      ],
+      "rationale": "Audit CLI only. Findings are deterministic fixture/report hashing, local error and report-map bookkeeping, sys.path setup, and caller-requested stdout/file audit-report output. The fixture is explicitly non-production and cannot mutate identity/self-model/memory, install capture, mutate registry state, start a window, authorize cutover, or open M3-E authority.",
+      "owner": "M3-B long-horizon self-identity recalculable audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 184,
+      "fingerprints": {
+        "03d7d03cc490ff0c2bfb7da11fcef8d563a76ab4b387a7d9173b4c5b44058112": 4,
+        "3199a560eaf0e3d5d8634a91e6b056c15a1569817dca971c04b31fbc14779f07": 1,
+        "4b5627f4a9868a14cf6d0aaad92c4b63721a8c436470b3aca72336da5b27a881": 3,
+        "4c9dbf141536c4a5faa32a5c0e3bc92647c32bc8b5220b2bb050bcb7dd188b6a": 1,
+        "7501cc36984a92139cc9fd9717f8339f56d89b51afa97676f38d67e837d3a279": 1,
+        "acabbe22465b7e6e2e9332f19bcc53e5d4d48da8abd6b6b70641b640ddb8300c": 1,
+        "b475fa70bde656bfe5e6fad1bc0b1b4f4c04aa1b26490011123576367aa66f49": 1,
+        "d8332b2d04fd4b0877f090f9ca417bfcda73cdd180ae51e8870690fd03117003": 1
+      }
+    },
+    {
+      "path": "tests/audit/test_m3_b_long_horizon_self_identity_source_binding.py",
+      "categories": [
+        "mutation"
+      ],
+      "symbols": [
+        "test_long_horizon_self_identity_source_binding_audit_is_deterministic_and_exact"
+      ],
+      "rationale": "Test-only set construction used to compare exact self-identity evidence coverage. It executes no identity/self-model/memory write, capture, persistence, owner mutation, observation window, or authority transition.",
+      "owner": "M3-B long-horizon self-identity audit tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 184,
+      "fingerprints": {
+        "f20475164995c3c7db6e438bab0a66d8516d6c4fee608243cac6549945d3c3eb": 2
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_long_horizon_self_identity_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "_sha",
+        "test_self_identity_binding_objects_are_frozen_and_cannot_claim_mutation_or_authority"
+      ],
+      "rationale": "Focused test evidence only. Findings are deterministic fixture hashing and a deliberately rejected frozen-dataclass assignment used to prove fail-closed mutation and authority boundaries. No production capture, identity/self-model/memory mutation, persistence, or authority path exists.",
+      "owner": "M3-B long-horizon self-identity focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 184,
+      "fingerprints": {
+        "0d98f39d2e83cca04af6a39f85edf8ce00bf5db59e85775b57c905b2f5c85664": 1,
+        "ee47c6be4cfed4151391ad1eb08843091e55b693ce7188da304cb9440d3c468f": 1
+      }
+    }
+  ]
+}
