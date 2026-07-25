@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-26**  
-Rebaseline base: `5664fc3bc22054c2d39142b3125416aea6089c63` — PR #196 squash merge  
+Rebaseline base/prerequisite: `5664fc3bc22054c2d39142b3125416aea6089c63` — PR #196 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -19,7 +19,7 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
 | M2-E | **A11 repair + wrapper-entrypoint hotfix merged; reviewed resume already succeeded; phone supervisor restart pending; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume, #195 A11 content-addressed repair, #196 script bootstrap hotfix |
 | M3-A | **complete** | #169 drive-dynamics design |
-| M3-B | **in progress** | #170-#190 merged shadow/read-only chain; C1 operator-attestation trust-root candidate is #194 and contains no real attestation |
+| M3-B | **in progress** | #170-#190 merged shadow/read-only chain; #194 is the C1 trust-root change owner and contains no real attestation |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
@@ -54,7 +54,7 @@ Merged M3-B work now includes:
 - real `prediction_error_pressure` runtime source bridge (#189);
 - production-runtime provenance preflight with fixture-classification binding (#190).
 
-The current C1 candidate (#194) adds a one-operator attestation trust-root contract and operator-local digest recomputation surface. It deliberately leaves the reviewed-attestation registry empty because no real phone launch attestation has been produced and reviewed yet.
+The C1 lineage (#194) supplies a one-operator attestation trust-root contract and operator-local digest recomputation surface. It deliberately leaves the reviewed-attestation registry empty because no real phone launch attestation has been produced and reviewed yet. Whether #194 is Draft, Ready, or merged must be read from live PR metadata; that metadata-only state does not change the counters below.
 
 The structural/real-observation boundary remains:
 
@@ -65,7 +65,7 @@ immutable retention sink:                     present
 verifier issuance anti-forgery boundary:      present
 prediction_error runtime source bridge:       present
 production runtime provenance preflight:      present
-operator attestation trust-root candidate:    present in #194
+operator attestation trust-root:              supplied by #194 lineage
 reviewed real operator attestations:           0
 registered runtime provenance verifiers:      0
 verified production runtime anchors:          0
@@ -226,7 +226,7 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
 | #192 | merged | A1 guarded M2-E habitat recovery + reviewed resume |
 | #193 | merged | B2 STATUS/reuse rebaseline and frozen-PR disposition |
-| #194 | open Draft | C1 operator-attestation trust-root candidate; reviewed-attestation registry intentionally empty |
+| #194 | live PR state authoritative | C1 operator-attestation trust-root lineage; reviewed-attestation registry intentionally empty |
 | #195 | merged | A11 content-addressed habitat persistence repair; exact validation pinned in merged PR metadata |
 | #196 | merged | A11 wrapper script-bootstrap hotfix; exact validation pinned in merged PR metadata |
 
@@ -252,8 +252,8 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 Order is constrained by evidence and authority boundaries:
 
 1. **Phone M2-E continuation:** update the phone checkout to merged `main` and restart only `scripts/habitat/supervisor.sh`; do **not** run `resume --reviewed` again. Continue the existing real habitat window from the already-resumed state.
-2. **C1 — Operator Attestation Trust Root (#194):** exact-head validate the final registered C1 head and squash merge only if all gates are green. C1 itself must retain zero reviewed real attestations and zero production verifier/observation counts.
-3. **Real phone launch attestation:** after C1 is merged, the operator may create and locally verify one real launch attestation using private companion nonce material. Raw nonce material stays private; only approved digest/public fields may enter review.
+2. **C1 trust root (#194):** this lineage supplies the one-operator contract; its Draft/Ready/merged state must be read live. No C2 production evidence may be accepted while #194 is unmerged, and merging #194 does not itself create a real attestation or production verifier.
+3. **Real phone launch attestation:** only after #194 is merged, the operator may create and locally verify one real launch attestation using private companion nonce material. Raw nonce material stays private; only approved digest/public fields may enter review.
 4. **C2 — First capability-forcing real observation:** only after an exact real attestation is reviewed/pinned, bind one real attested runtime/source verifier and retain the first positive-confidence observation honestly. Do not inflate one observation into 37/37 production coverage.
 5. Continue M3-B real source-batch observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
 
