@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_quarantined_social_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "QuarantinedSocialRawRecord.__post_init__",
+        "_digest",
+        "derive_quarantined_social_axis_evidence",
+        "quarantined_social_source_bindings"
+      ],
+      "rationale": "Caller-invoked detached shadow social source-binding construction only. Findings are canonical SHA-256 encoding, immutable-record field uniqueness checks, local binding-list assembly, and deterministic in-memory set checks. The module has no social-input acquisition, raw-social ingestion, hardware polling, runtime observer, scheduler, persistence, event append, owner mutation, production capture, observation-window transition, cutover, or M3-E authority.",
+      "owner": "M3-B quarantined social seven-axis source binding",
+      "disposition": "DISCONNECTED_SHADOW_SOURCE_BINDING_ONLY",
+      "introduced_by_pr": 182,
+      "fingerprints": {
+        "259de226c1ec01715e0af60781be0468ab15e42b3f093081ee104a41a5596531": 1,
+        "6502695951380ce192a1f5763e0f1f7a3b7327eaab711a2a9e4209bbc00f2a07": 1,
+        "96fe50475cfabe3fa77d385bc5a51cc48f8d8f7290283024905e9ed5a025418d": 1,
+        "ba8be5fd3a72fb88970c36a790ec8ab43169a14514a9e9589d4165adcada5aad": 1
+      }
+    },
+    {
+      "path": "scripts/audit/m3_b_quarantined_social_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "<module>",
+        "_digest",
+        "_sha",
+        "_static_surface",
+        "_write",
+        "audit_repository"
+      ],
+      "rationale": "Audit CLI only. Findings are fixture/report hashing, AST set accounting, local error/rejection bookkeeping, sys.path setup, and caller-requested stdout/file report output. The audit fixture is explicitly non-production and cannot ingest raw social feedback, install capture, mutate registry state, start a window, authorize cutover, or open M3-E authority.",
+      "owner": "M3-B quarantined social recalculable audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 182,
+      "fingerprints": {
+        "05aa844f8d9683bd86b6e36471b9cfdcd192105aa22ffcf70e8753e19f7fb0ec": 2,
+        "090ddab38cf107e971c705fb63f4b62d33658483adb59ff4e1c3b24c9a301ea6": 1,
+        "1520ec08df728c8039c322cdd161f0d020b8273dcf62ea305e16a085552f368e": 1,
+        "16d96c9a45724303632e4b932e17c90ed255eece0171fe9478899129ffb7c8b1": 3,
+        "724e8945b4d354b743b52ff42de8c858ac39100876bdd709265933eb161976ab": 2,
+        "7e7199369b23ce5eb51aedc19e9f4a451cb9be254c74966663a8a5c69e68a62a": 1,
+        "88a503c4ccbfd8edac9a1cfa919fc3ac2d2a8ec3c6afeb7009f4b33a538dd29d": 1,
+        "8eed6ab7a74e7e103e42c0914af639ac99401d547761c3c19856011cce3779f4": 1,
+        "ae10590ada953e1088ed0df93abc2e45c9ea60e22c5783da80f42f13ab511f10": 1,
+        "b1baf4d69ac4b731e1a440cf7bfa49593d2c92f0637727f754c2c72d373128f0": 7,
+        "ba63b4106fcc96173d4d4fa941ae32cf04079ea409ea84d3c1adb395b5b14ce3": 1,
+        "c9275db8cbf10f11c18a9dd92b1b845fe5f47dfb024a70eee603e7fc812bd722": 1,
+        "e104d66836f0c7e7a159d0098489f83d22a0cad0cea133669dac3537c84a5253": 1
+      }
+    },
+    {
+      "path": "tests/audit/test_m3_b_quarantined_social_source_binding.py",
+      "categories": [
+        "mutation"
+      ],
+      "symbols": [
+        "test_quarantined_social_source_binding_audit_is_deterministic_and_exact"
+      ],
+      "rationale": "Test-only set construction used to compare exact seven-axis evidence coverage. It executes no capture, persistence, owner mutation, observation window, or authority transition.",
+      "owner": "M3-B quarantined social audit tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 182,
+      "fingerprints": {
+        "5fcce5b8987eec01dea72251c360d223fba1ca1fc16e9e91954c585bcffdd348": 2
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_quarantined_social_source_binding.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "_sha",
+        "test_social_binding_objects_are_frozen_and_cannot_claim_authority",
+        "test_social_core_module_has_no_io_polling_scheduler_event_or_runtime_surface"
+      ],
+      "rationale": "Focused test evidence only. Findings are deterministic fixture hashing, local AST set accounting, and deliberately rejected frozen-dataclass assignment used to prove fail-closed authority boundaries. No production capture, social-input ingestion, live mutation, persistence, or authority path exists.",
+      "owner": "M3-B quarantined social focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 182,
+      "fingerprints": {
+        "17beced814f3c9f2d29e0851b205896467ecd1d83ffe6687941c9626db377c10": 1,
+        "21698bceaf5f603b5b5f47745c77f7acc9df0f924a49ce9d1f5511f1ae618a5e": 2,
+        "509f64bf2ed2b65863f14d5065a710996fc57eae53e07b2112df5ce83a622c72": 2,
+        "5470d0969f9ec11598c6c5f22670e3eb20592674574ccaf6ff59532fd51232fb": 1,
+        "5d6c8d8deea256e0aee69c8c8d01b8731b37a3c19fd6c48474db0489a195f9c2": 1,
+        "7842306d63bf6f75d222feb64fa4e9c99654bbd5a61576b69ab544b9b7637438": 1,
+        "be08a8e5e1d92be71b64fef8f2d2ccdb9effbef53cabfa82336819cd7a61e31c": 1
+      }
+    }
+  ]
+}

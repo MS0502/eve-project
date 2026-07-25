@@ -1,0 +1,32 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 182,
+  "base_candidate_surface_digest": "94fe9f5a7853519cf6599efb5982f2028f954f3bef5ebd34d400ebea23f94cfe",
+  "candidate_surface_digest": "1cafcf884e6a8e7761ba7021aa0f56285e60ed6c0a1b6a7a83d8de411a3d2568",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "0186a715ebd3c767ee7e1ab07479c58441b5a24caabf89434f678d0e90e89576",
+        "3cb30cbc1f8474c508926413c4b2750bf449d7c919c2b948781e60d6b8da0c48",
+        "4011e6be6c91d32f6322fa720d4b4db1072ed0bd98ccc1016e372569044683ec",
+        "4a7cf28db5968c32915efc81b69227d24b099aec712e5ac1b019d8bae71b019b",
+        "567d3ec7a5a5b62f0387c3ef7862004993d4678223aa94c62df73532ec7c401c",
+        "6d149c03166d1ab64c7dff28088e0d53c294917b962302e655254cb7aa68aebf",
+        "7376ca7dc7a80a462635809e47c79b6320d3443ac76ab1eea2cb99f1252bce72",
+        "7816983caeec3d7cd6f8b6126a449072f5035482f3778ece1e0998140f59f6f5",
+        "8a3a28bbf17113bd580e5191b4944d57797967091bdea696b26472bf417fd45a",
+        "8bcf742387d2cb0a5f9ab0717a90d6347f7d7919b3ff95c424c45952998ec005",
+        "b16eed9de24ea0054772891617018992650cb2efa54637957379001d990f3a93",
+        "ee31e4bf7c8b717fb40d6e3ab9519ad58548e22352007fa2a24ac67cba2373ef",
+        "f8947967038437e4edf3bad57ad538f41f2929b63d8e6fc2bbfc8da889ad1bee",
+        "ff13c0b2555147844da49f8b6521b0719779d1eabc2535f645bc2254b1588055"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The extractor follows caller-supplied detached social-quarantine/appraisal digests and exact raw-value fields through fail-closed validation and canonical JSON-to-SHA-256 integrity construction. Generic hashlib.sha256 symbol matching conservatively collides with an unrelated legacy restore helper that performs path.open/fh.read, but this social-binding module imports no path or file-read surface and invokes no such helper. The records only verify an already supplied quarantine-to-appraisal integrity chain and construct immutable detached evidence; they do not acquire social input, ingest raw social feedback, poll hardware, read persistence, emit expression, install runtime capture, or grant authority.",
+      "owner": "M3-B quarantined social-relationship source binding",
+      "denial_semantics": "Fail-closed social-quarantine/appraisal digest rejection and local integrity hashing are audit-visible validation only. They grant no runtime read, raw-social ingestion, hardware polling, persistence access, expression path, observation-window transition, cutover, or M3-E authority."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
