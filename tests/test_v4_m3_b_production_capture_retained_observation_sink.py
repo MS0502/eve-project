@@ -180,6 +180,18 @@ def test_direct_verification_metadata_cannot_bypass_registered_verifier_executio
         )
 
 
+def test_dataclass_replace_cannot_clone_or_modify_an_issued_verification(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    evidence = _evidence()
+    verification = _issued_verification(monkeypatch, evidence)
+    with pytest.raises(RegistryProductionCaptureError, match="issued by registered verifier execution"):
+        replace(
+            verification,
+            verifier_trace_digest=_sha("caller-replaced-verifier-trace"),
+        )
+
+
 def test_registered_verifier_callable_is_executed_before_verification_is_issued(
     monkeypatch: pytest.MonkeyPatch,
 ):
