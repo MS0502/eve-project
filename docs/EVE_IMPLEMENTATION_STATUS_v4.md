@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-25**  
-Rebaseline base: `5af3fc8f2041e54a33384c4a8d60bebccb5a6eb2` — PR #190 squash merge  
+Rebaseline base: `9b2545795b681dd0c53a9d51820b6baa70df9482` — PR #191 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -17,14 +17,14 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-B | merged | #162 read-capability extraction and exact technical decisions |
 | M2-C | merged | #164 bounded migration/dual-read comparison |
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
-| M2-E | **operational window work in progress; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver |
+| M2-E | **operational window repair in progress; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver; A1 guarded-recovery repair supplied by the current unmerged change |
 | M3-A | **complete** | #169 drive-dynamics design |
 | M3-B | **in progress** | #170-#190 shadow/read-only affect and real-observation preflight chain |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
-`M2-E` acceptance is not a production cutover authorization. The phone habitat observation window is currently frozen pending the A7 habitat-driver repair described below. The M3-B observation window is a separate gate and has **not started**.
+`M2-E` acceptance is not a production cutover authorization. The phone habitat observation window remains frozen until the A1 repair in the current change passes exact-head validation, reaches `main`, and the operator explicitly executes its reviewed resume command. The M3-B observation window is a separate gate and has **not started**.
 
 ### Executable-audit compatibility notes
 
@@ -80,7 +80,7 @@ cutover authorized:                           false
 
 No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, or self-hashed launch metadata may be reclassified as production evidence. Production provenance requires an independently reviewable trust root.
 
-## 3. M2-E habitat incident and A7 repair gate
+## 3. M2-E habitat incident and A1 repair gate
 
 The phone habitat incident on 2026-07-24 exposed a failure-visibility defect rather than a demonstrated store-integrity failure. The private companion evidence remains outside the public repository; only reviewed summaries/digests may be committed.
 
@@ -88,19 +88,27 @@ Repository/code inspection plus the operator evidence establish the following bo
 
 - the durable store survived the incident and the operator-side integrity checks reported healthy state;
 - a freeze occurred immediately after the last known normal sequence during the watchdog restore path;
-- the current runtime can collapse restore-path exceptions into broad `unrecoverable_corruption` handling without preserving exception type/message/traceback identity;
-- `supervisor.sh` does not continuously redirect runtime stdout/stderr into `supervisor.log`, leaving a second visibility gap;
-- the swallowed exception's exact type is therefore **not known** and must not be invented retrospectively.
+- the prior habitat runtime could collapse restore-path failures into broad `unrecoverable_corruption` handling without preserving exception type/message/traceback identity;
+- the prior `supervisor.sh` did not continuously redirect runtime stdout/stderr into `supervisor.log`, leaving a second visibility gap;
+- the swallowed incident exception's exact type remains **unknown** and is not retroactively invented.
 
-A1 is the critical repair gate before operator resume. Required scope:
+The current unmerged A1 change supplies the repair without authorizing resume by itself:
 
-1. record exception type, message, and traceback digest in append-only raw evidence before freeze;
-2. classify `unrecoverable_corruption` only after integrity failure; use bounded three-attempt backoff for I/O failure and classify exhausted I/O as `io_failure`;
-3. add guarded reviewed resume requiring integrity success, exact event-count/reconciliation validity, and recomputed restore-digest success while retaining the original freeze evidence immutably;
-4. make supervisor stdout/stderr actually reach `supervisor.log`;
-5. add chaos coverage for injected OSError and corruption/resume denial.
+1. the stable phone entrypoint delegates to an independently testable guarded runtime;
+2. every caught exception that can cause a freeze records exception type, message, traceback digest, attempt, and an evidence digest in the append-only private raw stream before the freeze transition;
+3. restore/integrity I/O receives three bounded backoffs (`1s`, `2s`, `4s`), exhausted healthy-store I/O is classified `io_failure`, and `unrecoverable_corruption` is reserved for a failed integrity report;
+4. reviewed resume requires integrity success, exact event-count validity, recomputed restore digest, and—only for the existing one-row pending-commit case—an exact deterministic next-event match before reconciliation;
+5. `freeze_reviewed_resume` references the immutable pre-resume freeze-review digest and does not erase earlier freeze/raw evidence;
+6. supervisor status stderr plus worker stdout/stderr are continuously appended to private `supervisor.log`;
+7. focused tests cover injected OSError retry/evidence, corruption-only classification, corruption resume refusal, same-count resume, one-pending-event reconciliation, and supervisor logging.
 
-This repair grants no cutover, recovery authority, M3 authority, or production-default change.
+The exact operator command is intentionally not authorized until this change is exact-head green and merged. After that, the reviewed resume command is:
+
+```bash
+python scripts/habitat/m2_e_window_runtime.py --private-root "${EVE_M2E_PRIVATE_ROOT:-$HOME/.local/share/eve-m2e-window-private}" resume --reviewed
+```
+
+This repair grants no cutover, recovery authority beyond the explicit reviewed resume gate, M3 authority, production-default change, or observation-window seal.
 
 ## 4. Validation reuse and new-chat rule
 
@@ -115,20 +123,22 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #190 is now pinned as a merged prerequisite:
+PR #191 is the latest merged prerequisite pin:
 
 ```text
-exact head:   2b2689e9fc49c8f10ea8c367b8e74e3860523ca0
-exact run:    30148099229
-focused:      8 passed
+exact head:   d6399f3d471274e2f2ccf34145a47902637d6340
+exact run:    30149385365
+focused:      no focused tests selected
 full:         3,128 passed
-artifact SHA: 6abbdc0f6be2c887c75cddc30ca232fbfd15d02707580c68ca2098f0b0e2a2a4
-M2-E run:     30148099254
+artifact SHA: f8dc41d9a997f6b101ada94b8e92101fb237797a2fb059980f8e12ae41c0c3a0
+M2-E run:     30149385366
 M2-E:         6/6 jobs passed
-merge SHA:    5af3fc8f2041e54a33384c4a8d60bebccb5a6eb2
+merge SHA:    9b2545795b681dd0c53a9d51820b6baa70df9482
 ```
 
-## 5. Governance rules added by this rebaseline
+PR #190 remains separately pinned in the reuse ledger; A1 does not rerun #190 or #191 merely because implementation work has moved to a new PR/chat.
+
+## 5. Governance rules added by the #191 rebaseline
 
 ### 5.1 Same-PR STATUS update
 
@@ -138,7 +148,7 @@ Every merge-intended implementation/governance PR must update this STATUS docume
 
 A PR number, merge state, exact head, workflow result, artifact digest, or completion claim may be written in completed form only after direct repository/workflow verification. Work that has not been pushed/created/verified must be described as planned, proposed, or pending.
 
-On 2026-07-25, before this governance rebaseline was opened, a status report incorrectly stated that PRs #190-#192 had been merged. Direct repository audit showed #190 was still Draft/Open and that no PR objects existed for #191 or #192 at that time. #190 was then independently reviewed, corrected, exact-head validated, and squash-merged as `5af3fc8f2041e54a33384c4a8d60bebccb5a6eb2`. The earlier #191/#192 completion claims remain invalid historical claims. Any later creation of those PR numbers does not retroactively validate the earlier report.
+On 2026-07-25, before the #191 governance rebaseline was opened, a status report incorrectly stated that PRs #190-#192 had been merged. Direct repository audit showed #190 was still Draft/Open and that no PR objects existed for #191 or #192 at that time. #190 was then independently reviewed, corrected, exact-head validated, and squash-merged as `5af3fc8f2041e54a33384c4a8d60bebccb5a6eb2`; #191 was later actually created, validated, and squash-merged as `9b2545795b681dd0c53a9d51820b6baa70df9482`. The earlier #191/#192 completion claims remain invalid historical claims. Any later creation of PR #192 does not retroactively validate the earlier report.
 
 ### 5.3 Private companion boundary
 
@@ -148,7 +158,7 @@ Raw phone companion contents, SQLite/WAL files, backups, private nonce material,
 
 Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision.
 
-## 6. PR registry — #145 through #190
+## 6. PR registry — #145 through #191
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -200,6 +210,7 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #188 | merged | production verifier issuance anti-forgery boundary |
 | #189 | merged | prediction-error real runtime source bridge preflight |
 | #190 | merged | production-runtime provenance preflight; fixture relabeling defect corrected before merge |
+| #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
 
 ## 7. Frozen PR register
 
@@ -211,14 +222,14 @@ Open frozen legacy-lineage PRs remain:
 
 The historical M1 acceptance record names these as **open REWRITE PRs #109, #86, #84, and #82**. That literal remains an executable-audit compatibility statement until B2 performs repository-verified supersession disposition.
 
-They are not merge-authorized by this status rebaseline. The next governance step B2 compares each intent against the merged M2-A/M2-B and later contracts. Fully absorbed items may be closed with supersession/evidence preservation; any unabsorbed requirement must be reported instead of silently closed.
+They are not merge-authorized by this status update. B2 compares each intent against the merged replacements/contracts. Repository preflight already identifies merged replacements for #82/#84/#86, while #109 still requires explicit residual review and must not be closed merely to force the register to zero.
 
 ## 8. Current next steps
 
 Order is constrained by evidence and authority boundaries:
 
-1. **A1 — Habitat Driver Fix:** repair failure visibility, I/O classification/backoff, guarded reviewed resume, supervisor logging, and chaos coverage; then operator may execute the exact reviewed resume command from that PR.
-2. **B2 — Frozen-PR disposition:** after this STATUS/governance rebaseline, compare #109/#86/#84/#82 against merged contracts and close only fully superseded work.
+1. **A1 — Habitat Driver Fix:** validate the current guarded-recovery change on its final registered exact head; only if exact-head and M2-E are green may it be Ready/squash-merged, after which the operator may run the exact reviewed resume command above.
+2. **B2 — Frozen-PR disposition:** close #82/#84/#86 only after recording their verified merged replacements; keep #109 open if its unabsorbed residual remains.
 3. **C1 — Operator Attestation Trust Root:** create a one-operator trust root in which private companion nonce material remains private and repository/runtime evidence carries only the independently checkable digest binding. A runtime may not self-sign its own production provenance.
 4. **C2 — First capability-forcing real observation:** only after C1, bind a real attested source verifier and land the first retained, positive-confidence real observation honestly. Do not inflate 1/37 into 37/37 production coverage.
 5. Continue M3-B source-batch real observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
