@@ -100,12 +100,10 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         )
     except RegistryProductionCaptureError as exc:
         unregistered_verifier_rejected = "not registered" in str(exc)
-    if not unregistered_verifier_rejected:
-        errors.append("unregistered production verifier execution was not rejected")
 
     direct_verification_rejected = _direct_verification_rejected(evidence)
-    if not direct_verification_rejected:
-        errors.append("caller-authored production verification bypassed issuance boundary")
+    if not unregistered_verifier_rejected or not direct_verification_rejected:
+        errors.append("production verifier issuance boundary rejection audit failed")
 
     capture_path = root / "core/m3_b_registry_production_capture_adapter.py"
     sink_path = root / "core/m3_b_registry_retained_real_observation_sink.py"
