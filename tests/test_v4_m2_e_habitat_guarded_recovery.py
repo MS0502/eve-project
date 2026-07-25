@@ -184,7 +184,7 @@ def test_reviewed_resume_same_count_requires_recomputed_restore_digest(tmp_path:
 def test_supervisor_captures_runtime_streams_and_runs_guarded_runtime():
     supervisor = SUPERVISOR.read_text(encoding="utf-8")
 
-    assert 'RUNTIME="$REPO_ROOT/scripts/habitat/m2_e_window_runtime_guarded.py"' in supervisor
+    assert 'RUNTIME="$REPO_ROOT/scripts/habitat/m2_e_window_runtime_guarded_a11.py"' in supervisor
     assert 'LOG="$PRIVATE_ROOT/supervisor.log"' in supervisor
     assert '2>>"$LOG"' in supervisor
     assert '>>"$LOG" 2>&1' in supervisor
