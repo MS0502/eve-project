@@ -200,18 +200,30 @@ def test_runtime_bridge_fails_closed_on_unobserved_or_mismatched_trace():
         )
 
 
-def test_non_fixture_label_is_not_production_origin_proof():
-    snapshot = prediction_error_runtime_snapshot_from_mappings(
-        prediction=_prediction(prediction_id="pred_0000"),
-        error=_error(prediction_id="pred_0000", mood_error=0.2),
+def test_non_fixture_label_is_not_production_origin_proof_and_changes_source_digest():
+    prediction = _prediction(prediction_id="pred_0000")
+    error = _error(prediction_id="pred_0000", mood_error=0.2)
+    non_fixture = prediction_error_runtime_snapshot_from_mappings(
+        prediction=prediction,
+        error=error,
         observe_count=1,
         source_instance_id="runtime:ai-adapter:primary",
         fixture_only=False,
     )
-    assert snapshot.fixture_only is False
-    assert snapshot.production_origin_verified is False
-    assert snapshot.production_verifier_registered is False
-    assert snapshot.retained_real_observation is False
+    fixture = prediction_error_runtime_snapshot_from_mappings(
+        prediction=prediction,
+        error=error,
+        observe_count=1,
+        source_instance_id="runtime:ai-adapter:primary",
+        fixture_only=True,
+    )
+    assert non_fixture.fixture_only is False
+    assert non_fixture.production_origin_verified is False
+    assert non_fixture.production_verifier_registered is False
+    assert non_fixture.retained_real_observation is False
+    assert fixture.fixture_only is True
+    assert non_fixture.source_integrity_digest != fixture.source_integrity_digest
+    assert non_fixture.source_snapshot_id != fixture.source_snapshot_id
 
 
 def test_bridge_capability_keeps_production_and_m3_boundaries_closed():
