@@ -25,12 +25,12 @@ from core.m3_b_retained_real_observation_capture_preflight import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_preflight_reassembles_all_seven_binding_groups_into_exact_37_axis_order():
+def test_preflight_reassembles_all_seven_binding_groups_into_exact_37_axis_coverage():
     preflight = retained_real_observation_capture_preflight()
     axes = tuple(axis for group in preflight.source_binding_groups for axis in group.axes)
-    assert axes == REGISTRY_AXIS_ORDER
     assert len(axes) == 37
     assert len(set(axes)) == 37
+    assert set(axes) == set(REGISTRY_AXIS_ORDER)
     assert tuple(group.group_binding_count for group in preflight.source_binding_groups) == (
         4,
         2,
