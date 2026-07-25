@@ -2,22 +2,23 @@
 
 The adapter is capability machinery only. Importing or constructing it performs no
 runtime polling, source discovery, persistence, event append, scheduling, owner
-mutation, observation-window transition, or authority promotion. A caller must
-supply already-derived positive-confidence evidence plus an exact immutable
-production-source verification created by a separately reviewed source bridge.
+mutation, observation-window transition, or authority promotion.
 
-No production source verifier is registered by this module. The closed registry
-below is intentionally empty. Until a later reviewed PR registers an exact source-
-contract/verifier pair, ``ProductionCaptureRecord`` construction fails closed and
-no retained-real-observation append can occur.
+A production verification is accepted only when it was issued by executing the
+registered source-contract-specific verifier over caller-supplied source material.
+Callers cannot turn self-authored verification metadata into a real capture merely by
+constructing ``ProductionSourceVerification``. No production verifier is registered
+by this module; the closed registry remains intentionally empty until a later reviewed
+runtime-source integration PR supplies an executable verifier.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import re
-from dataclasses import dataclass
-from typing import Any, Mapping
+from dataclasses import InitVar, dataclass, field
+from types import MappingProxyType
+from typing import Any, Callable, Mapping
 
 from core.event_kernel import SHADOW_AUTHORITY
 from core.m3_b_registry_observation_evidence import RegistryAxisPositiveConfidenceEvidence
@@ -27,6 +28,8 @@ from core.m3_b_registry_observation_source_manifest import (
 )
 
 VERIFICATION_SCHEMA_VERSION = "eve.m3-b.registry-production-source-verification.v1"
+VERIFIER_RESULT_SCHEMA_VERSION = "eve.m3-b.registry-production-verifier-result.v1"
+VERIFIER_REGISTRATION_SCHEMA_VERSION = "eve.m3-b.registry-production-verifier-registration.v1"
 CAPTURE_RECORD_SCHEMA_VERSION = "eve.m3-b.registry-production-capture-record.v1"
 CAPABILITY_SCHEMA_VERSION = "eve.m3-b.registry-production-capture-capability.v1"
 ADAPTER_VERSION = "eve.m3-b.registry-production-capture-adapter.v1"
@@ -36,12 +39,7 @@ POSITIVE_CONFIDENCE_COVERAGE_BLOCKER = "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_IN
 OBSERVATION_WINDOW_NOT_STARTED_BLOCKER = "REGISTRY_OBSERVATION_WINDOW_NOT_STARTED"
 ZERO_DIGEST = "0" * 64
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
-
-# Deliberately empty in this capability-only PR. A later source-integration PR
-# must add exact source_contract_id -> (verifier_id, verifier_version) entries
-# together with the reviewed verifier implementation. Merely constructing a
-# ProductionSourceVerification object is therefore insufficient to claim reality.
-REGISTERED_PRODUCTION_SOURCE_VERIFIERS: Mapping[str, tuple[str, str]] = {}
+_VERIFICATION_ISSUANCE_TOKEN = object()
 
 
 class RegistryProductionCaptureError(ValueError):
@@ -92,10 +90,118 @@ def _manifest_entry(axis: str) -> RegistryObservationSourceEntry:
     raise RegistryProductionCaptureError("axis is absent from the registry source manifest")
 
 
+@dataclass(frozen=True, slots=True)
+class ProductionSourceVerifierResult:
+    """Untrusted verifier output that must still be bound and issued by this module."""
+
+    source_instance_id: str
+    source_snapshot_id: str
+    source_schema_version: str
+    source_integrity_digest: str
+    raw_observation_digest: str
+    observation_evidence_digest: str
+    verifier_trace_digest: str
+    verified_logical_tick: int
+    verification_environment: str = VERIFICATION_ENVIRONMENT
+    production_origin_verified: bool = True
+    runtime_capture_verified: bool = True
+    fixture_only: bool = False
+    synthetic: bool = False
+    proposal_only: bool = False
+    registry_owner_source: bool = False
+    schema_version: str = VERIFIER_RESULT_SCHEMA_VERSION
+    authority: str = SHADOW_AUTHORITY
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "source_instance_id",
+            "source_snapshot_id",
+            "source_schema_version",
+        ):
+            _identifier(getattr(self, field_name), field_name)
+        for field_name in (
+            "source_integrity_digest",
+            "raw_observation_digest",
+            "observation_evidence_digest",
+            "verifier_trace_digest",
+        ):
+            _digest_string(getattr(self, field_name), field_name)
+        _nonnegative_int(self.verified_logical_tick, "verified_logical_tick")
+        if self.verification_environment not in {"production", "test_fixture"}:
+            raise RegistryProductionCaptureError("unsupported verification environment")
+        if self.verification_environment == "production" and self.fixture_only:
+            raise RegistryProductionCaptureError(
+                "production verification cannot simultaneously be a fixture"
+            )
+        if self.verification_environment == "test_fixture" and not self.fixture_only:
+            raise RegistryProductionCaptureError(
+                "test verification environment must remain fixture_only"
+            )
+        if not self.production_origin_verified or not self.runtime_capture_verified:
+            raise RegistryProductionCaptureError(
+                "verifier result requires explicit origin and runtime-capture proof"
+            )
+        if self.synthetic or self.proposal_only or self.registry_owner_source:
+            raise RegistryProductionCaptureError(
+                "synthetic, proposal-only, or registry-owner evidence cannot be verifier output"
+            )
+        if self.schema_version != VERIFIER_RESULT_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
+            raise RegistryProductionCaptureError(
+                "production verifier result must remain exact shadow-only evidence"
+            )
+
+
+ProductionVerifierCallable = Callable[
+    [RegistryAxisPositiveConfidenceEvidence, Mapping[str, Any]],
+    ProductionSourceVerifierResult,
+]
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionSourceVerifierRegistration:
+    """Reviewed executable verifier registration for exactly one source contract."""
+
+    source_contract_id: str
+    verifier_id: str
+    verifier_version: str
+    verifier: ProductionVerifierCallable = field(repr=False, compare=False)
+    schema_version: str = VERIFIER_REGISTRATION_SCHEMA_VERSION
+    authority: str = SHADOW_AUTHORITY
+
+    def __post_init__(self) -> None:
+        for field_name in ("source_contract_id", "verifier_id", "verifier_version"):
+            _identifier(getattr(self, field_name), field_name)
+        contracts = {
+            entry.source_contract_id for entry in registry_observation_source_manifest().entries
+        }
+        if self.source_contract_id not in contracts:
+            raise RegistryProductionCaptureError(
+                "production verifier registration source contract is absent from manifest"
+            )
+        if not callable(self.verifier):
+            raise RegistryProductionCaptureError("production verifier registration must be executable")
+        if self.schema_version != VERIFIER_REGISTRATION_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
+            raise RegistryProductionCaptureError(
+                "production verifier registration must remain exact shadow-only machinery"
+            )
+
+
+# Deliberately empty and immutable. Future source-integration PRs may change this
+# constant only through reviewed repository code; runtime callers cannot inject a
+# registration into the live mapping.
+REGISTERED_PRODUCTION_SOURCE_VERIFIERS: Mapping[
+    str, ProductionSourceVerifierRegistration
+] = MappingProxyType({})
+
+
 def _require_registered_verifier(verification: "ProductionSourceVerification") -> None:
-    expected = REGISTERED_PRODUCTION_SOURCE_VERIFIERS.get(verification.source_contract_id)
-    actual = (verification.verifier_id, verification.verifier_version)
-    if expected is None or actual != expected:
+    registration = REGISTERED_PRODUCTION_SOURCE_VERIFIERS.get(verification.source_contract_id)
+    if (
+        type(registration) is not ProductionSourceVerifierRegistration
+        or registration.source_contract_id != verification.source_contract_id
+        or registration.verifier_id != verification.verifier_id
+        or registration.verifier_version != verification.verifier_version
+    ):
         raise RegistryProductionCaptureError(
             "production verifier is not registered for this source contract"
         )
@@ -103,12 +209,7 @@ def _require_registered_verifier(verification: "ProductionSourceVerification") -
 
 @dataclass(frozen=True, slots=True)
 class ProductionSourceVerification:
-    """Immutable proof supplied by a separately reviewed production source bridge.
-
-    The object validates source provenance, but it is not sufficient by itself.
-    ``ProductionCaptureRecord`` additionally requires its verifier pair to appear
-    in ``REGISTERED_PRODUCTION_SOURCE_VERIFIERS``.
-    """
+    """Immutable production proof issued only by registered verifier execution."""
 
     axis: str
     source_contract_id: str
@@ -132,10 +233,15 @@ class ProductionSourceVerification:
     registry_owner_source: bool = False
     schema_version: str = VERIFICATION_SCHEMA_VERSION
     authority: str = SHADOW_AUTHORITY
+    _issuance_token: InitVar[object | None] = None
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, _issuance_token: object | None) -> None:
+        if _issuance_token is not _VERIFICATION_ISSUANCE_TOKEN:
+            raise RegistryProductionCaptureError(
+                "production verification must be issued by registered verifier execution"
+            )
         entry = _manifest_entry(self.axis)
-        for field in (
+        for field_name in (
             "source_contract_id",
             "source_family",
             "source_instance_id",
@@ -144,14 +250,14 @@ class ProductionSourceVerification:
             "verifier_id",
             "verifier_version",
         ):
-            _identifier(getattr(self, field), field)
-        for field in (
+            _identifier(getattr(self, field_name), field_name)
+        for field_name in (
             "source_integrity_digest",
             "raw_observation_digest",
             "observation_evidence_digest",
             "verifier_trace_digest",
         ):
-            _digest_string(getattr(self, field), field)
+            _digest_string(getattr(self, field_name), field_name)
         _nonnegative_int(self.verified_logical_tick, "verified_logical_tick")
         if self.source_contract_id != entry.source_contract_id:
             raise RegistryProductionCaptureError(
@@ -217,6 +323,82 @@ class ProductionSourceVerification:
     @property
     def verification_digest(self) -> str:
         return _digest(self.to_mapping(), "registry_production_source_verification")
+
+
+def execute_registered_production_verifier(
+    evidence: RegistryAxisPositiveConfidenceEvidence,
+    source_material: Mapping[str, Any],
+) -> ProductionSourceVerification:
+    """Execute the exact registered verifier and issue a bound immutable proof."""
+
+    if type(evidence) is not RegistryAxisPositiveConfidenceEvidence:
+        raise RegistryProductionCaptureError(
+            "registered verifier execution requires exact positive-confidence evidence"
+        )
+    if not isinstance(source_material, Mapping):
+        raise RegistryProductionCaptureError("production verifier source material must be a mapping")
+    entry = _manifest_entry(evidence.axis)
+    registration = REGISTERED_PRODUCTION_SOURCE_VERIFIERS.get(entry.source_contract_id)
+    if type(registration) is not ProductionSourceVerifierRegistration:
+        raise RegistryProductionCaptureError(
+            "production verifier is not registered for this source contract"
+        )
+    if registration.source_contract_id != entry.source_contract_id:
+        raise RegistryProductionCaptureError(
+            "registered verifier source contract does not match manifest"
+        )
+    result = registration.verifier(evidence, dict(source_material))
+    if type(result) is not ProductionSourceVerifierResult:
+        raise RegistryProductionCaptureError(
+            "registered production verifier must return the exact immutable verifier result"
+        )
+    verification = ProductionSourceVerification(
+        axis=evidence.axis,
+        source_contract_id=entry.source_contract_id,
+        source_family=entry.source_family,
+        source_instance_id=result.source_instance_id,
+        source_snapshot_id=result.source_snapshot_id,
+        source_schema_version=result.source_schema_version,
+        source_integrity_digest=result.source_integrity_digest,
+        raw_observation_digest=result.raw_observation_digest,
+        observation_evidence_digest=result.observation_evidence_digest,
+        verifier_id=registration.verifier_id,
+        verifier_version=registration.verifier_version,
+        verifier_trace_digest=result.verifier_trace_digest,
+        verified_logical_tick=result.verified_logical_tick,
+        verification_environment=result.verification_environment,
+        production_origin_verified=result.production_origin_verified,
+        runtime_capture_verified=result.runtime_capture_verified,
+        fixture_only=result.fixture_only,
+        synthetic=result.synthetic,
+        proposal_only=result.proposal_only,
+        registry_owner_source=result.registry_owner_source,
+        _issuance_token=_VERIFICATION_ISSUANCE_TOKEN,
+    )
+    expected = (
+        evidence.source_family,
+        evidence.source_instance_id,
+        evidence.source_snapshot_id,
+        evidence.source_schema_version,
+        evidence.source_integrity_digest,
+        evidence.raw_observation_digest,
+        evidence.evidence_digest,
+    )
+    actual = (
+        verification.source_family,
+        verification.source_instance_id,
+        verification.source_snapshot_id,
+        verification.source_schema_version,
+        verification.source_integrity_digest,
+        verification.raw_observation_digest,
+        verification.observation_evidence_digest,
+    )
+    if actual != expected:
+        raise RegistryProductionCaptureError(
+            "registered verifier output does not bind the exact observation evidence"
+        )
+    _require_registered_verifier(verification)
+    return verification
 
 
 @dataclass(frozen=True, slots=True)

@@ -13,8 +13,11 @@ from core.m3_b_registry_production_capture_adapter import (
     REGISTERED_PRODUCTION_SOURCE_VERIFIERS,
     ProductionCaptureRecord,
     ProductionSourceVerification,
+    ProductionSourceVerifierRegistration,
+    ProductionSourceVerifierResult,
     RegistryProductionCaptureAdapter,
     RegistryProductionCaptureError,
+    execute_registered_production_verifier,
     production_capture_capability_status,
 )
 from core.m3_b_registry_retained_real_observation_sink import (
@@ -51,23 +54,20 @@ def _evidence() -> RegistryAxisPositiveConfidenceEvidence:
     )
 
 
-def _verification(
+def _verifier_result(
     evidence: RegistryAxisPositiveConfidenceEvidence,
     *,
     fixture_only: bool = False,
-) -> ProductionSourceVerification:
-    return ProductionSourceVerification(
-        axis=evidence.axis,
-        source_contract_id="eve:m3-b:registry-source:energy_budget:v1",
-        source_family=evidence.source_family,
+    source_snapshot_id: str | None = None,
+    observation_evidence_digest: str | None = None,
+) -> ProductionSourceVerifierResult:
+    return ProductionSourceVerifierResult(
         source_instance_id=evidence.source_instance_id,
-        source_snapshot_id=evidence.source_snapshot_id,
+        source_snapshot_id=source_snapshot_id or evidence.source_snapshot_id,
         source_schema_version=evidence.source_schema_version,
         source_integrity_digest=evidence.source_integrity_digest,
         raw_observation_digest=evidence.raw_observation_digest,
-        observation_evidence_digest=evidence.evidence_digest,
-        verifier_id="test.production.energy-budget-verifier",
-        verifier_version="v1",
+        observation_evidence_digest=observation_evidence_digest or evidence.evidence_digest,
         verifier_trace_digest=_sha("verifier-trace:20"),
         verified_logical_tick=20,
         verification_environment="test_fixture" if fixture_only else "production",
@@ -75,25 +75,44 @@ def _verification(
     )
 
 
-def _register_test_verifier(monkeypatch: pytest.MonkeyPatch) -> None:
+def _register_test_verifier(
+    monkeypatch: pytest.MonkeyPatch,
+    verifier=None,
+) -> None:
+    if verifier is None:
+        verifier = lambda evidence, source_material: _verifier_result(evidence)
+    registration = ProductionSourceVerifierRegistration(
+        source_contract_id="eve:m3-b:registry-source:energy_budget:v1",
+        verifier_id="test.production.energy-budget-verifier",
+        verifier_version="v1",
+        verifier=verifier,
+    )
     monkeypatch.setattr(
         capture_module,
         "REGISTERED_PRODUCTION_SOURCE_VERIFIERS",
-        {
-            "eve:m3-b:registry-source:energy_budget:v1": (
-                "test.production.energy-budget-verifier",
-                "v1",
-            )
-        },
+        {registration.source_contract_id: registration},
+    )
+
+
+def _issued_verification(
+    monkeypatch: pytest.MonkeyPatch,
+    evidence: RegistryAxisPositiveConfidenceEvidence,
+    *,
+    verifier=None,
+) -> ProductionSourceVerification:
+    _register_test_verifier(monkeypatch, verifier=verifier)
+    return execute_registered_production_verifier(
+        evidence,
+        {"source": "test-only-disposable-runtime"},
     )
 
 
 def _capture(monkeypatch: pytest.MonkeyPatch) -> ProductionCaptureRecord:
-    _register_test_verifier(monkeypatch)
     evidence = _evidence()
+    verification = _issued_verification(monkeypatch, evidence)
     return RegistryProductionCaptureAdapter().capture(
         evidence,
-        _verification(evidence),
+        verification,
         capture_id="test:capture:energy-budget:20",
         capture_tick=20,
     )
@@ -129,32 +148,75 @@ def test_capability_presence_does_not_claim_any_real_observation_or_window():
     assert sink.m3_e_authority_open is False
 
 
-def test_unregistered_verifier_cannot_create_a_production_capture_record():
+def test_unregistered_verifier_cannot_issue_a_production_verification():
     evidence = _evidence()
-    verification = _verification(evidence)
-    assert verification.counts_as_real is True
     with pytest.raises(RegistryProductionCaptureError, match="not registered"):
-        RegistryProductionCaptureAdapter().capture(
+        execute_registered_production_verifier(
             evidence,
+            {"source": "unregistered-test-source"},
+        )
+
+
+def test_direct_verification_metadata_cannot_bypass_registered_verifier_execution(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    evidence = _evidence()
+    _register_test_verifier(monkeypatch)
+    with pytest.raises(RegistryProductionCaptureError, match="issued by registered verifier execution"):
+        ProductionSourceVerification(
+            axis=evidence.axis,
+            source_contract_id="eve:m3-b:registry-source:energy_budget:v1",
+            source_family=evidence.source_family,
+            source_instance_id=evidence.source_instance_id,
+            source_snapshot_id=evidence.source_snapshot_id,
+            source_schema_version=evidence.source_schema_version,
+            source_integrity_digest=evidence.source_integrity_digest,
+            raw_observation_digest=evidence.raw_observation_digest,
+            observation_evidence_digest=evidence.evidence_digest,
+            verifier_id="test.production.energy-budget-verifier",
+            verifier_version="v1",
+            verifier_trace_digest=_sha("caller-authored-trace"),
+            verified_logical_tick=20,
+        )
+
+
+def test_dataclass_replace_cannot_clone_or_modify_an_issued_verification(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    evidence = _evidence()
+    verification = _issued_verification(monkeypatch, evidence)
+    with pytest.raises(RegistryProductionCaptureError, match="issued by registered verifier execution"):
+        replace(
             verification,
-            capture_id="test:capture:unregistered",
-            capture_tick=20,
+            verifier_trace_digest=_sha("caller-replaced-verifier-trace"),
         )
-    with pytest.raises(RegistryProductionCaptureError, match="not registered"):
-        ProductionCaptureRecord(
-            capture_id="test:capture:direct-constructor",
-            capture_tick=20,
-            evidence=evidence,
-            verification=verification,
-        )
+
+
+def test_registered_verifier_callable_is_executed_before_verification_is_issued(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    evidence = _evidence()
+
+    def verifier(observation, source_material):
+        assert source_material == {"source": "test-only-disposable-runtime"}
+        return _verifier_result(observation)
+
+    verification = _issued_verification(monkeypatch, evidence, verifier=verifier)
+    assert verification.counts_as_real is True
+    assert verification.observation_evidence_digest == evidence.evidence_digest
+    assert verification.verifier_id == "test.production.energy-budget-verifier"
+    assert verification.verifier_trace_digest == _sha("verifier-trace:20")
 
 
 def test_fixture_verification_can_never_become_a_retained_real_capture_even_if_registered(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    _register_test_verifier(monkeypatch)
     evidence = _evidence()
-    fixture = _verification(evidence, fixture_only=True)
+
+    def fixture_verifier(observation, source_material):
+        return _verifier_result(observation, fixture_only=True)
+
+    fixture = _issued_verification(monkeypatch, evidence, verifier=fixture_verifier)
     assert fixture.counts_as_real is False
     with pytest.raises(RegistryProductionCaptureError, match="test fixtures"):
         RegistryProductionCaptureAdapter().capture(
@@ -165,28 +227,25 @@ def test_fixture_verification_can_never_become_a_retained_real_capture_even_if_r
         )
 
 
-def test_capture_verification_must_bind_exact_evidence_identity_and_digests(
+def test_verifier_output_must_bind_exact_evidence_identity_and_digests(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    _register_test_verifier(monkeypatch)
     evidence = _evidence()
-    verification = _verification(evidence)
-    mismatched = replace(verification, source_snapshot_id="test:other:snapshot")
-    with pytest.raises(RegistryProductionCaptureError, match="exact observation evidence"):
-        RegistryProductionCaptureAdapter().capture(
-            evidence,
-            mismatched,
-            capture_id="test:capture:mismatch",
-            capture_tick=20,
+
+    def mismatched_snapshot(observation, source_material):
+        return _verifier_result(observation, source_snapshot_id="test:other:snapshot")
+
+    with pytest.raises(RegistryProductionCaptureError, match="does not bind the exact observation evidence"):
+        _issued_verification(monkeypatch, evidence, verifier=mismatched_snapshot)
+
+    def mismatched_digest(observation, source_material):
+        return _verifier_result(
+            observation,
+            observation_evidence_digest=_sha("other-evidence"),
         )
-    wrong_digest = replace(verification, observation_evidence_digest=_sha("other-evidence"))
-    with pytest.raises(RegistryProductionCaptureError, match="exact observation evidence"):
-        RegistryProductionCaptureAdapter().capture(
-            evidence,
-            wrong_digest,
-            capture_id="test:capture:mismatch-digest",
-            capture_tick=20,
-        )
+
+    with pytest.raises(RegistryProductionCaptureError, match="does not bind the exact observation evidence"):
+        _issued_verification(monkeypatch, evidence, verifier=mismatched_digest)
 
 
 def test_capture_cannot_claim_persistence_window_mutation_or_authority(
@@ -227,9 +286,8 @@ def test_registered_verifier_simulation_proves_durable_append_without_changing_r
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    # This monkeypatch is explicitly a test-only simulation of a future reviewed
-    # verifier registration. It does not change repository registration state and
-    # must not be used as evidence that a production observation exists.
+    # This registration is process-local test evidence only. The repository table
+    # remains empty and this disposable simulation is not a production observation.
     capture = _capture(monkeypatch)
     database = tmp_path / "retained.sqlite3"
     store = SQLiteShadowStore(database)
