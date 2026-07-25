@@ -196,17 +196,16 @@ def test_registered_verifier_callable_is_executed_before_verification_is_issued(
     monkeypatch: pytest.MonkeyPatch,
 ):
     evidence = _evidence()
-    calls: list[dict] = []
 
     def verifier(observation, source_material):
-        calls.append(dict(source_material))
+        assert source_material == {"source": "test-only-disposable-runtime"}
         return _verifier_result(observation)
 
     verification = _issued_verification(monkeypatch, evidence, verifier=verifier)
-    assert calls == [{"source": "test-only-disposable-runtime"}]
     assert verification.counts_as_real is True
     assert verification.observation_evidence_digest == evidence.evidence_digest
     assert verification.verifier_id == "test.production.energy-budget-verifier"
+    assert verification.verifier_trace_digest == _sha("verifier-trace:20")
 
 
 def test_fixture_verification_can_never_become_a_retained_real_capture_even_if_registered(
