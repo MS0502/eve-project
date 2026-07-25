@@ -3,7 +3,7 @@ set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PRIVATE_ROOT="${EVE_M2E_PRIVATE_ROOT:-$HOME/.local/share/eve-m2e-window-private}"
-RUNTIME="$REPO_ROOT/scripts/habitat/m2_e_window_runtime.py"
+RUNTIME="$REPO_ROOT/scripts/habitat/m2_e_window_runtime_guarded.py"
 SUPERVISOR_PATH="$REPO_ROOT/scripts/habitat/supervisor.sh"
 LOG="$PRIVATE_ROOT/supervisor.log"
 BOOT_PENDING=0
