@@ -25,7 +25,8 @@
     ],
     "discovery_rule": "A new implementation PR runs compile, focused tests, M0 invariance, and M2-B validation before forward registration. Full-suite is blocked until exact fingerprints are registered. Full-suite runs once on the final registered head.",
     "registration_only_rule": "Intermediate registration-only heads are not evidence. Workflow concurrency should cancel superseded runs; only the final registered exact head may be accepted.",
-    "manual_rerun_rule": "Do not manually rerun a green pinned prerequisite merely because work moved to another chat or PR. Record the reused entry in the new PR instead."
+    "manual_rerun_rule": "Do not manually rerun a green pinned prerequisite merely because work moved to another chat or PR. Record the reused entry in the new PR instead.",
+    "new_chat_handoff_rule": "At the start of every new chat or operator session, inspect this ledger first. When the latest prerequisite entry still satisfies reuse_required_when, reuse it and do not schedule its full-suite or M2-E validation again."
   },
   "merged_entries": [
     {"pr":172,"title":"Legacy 26-Axis Immutable Capture","exact_head":"effac41db02581c4d5521a839d6cbfbffcecad27","exact_run":29984825031,"focused":"11 passed","full":"2860 passed","artifact_name":"exact-head-validation-effac41db02581c4d5521a839d6cbfbffcecad27","artifact_sha256":"f79570993f0775382ca0a72a90692ac555758ab52d472cf72a300600fcaba481","m2e_run":29984825029,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"f20951351b56c7102fdcf7c00f17cbcfac792205","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
@@ -37,15 +38,16 @@
     {"pr":180,"title":"M3-B Appraised Survival Two-Axis Source Binding","exact_head":"dee922cc38c3076a68c6208b48e01774c131a21a","exact_run":30003495700,"focused":"24 passed","full":"2964 passed","artifact_name":"exact-head-validation-dee922cc38c3076a68c6208b48e01774c131a21a","artifact_sha256":"a70c83361fe2b6c1e2563be333330d9ef1aba93760171f2e8522b84e2e276c2c","m2e_run":30003495677,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"c9b46e2f0d509d78b6b2802e180e7a3a4be741b3","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
     {"pr":181,"title":"M3-B Quarantined Risk-Defense Six-Axis Source Binding","exact_head":"e50651e4df087e744e3764c30074f9ea0b61ba1b","exact_run":30137513106,"focused":"33 passed","full":"2997 passed","artifact_name":"exact-head-validation-e50651e4df087e744e3764c30074f9ea0b61ba1b","artifact_sha256":"48198281221b2e38c501c9e75164729206e8d4025a5f5935f52a5472422b6b62","m2e_run":30137513107,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"d82652d74b9051d227ec415b648ec209b9de8b3d","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
     {"pr":182,"title":"M3-B Quarantined Social-Relationship Seven-Axis Source Binding","exact_head":"de7a53221ec99613c5c48165374cdf3438dc54e5","exact_run":30138226116,"focused":"30 passed","full":"3027 passed","artifact_name":"exact-head-validation-de7a53221ec99613c5c48165374cdf3438dc54e5","artifact_sha256":"79bb33ddc9221c48ce18e76dcd632bd404a2a08f33d2a0589460320a7e860916","m2e_run":30138226118,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"6c57f41114fbe0a203e559a27b187f6801ad7640","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
-    {"pr":183,"title":"M3-B Validated Learning-Exploration Six-Axis Source Binding","exact_head":"90b035d2352de01373f15b36aa06461121b3d520","exact_run":30138890046,"focused":"20 passed","full":"3047 passed","artifact_name":"exact-head-validation-90b035d2352de01373f15b36aa06461121b3d520","artifact_sha256":"c63af0b5be41d3c6d10b70936244ce0581b15321d91ae9adca4b05430e6eb4c9","m2e_run":30138890036,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"af363429f0d1065f803084d446a87c80753bc4cf","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"}
+    {"pr":183,"title":"M3-B Validated Learning-Exploration Six-Axis Source Binding","exact_head":"90b035d2352de01373f15b36aa06461121b3d520","exact_run":30138890046,"focused":"20 passed","full":"3047 passed","artifact_name":"exact-head-validation-90b035d2352de01373f15b36aa06461121b3d520","artifact_sha256":"c63af0b5be41d3c6d10b70936244ce0581b15321d91ae9adca4b05430e6eb4c9","m2e_run":30138890036,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"af363429f0d1065f803084d446a87c80753bc4cf","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
+    {"pr":184,"title":"M3-B Long-Horizon Self-Identity Six-Axis Source Binding","exact_head":"ba25b0052bdec7a3db8f6643bf223bc8105d0828","exact_run":30140781834,"focused":"21 passed","full":"3068 passed","artifact_name":"exact-head-validation-ba25b0052bdec7a3db8f6643bf223bc8105d0828","artifact_sha256":"c1e7adef398ad425445f5f2455eeacad77b0cafbe2a77ac05998520e18b5958c","m2e_run":30140781765,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"4adbb575ffe517512af74c74fce58a49f7996128","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"}
   ],
   "superseded_or_nonreusable": [
     {"pr":174,"reason":"GitHub PR head integration failure; full-suite was never executed.","reuse_status":"PROHIBITED"},
     {"pr":175,"reason":"Closed unmerged with stale PR head; corrected implementation moved to PR 176.","reuse_status":"PROHIBITED"}
   ],
   "active_unmerged": {
-    "pr": 184,
+    "pr": 185,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "af363429f0d1065f803084d446a87c80753bc4cf"
+    "baseline_sha": "4adbb575ffe517512af74c74fce58a49f7996128"
   }
 }
