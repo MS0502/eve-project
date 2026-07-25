@@ -68,6 +68,22 @@
       }
     },
     {
+      "path": "scripts/audit/m3_b_retained_real_observation_capture_preflight.py",
+      "categories": [
+        "mutation"
+      ],
+      "symbols": [
+        "audit_repository"
+      ],
+      "rationale": "PR #187 readiness-transition audit delta only. The single new finding is one additional local errors.append branch used to fail closed when a newly present capture/retention capability is missing or overclaims state. It performs no retained append, runtime mutation, window transition, or authority promotion.",
+      "owner": "M3-B retained-real-observation readiness audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 1
+      }
+    },
+    {
       "path": "tests/test_v4_m3_b_production_capture_retained_observation_sink.py",
       "categories": [
         "adaptive_numeric",
@@ -88,6 +104,29 @@
         "4a69a708a3900124e3026d471b4b80a4abaae3d28f0a3d7a2a46e837941a0e0f": 1,
         "6db436be8bdb2407ace05ae200e671d91548772f1793cab9e149e9e1f3ce8d23": 1,
         "6ffcebf22a9218672358e9d49d9f71fefa3cadefd9fe31b50bd15abf1a10c8ea": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_retained_real_observation_capture_preflight.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "test_core_readiness_has_no_filesystem_network_thread_scheduler_or_persistence_calls",
+        "test_preflight_and_components_are_frozen_and_fail_closed_on_overclaim"
+      ],
+      "rationale": "PR #187 focused-test delta for the machinery-present readiness state. Findings are test-local AST set/add/update bookkeeping and a deliberately rejected frozen-dataclass assignment. They prove that code presence is not runtime installation and that retained coverage/window/authority remain fail-closed; they perform no production capture or persistent append.",
+      "owner": "M3-B retained-real-observation readiness focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "411d5acec19f1ce1f3ab5f641e6b2d5c8e2821e6e5cb6df74c568967e983d7bf": 1,
+        "412d99902148adcb9cddaab98fdba6175053f8473bf5ce110bc688ad388bd998": 1,
+        "61ef7096cc93d20ea3d0a83783c7a93b8791d6e14d1d2786b6e10c0bd4626316": 1,
+        "76b40a980c01b4bc2933ca1c075c7f672f5e5e212efc94b48fc6790d61183e0f": 1,
+        "add41ddd87554cf9874b33f6b1633b7433d517205622bccc0c8b8f0056d4d978": 2,
+        "b68035eff7c2c5f0f79f5c86f0e473dd8b796e034fb14df7cd7f93d607b39a0c": 2
       }
     }
   ]
