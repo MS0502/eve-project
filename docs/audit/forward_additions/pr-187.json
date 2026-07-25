@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_registry_retained_real_observation_sink.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "RetainedRealObservationSink.__init__",
+        "RetainedRealObservationSink.append",
+        "_digest"
+      ],
+      "rationale": "Reviewed M3-B durable shadow-write capability. RetainedRealObservationSink.append intentionally invokes the already validated M2-A SQLiteShadowStore append-only SHA-256 chain, but only after an exact ProductionCaptureRecord has passed the closed production-verifier gate. Construction stores the explicit store handle only and performs no I/O; there is no auto-initialize or auto-append. The append remains shadow_only, requires exact event-envelope/readback proof, and cannot mutate the registry owner, start the observation window, complete M3-B, open M3-C/M3-E, or authorize cutover. The adaptive finding is canonical SHA-256 encoding only.",
+      "owner": "M3-B immutable retained-real-observation shadow sink",
+      "disposition": "M3_B_RETAINED_REAL_OBSERVATION_SHADOW_SINK",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "0bf1107762b60dbe0283750b51a799fa33f6c024fdb7dccdcc0ef0bae3e1ff9e": 1,
+        "33d71c69754fa0ff050ee14c1cc31dac7a47482cfd91e0f9f056dda0e1ffa6cd": 1,
+        "ca52c56068e7aa4a527c43997a93276ff75de6e4e82a6ef789ff4fe20c58de33": 1
+      }
+    },
+    {
+      "path": "core/m3_b_registry_production_capture_adapter.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "_digest"
+      ],
+      "rationale": "Deterministic canonical SHA-256 encoding inside the production-origin verification/capture contract. The production verifier registration map is deliberately empty in PR #187, so this module cannot create a real ProductionCaptureRecord in repository state and performs no runtime source read, persistence write, scheduling, window transition, or authority promotion.",
+      "owner": "M3-B production capture verification boundary",
+      "disposition": "M3_B_PRODUCTION_CAPTURE_VALIDATION",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "1052e427fd1f2cf6ac78beed668ec91a074d517d5eff0257fbf2b93d4b1584ed": 1
+      }
+    },
+    {
+      "path": "scripts/audit/m3_b_production_capture_retained_observation_sink.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "<module>",
+        "_digest",
+        "_sha",
+        "audit_repository",
+        "main"
+      ],
+      "rationale": "Audit CLI only. Findings are deterministic fixture/report hashing, local error/report bookkeeping, sys.path setup, and caller-requested stdout or audit-file output. The audit deliberately proves the production verifier registration table is empty and that an unregistered verifier is rejected; it performs no retained-observation append and cannot start a window or grant authority.",
+      "owner": "M3-B production capture and retention capability audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "17eb0a45e89a8b2cbe28d2e7be60676917684178e71219cffea53e2fb39a583d": 1,
+        "2fae18c4480c7415e799286b69a5179ead4bfbc5b27708afbfc5847734572ea1": 1,
+        "3959ec52ff4d9d2bd3dc9839ed8c3f94f3ab729d3c81fedd058d66ec94a850ae": 8,
+        "4ca616df513f3b6dd2b275cd58995952bb623284df6b40c2c14468d8f2acad19": 1,
+        "a491438daf7572a5754c1cb0a0f3fdf4f5847e5b2dab8bb242f9bbe09d0e62b7": 1,
+        "ab18ef24be0d2d902a7378ffeafe3810e0e18e432e5951960a0775fcb716cac4": 1,
+        "b4aed56713a046f23041ac55b93b8b4fdad78c8cc849685081dca7baba720a04": 1,
+        "e00de78014db0c9102d20571f4c92466d97d223b98c0fee78b974a1e4ce10b8c": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_production_capture_retained_observation_sink.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "_sha",
+        "test_capture_cannot_claim_persistence_window_mutation_or_authority",
+        "test_registered_verifier_simulation_proves_durable_append_without_changing_repository_status",
+        "test_sink_construction_performs_no_io_and_requires_explicit_store_initialize"
+      ],
+      "rationale": "Focused test evidence only. The sink.append findings are disposable temporary-SQLite exercises. One test intentionally calls append before initialization and proves no database is created; another temporarily monkeypatches a verifier registration solely to prove the reviewed shadow sink can append and read back one immutable event. The monkeypatch is process-local test state and the repository registration table remains empty. Frozen-object assignment is deliberately rejected to prove fail-closed authority boundaries.",
+      "owner": "M3-B production capture and retention focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "3e111eb2117b85f41a93223086c2ba0a3f2dbca771f59514ea8af81be8d83a3b": 1,
+        "4a69a708a3900124e3026d471b4b80a4abaae3d28f0a3d7a2a46e837941a0e0f": 1,
+        "6db436be8bdb2407ace05ae200e671d91548772f1793cab9e149e9e1f3ce8d23": 1,
+        "6ffcebf22a9218672358e9d49d9f71fefa3cadefd9fe31b50bd15abf1a10c8ea": 1
+      }
+    }
+  ]
+}
