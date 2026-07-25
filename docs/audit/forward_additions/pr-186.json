@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_retained_real_observation_capture_preflight.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "RetainedRealObservationCapturePreflight.__post_init__",
+        "SourceBindingCoverageGroup.__post_init__",
+        "_digest"
+      ],
+      "rationale": "Detached preflight construction only. Findings are canonical SHA-256 encoding and local set-based uniqueness/coverage checks over already-declared source-binding metadata. The module imports no filesystem, network, scheduler, persistence, capture, expression, or action-execution surface and cannot create retained observations, mutate the registry owner, start a window, authorize cutover, or open M3-E authority.",
+      "owner": "M3-B 37-axis retained-real-observation capture preflight",
+      "disposition": "DISCONNECTED_SHADOW_PREFLIGHT_ONLY",
+      "introduced_by_pr": 186,
+      "fingerprints": {
+        "1d3ba5157ea06ba645e8d3c6173b6d7d4437c16af77fa6a5f93f258da69f8a5d": 1,
+        "23307ea2f713039cc6fdcb3191c16a8570111bc48a47f7fc5c646191965916a7": 1,
+        "c82bf2293d35c6262e95fb40a8882f97c7e7a9f3b7b52c14271743feec46d370": 3
+      }
+    },
+    {
+      "path": "scripts/audit/m3_b_retained_real_observation_capture_preflight.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "<module>",
+        "_digest",
+        "audit_repository",
+        "main"
+      ],
+      "rationale": "Audit CLI only. Findings are deterministic report hashing, local error-list/report-map bookkeeping, sys.path setup, and caller-requested stdout/file report output. Filesystem checks only verify that the two named future production component paths are absent. The audit installs no capture, retains no observation, touches no runtime owner/persistence state, starts no observation window, and grants no authority.",
+      "owner": "M3-B retained-real-observation preflight audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 186,
+      "fingerprints": {
+        "3415dd5decf06b8edf2f583318e52ec8889e32ede2a52bef07dc2776365be18a": 1,
+        "4931efc6912e1ce25067e3dec74715edd14ad85d77c88ccf905f0065655b7506": 1,
+        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 10,
+        "70ea1436a0cb9631e8770a844f9f8cbd8397ed25874988133bb558b7dce8c7f8": 1,
+        "a313523cd8b87f10992d381f21e55b51e5b00e3c283964b4b7922fcb7498af11": 1,
+        "dbdccd28602ebff45a6f91a1f71f8c7305bfbeca204ab26b7b89c7707d9cd785": 1,
+        "efe381363d5ebc812addbfbaa07aa953f3bbe79187977e58ddc81cf0576adec3": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_retained_real_observation_capture_preflight.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "test_core_preflight_has_no_filesystem_network_thread_scheduler_or_persistence_surface",
+        "test_preflight_and_components_are_frozen_and_fail_closed_on_capability_claims",
+        "test_preflight_reassembles_all_seven_binding_groups_into_exact_37_axis_coverage"
+      ],
+      "rationale": "Focused test evidence only. Findings are local set construction for coverage/AST checks, test-only AST collection mutation, and a deliberately rejected frozen-dataclass assignment used to prove fail-closed authority boundaries. They execute no production capture, persistence, observation retention, window transition, or runtime mutation.",
+      "owner": "M3-B retained-real-observation preflight focused tests",
+      "disposition": "TEST_EVIDENCE",
+      "introduced_by_pr": 186,
+      "fingerprints": {
+        "1a285d55ed7fdf01c36399e5ede1ac5721df9d7a745dd66b9e8e96a42cfa6992": 2,
+        "3e02f0c0c4f40a7f2734a40e6b94940054d196d2dba60e633615e477b24674ac": 1,
+        "6a076b22944557984f857387d87aa8cb3deead45d95b834952d99e4c608f7635": 1,
+        "70d3cfe1e9bd037d316d08ad8ba8e3e8a8c43e702b5a395e6050430b7fcb2502": 2,
+        "7cc425c4bd239b408f96eb97f9b926964b14702790e087e30ebe8cb9f302fe07": 1,
+        "98e46a43b5bd937cdf6d1b3b5a3d6442c42b6899355191975a6d0dcba8465395": 3,
+        "f974ef206461e165517bb04367580c729ca6cd478a7d0f534cfdcb5137058bc9": 1
+      }
+    }
+  ]
+}
