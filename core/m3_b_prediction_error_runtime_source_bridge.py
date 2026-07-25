@@ -132,6 +132,8 @@ class PredictionErrorRuntimeSourceSnapshot:
         _identifier(self.source_instance_id, "source_instance_id")
         _nonnegative_int(self.logical_tick, "logical_tick")
         _identifier(self.prediction_id, "prediction_id")
+        if type(self.fixture_only) is not bool:
+            raise PredictionErrorRuntimeSourceBridgeError("fixture_only must be boolean")
         prediction = _thaw_mapping(self.prediction_json, "prediction_json")
         error = _thaw_mapping(self.error_json, "error_json")
         if prediction.get("id") != self.prediction_id:
@@ -151,13 +153,22 @@ class PredictionErrorRuntimeSourceSnapshot:
             raise PredictionErrorRuntimeSourceBridgeError(
                 "prediction expected_state is absent"
             )
-        mood = expected_state.get("mood")
-        if not isinstance(mood, Mapping):
+        _finite(
+            expected_state.get("mood_valence"),
+            "expected mood valence",
+            lower=-1.0,
+            upper=1.0,
+        )
+        _finite(
+            expected_state.get("mood_arousal"),
+            "expected mood arousal",
+            lower=0.0,
+            upper=1.0,
+        )
+        if not isinstance(expected_state.get("hormones"), Mapping):
             raise PredictionErrorRuntimeSourceBridgeError(
-                "prediction expected mood is absent"
+                "prediction expected hormones are absent"
             )
-        _finite(mood.get("valence"), "expected mood valence", lower=-1.0, upper=1.0)
-        _finite(mood.get("arousal"), "expected mood arousal", lower=0.0, upper=1.0)
         _finite(error.get("mood_error"), "mood_error", lower=0.0, upper=MOOD_ERROR_MAX)
         _finite(error.get("pred_confidence"), "pred_confidence", lower=0.0, upper=1.0)
         if not isinstance(error.get("hormone_errors"), Mapping):
@@ -344,6 +355,8 @@ def prediction_error_runtime_snapshot_from_mappings(
         raise PredictionErrorRuntimeSourceBridgeError(
             "prediction-error source requires a completed observation count"
         )
+    if type(fixture_only) is not bool:
+        raise PredictionErrorRuntimeSourceBridgeError("fixture_only must be boolean")
     prediction_id = _identifier(prediction.get("id"), "prediction id")
     return PredictionErrorRuntimeSourceSnapshot(
         source_instance_id=_identifier(source_instance_id, "source_instance_id"),
@@ -351,7 +364,7 @@ def prediction_error_runtime_snapshot_from_mappings(
         prediction_id=prediction_id,
         prediction_json=_freeze_mapping(prediction, "prediction"),
         error_json=_freeze_mapping(error, "error"),
-        fixture_only=bool(fixture_only),
+        fixture_only=fixture_only,
     )
 
 
