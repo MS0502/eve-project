@@ -35,14 +35,14 @@
         "audit_repository",
         "main"
       ],
-      "rationale": "Audit CLI only. Findings are deterministic report hashing, local error-list/report-map bookkeeping, sys.path setup, and caller-requested stdout/file report output. Filesystem checks only verify that the two named future production component paths are absent. The audit installs no capture, retains no observation, touches no runtime owner/persistence state, starts no observation window, and grants no authority.",
+      "rationale": "Audit CLI only. Findings are deterministic report hashing, local error-list/report-map bookkeeping, sys.path setup, and caller-requested stdout/file report output. The readiness audit evolves with the retained-observation boundary; the shared local errors.append fingerprint count tracks the current exact tree. It installs no capture, retains no production observation, touches no runtime owner state, starts no observation window, and grants no authority.",
       "owner": "M3-B retained-real-observation preflight audit",
       "disposition": "AUDIT_EVIDENCE_ONLY",
       "introduced_by_pr": 186,
       "fingerprints": {
         "3415dd5decf06b8edf2f583318e52ec8889e32ede2a52bef07dc2776365be18a": 1,
         "4931efc6912e1ce25067e3dec74715edd14ad85d77c88ccf905f0065655b7506": 1,
-        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 10,
+        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 11,
         "70ea1436a0cb9631e8770a844f9f8cbd8397ed25874988133bb558b7dce8c7f8": 1,
         "a313523cd8b87f10992d381f21e55b51e5b00e3c283964b4b7922fcb7498af11": 1,
         "dbdccd28602ebff45a6f91a1f71f8c7305bfbeca204ab26b7b89c7707d9cd785": 1,
