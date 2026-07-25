@@ -40,15 +40,16 @@
     {"pr":182,"title":"M3-B Quarantined Social-Relationship Seven-Axis Source Binding","exact_head":"de7a53221ec99613c5c48165374cdf3438dc54e5","exact_run":30138226116,"focused":"30 passed","full":"3027 passed","artifact_name":"exact-head-validation-de7a53221ec99613c5c48165374cdf3438dc54e5","artifact_sha256":"79bb33ddc9221c48ce18e76dcd632bd404a2a08f33d2a0589460320a7e860916","m2e_run":30138226118,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"6c57f41114fbe0a203e559a27b187f6801ad7640","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
     {"pr":183,"title":"M3-B Validated Learning-Exploration Six-Axis Source Binding","exact_head":"90b035d2352de01373f15b36aa06461121b3d520","exact_run":30138890046,"focused":"20 passed","full":"3047 passed","artifact_name":"exact-head-validation-90b035d2352de01373f15b36aa06461121b3d520","artifact_sha256":"c63af0b5be41d3c6d10b70936244ce0581b15321d91ae9adca4b05430e6eb4c9","m2e_run":30138890036,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"af363429f0d1065f803084d446a87c80753bc4cf","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
     {"pr":184,"title":"M3-B Long-Horizon Self-Identity Six-Axis Source Binding","exact_head":"ba25b0052bdec7a3db8f6643bf223bc8105d0828","exact_run":30140781834,"focused":"21 passed","full":"3068 passed","artifact_name":"exact-head-validation-ba25b0052bdec7a3db8f6643bf223bc8105d0828","artifact_sha256":"c1e7adef398ad425445f5f2455eeacad77b0cafbe2a77ac05998520e18b5958c","m2e_run":30140781765,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"4adbb575ffe517512af74c74fce58a49f7996128","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
-    {"pr":185,"title":"M3-B AGP-Bounded Expression-Action Six-Axis Source Binding","exact_head":"e590ada5663a3ddbf6fa33128d9228eeba13481d","exact_run":30141414944,"focused":"22 passed","full":"3090 passed","artifact_name":"exact-head-validation-e590ada5663a3ddbf6fa33128d9228eeba13481d","artifact_sha256":"ae9cdd47da1d1c6894e0047ee160422775896264231ae4a80e455c61b5f43cb1","m2e_run":30141414947,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"272ae3132547395e03af55731ba87736aa6535e8","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"}
+    {"pr":185,"title":"M3-B AGP-Bounded Expression-Action Six-Axis Source Binding","exact_head":"e590ada5663a3ddbf6fa33128d9228eeba13481d","exact_run":30141414944,"focused":"22 passed","full":"3090 passed","artifact_name":"exact-head-validation-e590ada5663a3ddbf6fa33128d9228eeba13481d","artifact_sha256":"ae9cdd47da1d1c6894e0047ee160422775896264231ae4a80e455c61b5f43cb1","m2e_run":30141414947,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"272ae3132547395e03af55731ba87736aa6535e8","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
+    {"pr":186,"title":"M3-B 37-Axis Retained Real Observation Capture Preflight","exact_head":"177d63fb31f42b71463d61881c269a83ba958e0c","exact_run":30142093253,"focused":"9 passed","full":"3099 passed","artifact_name":"exact-head-validation-177d63fb31f42b71463d61881c269a83ba958e0c","artifact_sha256":"394f5f6e499daaa6f03d4f342b82f3db79bcdd24656adfe350f8e0b0f5b3027f","m2e_run":30142093254,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"b92a16a81e1591e490edc36d0171bc9a2c3bf065","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"}
   ],
   "superseded_or_nonreusable": [
     {"pr":174,"reason":"GitHub PR head integration failure; full-suite was never executed.","reuse_status":"PROHIBITED"},
     {"pr":175,"reason":"Closed unmerged with stale PR head; corrected implementation moved to PR 176.","reuse_status":"PROHIBITED"}
   ],
   "active_unmerged": {
-    "pr": 186,
+    "pr": 187,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "272ae3132547395e03af55731ba87736aa6535e8"
+    "baseline_sha": "b92a16a81e1591e490edc36d0171bc9a2c3bf065"
   }
 }
