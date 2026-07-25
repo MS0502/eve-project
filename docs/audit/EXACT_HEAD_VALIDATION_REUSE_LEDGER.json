@@ -147,6 +147,21 @@
       "merge_method": "squash",
       "merge_sha": "d82652d74b9051d227ec415b648ec209b9de8b3d",
       "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 182,
+      "title": "M3-B Quarantined Social-Relationship Seven-Axis Source Binding",
+      "exact_head": "de7a53221ec99613c5c48165374cdf3438dc54e5",
+      "exact_run": 30138226116,
+      "focused": "30 passed",
+      "full": "3027 passed",
+      "artifact_name": "exact-head-validation-de7a53221ec99613c5c48165374cdf3438dc54e5",
+      "artifact_sha256": "79bb33ddc9221c48ce18e76dcd632bd404a2a08f33d2a0589460320a7e860916",
+      "m2e_run": 30138226118,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "6c57f41114fbe0a203e559a27b187f6801ad7640",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
     }
   ],
   "superseded_or_nonreusable": [
@@ -162,8 +177,8 @@
     }
   ],
   "active_unmerged": {
-    "pr": 182,
+    "pr": 183,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "d82652d74b9051d227ec415b648ec209b9de8b3d"
+    "baseline_sha": "6c57f41114fbe0a203e559a27b187f6801ad7640"
   }
 }
