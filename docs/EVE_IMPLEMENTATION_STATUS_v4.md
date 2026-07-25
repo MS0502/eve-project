@@ -26,6 +26,14 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 
 `M2-E` acceptance is not a production cutover authorization. The phone habitat observation window is currently frozen pending the A7 habitat-driver repair described below. The M3-B observation window is a separate gate and has **not started**.
 
+### Executable-audit compatibility notes
+
+Historical acceptance wording that is still asserted by executable audit tests remains part of the status contract; it is retained here without reverting the current milestone state above.
+
+M1 status: **closed for mechanism verification**. This is the historical #158 human-acceptance boundary and does not itself authorize persistence cutover or later M-series authority.
+
+M3-A drive-dynamics design status: the merged #169 artifact remains a **documentation-only** design boundary over the **63-axis Affect Migration Plan**, including **48 bidirectional named transitions**, with **no runtime integration** in that design artifact and **integration eligibility only after persistence cutover**. M3-A is now complete as a design milestone, while its historical no-runtime-integration boundary remains authoritative for what #169 itself proved.
+
 ## 2. M3-B exact current boundary
 
 Merged M3-B work now includes:
