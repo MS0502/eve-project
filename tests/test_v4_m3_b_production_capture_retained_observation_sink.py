@@ -248,6 +248,7 @@ def test_registered_verifier_simulation_proves_durable_append_without_changing_r
     assert receipt.verification_digest == capture.verification.verification_digest
     assert receipt.store_before_count == 0
     assert receipt.store_after_count == 1
+    assert receipt.store_before_chain_digest == "0" * 64
     assert receipt.store_before_chain_digest != receipt.store_after_chain_digest
     assert receipt.readback_verified is True
     assert receipt.retained_real_observation_delta == 1
@@ -269,9 +270,9 @@ def test_registered_verifier_simulation_proves_durable_append_without_changing_r
     assert payload["capture_digest"] == capture.capture_digest
     assert payload["source_evidence_digest"] == capture.evidence.evidence_digest
     assert payload["source_verification_digest"] == capture.verification.verification_digest
-    integrity = store.verify_integrity()
-    assert integrity.valid is True
-    assert integrity.event_count == 1
+    # events() recalculates and validates the complete persisted event chain before
+    # returning records, so this is the public integrity check for event-only state.
+    assert store.events() == events
 
 
 def test_retention_event_material_is_deterministic_under_test_registration(
@@ -298,7 +299,7 @@ def test_retention_event_material_is_deterministic_under_test_registration(
 def test_sink_rejects_non_capture_objects_without_touching_store(tmp_path):
     store = SQLiteShadowStore(tmp_path / "retained.sqlite3")
     store.initialize()
-    before = store.verify_integrity()
+    before = store.events()
     with pytest.raises(RegistryRetainedObservationSinkError, match="exact immutable"):
         build_retained_real_observation_event(
             object(),  # type: ignore[arg-type]
@@ -306,6 +307,5 @@ def test_sink_rejects_non_capture_objects_without_touching_store(tmp_path):
             sequence=1,
             correlation_id="test:invalid:correlation",
         )
-    after = store.verify_integrity()
-    assert before == after
-    assert after.event_count == 0
+    after = store.events()
+    assert before == after == ()
