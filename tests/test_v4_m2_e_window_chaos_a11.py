@@ -7,21 +7,32 @@ from pathlib import Path
 
 import pytest
 
-from core.event_kernel import MAX_CANONICAL_JSON_BYTES, EventEnvelope, InvalidEventEnvelope, canonical_json_object
 from core.canonical_content import APPEND_STATE_REPRESENTATION_SCHEMA_VERSION
-from core.m2_e_window_driver import WindowConfig, WindowState, advance_runtime, freeze_shadow, record_discrete_stimulus
-from core.sqlite_shadow_store import SQLiteShadowStore
-from core import sqlite_shadow_store_v1 as legacy
+from core.event_kernel import (
+    MAX_CANONICAL_JSON_BYTES,
+    EventEnvelope,
+    InvalidEventEnvelope,
+    canonical_json_object,
+)
+from core.m2_e_window_driver import (
+    WindowConfig,
+    WindowState,
+    advance_runtime,
+    freeze_shadow,
+    record_discrete_stimulus,
+)
+from core.sqlite_shadow_store import SQLiteShadowStore as LegacySQLiteShadowStore
 from core.sqlite_shadow_store_a11 import (
     CONTENT_REFERENCE_SCHEMA_VERSION,
     EVENT_STORAGE_REFERENCE_SCHEMA_VERSION,
+    SQLiteShadowStore,
 )
-from scripts.habitat import m2_e_window_runtime_guarded as runtime
+from scripts.habitat import m2_e_window_runtime_guarded_a11 as runtime
 
 
-def test_exact_legacy_v1_store_gets_additive_content_table_and_reads_legacy_snapshot(tmp_path: Path):
+def test_exact_legacy_v1_store_is_lazy_extended_and_reads_legacy_snapshot(tmp_path: Path):
     path = tmp_path / "legacy.sqlite3"
-    old = legacy.SQLiteShadowStore(path)
+    old = LegacySQLiteShadowStore(path)
     old.initialize()
     expected_state = {"calls": [], "learned": []}
     old.write_snapshot(
@@ -40,13 +51,29 @@ def test_exact_legacy_v1_store_gets_additive_content_table_and_reads_legacy_snap
         assert connection.execute("SELECT COUNT(*) FROM migrations").fetchone()[0] == 1
         assert connection.execute(
             "SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name='content_materials'"
+        ).fetchone()[0] == 0
+    finally:
+        connection.close()
+    assert store.latest_valid_snapshot("legacy:stream").selected.state == expected_state
+
+    # First genuinely large state installs only the additive A11 content table;
+    # the frozen migration history and old inline snapshot remain untouched.
+    store.write_snapshot(
+        snapshot_id="a11:trigger:large",
+        stream_id="a11:trigger",
+        through_sequence=0,
+        state=runtime._snapshot_for(700),
+        state_schema_version="eve.m2e.synthetic-state.v1",
+    )
+    connection = sqlite3.connect(path)
+    try:
+        assert connection.execute("SELECT COUNT(*) FROM migrations").fetchone()[0] == 1
+        assert connection.execute(
+            "SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name='content_materials'"
         ).fetchone()[0] == 1
     finally:
         connection.close()
-
-    selection = store.latest_valid_snapshot("legacy:stream")
-    assert selection.selected is not None
-    assert selection.selected.state == expected_state
+    assert store.latest_valid_snapshot("legacy:stream").selected.state == expected_state
     assert store.integrity_check().valid is True
 
 
@@ -113,7 +140,13 @@ def test_seq_280_uses_content_reference_and_reviewed_resume_reconciles_pending_r
     root = tmp_path / "private"
     paths = runtime._ensure_private_root(root)
     config = WindowConfig()
-    store = runtime._store(paths, config)
+    store = runtime._guarded._store(paths, config)
+
+    # Build the store through the wrapper-selected A11 class, not the unchanged
+    # global M2-A store used by accepted M2-D evidence.
+    assert isinstance(store, SQLiteShadowStore)
+
+    from core import sqlite_shadow_store as legacy
 
     legacy._canon(legacy._event_material(runtime._event(279)), "event_material")
     with pytest.raises(InvalidEventEnvelope, match="event_material exceeds canonical size limit"):
@@ -130,8 +163,12 @@ def test_seq_280_uses_content_reference_and_reviewed_resume_reconciles_pending_r
 
     connection = sqlite3.connect(store.database_path)
     try:
-        row_279 = json.loads(connection.execute("SELECT event_json FROM events WHERE sequence=279").fetchone()[0])
-        row_280 = json.loads(connection.execute("SELECT event_json FROM events WHERE sequence=280").fetchone()[0])
+        row_279 = json.loads(
+            connection.execute("SELECT event_json FROM events WHERE sequence=279").fetchone()[0]
+        )
+        row_280 = json.loads(
+            connection.execute("SELECT event_json FROM events WHERE sequence=280").fetchone()[0]
+        )
     finally:
         connection.close()
     assert "payload_json" in row_279
@@ -140,6 +177,10 @@ def test_seq_280_uses_content_reference_and_reviewed_resume_reconciles_pending_r
     assert store.events(stream_id=runtime.BOUNDED_STREAM)[-1] == runtime._event(280)
     assert store.integrity_check().valid is True
 
+    # Explicitly retain the reviewed one-pending-row proof even though current
+    # code inspection shows the named seq-280 event_material failure occurs
+    # before insertion, so a same-count rows=279 recovery is the more likely
+    # observed phone state for this specific incident.
     frozen = freeze_shadow(state, "recovery_digest_mismatch")
     runtime._save_state(paths, frozen)
     paths["running"].write_text("unclean\n", encoding="utf-8")
@@ -158,9 +199,8 @@ def test_seq_280_uses_content_reference_and_reviewed_resume_reconciles_pending_r
     resume = next(item for item in records if item["type"] == "freeze_reviewed_resume")
     assert resume["reconciled_pending_commit"] is True
 
-    # Keep historical seq-280 logical identity for pending-row reconciliation.
-    # Later, when the actual event payload itself reaches the unchanged kernel
-    # limit, A11 switches to digest+manifest+append-delta rather than raising it.
+    # Fix the next real wall too: seq303 still fits the frozen logical payload;
+    # seq304 switches to A11 references+append delta without raising the limit.
     assert "after" in runtime._event(303).payload
     compact_304 = runtime._event(304)
     assert compact_304.payload["state_representation"] == APPEND_STATE_REPRESENTATION_SCHEMA_VERSION
