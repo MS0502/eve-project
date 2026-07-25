@@ -17,6 +17,7 @@ import hashlib
 import json
 import re
 from dataclasses import InitVar, dataclass, field
+from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
 from core.event_kernel import SHADOW_AUTHORITY
@@ -185,11 +186,12 @@ class ProductionSourceVerifierRegistration:
             )
 
 
-# Deliberately empty. Future source-integration PRs may add only reviewed executable
-# registrations; identifier/version metadata without an executable verifier is invalid.
+# Deliberately empty and immutable. Future source-integration PRs may change this
+# constant only through reviewed repository code; runtime callers cannot inject a
+# registration into the live mapping.
 REGISTERED_PRODUCTION_SOURCE_VERIFIERS: Mapping[
     str, ProductionSourceVerifierRegistration
-] = {}
+] = MappingProxyType({})
 
 
 def _require_registered_verifier(verification: "ProductionSourceVerification") -> None:
