@@ -1,8 +1,8 @@
 """Pure deterministic A11 canonical material + structural reference helpers.
 
 This module deliberately has no I/O and does not relax EventEnvelope limits.
-It exists so snapshot persistence, habitat compact events, and replay all hash
-large state with one versioned canonical representation.
+It exists so event/snapshot persistence and replay can hash large state with one
+versioned canonical representation while leaving logical envelopes unchanged.
 """
 from __future__ import annotations
 
@@ -122,73 +122,3 @@ def verify_content_reference(
     )
     if dict(reference) != expected:
         raise CanonicalContentError("content reference does not match canonical material")
-
-
-APPEND_STATE_REPRESENTATION_SCHEMA_VERSION = "eve.a11-append-state-reference.v1"
-APPEND_STATE_CONTENT_SCHEMA_VERSION = "eve.event-append-state-material.v1"
-
-
-def _append_delta(before: Mapping[str, Any], after: Mapping[str, Any]) -> dict[str, Any]:
-    if set(before) != set(after):
-        raise CanonicalContentError("append-state mappings must have identical key domains")
-    appended: dict[str, list[Any]] = {}
-    for key in sorted(before):
-        before_value = before[key]
-        after_value = after[key]
-        if not isinstance(before_value, list) or not isinstance(after_value, list):
-            raise CanonicalContentError("append-state mappings must contain JSON lists")
-        if after_value[: len(before_value)] != before_value:
-            raise CanonicalContentError("append-state after value must preserve the before prefix")
-        appended[key] = after_value[len(before_value) :]
-    return {"append": appended}
-
-
-def compact_append_state_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
-    """Replace large before/after list-state material with A11 refs + append delta."""
-    if not isinstance(payload, Mapping):
-        raise CanonicalContentError("payload must be a mapping")
-    before = payload.get("before")
-    after = payload.get("after")
-    if not isinstance(before, Mapping) or not isinstance(after, Mapping):
-        raise CanonicalContentError("payload is not an append-state candidate")
-    before_plain = dict(before)
-    after_plain = dict(after)
-    delta = _append_delta(before_plain, after_plain)
-    before_ref, _ = build_content_reference(
-        before_plain,
-        content_schema_version=APPEND_STATE_CONTENT_SCHEMA_VERSION,
-    )
-    after_ref, _ = build_content_reference(
-        after_plain,
-        content_schema_version=APPEND_STATE_CONTENT_SCHEMA_VERSION,
-    )
-    compact = {key: value for key, value in payload.items() if key not in {"before", "after"}}
-    compact.update(
-        {
-            "after_ref": after_ref,
-            "before_ref": before_ref,
-            "state_delta": delta,
-            "state_representation": APPEND_STATE_REPRESENTATION_SCHEMA_VERSION,
-        }
-    )
-    return compact
-
-
-def apply_append_state_delta(
-    before: Mapping[str, Any],
-    delta: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Deterministically reconstruct an append-only after-state for revalidation."""
-    if not isinstance(before, Mapping) or not isinstance(delta, Mapping) or set(delta) != {"append"}:
-        raise CanonicalContentError("append-state delta is malformed")
-    appended = delta["append"]
-    if not isinstance(appended, Mapping) or set(appended) != set(before):
-        raise CanonicalContentError("append-state delta key domain mismatch")
-    result: dict[str, Any] = {}
-    for key in sorted(before):
-        base = before[key]
-        extra = appended[key]
-        if not isinstance(base, list) or not isinstance(extra, list):
-            raise CanonicalContentError("append-state delta values must be JSON lists")
-        result[key] = list(base) + list(extra)
-    return result
