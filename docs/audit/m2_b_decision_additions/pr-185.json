@@ -1,0 +1,33 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 185,
+  "base_candidate_surface_digest": "9f8f334440587145845e22fd6217825056d96fd910678b5a221eab6cd8f264e9",
+  "candidate_surface_digest": "0e70c633eb88689580310d2dc5b160879f02254db89e2083c759c5a276065389",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "0559676df349c674f2b4a5fbeb31b17657412c3963ae151707d7ad144022bb18",
+        "109b408acc6cf324c57287f32e1d1e3f5210b8e403d4bc8a7bf81d525ebd2b8b",
+        "157b569e4d5c428141f96d71dc98b60e9117c1df76b45f15b1ad405778a107d3",
+        "2435d58b365e9812c21d75a85ad276210eabb87710a7cf115d218984152c3013",
+        "2d28ad5b248c45cb276fb6322056c1819a8396f5b1959d45d9fe89d9a1053c44",
+        "3553b2ea5fbdef4625c929bed2fec180c90a85b1fb40a2564f4e6eb21d87cb27",
+        "3927c008c8c358babdabff29b9e14f204af5daf426d9897798ccfce7ff7cac70",
+        "4811d9dea93857d1c108ba5ff983deda16187a94cb799f64a97171674ec3e3bb",
+        "5d42f6946bee940ce2fbba33d03cd8a55d4e8c2bc95bd67cf438eff57da288ce",
+        "675513cedbf41f4107fc042021ce87e0e455dc0ce321133e8511ebbe92024282",
+        "7e9b1544e6b2c165436ff181bad07a42c281e42cc5fcb94eadcfa85aebd348e1",
+        "aa10e02bb3e478469266e61824a72a94db84b562a68427fcc145b50820ea61b4",
+        "e385b1b12ec9f4596a2e70ab89bcad724af35e725ac0ec82088b78cebeee3da3",
+        "ed6f49c37d4afe2ef238085786278bed74e9be0d6796906829a76a51edcfbe0b",
+        "fb5d2c15c58a1e873f745e3b00919d97fbadecab9bbdf5003d0e5bc90d953db0"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The detached expression-action binding follows caller-supplied AGP/appraisal digests and exact raw-value fields only through fail-closed validation and canonical JSON-to-SHA-256 integrity construction. Generic digest propagation conservatively collides with an unrelated archived restore helper that performs path.open/fh.read. This module imports no restore, file, runtime-capture, persistence, expression, action-execution, or tool surface. Identifier strip and local validation exceptions are bounded input checks. No source acquisition, raw-social ingestion, hardware polling, runtime read, expression/action execution, memory write, persistence access, event append, owner mutation, observation-window transition, cutover, or M3-E authority is granted.",
+      "owner": "M3-B AGP-bounded expression-action source binding",
+      "denial_semantics": "Fail-closed AGP/appraisal digest, field, type, and status checks plus local integrity hashing are audit-visible validation only. They grant no runtime read, expression or action execution, memory/persistence write, capture, observation-window transition, cutover, or M3-E authority."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
