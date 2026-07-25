@@ -45,6 +45,18 @@
       }
     },
     {
+      "path": "scripts/audit/m3_b_retained_real_observation_capture_preflight.py",
+      "categories": ["mutation"],
+      "symbols": ["audit_repository"],
+      "rationale": "PR #187 readiness-transition audit delta only. The single new finding is one additional local errors.append branch used to fail closed when a newly present capture/retention capability is missing or overclaims state. It performs no retained append, runtime mutation, window transition, or authority promotion.",
+      "owner": "M3-B retained-real-observation readiness audit",
+      "disposition": "AUDIT_EVIDENCE_ONLY",
+      "introduced_by_pr": 187,
+      "fingerprints": {
+        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 1
+      }
+    },
+    {
       "path": "tests/test_v4_m3_b_production_capture_retained_observation_sink.py",
       "categories": ["adaptive_numeric", "mutation"],
       "symbols": ["_sha", "test_capture_cannot_claim_persistence_window_mutation_or_authority", "test_registered_verifier_simulation_proves_durable_append_without_changing_repository_status", "test_sink_construction_performs_no_io_and_requires_explicit_store_initialize"],
