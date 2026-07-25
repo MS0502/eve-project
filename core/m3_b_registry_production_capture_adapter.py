@@ -6,8 +6,10 @@ mutation, observation-window transition, or authority promotion. A caller must
 supply already-derived positive-confidence evidence plus an exact immutable
 production-source verification created by a separately reviewed source bridge.
 
-No source bridge is registered by this module. Therefore the presence of this
-adapter does not itself prove that any real production observation exists.
+No production source verifier is registered by this module. The closed registry
+below is intentionally empty. Until a later reviewed PR registers an exact source-
+contract/verifier pair, ``ProductionCaptureRecord`` construction fails closed and
+no retained-real-observation append can occur.
 """
 from __future__ import annotations
 
@@ -18,9 +20,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from core.event_kernel import SHADOW_AUTHORITY
-from core.m3_b_registry_observation_evidence import (
-    RegistryAxisPositiveConfidenceEvidence,
-)
+from core.m3_b_registry_observation_evidence import RegistryAxisPositiveConfidenceEvidence
 from core.m3_b_registry_observation_source_manifest import (
     RegistryObservationSourceEntry,
     registry_observation_source_manifest,
@@ -36,6 +36,12 @@ POSITIVE_CONFIDENCE_COVERAGE_BLOCKER = "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_IN
 OBSERVATION_WINDOW_NOT_STARTED_BLOCKER = "REGISTRY_OBSERVATION_WINDOW_NOT_STARTED"
 ZERO_DIGEST = "0" * 64
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
+
+# Deliberately empty in this capability-only PR. A later source-integration PR
+# must add exact source_contract_id -> (verifier_id, verifier_version) entries
+# together with the reviewed verifier implementation. Merely constructing a
+# ProductionSourceVerification object is therefore insufficient to claim reality.
+REGISTERED_PRODUCTION_SOURCE_VERIFIERS: Mapping[str, tuple[str, str]] = {}
 
 
 class RegistryProductionCaptureError(ValueError):
@@ -86,13 +92,22 @@ def _manifest_entry(axis: str) -> RegistryObservationSourceEntry:
     raise RegistryProductionCaptureError("axis is absent from the registry source manifest")
 
 
+def _require_registered_verifier(verification: "ProductionSourceVerification") -> None:
+    expected = REGISTERED_PRODUCTION_SOURCE_VERIFIERS.get(verification.source_contract_id)
+    actual = (verification.verifier_id, verification.verifier_version)
+    if expected is None or actual != expected:
+        raise RegistryProductionCaptureError(
+            "production verifier is not registered for this source contract"
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class ProductionSourceVerification:
     """Immutable proof supplied by a separately reviewed production source bridge.
 
-    This object cannot be inferred from registry state or from the derived value
-    alone. Every source identity/digest must match the evidence exactly. Tests and
-    synthetic callers must set ``fixture_only=True`` and are rejected by capture.
+    The object validates source provenance, but it is not sufficient by itself.
+    ``ProductionCaptureRecord`` additionally requires its verifier pair to appear
+    in ``REGISTERED_PRODUCTION_SOURCE_VERIFIERS``.
     """
 
     axis: str
@@ -275,6 +290,7 @@ class ProductionCaptureRecord:
             raise RegistryProductionCaptureError(
                 "test fixtures cannot become retained-real-observation capture records"
             )
+        _require_registered_verifier(verification)
         if self.schema_version != CAPTURE_RECORD_SCHEMA_VERSION:
             raise RegistryProductionCaptureError("unsupported production capture schema")
         if self.adapter_version != ADAPTER_VERSION or self.authority != SHADOW_AUTHORITY:
@@ -351,9 +367,13 @@ class ProductionCaptureCapabilityStatus:
             raise RegistryProductionCaptureError("unsupported production-capture capability status")
         if self.production_capture_adapter_present is not True or self.immutable_retention_sink_required is not True:
             raise RegistryProductionCaptureError("capture capability presence contract is incomplete")
+        if self.registered_production_source_verifier_count != len(REGISTERED_PRODUCTION_SOURCE_VERIFIERS):
+            raise RegistryProductionCaptureError(
+                "capability verifier count disagrees with exact registration table"
+            )
         if self.registered_production_source_verifier_count != 0:
             raise RegistryProductionCaptureError(
-                "this module registers no production source verifier"
+                "this capability-only module must not register production source verifiers"
             )
         if self.retained_real_observation_count != 0 or self.positive_confidence_real_observation_count != 0:
             raise RegistryProductionCaptureError(
@@ -383,7 +403,7 @@ class ProductionCaptureCapabilityStatus:
 
 
 class RegistryProductionCaptureAdapter:
-    """Pure explicit converter from verified production evidence to capture record."""
+    """Pure explicit converter from registered verified production evidence."""
 
     def capture(
         self,
@@ -403,4 +423,6 @@ class RegistryProductionCaptureAdapter:
 
 def production_capture_capability_status() -> ProductionCaptureCapabilityStatus:
     """Report code presence only; no production verifier or observation is implied."""
-    return ProductionCaptureCapabilityStatus()
+    return ProductionCaptureCapabilityStatus(
+        registered_production_source_verifier_count=len(REGISTERED_PRODUCTION_SOURCE_VERIFIERS)
+    )
