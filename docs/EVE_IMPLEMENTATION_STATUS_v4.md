@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-26**  
-Rebaseline base: `e2c007ba1b8b3ae86bc30b1732b1c878c01f1ef9` — PR #195 squash merge  
+Rebaseline base: `5664fc3bc22054c2d39142b3125416aea6089c63` — PR #196 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -17,14 +17,14 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-B | merged | #162 read-capability extraction and exact technical decisions |
 | M2-C | merged | #164 bounded migration/dual-read comparison |
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
-| M2-E | **A11 canonical-size repair merged; reviewed resume succeeded; supervisor paused pending #196 wrapper-entrypoint hotfix; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume implementation, #195 A11 content-addressed repair |
+| M2-E | **A11 repair + wrapper-entrypoint hotfix merged; reviewed resume already succeeded; phone supervisor restart pending; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume, #195 A11 content-addressed repair, #196 script bootstrap hotfix |
 | M3-A | **complete** | #169 drive-dynamics design |
-| M3-B | **in progress** | #170-#190 shadow/read-only affect and real-observation preflight chain; C1 trust-root work remains Draft in #194 |
+| M3-B | **in progress** | #170-#190 merged shadow/read-only chain; C1 operator-attestation trust-root candidate is #194 and contains no real attestation |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
-`M2-E` acceptance is not a production cutover authorization. PR #195 is merged into `main`, and the operator-reported reviewed resume returned `resume_exit=0`, clearing the prior freeze after the guarded integrity/count/digest checks. The subsequent supervisor restart exposed a script-entrypoint bootstrap defect in the new A11 wrapper, so the supervisor was intentionally stopped and the already-successful resume must **not** be repeated. PR #196 owns that narrow hotfix. The M3-B observation window is a separate gate and has **not started**.
+`M2-E` acceptance is not a production cutover authorization. The reviewed resume was executed once after #195 and returned `resume_exit=0`; it must **not** be repeated. PR #196 fixed the subsequent supervisor script-entrypoint failure and merged as `5664fc3bc22054c2d39142b3125416aea6089c63`. The remaining M2-E phone action is checkout update plus supervisor restart only. The M3-B observation window is a separate gate and has **not started**.
 
 ### Executable-audit compatibility notes
 
@@ -54,7 +54,9 @@ Merged M3-B work now includes:
 - real `prediction_error_pressure` runtime source bridge (#189);
 - production-runtime provenance preflight with fixture-classification binding (#190).
 
-The merged structural state is:
+The current C1 candidate (#194) adds a one-operator attestation trust-root contract and operator-local digest recomputation surface. It deliberately leaves the reviewed-attestation registry empty because no real phone launch attestation has been produced and reviewed yet.
+
+The structural/real-observation boundary remains:
 
 ```text
 source bindings:                              37/37
@@ -63,13 +65,13 @@ immutable retention sink:                     present
 verifier issuance anti-forgery boundary:      present
 prediction_error runtime source bridge:       present
 production runtime provenance preflight:      present
-
+operator attestation trust-root candidate:    present in #194
+reviewed real operator attestations:           0
 registered runtime provenance verifiers:      0
 verified production runtime anchors:          0
 registered production source verifiers:       0/37
 retained real observation:                    0/37
 positive-confidence real observation:         0/37
-
 M3-B observation window eligible:             false
 M3-B observation window started:              false
 M3-B complete:                                false
@@ -78,7 +80,7 @@ M3-E authority open:                          false
 cutover authorized:                           false
 ```
 
-No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, or self-hashed launch metadata may be reclassified as production evidence. Production provenance requires an independently reviewable trust root.
+No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, self-hashed launch metadata, or unreviewed public attestation digest may be reclassified as production evidence. Production provenance requires an independently reviewable trust root and an exact reviewed registration.
 
 ## 3. M2-E habitat incidents, A1 visibility, A11 Fix 2, and wrapper hotfix
 
@@ -118,7 +120,7 @@ Habitat Fix 2 (#195) applies A11 rather than weakening the threshold: large pers
 
 The reviewed resume command was executed once after #195 merged and the operator reported `resume_exit=0`. That successful resume is complete and must not be repeated merely because the supervisor later failed to start.
 
-The post-resume supervisor failure is a separate script-entrypoint defect: `m2_e_window_runtime_guarded_a11.py` imported `core...` before installing the repository-root `sys.path` bootstrap already present in the A1 guarded runtime. Import-style pytest coverage therefore remained green while the supervisor-equivalent `python scripts/habitat/..._a11.py` path failed. PR #196 adds that bootstrap and a real subprocess script-execution regression only; it does not change persistence semantics, resume authority, or the observation-window state.
+PR #196 closed the separate script-entrypoint defect: `m2_e_window_runtime_guarded_a11.py` now installs the repository-root bootstrap before `core...` imports, and a supervisor-equivalent subprocess regression executes the wrapper as a real script. Its accepted exact head was `4944c01df3b0978ae73ea3060abd39bee14e41c1`; the squash merge is `5664fc3bc22054c2d39142b3125416aea6089c63`.
 
 ## 4. Validation reuse and new-chat rule
 
@@ -133,20 +135,21 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #195 is the latest merged prerequisite pin:
+PR #196 is the latest merged prerequisite pin:
 
 ```text
-exact head:   4c2a9619756ddd44cd0a3a92ce56c0315d7ab15f
-exact run:    30157481449
-focused:      9 passed
-full:         3,137 passed
-artifact SHA: f1ec04e2d21b656e77feb96e4851fbc3cae52105ced67be78fd3a6cfd8649429
-M2-E run:     30157481437
+exact head:   4944c01df3b0978ae73ea3060abd39bee14e41c1
+exact run:    30179233468
+focused:      4 passed
+full:         3,138 passed
+artifact:     exact-head-validation-4944c01df3b0978ae73ea3060abd39bee14e41c1
+artifact SHA: 4f803b16343871b6e20517676cd2a0a4ebce7231444fcd4158fb0926320181b8
+M2-E run:     30179233476
 M2-E:         6/6 jobs passed
-merge SHA:    e2c007ba1b8b3ae86bc30b1732b1c878c01f1ef9
+merge SHA:    5664fc3bc22054c2d39142b3125416aea6089c63
 ```
 
-PR #190 through #193 remain separately pinned by their accepted records/ledger entries. PR #195's merged metadata record explicitly states that a new chat or operator session does not justify rerunning its green evidence. PR #196 is a genuine code-head change and therefore requires its own validation, but it does not invalidate or rerun #195 as a prerequisite.
+PR #190 through #193 and #195 remain separately pinned by their accepted records/ledger entries. PR #196's merged metadata record explicitly states that a new chat or operator session does not justify rerunning its green evidence. C1 is a genuine new code head and therefore requires its own final validation; it does not invalidate or rerun #196 as a prerequisite.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -168,7 +171,7 @@ Raw phone companion contents, SQLite/WAL files, backups, private nonce material,
 
 Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision.
 
-## 6. PR registry — verified repository history through #195
+## 6. PR registry — verified repository history through #196
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -223,9 +226,9 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
 | #192 | merged | A1 guarded M2-E habitat recovery + reviewed resume |
 | #193 | merged | B2 STATUS/reuse rebaseline and frozen-PR disposition |
-| #194 | open Draft | C1 operator-attestation trust-root candidate; not yet accepted or merged |
+| #194 | open Draft | C1 operator-attestation trust-root candidate; reviewed-attestation registry intentionally empty |
 | #195 | merged | A11 content-addressed habitat persistence repair; exact validation pinned in merged PR metadata |
-| #196 | open Draft | A11 wrapper script-bootstrap hotfix; current active change owner |
+| #196 | merged | A11 wrapper script-bootstrap hotfix; exact validation pinned in merged PR metadata |
 
 ## 7. Frozen PR register
 
@@ -248,10 +251,10 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 
 Order is constrained by evidence and authority boundaries:
 
-1. **PR #196 — A11 wrapper script-bootstrap hotfix:** validate the supervisor-equivalent subprocess path, register only exact forward findings, exact-head validate once on the final registered head, and squash merge. The already-successful `resume --reviewed` must not be repeated.
-2. **Phone continuation after #196 merge:** update the phone checkout and restart only `scripts/habitat/supervisor.sh`; the first successful worker step should continue the existing M2-E window from its resumed state. No new resume or cutover action is authorized.
-3. **C1 — Operator Attestation Trust Root (#194 lineage):** rebase/replace the stale-base Draft as needed and complete the one-operator trust root while private nonce material remains private. A runtime may not self-sign its own production provenance.
-4. **C2 — First capability-forcing real observation:** only after C1, bind a real attested source verifier and land the first retained, positive-confidence real observation honestly. Do not inflate 1/37 into 37/37 production coverage.
-5. Continue M3-B source-batch real observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
+1. **Phone M2-E continuation:** update the phone checkout to merged `main` and restart only `scripts/habitat/supervisor.sh`; do **not** run `resume --reviewed` again. Continue the existing real habitat window from the already-resumed state.
+2. **C1 — Operator Attestation Trust Root (#194):** exact-head validate the final registered C1 head and squash merge only if all gates are green. C1 itself must retain zero reviewed real attestations and zero production verifier/observation counts.
+3. **Real phone launch attestation:** after C1 is merged, the operator may create and locally verify one real launch attestation using private companion nonce material. Raw nonce material stays private; only approved digest/public fields may enter review.
+4. **C2 — First capability-forcing real observation:** only after an exact real attestation is reviewed/pinned, bind one real attested runtime/source verifier and retain the first positive-confidence observation honestly. Do not inflate one observation into 37/37 production coverage.
+5. Continue M3-B real source-batch observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
 
-The immediate project state remains **M3-B in progress**, with real production verifier/observation counters at zero and no cutover authority.
+The immediate project state remains **M3-B in progress**, with reviewed real operator attestations at zero, real production verifier/observation counters at zero, and no cutover authority.
