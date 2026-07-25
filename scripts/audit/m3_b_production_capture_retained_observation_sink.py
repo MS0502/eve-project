@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recalculable audit for M3-B production-capture and retention-sink machinery."""
+"""Recalculable audit for M3-B production-capture verifier issuance and retention."""
 from __future__ import annotations
 
 import argparse
@@ -17,16 +17,16 @@ from core.m3_b_registry_observation_evidence import RegistryAxisPositiveConfiden
 from core.m3_b_registry_production_capture_adapter import (  # noqa: E402
     REGISTERED_PRODUCTION_SOURCE_VERIFIERS,
     ProductionSourceVerification,
-    RegistryProductionCaptureAdapter,
     RegistryProductionCaptureError,
+    execute_registered_production_verifier,
     production_capture_capability_status,
 )
 from core.m3_b_registry_retained_real_observation_sink import (  # noqa: E402
     retention_sink_capability_status,
 )
 
-SCHEMA_VERSION = "eve.m3-b.production-capture-retention-sink-audit.v1"
-BASELINE_SHA = "b92a16a81e1591e490edc36d0171bc9a2c3bf065"
+SCHEMA_VERSION = "eve.m3-b.production-verifier-issuance-retention-audit.v2"
+BASELINE_SHA = "7f2d755e28732e49ac2849d108c1d6f1e5255b7c"
 
 
 def _sha(text: str) -> str:
@@ -45,11 +45,8 @@ def _digest(value: Mapping[str, Any]) -> str:
     ).hexdigest()
 
 
-def _candidate_fixture() -> tuple[
-    RegistryAxisPositiveConfidenceEvidence,
-    ProductionSourceVerification,
-]:
-    evidence = RegistryAxisPositiveConfidenceEvidence(
+def _candidate_evidence() -> RegistryAxisPositiveConfidenceEvidence:
+    return RegistryAxisPositiveConfidenceEvidence(
         axis="energy_budget",
         value=0.6,
         confidence=0.8,
@@ -65,22 +62,28 @@ def _candidate_fixture() -> tuple[
         verification_method="audit_fixture_exact_digest_verification",
         model_or_rule_version="audit.energy-budget.derivation.v1",
     )
-    verification = ProductionSourceVerification(
-        axis=evidence.axis,
-        source_contract_id="eve:m3-b:registry-source:energy_budget:v1",
-        source_family=evidence.source_family,
-        source_instance_id=evidence.source_instance_id,
-        source_snapshot_id=evidence.source_snapshot_id,
-        source_schema_version=evidence.source_schema_version,
-        source_integrity_digest=evidence.source_integrity_digest,
-        raw_observation_digest=evidence.raw_observation_digest,
-        observation_evidence_digest=evidence.evidence_digest,
-        verifier_id="audit.unregistered.energy-budget-verifier",
-        verifier_version="v1",
-        verifier_trace_digest=_sha("audit-verifier-trace:20"),
-        verified_logical_tick=20,
-    )
-    return evidence, verification
+
+
+def _direct_verification_rejected(evidence: RegistryAxisPositiveConfidenceEvidence) -> bool:
+    try:
+        ProductionSourceVerification(
+            axis=evidence.axis,
+            source_contract_id="eve:m3-b:registry-source:energy_budget:v1",
+            source_family=evidence.source_family,
+            source_instance_id=evidence.source_instance_id,
+            source_snapshot_id=evidence.source_snapshot_id,
+            source_schema_version=evidence.source_schema_version,
+            source_integrity_digest=evidence.source_integrity_digest,
+            raw_observation_digest=evidence.raw_observation_digest,
+            observation_evidence_digest=evidence.evidence_digest,
+            verifier_id="audit.caller-authored-verifier",
+            verifier_version="v1",
+            verifier_trace_digest=_sha("audit-caller-authored-trace"),
+            verified_logical_tick=20,
+        )
+    except RegistryProductionCaptureError as exc:
+        return "issued by registered verifier execution" in str(exc)
+    return False
 
 
 def audit_repository(root: Path = ROOT) -> dict[str, Any]:
@@ -88,26 +91,28 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
     sink_status = retention_sink_capability_status()
     errors: list[str] = []
 
-    evidence, verification = _candidate_fixture()
+    evidence = _candidate_evidence()
     unregistered_verifier_rejected = False
     try:
-        RegistryProductionCaptureAdapter().capture(
+        execute_registered_production_verifier(
             evidence,
-            verification,
-            capture_id="audit:capture:must-fail",
-            capture_tick=20,
+            {"source": "audit-unregistered-test-fixture"},
         )
     except RegistryProductionCaptureError as exc:
         unregistered_verifier_rejected = "not registered" in str(exc)
     if not unregistered_verifier_rejected:
-        errors.append("unregistered production verifier was not rejected")
+        errors.append("unregistered production verifier execution was not rejected")
+
+    direct_verification_rejected = _direct_verification_rejected(evidence)
+    if not direct_verification_rejected:
+        errors.append("caller-authored production verification bypassed issuance boundary")
 
     capture_path = root / "core/m3_b_registry_production_capture_adapter.py"
     sink_path = root / "core/m3_b_registry_retained_real_observation_sink.py"
     if not capture_path.exists() or not sink_path.exists():
         errors.append("production capture or retention sink implementation path is absent")
     if REGISTERED_PRODUCTION_SOURCE_VERIFIERS:
-        errors.append("capability-only PR unexpectedly registers a production source verifier")
+        errors.append("issuance-boundary PR unexpectedly registers a production source verifier")
     if capture_status.registered_production_source_verifier_count != 0:
         errors.append("capture status claims a registered production verifier")
     if capture_status.retained_real_observation_count != 0:
@@ -122,7 +127,7 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
     report: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "baseline_sha": BASELINE_SHA,
-        "authority": "shadow_only_production_capture_retention_capability",
+        "authority": "shadow_only_production_verifier_issuance_boundary",
         "audit_fixture_only": True,
         "audit_fixture_is_production_observation": False,
         "production_capture_adapter_present": capture_status.production_capture_adapter_present,
@@ -133,8 +138,11 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "auto_initialize": sink_status.auto_initialize,
         "auto_append": sink_status.auto_append,
         "registered_production_source_verifier_count": capture_status.registered_production_source_verifier_count,
-        "registered_production_source_verifiers": dict(REGISTERED_PRODUCTION_SOURCE_VERIFIERS),
-        "unregistered_verifier_rejected": unregistered_verifier_rejected,
+        "registered_production_source_verifier_contracts": sorted(
+            REGISTERED_PRODUCTION_SOURCE_VERIFIERS
+        ),
+        "unregistered_verifier_execution_rejected": unregistered_verifier_rejected,
+        "caller_authored_verification_rejected": direct_verification_rejected,
         "retained_real_observation_count": 0,
         "positive_confidence_real_observation_count": 0,
         "observation_window_eligible": capture_status.observation_window_eligible,
@@ -147,8 +155,8 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "legacy_runtime_authoritative": True,
         "legacy_persistence_authoritative": True,
         "next_required_artifact": (
-            "reviewed source-contract-specific production verifier registration and runtime source bridge; "
-            "only then may an actual retained observation be appended"
+            "reviewed source-contract-specific executable verifier plus exact runtime source bridge; "
+            "registration and retained-real observation remain zero in this PR"
         ),
         "errors": errors,
     }
