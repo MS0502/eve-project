@@ -77,8 +77,13 @@ def _raw_values(axis: str, tick: int) -> tuple[tuple[str, object], ...]:
     raise AssertionError(axis)
 
 
-def _record(axis: str, tick: int) -> LongHorizonSelfIdentityRawRecord:
-    observation_id = f"test:{axis}:observation:{tick}"
+def _record(
+    axis: str,
+    tick: int,
+    *,
+    observation_id: str | None = None,
+) -> LongHorizonSelfIdentityRawRecord:
+    observation_id = observation_id or f"test:{axis}:observation:{tick}"
     source_instance_id = "test:self-identity-source:v1"
     source_snapshot_id = f"test:{axis}:snapshot:{tick}"
     source_schema_version = "test.self-identity-source.v1"
@@ -215,9 +220,8 @@ def test_field_order_versions_and_identity_specific_invariants_are_exact():
         (field, "other") if field == "appraisal_version" else (field, value)
         for field, value in respect.raw_values
     )
-    changed = replace(respect, raw_values=bad_version)
     with pytest.raises(LongHorizonSelfIdentitySourceBindingError, match="appraisal_version"):
-        LongHorizonSelfIdentityRawRecord(**{**changed.to_mapping(), "raw_values": bad_version})
+        replace(respect, raw_values=bad_version)
     purpose = _record("purpose_alignment", 1)
     bad_goals = tuple(
         (field, 99) if field == "aligned_goal_count" else (field, value)
@@ -236,8 +240,8 @@ def test_derivation_enforces_three_records_twelve_ticks_unique_identity_and_one_
         derive_long_horizon_self_identity_axis_evidence(too_short)
     with pytest.raises(LongHorizonSelfIdentitySourceBindingError, match="sorted and unique"):
         derive_long_horizon_self_identity_axis_evidence(tuple(reversed(records)))
-    duplicate = replace(records[1], observation_id=records[0].observation_id)
-    with pytest.raises(LongHorizonSelfIdentitySourceBindingError, match="raw observation digest|observation_id"):
+    duplicate = _record("self_coherence", 7, observation_id=records[0].observation_id)
+    with pytest.raises(LongHorizonSelfIdentitySourceBindingError, match="observation_id values must be unique"):
         derive_long_horizon_self_identity_axis_evidence((records[0], duplicate, records[2]))
 
 
