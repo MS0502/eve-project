@@ -11,7 +11,6 @@ from scripts.habitat import m2_e_window_runtime_guarded as runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 SUPERVISOR = ROOT / "scripts/habitat/supervisor.sh"
-STABLE_RUNTIME = ROOT / "scripts/habitat/m2_e_window_runtime.py"
 
 
 def _healthy_report(*, event_count: int = 0):
@@ -182,15 +181,13 @@ def test_reviewed_resume_same_count_requires_recomputed_restore_digest(tmp_path:
     assert resumed.last_recovery_digest == restored.state_digest
 
 
-def test_supervisor_captures_runtime_streams_and_stable_entrypoint_delegates():
+def test_supervisor_captures_runtime_streams_and_runs_guarded_runtime():
     supervisor = SUPERVISOR.read_text(encoding="utf-8")
-    stable = STABLE_RUNTIME.read_text(encoding="utf-8")
 
+    assert 'RUNTIME="$REPO_ROOT/scripts/habitat/m2_e_window_runtime_guarded.py"' in supervisor
     assert 'LOG="$PRIVATE_ROOT/supervisor.log"' in supervisor
     assert '2>>"$LOG"' in supervisor
     assert '>>"$LOG" 2>&1' in supervisor
     assert "supervisor_start" in supervisor
-    assert "m2_e_window_runtime_guarded" in stable
-    assert "raise SystemExit(main())" in stable
     assert "kill -9" not in supervisor
     assert "pkill" not in supervisor
