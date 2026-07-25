@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""A11-enabled entrypoint for the bounded guarded M2-E habitat runtime.
+"""A11 persistence wrapper for the bounded guarded M2-E habitat runtime.
 
-The reviewed A1 guarded runtime remains byte-for-byte unchanged. This wrapper
-rebinds only its local event/store/replay dependencies to the habitat-scoped A11
-implementations, then delegates every CLI/recovery/freeze/evidence behavior to
-the merged guarded runtime.
+The reviewed A1 guarded runtime, EventEnvelope contract, and shadow projection
+remain unchanged. This wrapper replaces only the habitat process' SQLite store
+binding with the content-addressed A11 persistence implementation, then delegates
+all CLI/recovery/freeze/evidence behavior to the merged guarded runtime.
 """
 from __future__ import annotations
 
-from core.habitat_event_kernel_a11 import EventEnvelope
-from core.habitat_shadow_projection_a11 import (
-    ActivationLearnPairShadowState,
-    replay_activation_learn_pair,
-)
-from core.sqlite_shadow_store_habitat_a11 import SQLiteShadowStore
+from core.sqlite_shadow_store_a11 import SQLiteShadowStore
 from scripts.habitat import m2_e_window_runtime_guarded as _guarded
 
-_guarded.EventEnvelope = EventEnvelope
-_guarded.ActivationLearnPairShadowState = ActivationLearnPairShadowState
-_guarded.replay_activation_learn_pair = replay_activation_learn_pair
+# Python resolves this global when the reviewed _store() function is called, so
+# only the habitat persistence implementation changes. EventEnvelope creation and
+# replay continue to use core.event_kernel/core.shadow_projection unchanged.
 _guarded.SQLiteShadowStore = SQLiteShadowStore
 
 # Re-export the reviewed control surface so tests/operators can use this module
