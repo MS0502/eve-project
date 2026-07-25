@@ -3,15 +3,8 @@
   "registered_addition_groups": [
     {
       "path": "core/m3_b_registry_retained_real_observation_sink.py",
-      "categories": [
-        "adaptive_numeric",
-        "mutation"
-      ],
-      "symbols": [
-        "RetainedRealObservationSink.__init__",
-        "RetainedRealObservationSink.append",
-        "_digest"
-      ],
+      "categories": ["adaptive_numeric", "mutation"],
+      "symbols": ["RetainedRealObservationSink.__init__", "RetainedRealObservationSink.append", "_digest"],
       "rationale": "Reviewed M3-B durable shadow-write capability. RetainedRealObservationSink.append intentionally invokes the already validated M2-A SQLiteShadowStore append-only SHA-256 chain, but only after an exact ProductionCaptureRecord has passed the closed production-verifier gate. Construction stores the explicit store handle only and performs no I/O; there is no auto-initialize or auto-append. The append remains shadow_only, requires exact event-envelope/readback proof, and cannot mutate the registry owner, start the observation window, complete M3-B, open M3-C/M3-E, or authorize cutover. The adaptive finding is canonical SHA-256 encoding only.",
       "owner": "M3-B immutable retained-real-observation shadow sink",
       "disposition": "M3_B_RETAINED_REAL_OBSERVATION_SHADOW_SINK",
@@ -24,34 +17,18 @@
     },
     {
       "path": "core/m3_b_registry_production_capture_adapter.py",
-      "categories": [
-        "adaptive_numeric"
-      ],
-      "symbols": [
-        "_digest"
-      ],
+      "categories": ["adaptive_numeric"],
+      "symbols": ["_digest"],
       "rationale": "Deterministic canonical SHA-256 encoding inside the production-origin verification/capture contract. The production verifier registration map is deliberately empty in PR #187, so this module cannot create a real ProductionCaptureRecord in repository state and performs no runtime source read, persistence write, scheduling, window transition, or authority promotion.",
       "owner": "M3-B production capture verification boundary",
       "disposition": "M3_B_PRODUCTION_CAPTURE_VALIDATION",
       "introduced_by_pr": 187,
-      "fingerprints": {
-        "1052e427fd1f2cf6ac78beed668ec91a074d517d5eff0257fbf2b93d4b1584ed": 1
-      }
+      "fingerprints": {"1052e427fd1f2cf6ac78beed668ec91a074d517d5eff0257fbf2b93d4b1584ed": 1}
     },
     {
       "path": "scripts/audit/m3_b_production_capture_retained_observation_sink.py",
-      "categories": [
-        "adaptive_numeric",
-        "direct_write",
-        "mutation"
-      ],
-      "symbols": [
-        "<module>",
-        "_digest",
-        "_sha",
-        "audit_repository",
-        "main"
-      ],
+      "categories": ["adaptive_numeric", "direct_write", "mutation"],
+      "symbols": ["<module>", "_digest", "_sha", "audit_repository", "main"],
       "rationale": "Audit CLI only. Findings are deterministic fixture/report hashing, local error/report bookkeeping, sys.path setup, and caller-requested stdout or audit-file output. The audit deliberately proves the production verifier registration table is empty and that an unregistered verifier is rejected; it performs no retained-observation append and cannot start a window or grant authority.",
       "owner": "M3-B production capture and retention capability audit",
       "disposition": "AUDIT_EVIDENCE_ONLY",
@@ -68,33 +45,9 @@
       }
     },
     {
-      "path": "scripts/audit/m3_b_retained_real_observation_capture_preflight.py",
-      "categories": [
-        "mutation"
-      ],
-      "symbols": [
-        "audit_repository"
-      ],
-      "rationale": "PR #187 readiness-transition audit delta only. The single new finding is one additional local errors.append branch used to fail closed when a newly present capture/retention capability is missing or overclaims state. It performs no retained append, runtime mutation, window transition, or authority promotion.",
-      "owner": "M3-B retained-real-observation readiness audit",
-      "disposition": "AUDIT_EVIDENCE_ONLY",
-      "introduced_by_pr": 187,
-      "fingerprints": {
-        "55bf0e325c1650f0f8007e975b4d3f10a97098449132bdec4920ad6332ca8bdb": 1
-      }
-    },
-    {
       "path": "tests/test_v4_m3_b_production_capture_retained_observation_sink.py",
-      "categories": [
-        "adaptive_numeric",
-        "mutation"
-      ],
-      "symbols": [
-        "_sha",
-        "test_capture_cannot_claim_persistence_window_mutation_or_authority",
-        "test_registered_verifier_simulation_proves_durable_append_without_changing_repository_status",
-        "test_sink_construction_performs_no_io_and_requires_explicit_store_initialize"
-      ],
+      "categories": ["adaptive_numeric", "mutation"],
+      "symbols": ["_sha", "test_capture_cannot_claim_persistence_window_mutation_or_authority", "test_registered_verifier_simulation_proves_durable_append_without_changing_repository_status", "test_sink_construction_performs_no_io_and_requires_explicit_store_initialize"],
       "rationale": "Focused test evidence only. The sink.append findings are disposable temporary-SQLite exercises. One test intentionally calls append before initialization and proves no database is created; another temporarily monkeypatches a verifier registration solely to prove the reviewed shadow sink can append and read back one immutable event. The monkeypatch is process-local test state and the repository registration table remains empty. Frozen-object assignment is deliberately rejected to prove fail-closed authority boundaries.",
       "owner": "M3-B production capture and retention focused tests",
       "disposition": "TEST_EVIDENCE",
@@ -108,14 +61,8 @@
     },
     {
       "path": "tests/test_v4_m3_b_retained_real_observation_capture_preflight.py",
-      "categories": [
-        "adaptive_numeric",
-        "mutation"
-      ],
-      "symbols": [
-        "test_core_readiness_has_no_filesystem_network_thread_scheduler_or_persistence_calls",
-        "test_preflight_and_components_are_frozen_and_fail_closed_on_overclaim"
-      ],
+      "categories": ["adaptive_numeric", "mutation"],
+      "symbols": ["test_core_readiness_has_no_filesystem_network_thread_scheduler_or_persistence_calls", "test_preflight_and_components_are_frozen_and_fail_closed_on_overclaim"],
       "rationale": "PR #187 focused-test delta for the machinery-present readiness state. Findings are test-local AST set/add/update bookkeeping and a deliberately rejected frozen-dataclass assignment. They prove that code presence is not runtime installation and that retained coverage/window/authority remain fail-closed; they perform no production capture or persistent append.",
       "owner": "M3-B retained-real-observation readiness focused tests",
       "disposition": "TEST_EVIDENCE",
