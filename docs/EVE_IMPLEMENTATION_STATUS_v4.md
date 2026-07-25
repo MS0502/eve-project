@@ -207,6 +207,8 @@ Open frozen legacy-lineage PRs remain:
 #109  #86  #84  #82
 ```
 
+The historical M1 acceptance record names these as **open REWRITE PRs #109, #86, #84, and #82**. That literal remains an executable-audit compatibility statement until B2 performs repository-verified supersession disposition.
+
 They are not merge-authorized by this status rebaseline. The next governance step B2 compares each intent against the merged M2-A/M2-B and later contracts. Fully absorbed items may be closed with supersession/evidence preservation; any unabsorbed requirement must be reported instead of silently closed.
 
 ## 8. Current next steps
