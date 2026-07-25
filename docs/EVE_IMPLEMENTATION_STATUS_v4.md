@@ -94,7 +94,7 @@ Repository/code inspection plus the operator evidence establish the following bo
 
 The current unmerged A1 change supplies the repair without authorizing resume by itself:
 
-1. the stable phone entrypoint delegates to an independently testable guarded runtime;
+1. the original #168 habitat CLI remains byte-for-byte intact for audit compatibility, while the supervisor executes a separate independently testable guarded runtime;
 2. every caught exception that can cause a freeze records exception type, message, traceback digest, attempt, and an evidence digest in the append-only private raw stream before the freeze transition;
 3. restore/integrity I/O receives three bounded backoffs (`1s`, `2s`, `4s`), exhausted healthy-store I/O is classified `io_failure`, and `unrecoverable_corruption` is reserved for a failed integrity report;
 4. reviewed resume requires integrity success, exact event-count validity, recomputed restore digest, and—only for the existing one-row pending-commit case—an exact deterministic next-event match before reconciliation;
@@ -105,7 +105,7 @@ The current unmerged A1 change supplies the repair without authorizing resume by
 The exact operator command is intentionally not authorized until this change is exact-head green and merged. After that, the reviewed resume command is:
 
 ```bash
-python scripts/habitat/m2_e_window_runtime.py --private-root "${EVE_M2E_PRIVATE_ROOT:-$HOME/.local/share/eve-m2e-window-private}" resume --reviewed
+python scripts/habitat/m2_e_window_runtime_guarded.py --private-root "${EVE_M2E_PRIVATE_ROOT:-$HOME/.local/share/eve-m2e-window-private}" resume --reviewed
 ```
 
 This repair grants no cutover, recovery authority beyond the explicit reviewed resume gate, M3 authority, production-default change, or observation-window seal.
