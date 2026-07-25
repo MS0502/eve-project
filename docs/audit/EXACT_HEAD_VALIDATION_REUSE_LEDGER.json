@@ -43,15 +43,16 @@
     {"pr":185,"title":"M3-B AGP-Bounded Expression-Action Six-Axis Source Binding","exact_head":"e590ada5663a3ddbf6fa33128d9228eeba13481d","exact_run":30141414944,"focused":"22 passed","full":"3090 passed","artifact_name":"exact-head-validation-e590ada5663a3ddbf6fa33128d9228eeba13481d","artifact_sha256":"ae9cdd47da1d1c6894e0047ee160422775896264231ae4a80e455c61b5f43cb1","m2e_run":30141414947,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"272ae3132547395e03af55731ba87736aa6535e8","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
     {"pr":186,"title":"M3-B 37-Axis Retained Real Observation Capture Preflight","exact_head":"177d63fb31f42b71463d61881c269a83ba958e0c","exact_run":30142093253,"focused":"9 passed","full":"3099 passed","artifact_name":"exact-head-validation-177d63fb31f42b71463d61881c269a83ba958e0c","artifact_sha256":"394f5f6e499daaa6f03d4f342b82f3db79bcdd24656adfe350f8e0b0f5b3027f","m2e_run":30142093254,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"b92a16a81e1591e490edc36d0171bc9a2c3bf065","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
     {"pr":187,"title":"M3-B Production Capture Adapter + Immutable Retained-Observation Sink","exact_head":"1f6c1d7746a335ef92e67940a7d5b791eef0ccdf","exact_run":30144115559,"focused":"19 passed","full":"3109 passed","artifact_name":"exact-head-validation-1f6c1d7746a335ef92e67940a7d5b791eef0ccdf","artifact_sha256":"16e209c82ef329213f144fed5b4a139f7c2a06a0ffe0190084b355b889e2a0b9","m2e_run":30144115571,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"7f2d755e28732e49ac2849d108c1d6f1e5255b7c","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
-    {"pr":188,"title":"M3-B: Harden production verifier issuance boundary","exact_head":"7c76276a1f1ec17afc31c3cc7a85f349ca6f3e8b","exact_run":30145022292,"focused":"14 passed","full":"3113 passed","artifact_name":"exact-head-validation-7c76276a1f1ec17afc31c3cc7a85f349ca6f3e8b","artifact_sha256":"07cd81a95cf920577776e72e9daa8de5449074c515488bff590ab82dab8a2c4c","m2e_run":30145022290,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"9566c07f89b6aba01f2d875a12e68f7767ab2fdb","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"}
+    {"pr":188,"title":"M3-B: Harden production verifier issuance boundary","exact_head":"7c76276a1f1ec17afc31c3cc7a85f349ca6f3e8b","exact_run":30145022292,"focused":"14 passed","full":"3113 passed","artifact_name":"exact-head-validation-7c76276a1f1ec17afc31c3cc7a85f349ca6f3e8b","artifact_sha256":"07cd81a95cf920577776e72e9daa8de5449074c515488bff590ab82dab8a2c4c","m2e_run":30145022290,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"9566c07f89b6aba01f2d875a12e68f7767ab2fdb","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"},
+    {"pr":189,"title":"M3-B: Add prediction-error runtime source bridge preflight","exact_head":"897e7e90e7acb9263e7ac103f4d9314474346f9b","exact_run":30145767939,"focused":"7 passed","full":"3120 passed","artifact_name":"exact-head-validation-897e7e90e7acb9263e7ac103f4d9314474346f9b","artifact_sha256":"94c3fe69bae141ce140cea9a48c1292a253bb25fbb84040dfaa57cb5787ebfa2","m2e_run":30145767966,"m2e_result":"6/6 passed","merge_method":"squash","merge_sha":"2e2ad2ffa4d320ad9f8439a6b13097fa72fa40bb","reuse_status":"REQUIRED_WHEN_POLICY_MATCHES"}
   ],
   "superseded_or_nonreusable": [
     {"pr":174,"reason":"GitHub PR head integration failure; full-suite was never executed.","reuse_status":"PROHIBITED"},
     {"pr":175,"reason":"Closed unmerged with stale PR head; corrected implementation moved to PR 176.","reuse_status":"PROHIBITED"}
   ],
   "active_unmerged": {
-    "pr": 189,
+    "pr": 190,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "9566c07f89b6aba01f2d875a12e68f7767ab2fdb"
+    "baseline_sha": "2e2ad2ffa4d320ad9f8439a6b13097fa72fa40bb"
   }
 }
