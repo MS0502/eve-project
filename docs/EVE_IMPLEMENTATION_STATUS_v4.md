@@ -17,14 +17,14 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-B | merged | #162 read-capability extraction and exact technical decisions |
 | M2-C | merged | #164 bounded migration/dual-read comparison |
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
-| M2-E | **guarded recovery merged; reviewed operator resume pending; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume implementation |
+| M2-E | **A1 visibility succeeded; A11 canonical-size repair pending; reviewed resume blocked; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume implementation; Habitat Fix 2 is PR #195 |
 | M3-A | **complete** | #169 drive-dynamics design |
 | M3-B | **in progress** | #170-#190 shadow/read-only affect and real-observation preflight chain |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
-`M2-E` acceptance is not a production cutover authorization. PR #192 is merged into `main`, but the phone habitat observation window remains frozen until the operator explicitly executes the reviewed resume command and that command succeeds. The M3-B observation window is a separate gate and has **not started**.
+`M2-E` acceptance is not a production cutover authorization. PR #192 is merged into `main`, but the phone habitat observation window is frozen after A1 named the sequence-280 canonical-size persistence failure. The reviewed resume must not be run until Habitat Fix 2 is merged from an exact validated head; after that, a successful reviewed resume only continues the observation window. The M3-B observation window is a separate gate and has **not started**.
 
 ### Executable-audit compatibility notes
 
@@ -80,7 +80,7 @@ cutover authorized:                           false
 
 No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, or self-hashed launch metadata may be reclassified as production evidence. Production provenance requires an independently reviewable trust root.
 
-## 3. M2-E habitat incident and A1 repair gate
+## 3. M2-E habitat incidents, A1 visibility, and A11 Fix 2 gate
 
 The phone habitat incident on 2026-07-24 exposed a failure-visibility defect rather than a demonstrated store-integrity failure. The private companion evidence remains outside the public repository; only reviewed summaries/digests may be committed.
 
@@ -90,9 +90,9 @@ Repository/code inspection plus the operator evidence establish the following bo
 - a freeze occurred immediately after the last known normal sequence during the watchdog restore path;
 - the prior habitat runtime could collapse restore-path failures into broad `unrecoverable_corruption` handling without preserving exception type/message/traceback identity;
 - the prior `supervisor.sh` did not continuously redirect runtime stdout/stderr into `supervisor.log`, leaving a second visibility gap;
-- the swallowed incident exception's exact type remains **unknown** and is not retroactively invented.
+- the swallowed 2026-07-24 incident exception's exact type remains **unknown** and is not retroactively invented.
 
-The merged PR #192 A1 implementation supplies the repair without authorizing resume by itself:
+The merged PR #192 A1 implementation supplied the visibility/recovery repair without authorizing resume by itself:
 
 1. the original #168 habitat CLI remains byte-for-byte intact for audit compatibility, while the supervisor executes a separate independently testable guarded runtime;
 2. every caught exception that can cause a freeze records exception type, message, traceback digest, attempt, and an evidence digest in the append-only private raw stream before the freeze transition;
@@ -102,13 +102,27 @@ The merged PR #192 A1 implementation supplies the repair without authorizing res
 6. supervisor status stderr plus worker stdout/stderr are continuously appended to private `supervisor.log`;
 7. focused tests cover injected OSError retry/evidence, corruption-only classification, corruption resume refusal, same-count resume, one-pending-event reconciliation, and supervisor logging.
 
-The reviewed resume command is authorized only when the checked-out `main` contains the exact validated A1 implementation:
+A1 then did its intended job on the first recurrence. The operator-private record on 2026-07-25 retained:
+
+```text
+InvalidEventEnvelope: event_material exceeds canonical size limit
+context: append_snapshot_backup
+sequence boundary: 280
+```
+
+The deterministic timing boundary also matches the prior incident: sequence 279 was observed at 2026-07-24 11:29 and the fixed stimulus interval is 300 seconds, placing the next attempt at 11:34, the original freeze time. This supports a same-boundary recurrence; it does **not** retroactively supply the exception type that the pre-A1 path failed to record.
+
+Repository inspection identifies an A11 representation defect at that boundary. Habitat events contain the cumulative full shadow state in `before` and `after`; the frozen v1 SQLite persistence path then embeds the canonical `payload_json` string inside `event_material`, adding escaping overhead until the persistence representation crosses the unchanged 65,536-byte canonical limit at sequence 280. Snapshot rows also inline the growing full state and therefore have the same unbounded-growth design problem.
+
+Habitat Fix 2 applies A11 rather than weakening the threshold: large persisted material moves to append-only SHA-256 content-addressed storage, while canonical event/snapshot persistence records retain only the digest and a versioned structural manifest. Logical `EventEnvelope` validation and `MAX_CANONICAL_JSON_BYTES` remain unchanged. Exact legacy-v1 stores retain their original single migration record and old inline snapshots remain readable through an explicit format branch; no old snapshot is rewritten. Replay computes the same canonical full-state digest as snapshot content. The existing one-pending-row path remains responsible for reconciling a durable sequence 280 against `window_state.json` at 279.
+
+The reviewed resume command remains:
 
 ```bash
 python scripts/habitat/m2_e_window_runtime_guarded.py --private-root "${EVE_M2E_PRIVATE_ROOT:-$HOME/.local/share/eve-m2e-window-private}" resume --reviewed
 ```
 
-This repair grants no cutover, recovery authority beyond the explicit reviewed resume gate, M3 authority, production-default change, or observation-window seal.
+It is operationally blocked until Habitat Fix 2 is merged from an exact validated head. This repair grants no cutover, recovery authority beyond the explicit reviewed resume gate, M3 authority, production-default change, or observation-window seal.
 
 ## 4. Validation reuse and new-chat rule
 
@@ -213,6 +227,8 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
 | #192 | merged | A1 guarded M2-E habitat recovery + reviewed resume |
 
+PR #195 is the active Habitat Fix 2 change owner. Its Draft/Ready/merged state, exact head, workflow result, and eventual merge SHA must be read from live repository metadata and are not predeclared here.
+
 ## 7. Frozen PR register
 
 Open frozen legacy-lineage PRs now remaining:
@@ -234,7 +250,7 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 
 Order is constrained by evidence and authority boundaries:
 
-1. **A1 — reviewed operator resume:** the exact validated #192 implementation is now on `main`; the operator may run the reviewed resume command above. A successful guarded resume continues M2-E observation rather than authorizing cutover.
+1. **Habitat Fix 2 — A11 canonical-size repair:** keep the M2-E phone window frozen until PR #195 is exact-head validated and merged. After merge, stop the supervisor, update the phone checkout to `main`, run the explicit `resume --reviewed` command, and restart the supervisor. Successful reconciliation continues M2-E observation only; it does not authorize cutover.
 2. **C1 — Operator Attestation Trust Root:** create a one-operator trust root in which private companion nonce material remains private and repository/runtime evidence carries only the independently checkable digest binding. A runtime may not self-sign its own production provenance.
 3. **C2 — First capability-forcing real observation:** only after C1, bind a real attested source verifier and land the first retained, positive-confidence real observation honestly. Do not inflate 1/37 into 37/37 production coverage.
 4. Continue M3-B source-batch real observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
