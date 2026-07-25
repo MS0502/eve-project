@@ -10,7 +10,6 @@ open M3-E runtime authority.
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from dataclasses import dataclass
 from typing import Any, Mapping
@@ -47,6 +46,18 @@ def _digest_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or _DIGEST.fullmatch(value) is None or value == ZERO_DIGEST:
         raise RegistryRetainedObservationSinkError(
             f"{field} must be a non-placeholder lowercase SHA-256 digest"
+        )
+    return value
+
+
+def _chain_digest(value: Any, field: str, *, allow_genesis: bool = False) -> str:
+    if not isinstance(value, str) or _DIGEST.fullmatch(value) is None:
+        raise RegistryRetainedObservationSinkError(
+            f"{field} must be a lowercase SHA-256 digest"
+        )
+    if value == ZERO_DIGEST and not allow_genesis:
+        raise RegistryRetainedObservationSinkError(
+            f"{field} cannot be the genesis digest"
         )
     return value
 
@@ -160,11 +171,15 @@ class RetainedRealObservationReceipt:
             "capture_digest",
             "verification_digest",
             "event_envelope_digest",
-            "store_before_chain_digest",
-            "store_after_chain_digest",
             "store_transition_hash",
         ):
             _digest_string(getattr(self, field), field)
+        _chain_digest(
+            self.store_before_chain_digest,
+            "store_before_chain_digest",
+            allow_genesis=True,
+        )
+        _chain_digest(self.store_after_chain_digest, "store_after_chain_digest")
         _positive_int(self.sequence, "sequence")
         if isinstance(self.store_ordinal, bool) or not isinstance(self.store_ordinal, int) or self.store_ordinal < 1:
             raise RegistryRetainedObservationSinkError("store_ordinal must be positive")
@@ -178,6 +193,10 @@ class RetainedRealObservationReceipt:
         ):
             raise RegistryRetainedObservationSinkError(
                 "store receipt must prove exactly one append"
+            )
+        if self.store_before_chain_digest == ZERO_DIGEST and self.store_before_count != 0:
+            raise RegistryRetainedObservationSinkError(
+                "genesis chain digest is valid only before the first append"
             )
         if self.store_before_chain_digest == self.store_after_chain_digest:
             raise RegistryRetainedObservationSinkError(
