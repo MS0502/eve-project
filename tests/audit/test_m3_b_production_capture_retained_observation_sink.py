@@ -18,8 +18,9 @@ def test_production_capture_retention_sink_audit_is_deterministic_and_fail_close
     assert first["auto_initialize"] is False
     assert first["auto_append"] is False
     assert first["registered_production_source_verifier_count"] == 0
-    assert first["registered_production_source_verifiers"] == {}
-    assert first["unregistered_verifier_rejected"] is True
+    assert first["registered_production_source_verifier_contracts"] == []
+    assert first["unregistered_verifier_execution_rejected"] is True
+    assert first["caller_authored_verification_rejected"] is True
     assert first["retained_real_observation_count"] == 0
     assert first["positive_confidence_real_observation_count"] == 0
     assert first["observation_window_eligible"] is False
