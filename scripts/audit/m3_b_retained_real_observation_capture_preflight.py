@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recalculable audit for the 37-axis retained-real-observation capture preflight."""
+"""Recalculable audit for current 37-axis retained-real-observation readiness."""
 from __future__ import annotations
 
 import argparse
@@ -19,8 +19,8 @@ from core.m3_b_retained_real_observation_capture_preflight import (  # noqa: E40
     retained_real_observation_capture_preflight,
 )
 
-SCHEMA_VERSION = "eve.m3-b.retained-real-observation-capture-preflight-audit.v1"
-BASELINE_SHA = "272ae3132547395e03af55731ba87736aa6535e8"
+SCHEMA_VERSION = "eve.m3-b.retained-real-observation-capture-preflight-audit.v2"
+BASELINE_SHA = "b92a16a81e1591e490edc36d0171bc9a2c3bf065"
 
 
 def _digest(value: Mapping[str, Any]) -> str:
@@ -43,7 +43,7 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
     errors: list[str] = []
 
     if first != second or first.preflight_digest != second.preflight_digest:
-        errors.append("retained-real-observation capture preflight is not deterministic")
+        errors.append("retained-real-observation readiness is not deterministic")
     if first.source_binding_count != 37 or first.source_binding_complete is not True:
         errors.append("source-binding coverage is not exact 37/37")
     if tuple(group.cumulative_bound_axis_count for group in first.source_binding_groups) != (
@@ -56,18 +56,20 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         37,
     ):
         errors.append("source-binding cumulative coverage is not exact")
-    if production_path.exists():
-        errors.append("future production capture adapter path already exists")
-    if retention_path.exists():
-        errors.append("future immutable retention sink path already exists")
-    if first.production_capture_adapter_present or first.retention_sink_present:
-        errors.append("preflight incorrectly claims a production capture component")
+    if not production_path.exists():
+        errors.append("production capture adapter code path is absent")
+    if not retention_path.exists():
+        errors.append("immutable retention sink code path is absent")
+    if not first.production_capture_adapter_present or not first.retention_sink_present:
+        errors.append("readiness does not reflect both present code capabilities")
+    if first.registered_production_source_verifier_count != 0:
+        errors.append("PR187 readiness unexpectedly claims a production source verifier")
     if first.retained_real_observation_count != 0:
-        errors.append("preflight fabricated retained real observations")
+        errors.append("readiness fabricated retained real observations")
     if first.positive_confidence_real_observation_count != 0:
-        errors.append("preflight fabricated positive-confidence real coverage")
+        errors.append("readiness fabricated positive-confidence real coverage")
     if first.observation_window_eligible or first.observation_window_started:
-        errors.append("preflight opened the observation window boundary")
+        errors.append("readiness opened the observation window boundary")
     if any(
         (
             first.persistence_accessed,
@@ -83,12 +85,12 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
             first.cutover_authorized,
         )
     ):
-        errors.append("preflight granted mutation, persistence, cutover, or authority")
+        errors.append("readiness granted mutation, persistence use, cutover, or authority")
 
     report: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "baseline_sha": BASELINE_SHA,
-        "authority": "shadow_only_retained_real_observation_capture_preflight",
+        "authority": "shadow_only_retained_real_observation_readiness",
         "source_binding_count": first.source_binding_count,
         "source_binding_complete": first.source_binding_complete,
         "source_binding_cumulative_counts": [
@@ -105,6 +107,7 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "retention_sink_future_path_present": retention_path.exists(),
         "production_capture_adapter_present": first.production_capture_adapter_present,
         "retention_sink_present": first.retention_sink_present,
+        "registered_production_source_verifier_count": first.registered_production_source_verifier_count,
         "retained_real_observation_count": first.retained_real_observation_count,
         "positive_confidence_real_observation_count": first.positive_confidence_real_observation_count,
         "observation_window_eligible": first.observation_window_eligible,
@@ -127,8 +130,8 @@ def audit_repository(root: Path = ROOT) -> dict[str, Any]:
         "legacy_runtime_authoritative": True,
         "legacy_persistence_authoritative": True,
         "next_required_artifact": (
-            "production capture adapter plus immutable retained-real-observation sink; "
-            "real observations must originate from actual production sources and cannot be fabricated"
+            "reviewed source-contract-specific production verifier/runtime bridge; "
+            "real observations remain impossible until verifier registration exists"
         ),
         "errors": errors,
     }
