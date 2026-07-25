@@ -36,6 +36,11 @@ This PR closes that future issuance gap before any production source is register
 - an executable verifier callable;
 - exact shadow-only registration schema.
 
+The repository registration table is also exposed as an immutable `MappingProxyType`.
+Runtime callers cannot insert a registration into that mapping. A later production
+source integration must change the reviewed repository constant itself and pass the
+same exact-head validation before the registration exists in production code.
+
 A caller cannot create an acceptable `ProductionSourceVerification` from metadata
 alone. The only supported issuance path is:
 
@@ -48,7 +53,10 @@ alone. The only supported issuance path is:
 6. only then does the capture module issue the immutable
    `ProductionSourceVerification` used by `ProductionCaptureRecord`.
 
-Direct caller construction fails closed before a capture can be created.
+Direct caller construction fails closed before a capture can be created. The private
+issuance proof is an `InitVar`, not retained object state, so `dataclasses.replace(...)`
+cannot clone or alter an already-issued verification while carrying issuance authority
+forward.
 
 ## State intentionally unchanged
 
@@ -87,6 +95,10 @@ The source manifest requires for `prediction_error_pressure`:
 - `observed_value_digest`
 - `predicted_value_digest`
 - `verification_status`
+
+The manifest requires at least two raw records spanning at least one logical tick for
+this axis. Those requirements are source-contract prerequisites, not evidence that the
+records already exist in production.
 
 This is only a candidate bridge. It is **not** registered by this PR and is not counted
 as a retained real observation. A later PR must prove an exact runtime-source mapping,
