@@ -13,17 +13,18 @@ def test_retained_real_observation_capture_preflight_audit_is_deterministic_and_
     assert first["source_binding_cumulative_counts"] == [4, 6, 12, 19, 25, 31, 37]
     assert len(first["source_binding_group_digests"]) == 7
     assert first["deterministic_preflight_equal"] is True
-    assert first["production_capture_future_path_present"] is False
-    assert first["retention_sink_future_path_present"] is False
-    assert first["production_capture_adapter_present"] is False
-    assert first["retention_sink_present"] is False
+    assert first["production_capture_future_path_present"] is True
+    assert first["retention_sink_future_path_present"] is True
+    assert first["production_capture_adapter_present"] is True
+    assert first["retention_sink_present"] is True
+    assert first["registered_production_source_verifier_count"] == 0
     assert first["retained_real_observation_count"] == 0
     assert first["positive_confidence_real_observation_count"] == 0
     assert first["observation_window_eligible"] is False
     assert first["observation_window_started"] is False
     assert first["observation_window_satisfied"] is False
     assert first["blockers"] == [
-        "REGISTRY_RETAINED_REAL_OBSERVATION_CAPTURE_ABSENT",
+        "REGISTRY_PRODUCTION_SOURCE_VERIFIER_COVERAGE_INCOMPLETE",
         "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE",
         "REGISTRY_OBSERVATION_WINDOW_NOT_STARTED",
     ]

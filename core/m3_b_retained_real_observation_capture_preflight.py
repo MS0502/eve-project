@@ -1,10 +1,9 @@
-"""M3-B retained-real-observation capture preflight for all 37 registry axes.
+"""M3-B retained-real-observation readiness status for all 37 registry axes.
 
-This module closes no production capability. It verifies that all seven source-
-binding groups cover every canonical registry axis exactly once while production
-capture and immutable retention are still absent. It cannot claim retained real
-observations, observation-window eligibility, M3-B completion, cutover, or M3-E
-runtime authority.
+PR #186 introduced this surface while production capture and immutable retention
+were absent. PR #187 advances only machinery presence: both code capabilities now
+exist, but the production-verifier registry remains empty, retained-real coverage
+remains 0/37, and the observation window remains closed.
 """
 from __future__ import annotations
 
@@ -39,14 +38,21 @@ from core.m3_b_quarantined_social_source_binding import (
     quarantined_social_source_bindings,
 )
 from core.m3_b_registry_affect_owner import REGISTRY_AXIS_ORDER
+from core.m3_b_registry_production_capture_adapter import (
+    PRODUCTION_SOURCE_VERIFIER_BLOCKER,
+    production_capture_capability_status,
+)
+from core.m3_b_registry_retained_real_observation_sink import (
+    retention_sink_capability_status,
+)
 from core.m3_b_validated_learning_source_binding import (
     LEARNING_EXPLORATION_AXES,
     validated_learning_source_bindings,
 )
 
-SCHEMA_VERSION = "eve.m3-b.retained-real-observation-capture-preflight.v1"
+SCHEMA_VERSION = "eve.m3-b.retained-real-observation-capture-preflight.v2"
 GROUP_SCHEMA_VERSION = "eve.m3-b.source-binding-coverage-group.v1"
-COMPONENT_SCHEMA_VERSION = "eve.m3-b.required-production-capture-component.v1"
+COMPONENT_SCHEMA_VERSION = "eve.m3-b.required-production-capture-component.v2"
 TOTAL_AXIS_COUNT = 37
 RETAINED_REAL_OBSERVATION_CAPTURE_BLOCKER = "REGISTRY_RETAINED_REAL_OBSERVATION_CAPTURE_ABSENT"
 POSITIVE_CONFIDENCE_COVERAGE_BLOCKER = "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE"
@@ -58,7 +64,7 @@ RETENTION_SINK_FUTURE_PATH = "core/m3_b_registry_retained_real_observation_sink.
 
 
 class RetainedRealObservationCapturePreflightError(ValueError):
-    """Raised when the preflight overstates coverage or production authority."""
+    """Raised when readiness status overstates production observation authority."""
 
 
 def _canonical(value: Mapping[str, Any], field: str) -> str:
@@ -122,7 +128,7 @@ class SourceBindingCoverageGroup:
             )
         if self.schema_version != GROUP_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
             raise RetainedRealObservationCapturePreflightError(
-                "coverage group must remain exact shadow-only preflight evidence"
+                "coverage group must remain exact shadow-only evidence"
             )
         if (
             self.production_capture_present
@@ -130,7 +136,7 @@ class SourceBindingCoverageGroup:
             or self.observation_window_started
         ):
             raise RetainedRealObservationCapturePreflightError(
-                "source-binding coverage cannot claim production capture or retained observation"
+                "source-binding coverage cannot itself claim capture or retained observation"
             )
         object.__setattr__(self, "axes", axes)
 
@@ -154,7 +160,7 @@ class RequiredProductionCaptureComponent:
     component_id: str
     future_path: str
     responsibility: str
-    present: bool = False
+    present: bool = True
     schema_version: str = COMPONENT_SCHEMA_VERSION
     authority: str = SHADOW_AUTHORITY
     installed: bool = False
@@ -165,11 +171,15 @@ class RequiredProductionCaptureComponent:
             _nonempty(getattr(self, field), field)
         if self.schema_version != COMPONENT_SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
             raise RetainedRealObservationCapturePreflightError(
-                "required production component must remain preflight-only"
+                "production component status must remain shadow-only"
             )
-        if self.present or self.installed or self.enabled:
+        if self.present is not True:
             raise RetainedRealObservationCapturePreflightError(
-                "this preflight cannot claim a production capture component is present"
+                "PR187 readiness requires both production machinery code surfaces to be present"
+            )
+        if self.installed or self.enabled:
+            raise RetainedRealObservationCapturePreflightError(
+                "code presence cannot imply runtime installation or enablement"
             )
 
     def to_mapping(self) -> dict[str, Any]:
@@ -193,8 +203,9 @@ class RetainedRealObservationCapturePreflight:
     authority: str = SHADOW_AUTHORITY
     source_binding_count: int = TOTAL_AXIS_COUNT
     source_binding_complete: bool = True
-    production_capture_adapter_present: bool = False
-    retention_sink_present: bool = False
+    production_capture_adapter_present: bool = True
+    retention_sink_present: bool = True
+    registered_production_source_verifier_count: int = 0
     retained_real_observation_count: int = 0
     positive_confidence_real_observation_count: int = 0
     observation_window_eligible: bool = False
@@ -219,7 +230,7 @@ class RetainedRealObservationCapturePreflight:
         components = tuple(self.required_production_components)
         if len(groups) != 7:
             raise RetainedRealObservationCapturePreflightError(
-                "preflight requires all seven source-binding groups"
+                "readiness requires all seven source-binding groups"
             )
         axes = tuple(axis for group in groups for axis in group.axes)
         if (
@@ -230,14 +241,21 @@ class RetainedRealObservationCapturePreflight:
             raise RetainedRealObservationCapturePreflightError(
                 "source-binding groups must cover every canonical registry axis exactly once"
             )
-        cumulative = tuple(group.cumulative_bound_axis_count for group in groups)
-        if cumulative != (4, 6, 12, 19, 25, 31, 37):
+        if tuple(group.cumulative_bound_axis_count for group in groups) != (
+            4,
+            6,
+            12,
+            19,
+            25,
+            31,
+            37,
+        ):
             raise RetainedRealObservationCapturePreflightError(
                 "source-binding cumulative coverage must be exact 4/6/12/19/25/31/37"
             )
         if self.source_binding_count != TOTAL_AXIS_COUNT or self.source_binding_complete is not True:
             raise RetainedRealObservationCapturePreflightError(
-                "preflight must preserve exact 37/37 source-binding coverage"
+                "readiness must preserve exact 37/37 source-binding coverage"
             )
         if (
             len(components) != 2
@@ -245,25 +263,30 @@ class RetainedRealObservationCapturePreflight:
             != (PRODUCTION_CAPTURE_COMPONENT_ID, RETENTION_SINK_COMPONENT_ID)
             or tuple(component.future_path for component in components)
             != (PRODUCTION_CAPTURE_FUTURE_PATH, RETENTION_SINK_FUTURE_PATH)
+            or any(component.present is not True for component in components)
         ):
             raise RetainedRealObservationCapturePreflightError(
-                "preflight must enumerate exact future capture adapter and immutable retention sink"
+                "readiness must enumerate both present capture/retention code capabilities"
             )
         if self.schema_version != SCHEMA_VERSION or self.authority != SHADOW_AUTHORITY:
             raise RetainedRealObservationCapturePreflightError(
-                "retained-real-observation preflight must remain shadow-only"
+                "retained-real-observation readiness must remain shadow-only"
             )
-        if self.production_capture_adapter_present or self.retention_sink_present:
+        if self.production_capture_adapter_present is not True or self.retention_sink_present is not True:
             raise RetainedRealObservationCapturePreflightError(
-                "this preflight cannot claim production capture or retention components exist"
+                "PR187 readiness requires capture adapter and retention sink code presence"
+            )
+        if self.registered_production_source_verifier_count != 0:
+            raise RetainedRealObservationCapturePreflightError(
+                "PR187 does not register production source verifiers"
             )
         if self.retained_real_observation_count != 0 or self.positive_confidence_real_observation_count != 0:
             raise RetainedRealObservationCapturePreflightError(
-                "preflight cannot fabricate retained real observations or positive-confidence coverage"
+                "machinery presence cannot fabricate retained real observations"
             )
         if self.observation_window_eligible or self.observation_window_started or self.observation_window_satisfied:
             raise RetainedRealObservationCapturePreflightError(
-                "observation window cannot become eligible or start before retained real coverage"
+                "observation window cannot become eligible or start without retained real coverage"
             )
         if any(
             (
@@ -283,7 +306,7 @@ class RetainedRealObservationCapturePreflight:
             )
         ):
             raise RetainedRealObservationCapturePreflightError(
-                "preflight cannot grant runtime mutation, persistence, window, cutover, or authority"
+                "readiness cannot grant runtime mutation, persistence use, window, cutover, or authority"
             )
         object.__setattr__(self, "source_binding_groups", groups)
         object.__setattr__(self, "required_production_components", components)
@@ -291,7 +314,7 @@ class RetainedRealObservationCapturePreflight:
     @property
     def blockers(self) -> tuple[str, ...]:
         return (
-            RETAINED_REAL_OBSERVATION_CAPTURE_BLOCKER,
+            PRODUCTION_SOURCE_VERIFIER_BLOCKER,
             POSITIVE_CONFIDENCE_COVERAGE_BLOCKER,
             OBSERVATION_WINDOW_NOT_STARTED_BLOCKER,
         )
@@ -315,6 +338,7 @@ class RetainedRealObservationCapturePreflight:
             "persistence_accessed": self.persistence_accessed,
             "positive_confidence_real_observation_count": self.positive_confidence_real_observation_count,
             "production_capture_adapter_present": self.production_capture_adapter_present,
+            "registered_production_source_verifier_count": self.registered_production_source_verifier_count,
             "registry_owner_mutated": self.registry_owner_mutated,
             "required_production_components": [item.to_mapping() for item in self.required_production_components],
             "retained_real_observation_count": self.retained_real_observation_count,
@@ -329,7 +353,7 @@ class RetainedRealObservationCapturePreflight:
 
     @property
     def preflight_digest(self) -> str:
-        return _digest(self.to_mapping(), "retained_real_observation_capture_preflight")
+        return _digest(self.to_mapping(), "retained_real_observation_capture_readiness")
 
 
 def _coverage_group(
@@ -339,21 +363,17 @@ def _coverage_group(
     cumulative: int,
 ) -> SourceBindingCoverageGroup:
     bindings = tuple(binding_set.bindings)
-    if tuple(item.axis for item in bindings) != axes:
+    if tuple(item.axis for item in bindings) != axes or len(bindings) != len(axes):
         raise RetainedRealObservationCapturePreflightError(
-            f"{group_id} binding axes do not match their canonical group"
-        )
-    if len(bindings) != len(axes):
-        raise RetainedRealObservationCapturePreflightError(
-            f"{group_id} binding count does not match canonical group"
+            f"{group_id} binding set does not match its canonical axes"
         )
     if getattr(binding_set, "production_capture_present", False):
         raise RetainedRealObservationCapturePreflightError(
-            f"{group_id} unexpectedly claims production capture"
+            f"{group_id} source-binding contract unexpectedly claims capture"
         )
     if getattr(binding_set, "observation_window_started", False):
         raise RetainedRealObservationCapturePreflightError(
-            f"{group_id} unexpectedly claims an observation window"
+            f"{group_id} source-binding contract unexpectedly claims a window"
         )
     return SourceBindingCoverageGroup(
         group_id=group_id,
@@ -365,7 +385,9 @@ def _coverage_group(
 
 
 def retained_real_observation_capture_preflight() -> RetainedRealObservationCapturePreflight:
-    """Return the fail-closed preflight; no production capture is installed."""
+    """Return current readiness: machinery present, verifier/real coverage absent."""
+    capture_status = production_capture_capability_status()
+    sink_status = retention_sink_capability_status()
     groups = (
         _coverage_group("operational", OPERATIONAL_AXES, operational_registry_source_bindings(), 4),
         _coverage_group("appraised_survival", APPRAISED_SURVIVAL_AXES, appraised_survival_source_bindings(), 6),
@@ -380,20 +402,25 @@ def retained_real_observation_capture_preflight() -> RetainedRealObservationCapt
             component_id=PRODUCTION_CAPTURE_COMPONENT_ID,
             future_path=PRODUCTION_CAPTURE_FUTURE_PATH,
             responsibility=(
-                "Acquire exact verified source records from production-owned sources without "
-                "deriving them from registry defaults, proposals, or synthetic fixtures."
+                "Validate registered production-origin evidence before it can become a capture record."
             ),
+            present=capture_status.production_capture_adapter_present,
         ),
         RequiredProductionCaptureComponent(
             component_id=RETENTION_SINK_COMPONENT_ID,
             future_path=RETENTION_SINK_FUTURE_PATH,
             responsibility=(
-                "Append immutable retained-real-observation envelopes with source, raw, "
-                "verification, and retention integrity sufficient for deterministic replay."
+                "Append verified retained-real-observation envelopes through the existing immutable shadow store."
             ),
+            present=sink_status.immutable_retention_sink_present,
         ),
     )
     return RetainedRealObservationCapturePreflight(
         source_binding_groups=groups,
         required_production_components=components,
+        production_capture_adapter_present=capture_status.production_capture_adapter_present,
+        retention_sink_present=sink_status.immutable_retention_sink_present,
+        registered_production_source_verifier_count=(
+            capture_status.registered_production_source_verifier_count
+        ),
     )

@@ -9,12 +9,12 @@ import pytest
 
 import core.m3_b_retained_real_observation_capture_preflight as preflight_module
 from core.m3_b_registry_affect_owner import REGISTRY_AXIS_ORDER
+from core.m3_b_registry_production_capture_adapter import PRODUCTION_SOURCE_VERIFIER_BLOCKER
 from core.m3_b_retained_real_observation_capture_preflight import (
     OBSERVATION_WINDOW_NOT_STARTED_BLOCKER,
     POSITIVE_CONFIDENCE_COVERAGE_BLOCKER,
     PRODUCTION_CAPTURE_COMPONENT_ID,
     PRODUCTION_CAPTURE_FUTURE_PATH,
-    RETAINED_REAL_OBSERVATION_CAPTURE_BLOCKER,
     RETENTION_SINK_COMPONENT_ID,
     RETENTION_SINK_FUTURE_PATH,
     RequiredProductionCaptureComponent,
@@ -48,10 +48,11 @@ def test_preflight_reassembles_all_seven_binding_groups_into_exact_37_axis_cover
     assert preflight.source_binding_complete is True
 
 
-def test_preflight_keeps_production_capture_and_retained_real_observation_absent():
+def test_preflight_advances_to_machinery_present_but_real_observation_absent():
     preflight = retained_real_observation_capture_preflight()
-    assert preflight.production_capture_adapter_present is False
-    assert preflight.retention_sink_present is False
+    assert preflight.production_capture_adapter_present is True
+    assert preflight.retention_sink_present is True
+    assert preflight.registered_production_source_verifier_count == 0
     assert preflight.retained_real_observation_count == 0
     assert preflight.positive_confidence_real_observation_count == 0
     assert preflight.observation_window_eligible is False
@@ -72,21 +73,21 @@ def test_preflight_keeps_production_capture_and_retained_real_observation_absent
     assert preflight.cutover_authorized is False
 
 
-def test_preflight_has_exact_three_blockers_at_this_boundary():
+def test_preflight_has_exact_three_blockers_at_pr187_boundary():
     preflight = retained_real_observation_capture_preflight()
     assert preflight.blockers == (
-        RETAINED_REAL_OBSERVATION_CAPTURE_BLOCKER,
+        PRODUCTION_SOURCE_VERIFIER_BLOCKER,
         POSITIVE_CONFIDENCE_COVERAGE_BLOCKER,
         OBSERVATION_WINDOW_NOT_STARTED_BLOCKER,
     )
     assert preflight.blockers == (
-        "REGISTRY_RETAINED_REAL_OBSERVATION_CAPTURE_ABSENT",
+        "REGISTRY_PRODUCTION_SOURCE_VERIFIER_COVERAGE_INCOMPLETE",
         "REGISTRY_POSITIVE_CONFIDENCE_COVERAGE_INCOMPLETE",
         "REGISTRY_OBSERVATION_WINDOW_NOT_STARTED",
     )
 
 
-def test_future_production_components_are_enumerated_but_not_present_or_installed():
+def test_production_components_are_present_as_code_but_not_runtime_installed_or_enabled():
     preflight = retained_real_observation_capture_preflight()
     assert tuple(item.component_id for item in preflight.required_production_components) == (
         PRODUCTION_CAPTURE_COMPONENT_ID,
@@ -96,11 +97,11 @@ def test_future_production_components_are_enumerated_but_not_present_or_installe
         PRODUCTION_CAPTURE_FUTURE_PATH,
         RETENTION_SINK_FUTURE_PATH,
     )
-    assert all(item.present is False for item in preflight.required_production_components)
+    assert all(item.present is True for item in preflight.required_production_components)
     assert all(item.installed is False for item in preflight.required_production_components)
     assert all(item.enabled is False for item in preflight.required_production_components)
-    assert not (ROOT / PRODUCTION_CAPTURE_FUTURE_PATH).exists()
-    assert not (ROOT / RETENTION_SINK_FUTURE_PATH).exists()
+    assert (ROOT / PRODUCTION_CAPTURE_FUTURE_PATH).exists()
+    assert (ROOT / RETENTION_SINK_FUTURE_PATH).exists()
 
 
 def test_preflight_is_deterministic_and_recalculable():
@@ -112,35 +113,35 @@ def test_preflight_is_deterministic_and_recalculable():
     assert len(first.preflight_digest) == 64
 
 
-def test_preflight_and_components_are_frozen_and_fail_closed_on_capability_claims():
+def test_preflight_and_components_are_frozen_and_fail_closed_on_overclaim():
     preflight = retained_real_observation_capture_preflight()
     with pytest.raises(FrozenInstanceError):
         preflight.m3_b_complete = True  # type: ignore[misc]
-    with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot claim production"):
-        replace(preflight, production_capture_adapter_present=True)
+    with pytest.raises(RetainedRealObservationCapturePreflightError, match="requires capture adapter"):
+        replace(preflight, production_capture_adapter_present=False)
     with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot fabricate"):
         replace(preflight, retained_real_observation_count=1)
     with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot become eligible"):
         replace(preflight, observation_window_eligible=True)
     with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot grant runtime"):
         replace(preflight, m3_e_authority_open=True)
-    with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot claim"):
-        replace(preflight.required_production_components[0], present=True)
+    with pytest.raises(RetainedRealObservationCapturePreflightError, match="requires both"):
+        replace(preflight.required_production_components[0], present=False)
 
 
-def test_component_constructor_cannot_smuggle_an_installed_or_enabled_surface():
+def test_component_constructor_cannot_smuggle_runtime_installation_or_enablement():
     kwargs = {
         "component_id": PRODUCTION_CAPTURE_COMPONENT_ID,
         "future_path": PRODUCTION_CAPTURE_FUTURE_PATH,
-        "responsibility": "future-only test component",
+        "responsibility": "present code capability",
     }
-    with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot claim"):
+    with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot imply"):
         RequiredProductionCaptureComponent(**kwargs, installed=True)
-    with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot claim"):
+    with pytest.raises(RetainedRealObservationCapturePreflightError, match="cannot imply"):
         RequiredProductionCaptureComponent(**kwargs, enabled=True)
 
 
-def test_core_preflight_has_no_filesystem_network_thread_scheduler_or_persistence_surface():
+def test_core_readiness_has_no_filesystem_network_thread_scheduler_or_persistence_calls():
     tree = ast.parse(inspect.getsource(preflight_module))
     imported_roots: set[str] = set()
     calls: set[str] = set()

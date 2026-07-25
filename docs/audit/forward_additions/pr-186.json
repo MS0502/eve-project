@@ -35,7 +35,7 @@
         "audit_repository",
         "main"
       ],
-      "rationale": "Audit CLI only. Findings are deterministic report hashing, local error-list/report-map bookkeeping, sys.path setup, and caller-requested stdout/file report output. Filesystem checks only verify that the two named future production component paths are absent. The audit installs no capture, retains no observation, touches no runtime owner/persistence state, starts no observation window, and grants no authority.",
+      "rationale": "Audit CLI only. Findings are deterministic report hashing, local error-list/report-map bookkeeping, sys.path setup, and caller-requested stdout/file report output. The readiness audit evolves with the retained-observation boundary; the shared local errors.append fingerprint count tracks the current exact tree. It installs no capture, retains no production observation, touches no runtime owner state, starts no observation window, and grants no authority.",
       "owner": "M3-B retained-real-observation preflight audit",
       "disposition": "AUDIT_EVIDENCE_ONLY",
       "introduced_by_pr": 186,
@@ -52,26 +52,17 @@
     {
       "path": "tests/test_v4_m3_b_retained_real_observation_capture_preflight.py",
       "categories": [
-        "adaptive_numeric",
         "mutation"
       ],
       "symbols": [
-        "test_core_preflight_has_no_filesystem_network_thread_scheduler_or_persistence_surface",
-        "test_preflight_and_components_are_frozen_and_fail_closed_on_capability_claims",
         "test_preflight_reassembles_all_seven_binding_groups_into_exact_37_axis_coverage"
       ],
-      "rationale": "Focused test evidence only. Findings are local set construction for coverage/AST checks, test-only AST collection mutation, and a deliberately rejected frozen-dataclass assignment used to prove fail-closed authority boundaries. They execute no production capture, persistence, observation retention, window transition, or runtime mutation.",
+      "rationale": "Surviving PR #186 focused-test registration after PR #187 updates the readiness assertions. The remaining finding is local set construction for exact 37-axis coverage only; removed fingerprints no longer exist in the current tree and are intentionally retired rather than over-counted.",
       "owner": "M3-B retained-real-observation preflight focused tests",
       "disposition": "TEST_EVIDENCE",
       "introduced_by_pr": 186,
       "fingerprints": {
-        "1a285d55ed7fdf01c36399e5ede1ac5721df9d7a745dd66b9e8e96a42cfa6992": 2,
-        "3e02f0c0c4f40a7f2734a40e6b94940054d196d2dba60e633615e477b24674ac": 1,
-        "6a076b22944557984f857387d87aa8cb3deead45d95b834952d99e4c608f7635": 1,
-        "70d3cfe1e9bd037d316d08ad8ba8e3e8a8c43e702b5a395e6050430b7fcb2502": 2,
-        "7cc425c4bd239b408f96eb97f9b926964b14702790e087e30ebe8cb9f302fe07": 1,
-        "98e46a43b5bd937cdf6d1b3b5a3d6442c42b6899355191975a6d0dcba8465395": 3,
-        "f974ef206461e165517bb04367580c729ca6cd478a7d0f534cfdcb5137058bc9": 1
+        "98e46a43b5bd937cdf6d1b3b5a3d6442c42b6899355191975a6d0dcba8465395": 3
       }
     }
   ]
