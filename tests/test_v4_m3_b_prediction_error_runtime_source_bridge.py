@@ -20,7 +20,12 @@ from core.m3_b_prediction_error_runtime_source_bridge import (
 )
 
 
-def _prediction(*, prediction_id: str, mood_valence: float = 0.2) -> dict:
+def _prediction(
+    *,
+    prediction_id: str,
+    mood_valence: float = 0.2,
+    observed: bool = True,
+) -> dict:
     return {
         "id": prediction_id,
         "time": 0.0,
@@ -37,7 +42,7 @@ def _prediction(*, prediction_id: str, mood_valence: float = 0.2) -> dict:
         "expected_outcome": "neutral",
         "confidence": 0.0,
         "outcome_scores": {"bad": 0.0, "good": 0.0, "neutral": 0.0},
-        "observed": True,
+        "observed": observed,
     }
 
 
@@ -84,15 +89,13 @@ def test_runtime_shaped_snapshot_matches_manifest_fields_and_is_deterministic():
         fixture_only=True,
     )
     assert first == second
-    assert first.axis if hasattr(first, "axis") else AXIS == AXIS
     assert first.normalized_error == pytest.approx(0.2)
-    assert first.raw_values == (
-        ("model_version", MODEL_VERSION),
-        ("normalized_error", pytest.approx(0.2)),
-        ("observed_value_digest", first.observed_value_digest),
-        ("predicted_value_digest", first.predicted_value_digest),
-        ("verification_status", "verified"),
-    )
+    assert first.raw_values[0] == ("model_version", MODEL_VERSION)
+    assert first.raw_values[1][0] == "normalized_error"
+    assert first.raw_values[1][1] == pytest.approx(0.2)
+    assert first.raw_values[2] == ("observed_value_digest", first.observed_value_digest)
+    assert first.raw_values[3] == ("predicted_value_digest", first.predicted_value_digest)
+    assert first.raw_values[4] == ("verification_status", "verified")
     record = first.to_validated_learning_raw_record()
     assert record.axis == AXIS
     assert tuple(field for field, _ in record.raw_values) == (
@@ -178,11 +181,9 @@ def test_runtime_reader_returns_none_until_an_observed_error_exists():
 
 
 def test_runtime_bridge_fails_closed_on_unobserved_or_mismatched_trace():
-    unobserved = _prediction(prediction_id="pred_0000")
-    unobserved["observed"] = False
     with pytest.raises(PredictionErrorRuntimeSourceBridgeError, match="already-observed"):
         prediction_error_runtime_snapshot_from_mappings(
-            prediction=unobserved,
+            prediction=_prediction(prediction_id="pred_0000", observed=False),
             error=_error(prediction_id="pred_0000", mood_error=0.2),
             observe_count=1,
             source_instance_id="runtime:ai-adapter:primary",
