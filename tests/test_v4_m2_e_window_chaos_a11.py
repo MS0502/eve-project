@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from core.event_kernel import MAX_CANONICAL_JSON_BYTES, EventEnvelope, InvalidEventEnvelope, canonical_json_object
+from core.canonical_content import APPEND_STATE_REPRESENTATION_SCHEMA_VERSION
 from core.m2_e_window_driver import WindowConfig, WindowState, advance_runtime, freeze_shadow, record_discrete_stimulus
 from core.sqlite_shadow_store import SQLiteShadowStore
 from core import sqlite_shadow_store_v1 as legacy
@@ -156,3 +157,27 @@ def test_seq_280_uses_content_reference_and_reviewed_resume_reconciles_pending_r
     ]
     resume = next(item for item in records if item["type"] == "freeze_reviewed_resume")
     assert resume["reconciled_pending_commit"] is True
+
+    # Keep historical seq-280 logical identity for pending-row reconciliation.
+    # Later, when the actual event payload itself reaches the unchanged kernel
+    # limit, A11 switches to digest+manifest+append-delta rather than raising it.
+    assert "after" in runtime._event(303).payload
+    compact_304 = runtime._event(304)
+    assert compact_304.payload["state_representation"] == APPEND_STATE_REPRESENTATION_SCHEMA_VERSION
+    assert set(compact_304.payload) == {
+        "after_ref",
+        "before_ref",
+        "legacy_outcome",
+        "state_delta",
+        "state_representation",
+        "target",
+    }
+    compact_700 = runtime._event(700)
+    assert compact_700.payload["state_representation"] == APPEND_STATE_REPRESENTATION_SCHEMA_VERSION
+    assert len(compact_700.payload_json.encode("utf-8")) < MAX_CANONICAL_JSON_BYTES
+
+    store.append_many(tuple(runtime._event(sequence) for sequence in range(281, 305)))
+    restored = runtime._restore(store)
+    assert restored.state.sequence == 304
+    assert restored.state.snapshot == runtime._snapshot_for(304)
+    assert store.integrity_check().valid is True
