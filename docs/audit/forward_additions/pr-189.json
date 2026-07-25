@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_prediction_error_runtime_source_bridge.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "_digest"
+      ],
+      "rationale": "Deterministic canonical SHA-256 encoding for immutable prediction/error source snapshots, validation/appraisal trace material, and detached source digests. The bridge is read-only, installs no runtime hook, does not call predict/observe/tick, registers no production verifier, performs no persistence/event append, and cannot claim production provenance, retained-real coverage, observation-window state, M3 completion, or cutover authority.",
+      "owner": "M3-B prediction-error runtime source bridge preflight",
+      "disposition": "READ_ONLY_DETACHED_SOURCE_BRIDGE",
+      "introduced_by_pr": 189,
+      "fingerprints": {
+        "b01d14582c7aa8ff0261c4fc70b853f17027b39cef93d7a0269b17ee61d6b402": 1
+      }
+    }
+  ]
+}
