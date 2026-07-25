@@ -132,6 +132,21 @@
       "merge_method": "squash",
       "merge_sha": "c9b46e2f0d509d78b6b2802e180e7a3a4be741b3",
       "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 181,
+      "title": "M3-B Quarantined Risk-Defense Six-Axis Source Binding",
+      "exact_head": "e50651e4df087e744e3764c30074f9ea0b61ba1b",
+      "exact_run": 30137513106,
+      "focused": "33 passed",
+      "full": "2997 passed",
+      "artifact_name": "exact-head-validation-e50651e4df087e744e3764c30074f9ea0b61ba1b",
+      "artifact_sha256": "48198281221b2e38c501c9e75164729206e8d4025a5f5935f52a5472422b6b62",
+      "m2e_run": 30137513107,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "d82652d74b9051d227ec415b648ec209b9de8b3d",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
     }
   ],
   "superseded_or_nonreusable": [
@@ -147,8 +162,8 @@
     }
   ],
   "active_unmerged": {
-    "pr": 181,
+    "pr": 182,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "c9b46e2f0d509d78b6b2802e180e7a3a4be741b3"
+    "baseline_sha": "d82652d74b9051d227ec415b648ec209b9de8b3d"
   }
 }
