@@ -102,6 +102,21 @@
       "merge_method": "squash",
       "merge_sha": "0c0cfdd5a32f25cab52f62e15895475ea64afd63",
       "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 179,
+      "title": "M3-B Operational Four-Axis Source Binding",
+      "exact_head": "f0e17b2db84376cc43e85be525b6b02916479212",
+      "exact_run": 30001938793,
+      "focused": "24 passed",
+      "full": "2940 passed",
+      "artifact_name": "exact-head-validation-f0e17b2db84376cc43e85be525b6b02916479212",
+      "artifact_sha256": "275c13221278b3af72cf8ecd6dc00cb6b193bb70fa1a975e5f2c384fb8b53667",
+      "m2e_run": 30001938822,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "6c89e717c8bd702b86a322d0dbec439ea1ff3944",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
     }
   ],
   "superseded_or_nonreusable": [
@@ -117,8 +132,8 @@
     }
   ],
   "active_unmerged": {
-    "pr": 179,
+    "pr": 180,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "0c0cfdd5a32f25cab52f62e15895475ea64afd63"
+    "baseline_sha": "6c89e717c8bd702b86a322d0dbec439ea1ff3944"
   }
 }
