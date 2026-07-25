@@ -1,0 +1,33 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 183,
+  "base_candidate_surface_digest": "1cafcf884e6a8e7761ba7021aa0f56285e60ed6c0a1b6a7a83d8de411a3d2568",
+  "candidate_surface_digest": "b7fdf6e50028bcd41018906f850d1f4c78cfcc3a8af370c9d5b535f68e83c6fb",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "0ca1e99ac03c02b27abe4e0ead8467f0e6a2c2cd183e7d97e1632527abce9ffd",
+        "42b28a685f0e1e449ff935ba937615954e44cea4c3769071393c49ffe666a8d6",
+        "884d99f6ab4651ca928522b2fff2f9b1c12fce7261ae47e7dcafdd9b30559834",
+        "9ccd0fa340d2eff4ef2cf48b153623ae98919d7d2c8fc1e50a74fcf9ebe15324",
+        "a6c775af8ec47e7ea695dfd422567d715eee620845ba4736f66661aa70a97069",
+        "b7116f8d09cdba00181470011233575a1b88df4a10da82e54fdf528eeb1cc72b",
+        "b7c89890158d3fb6a3cf8f0fdb165b96d615d213b2f9f5a52f843bdab756c41a",
+        "b866bedaa46d38220f8aa34c698c3ec064ab40c31a9e62ab7f6ae0d722461a5a",
+        "bbd9a49f837d2f683aa78554e551de7650a6a478b33b7571fc26b80ee073438d",
+        "d8c0b64e6adabd46c59a7ddb6eab6b24b3dd9d60ee6a31002b8120518967d9e1",
+        "e7b11c06c4162fe55972d0ff6b80f2a2d796fa1206e39755044a8c6c47ab1471",
+        "eaca62e4b4dc5f2c65436308ddc0361504317654502477f0e1145d6003f84bf1",
+        "f2ab4efb6722287be61345f621f3e08b0ab0f513774b139f9b2de0c9743b97ef",
+        "fb7c9807ac7c93294b53f0337c6208c784368230858c2359d26671c4220531f6",
+        "fc524b98dce3b309c775f42069d52fca90d325978c5fb9b9aec13c959eda6c63"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The extractor follows caller-supplied detached validation/appraisal digests and exact raw-value fields through fail-closed identifier/digest validation and canonical JSON-to-SHA-256 integrity construction. Generic digest/evidence propagation conservatively collides with an unrelated archived restore helper that performs path.open/fh.read, but this validated-learning binding module imports no file or persistence surface and invokes no restore helper. The records only verify an already supplied validation-to-appraisal integrity chain and construct immutable detached evidence; they do not acquire training input, ingest raw social feedback, poll hardware, train or update a model, write memory, read persistence, emit expression, install runtime capture, or grant authority.",
+      "owner": "M3-B validated learning-exploration source binding",
+      "denial_semantics": "Fail-closed validation/appraisal digest rejection and local integrity hashing are audit-visible validation only. They grant no runtime read, training mutation, memory write, raw-social ingestion, hardware polling, persistence access, expression path, observation-window transition, cutover, or M3-E authority."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
