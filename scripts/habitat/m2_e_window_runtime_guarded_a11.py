@@ -13,7 +13,7 @@ from core.habitat_shadow_projection_a11 import (
     ActivationLearnPairShadowState,
     replay_activation_learn_pair,
 )
-from core.sqlite_shadow_store_a11 import SQLiteShadowStore
+from core.sqlite_shadow_store_habitat_a11 import SQLiteShadowStore
 from scripts.habitat import m2_e_window_runtime_guarded as _guarded
 
 _guarded.EventEnvelope = EventEnvelope
