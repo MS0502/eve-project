@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-25**  
-Rebaseline base: `9b2545795b681dd0c53a9d51820b6baa70df9482` — PR #191 squash merge  
+Rebaseline base: `77443032eb3fe70eac8c8ca8a18909574de81063` — PR #192 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -17,14 +17,14 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-B | merged | #162 read-capability extraction and exact technical decisions |
 | M2-C | merged | #164 bounded migration/dual-read comparison |
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
-| M2-E | **operational window repair/resume gate in progress; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver; A1 guarded-recovery implementation is PR #192 and operator resume remains explicit |
+| M2-E | **guarded recovery merged; reviewed operator resume pending; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume implementation |
 | M3-A | **complete** | #169 drive-dynamics design |
 | M3-B | **in progress** | #170-#190 shadow/read-only affect and real-observation preflight chain |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
-`M2-E` acceptance is not a production cutover authorization. The phone habitat observation window remains frozen unless the checked-out `main` contains the exact validated A1 implementation and the operator explicitly executes its reviewed resume command. The M3-B observation window is a separate gate and has **not started**.
+`M2-E` acceptance is not a production cutover authorization. PR #192 is merged into `main`, but the phone habitat observation window remains frozen until the operator explicitly executes the reviewed resume command and that command succeeds. The M3-B observation window is a separate gate and has **not started**.
 
 ### Executable-audit compatibility notes
 
@@ -92,7 +92,7 @@ Repository/code inspection plus the operator evidence establish the following bo
 - the prior `supervisor.sh` did not continuously redirect runtime stdout/stderr into `supervisor.log`, leaving a second visibility gap;
 - the swallowed incident exception's exact type remains **unknown** and is not retroactively invented.
 
-The PR #192 A1 implementation supplies the repair without authorizing resume by itself:
+The merged PR #192 A1 implementation supplies the repair without authorizing resume by itself:
 
 1. the original #168 habitat CLI remains byte-for-byte intact for audit compatibility, while the supervisor executes a separate independently testable guarded runtime;
 2. every caught exception that can cause a freeze records exception type, message, traceback digest, attempt, and an evidence digest in the append-only private raw stream before the freeze transition;
@@ -123,20 +123,20 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #191 is the latest merged prerequisite pin:
+PR #192 is the latest merged prerequisite pin:
 
 ```text
-exact head:   d6399f3d471274e2f2ccf34145a47902637d6340
-exact run:    30149385365
-focused:      no focused tests selected
-full:         3,128 passed
-artifact SHA: f8dc41d9a997f6b101ada94b8e92101fb237797a2fb059980f8e12ae41c0c3a0
-M2-E run:     30149385366
+exact head:   b4019f56da120919b582e73f7e87bd5877b758fb
+exact run:    30150542873
+focused:      6 passed
+full:         3,134 passed
+artifact SHA: 560a36ddf0b5f38aafc3773b87e343f2d07dfb348dc6663867d2b10c650d11c4
+M2-E run:     30150542880
 M2-E:         6/6 jobs passed
-merge SHA:    9b2545795b681dd0c53a9d51820b6baa70df9482
+merge SHA:    77443032eb3fe70eac8c8ca8a18909574de81063
 ```
 
-PR #190 remains separately pinned in the reuse ledger; A1 does not rerun #190 or #191 merely because implementation work has moved to a new PR/chat.
+PR #190 and PR #191 remain separately pinned in the reuse ledger. A new chat, PR metadata change, review, or Draft/Ready transition does not justify rerunning their green evidence or PR #192's green evidence while the reuse policy still matches.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -148,7 +148,7 @@ Every merge-intended implementation/governance PR must update this STATUS docume
 
 A PR number, merge state, exact head, workflow result, artifact digest, or completion claim may be written in completed form only after direct repository/workflow verification. Work that has not been pushed/created/verified must be described as planned, proposed, or pending.
 
-On 2026-07-25, before the #191 governance rebaseline was opened, a status report incorrectly stated that PRs #190-#192 had been merged. Direct repository audit showed #190 was still Draft/Open and that no PR objects existed for #191 or #192 at that time. #190 was then independently reviewed, corrected, exact-head validated, and squash-merged as `5af3fc8f2041e54a33384c4a8d60bebccb5a6eb2`; #191 was later actually created, validated, and squash-merged as `9b2545795b681dd0c53a9d51820b6baa70df9482`. The earlier #191/#192 completion claims remain invalid historical claims. Any later creation of PR #192 does not retroactively validate the earlier report.
+On 2026-07-25, before the #191 governance rebaseline was opened, a status report incorrectly stated that PRs #190-#192 had been merged. Direct repository audit showed #190 was still Draft/Open and that no PR objects existed for #191 or #192 at that time. #190 was then independently reviewed, corrected, exact-head validated, and squash-merged as `5af3fc8f2041e54a33384c4a8d60bebccb5a6eb2`; #191 was later actually created, validated, and squash-merged as `9b2545795b681dd0c53a9d51820b6baa70df9482`; #192 was later actually created, validated, and squash-merged as `77443032eb3fe70eac8c8ca8a18909574de81063`. Those later repository events do not retroactively validate the earlier false completion report.
 
 ### 5.3 Private companion boundary
 
@@ -158,7 +158,7 @@ Raw phone companion contents, SQLite/WAL files, backups, private nonce material,
 
 Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision.
 
-## 6. PR registry — verified merged history through #191
+## 6. PR registry — verified merged history through #192
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -211,29 +211,32 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #189 | merged | prediction-error real runtime source bridge preflight |
 | #190 | merged | production-runtime provenance preflight; fixture relabeling defect corrected before merge |
 | #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
-
-PR #192 is the A1 change that owns this STATUS update. Its live Draft/Ready/merged state must be read from repository metadata rather than inferred from this committed text.
+| #192 | merged | A1 guarded M2-E habitat recovery + reviewed resume |
 
 ## 7. Frozen PR register
 
-Open frozen legacy-lineage PRs remain:
+Open frozen legacy-lineage PRs now remaining:
 
 ```text
-#109  #86  #84  #82
+#109
 ```
 
-The historical M1 acceptance record names these as **open REWRITE PRs #109, #86, #84, and #82**. That literal remains an executable-audit compatibility statement until B2 performs repository-verified supersession disposition.
+The historical M1 acceptance record named **open REWRITE PRs #109, #86, #84, and #82**. B2 preserves that historical statement but records the repository-verified current disposition instead of treating it as live state:
 
-They are not merge-authorized by this status update. B2 compares each intent against the merged replacements/contracts. Repository preflight already identifies merged replacements for #82/#84/#86, while #109 still requires explicit residual review and must not be closed merely to force the register to zero.
+- #82 is closed/unmerged and fully superseded by merged #83 (`8b46050151860d462a09137cd3236dc10373845d`). Both lineages use the same four-file Round1081-1100 multimodal-event candidate scope; the supersession evidence is preserved in #82's discussion.
+- #84 is closed/unmerged and fully superseded by merged #85 (`9f0e1112c14883c0ee7b41d2770af713ab91fce7`). Both lineages use the same four-file Round1101-1120 cross-modal binding preflight scope; the supersession evidence is preserved in #84's discussion.
+- #86 is closed/unmerged and fully superseded by merged #88 (`7e5bcbc8f1e1c7849b89054f11a7df62d661acf1`). Both lineages use the same four-file Round1121-1140 memory-replay observation scope; the supersession evidence is preserved in #86's discussion.
+- #109 remains open/unmerged. Its four-file Round1461-1480 virtual-world situation conclusion-candidate scope is absent from the current `main`; therefore an unabsorbed residual exists and B2 does **not** close or label it superseded merely to make the frozen register zero.
+
+These dispositions grant no runtime, persistence, M3, or cutover authority.
 
 ## 8. Current next steps
 
 Order is constrained by evidence and authority boundaries:
 
-1. **A1 — reviewed operator resume:** only when checked-out `main` contains PR #192's exact validated A1 implementation may the operator run the reviewed resume command above; until then the habitat window stays frozen. A successful guarded resume continues M2-E observation rather than authorizing cutover.
-2. **B2 — Frozen-PR disposition:** close #82/#84/#86 only after recording their verified merged replacements; keep #109 open if its unabsorbed residual remains.
-3. **C1 — Operator Attestation Trust Root:** create a one-operator trust root in which private companion nonce material remains private and repository/runtime evidence carries only the independently checkable digest binding. A runtime may not self-sign its own production provenance.
-4. **C2 — First capability-forcing real observation:** only after C1, bind a real attested source verifier and land the first retained, positive-confidence real observation honestly. Do not inflate 1/37 into 37/37 production coverage.
-5. Continue M3-B source-batch real observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
+1. **A1 — reviewed operator resume:** the exact validated #192 implementation is now on `main`; the operator may run the reviewed resume command above. A successful guarded resume continues M2-E observation rather than authorizing cutover.
+2. **C1 — Operator Attestation Trust Root:** create a one-operator trust root in which private companion nonce material remains private and repository/runtime evidence carries only the independently checkable digest binding. A runtime may not self-sign its own production provenance.
+3. **C2 — First capability-forcing real observation:** only after C1, bind a real attested source verifier and land the first retained, positive-confidence real observation honestly. Do not inflate 1/37 into 37/37 production coverage.
+4. Continue M3-B source-batch real observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
 
 The immediate project state remains **M3-B in progress**, with real production verifier/observation counters at zero and no cutover authority.
