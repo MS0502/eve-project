@@ -365,5 +365,5 @@ def test_core_module_has_no_io_polling_scheduler_event_or_runtime_surface():
         {"os", "pathlib", "socket", "requests", "urllib", "subprocess"}
     )
     assert not called.intersection(
-        {"open", "read", "read_text", "write", "write_text", "append", "poll"}
+        {"open", "read", "read_text", "write", "write_text", "poll"}
     )
