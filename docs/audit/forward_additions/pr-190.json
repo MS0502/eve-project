@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "core/m3_b_production_runtime_provenance_preflight.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "_digest"
+      ],
+      "rationale": "Deterministic canonical SHA-256 encoding for immutable production-runtime provenance candidates, verifier bindings, capability evidence, and attestation material. This is evidence hashing only: it performs no adaptive state update, learning, production verifier registration, runtime hook installation, observation retention, window transition, or authority grant.",
+      "owner": "M3-B production runtime provenance preflight",
+      "disposition": "DETERMINISTIC_EVIDENCE_DIGEST_ONLY",
+      "introduced_by_pr": 190,
+      "fingerprints": {
+        "181d3203611d9affe94ed6ae0f08ca9d731c0af2c49b9a970623d0e9c1c63cf7": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_production_runtime_provenance_preflight.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "_digest"
+      ],
+      "rationale": "Test-only deterministic SHA-256 helper used to construct exact immutable attestation and verifier-trace fixtures. It does not execute adaptive learning or mutate production state.",
+      "owner": "M3-B production runtime provenance preflight tests",
+      "disposition": "TEST_FIXTURE_DIGEST_ONLY",
+      "introduced_by_pr": 190,
+      "fingerprints": {
+        "06deab450bfbecca22420a962a6305db2e57527cbf9d20521edebbbae5d15c90": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_m3_b_production_runtime_provenance_fixture_binding.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "_digest"
+      ],
+      "rationale": "Test-only deterministic SHA-256 helper for fixture-classification anti-relabeling evidence. It performs no adaptive state update and cannot establish production provenance.",
+      "owner": "M3-B production runtime provenance fixture-binding tests",
+      "disposition": "TEST_FIXTURE_DIGEST_ONLY",
+      "introduced_by_pr": 190,
+      "fingerprints": {
+        "f7ea77e338be5d248c50a87b29e8a887049018f7b356285f19c2b714e5dd5662": 1
+      }
+    }
+  ]
+}
