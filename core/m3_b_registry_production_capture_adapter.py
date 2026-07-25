@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from typing import Any, Callable, Mapping
 
 from core.event_kernel import SHADOW_AUTHORITY
@@ -231,10 +231,10 @@ class ProductionSourceVerification:
     registry_owner_source: bool = False
     schema_version: str = VERIFICATION_SCHEMA_VERSION
     authority: str = SHADOW_AUTHORITY
-    _issuance_token: object | None = field(default=None, repr=False, compare=False)
+    _issuance_token: InitVar[object | None] = None
 
-    def __post_init__(self) -> None:
-        if self._issuance_token is not _VERIFICATION_ISSUANCE_TOKEN:
+    def __post_init__(self, _issuance_token: object | None) -> None:
+        if _issuance_token is not _VERIFICATION_ISSUANCE_TOKEN:
             raise RegistryProductionCaptureError(
                 "production verification must be issued by registered verifier execution"
             )
