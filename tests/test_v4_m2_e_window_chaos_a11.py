@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -27,6 +29,28 @@ from core.sqlite_shadow_store_a11 import (
     SQLiteShadowStore,
 )
 from scripts.habitat import m2_e_window_runtime_guarded_a11 as runtime
+
+
+def test_a11_wrapper_runs_as_supervisor_style_script(tmp_path: Path):
+    repo_root = Path(__file__).resolve().parents[1]
+    script = repo_root / "scripts" / "habitat" / "m2_e_window_runtime_guarded_a11.py"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--private-root",
+            str(tmp_path / "private"),
+            "status",
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip()
+    assert result.stderr == ""
 
 
 def test_exact_legacy_v1_store_is_lazy_extended_and_reads_legacy_snapshot(tmp_path: Path):
