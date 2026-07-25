@@ -197,6 +197,8 @@ class RuntimeProvenanceVerifierResult:
         ):
             _sha256(getattr(self, name), name)
         _nonnegative_int(self.verified_logical_tick, "verified_logical_tick")
+        if type(self.fixture_only) is not bool:
+            raise ProductionRuntimeProvenanceError("fixture_only must be boolean")
         if self.verification_environment not in {
             PRODUCTION_ENVIRONMENT,
             TEST_FIXTURE_ENVIRONMENT,
@@ -309,6 +311,8 @@ class ProductionRuntimeProvenanceVerification:
         ):
             _sha256(getattr(self, name), name)
         _nonnegative_int(self.verified_logical_tick, "verified_logical_tick")
+        if type(self.fixture_only) is not bool:
+            raise ProductionRuntimeProvenanceError("fixture_only must be boolean")
         if self.verification_environment not in {
             PRODUCTION_ENVIRONMENT,
             TEST_FIXTURE_ENVIRONMENT,
@@ -410,6 +414,16 @@ def execute_registered_runtime_provenance_verifier(
     if type(result) is not RuntimeProvenanceVerifierResult:
         raise ProductionRuntimeProvenanceError(
             "runtime provenance verifier must return exact immutable verifier result"
+        )
+    expected_environment = (
+        TEST_FIXTURE_ENVIRONMENT if candidate.fixture_only else PRODUCTION_ENVIRONMENT
+    )
+    if (
+        result.fixture_only is not candidate.fixture_only
+        or result.verification_environment != expected_environment
+    ):
+        raise ProductionRuntimeProvenanceError(
+            "runtime provenance verifier result cannot change candidate fixture classification"
         )
     expected = (
         candidate.runtime_instance_id,
