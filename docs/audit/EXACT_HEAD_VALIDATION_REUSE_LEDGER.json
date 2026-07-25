@@ -117,6 +117,21 @@
       "merge_method": "squash",
       "merge_sha": "6c89e717c8bd702b86a322d0dbec439ea1ff3944",
       "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
+    },
+    {
+      "pr": 180,
+      "title": "M3-B Appraised Survival Two-Axis Source Binding",
+      "exact_head": "dee922cc38c3076a68c6208b48e01774c131a21a",
+      "exact_run": 30003495700,
+      "focused": "24 passed",
+      "full": "2964 passed",
+      "artifact_name": "exact-head-validation-dee922cc38c3076a68c6208b48e01774c131a21a",
+      "artifact_sha256": "a70c83361fe2b6c1e2563be333330d9ef1aba93760171f2e8522b84e2e276c2c",
+      "m2e_run": 30003495677,
+      "m2e_result": "6/6 passed",
+      "merge_method": "squash",
+      "merge_sha": "c9b46e2f0d509d78b6b2802e180e7a3a4be741b3",
+      "reuse_status": "REQUIRED_WHEN_POLICY_MATCHES"
     }
   ],
   "superseded_or_nonreusable": [
@@ -132,8 +147,8 @@
     }
   ],
   "active_unmerged": {
-    "pr": 180,
+    "pr": 181,
     "status": "DISCOVERY_NOT_REUSABLE_UNTIL_FINAL_EXACT_HEAD_VALIDATES_AND_MERGES",
-    "baseline_sha": "6c89e717c8bd702b86a322d0dbec439ea1ff3944"
+    "baseline_sha": "c9b46e2f0d509d78b6b2802e180e7a3a4be741b3"
   }
 }

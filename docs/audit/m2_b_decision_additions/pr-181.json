@@ -1,0 +1,32 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 181,
+  "base_candidate_surface_digest": "4d5047df2c7c579b37772d38a874dba5e265db9215cac217faec8a5658176efb",
+  "candidate_surface_digest": "94fe9f5a7853519cf6599efb5982f2028f954f3bef5ebd34d400ebea23f94cfe",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "0448802d85437eea9fb388405a7885bdceb07bbc9de6ee0dbe48deb470c9f628",
+        "3b501c54b7885ec55cff5a9c41c592d931a0c0c53b500b4baf3d3e07d1057e3a",
+        "5072e195d2a53dbab8e1b5594af0cf302ba561c8d96e3c8a92a964f29b98a2a8",
+        "5523425529484e7029477fdff90dffc3d20b56c56d6b86208cb4bb3c0f1247f4",
+        "5dfcb68d7237efee4d7d460493b3fa3aa3006823956e9084171fdaba8c82b593",
+        "76542f985b05644dc3cac7a7ed14726a849475c8849da82fc1ecde3b82b7c35c",
+        "825b1455bf9f17941c5274328df5472d4e022ee4cde3d2182709c892602491da",
+        "87807fc93311d4705e3d0412f787cc5a6606ae0331e90a169fcf1e197caff172",
+        "8bf338e12e14d84b1ca69f45df398aab7c6e94cbb0fd07eab2ea173e8c46f4a8",
+        "94c58d5891b28bd574f5c459bdd791b9dc5d4d74f97318754cd1f21a07124c77",
+        "9e2d926dec45a65e356276ca1d1480baf0412363c1ac13641b6d8c657ef861cd",
+        "bd77de99641a399acc0c71c806ea88f372eefb82ea579a8199227821498a4eb1",
+        "cfacc159412c21b6e4ce6ae5aa6d7765d542f71242f898e1060a205e36ae9bed",
+        "d9fea13d4b56ab20de218a035cf8c0e2c33f1d009fd25eb4457ba628100eea53"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The extractor follows caller-supplied detached quarantine/appraisal digests and exact raw-value fields through fail-closed identifier/digest validation and canonical JSON-to-SHA-256 integrity construction. Generic hashlib.sha256 symbol matching conservatively collides with an unrelated legacy restore helper that performs path.open/fh.read, but this risk-binding module imports no path or file-read surface and invokes no such helper. The records only verify an already supplied quarantine-to-appraisal integrity chain and construct immutable detached evidence; they do not acquire external input, ingest raw social feedback, poll hardware, read persistence, emit expression, install runtime capture, or grant authority.",
+      "owner": "M3-B quarantined risk-defense source binding",
+      "denial_semantics": "Fail-closed quarantine/appraisal digest rejection and local integrity hashing are audit-visible validation only. They grant no runtime read, raw-social ingestion, hardware polling, persistence access, expression path, observation-window transition, cutover, or M3-E authority."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
