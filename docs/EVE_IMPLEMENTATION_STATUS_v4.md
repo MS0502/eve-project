@@ -231,7 +231,7 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #194 | merged | C1 operator-attestation trust root; reviewed-attestation registry intentionally empty |
 | #195 | merged | A11 content-addressed habitat persistence repair; exact validation pinned in merged PR metadata |
 | #196 | merged | A11 wrapper script-bootstrap hotfix; exact validation pinned in merged PR metadata |
-| #197 | open Draft | C2 phone prediction-error runtime witness preflight; no real phone evidence contained in repository |
+| #197 | live PR state authoritative | C2 phone prediction-error runtime witness preflight; no real phone evidence contained in repository |
 
 ## 7. Frozen PR register
 
@@ -255,8 +255,8 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 Order is constrained by evidence and authority boundaries:
 
 1. **Phone M2-E continuation:** update the phone checkout to merged `main` and restart only `scripts/habitat/supervisor.sh`; do **not** run `resume --reviewed` again. Continue the existing real habitat window from the already-resumed state.
-2. **#197 witness preflight:** validate and merge the operator-side phone prediction-error witness machinery. Its merge alone changes no real-observation counter.
-3. **Real phone witness:** after #197 merges, run the witness against that exact clean merged head with the operator-private nonce and exactly two real full-engine interactions. Raw trace stays private; only the public-safe review JSON leaves the companion.
+2. **C2 witness preflight (#197 lineage):** this lineage supplies the operator-side phone prediction-error witness machinery. Its merge alone changes no real-observation counter; live PR metadata is authoritative for its current merge state.
+3. **Real phone witness:** only after #197 is merged, run the witness against that exact clean merged head with the operator-private nonce and exactly two real full-engine interactions. Raw trace stays private; only the public-safe review JSON leaves the companion.
 4. **C2 reviewed pin + first retained observation:** review the exact public witness, pin that attestation digest, register the C1 runtime-provenance verifier and the `prediction_error_pressure` production source verifier, then retain exactly one positive-confidence real observation through the existing immutable sink.
 5. Continue M3-B real source-batch observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
 
