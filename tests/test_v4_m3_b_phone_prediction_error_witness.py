@@ -7,6 +7,7 @@ import pytest
 from core.m3_b_phone_prediction_error_witness import (
     DEFAULT_SOURCE_INSTANCE_ID,
     ENTRYPOINT_ID,
+    PUBLIC_REVIEW_SCHEMA_VERSION,
     PhonePredictionErrorWitness,
     PhonePredictionErrorWitnessError,
     build_phone_prediction_error_witness,
@@ -92,7 +93,7 @@ def test_phone_witness_binds_c1_attestation_and_two_real_runtime_snapshots():
     assert tuple(item.logical_tick for item in witness.snapshots) == (1, 2)
 
 
-def test_public_review_is_digest_only_and_keeps_all_authority_closed():
+def test_public_review_exposes_safe_evidence_mapping_and_keeps_all_authority_closed():
     witness = _witness()
     public = witness.public_review_mapping()
     encoded = json.dumps(public, sort_keys=True)
@@ -100,6 +101,11 @@ def test_public_review_is_digest_only_and_keeps_all_authority_closed():
     assert "error" not in public
     assert "snapshots" not in public
     assert NONCE.decode("ascii") not in encoded
+    assert public["schema_version"] == PUBLIC_REVIEW_SCHEMA_VERSION
+    assert public["evidence"] == witness.evidence.to_mapping()
+    assert public["evidence_digest"] == witness.evidence.evidence_digest
+    assert public["evidence"]["raw_observation_digest"] == witness.evidence.raw_observation_digest
+    assert public["evidence"]["source_integrity_digest"] == witness.evidence.source_integrity_digest
     assert public["private_raw_location"] == "operator_private_companion_only"
     assert public["raw_record_count"] == 2
     assert len(public["private_material_digest"]) == 64
