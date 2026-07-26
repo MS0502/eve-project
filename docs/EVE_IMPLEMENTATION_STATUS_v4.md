@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-26**  
-Rebaseline base/prerequisite: `5664fc3bc22054c2d39142b3125416aea6089c63` — PR #196 squash merge  
+Rebaseline base/prerequisite: `a09ebb8abbbf68c9235795a7c89d8b8ea5d75378` — PR #194 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -19,7 +19,7 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
 | M2-E | **A11 repair + wrapper-entrypoint hotfix merged; reviewed resume already succeeded; phone supervisor restart pending; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume, #195 A11 content-addressed repair, #196 script bootstrap hotfix |
 | M3-A | **complete** | #169 drive-dynamics design |
-| M3-B | **in progress** | #170-#190 merged shadow/read-only chain; #194 is the C1 trust-root change owner and contains no real attestation |
+| M3-B | **in progress** | #170-#190 merged shadow/read-only chain; #194 merged C1 trust root; #197 is the phone prediction-error witness preflight and contains no real phone evidence |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
@@ -52,9 +52,10 @@ Merged M3-B work now includes:
 - production capture adapter + immutable retained-observation sink (#187);
 - executable verifier issuance anti-forgery boundary (#188);
 - real `prediction_error_pressure` runtime source bridge (#189);
-- production-runtime provenance preflight with fixture-classification binding (#190).
+- production-runtime provenance preflight with fixture-classification binding (#190);
+- one-operator attestation trust-root contract with an intentionally empty reviewed registry (#194).
 
-The C1 lineage (#194) supplies a one-operator attestation trust-root contract and operator-local digest recomputation surface. It deliberately leaves the reviewed-attestation registry empty because no real phone launch attestation has been produced and reviewed yet. Whether #194 is Draft, Ready, or merged must be read from live PR metadata; that metadata-only state does not change the counters below.
+PR #197 is the current phone prediction-error witness preflight. It composes the merged C1 trust root and the read-only prediction-error bridge so an operator can later produce one recalculable real phone witness. It does not itself contain phone evidence, register an attestation/verifier, retain an observation, or start the M3-B observation window.
 
 The structural/real-observation boundary remains:
 
@@ -65,7 +66,8 @@ immutable retention sink:                     present
 verifier issuance anti-forgery boundary:      present
 prediction_error runtime source bridge:       present
 production runtime provenance preflight:      present
-operator attestation trust-root:              supplied by #194 lineage
+operator attestation trust-root:              merged in #194
+phone prediction-error witness preflight:     proposed by #197; no phone evidence yet
 reviewed real operator attestations:           0
 registered runtime provenance verifiers:      0
 verified production runtime anchors:          0
@@ -80,7 +82,7 @@ M3-E authority open:                          false
 cutover authorized:                           false
 ```
 
-No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, self-hashed launch metadata, or unreviewed public attestation digest may be reclassified as production evidence. Production provenance requires an independently reviewable trust root and an exact reviewed registration.
+No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, self-hashed launch metadata, or unreviewed public attestation digest may be reclassified as production evidence. Production provenance requires an independently reviewable trust root and an exact reviewed registration. The M2-E habitat driver is explicitly a synthetic scripted shadow workload and cannot be substituted for the C2 `prediction_error_pressure` phone runtime witness.
 
 ## 3. M2-E habitat incidents, A1 visibility, A11 Fix 2, and wrapper hotfix
 
@@ -135,21 +137,21 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #196 is the latest merged prerequisite pin:
+PR #194 is the latest merged prerequisite pin:
 
 ```text
-exact head:   4944c01df3b0978ae73ea3060abd39bee14e41c1
-exact run:    30179233468
-focused:      4 passed
-full:         3,138 passed
-artifact:     exact-head-validation-4944c01df3b0978ae73ea3060abd39bee14e41c1
-artifact SHA: 4f803b16343871b6e20517676cd2a0a4ebce7231444fcd4158fb0926320181b8
-M2-E run:     30179233476
+exact head:   8038db04a29f738f4e9b0adc9b685c9f66ea0eca
+exact run:    30179969575
+focused:      8 passed
+full:         3,146 passed
+artifact:     exact-head-validation-8038db04a29f738f4e9b0adc9b685c9f66ea0eca
+artifact SHA: a8f9f8e0fc5030289836fd167cfd504d3c9dfb7b6ac64ae52555db911fa7667f
+M2-E run:     30179969573
 M2-E:         6/6 jobs passed
-merge SHA:    5664fc3bc22054c2d39142b3125416aea6089c63
+merge SHA:    a09ebb8abbbf68c9235795a7c89d8b8ea5d75378
 ```
 
-PR #190 through #193 and #195 remain separately pinned by their accepted records/ledger entries. PR #196's merged metadata record explicitly states that a new chat or operator session does not justify rerunning its green evidence. C1 is a genuine new code head and therefore requires its own final validation; it does not invalidate or rerun #196 as a prerequisite.
+The artifact was rechecked after the chat/session change and remained present, unexpired, and digest-matching. Therefore #194 is reused as PR #197's prerequisite. PR #197 is a genuine new code head, so only PR #197 itself requires new exact-head validation; #194 full-suite/M2-E must not be rerun as a prerequisite.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -165,13 +167,13 @@ On 2026-07-25, before the #191 governance rebaseline was opened, a status report
 
 ### 5.3 Private companion boundary
 
-Raw phone companion contents, SQLite/WAL files, backups, private nonce material, and other non-public habitat evidence must not be copied into the public repository. Public records may contain only approved schemas, bounded summaries, and cryptographic digests/references needed for authorized recomputation.
+Raw phone companion contents, SQLite/WAL files, backups, private nonce material, raw prediction/error witness mappings, and other non-public habitat/runtime evidence must not be copied into the public repository. Public records may contain only approved schemas, bounded summaries, and cryptographic digests/references needed for authorized recomputation.
 
 ### 5.4 No automatic authority promotion
 
 Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision.
 
-## 6. PR registry — verified repository history through #196
+## 6. PR registry — verified repository history through #197
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -226,9 +228,10 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
 | #192 | merged | A1 guarded M2-E habitat recovery + reviewed resume |
 | #193 | merged | B2 STATUS/reuse rebaseline and frozen-PR disposition |
-| #194 | live PR state authoritative | C1 operator-attestation trust-root lineage; reviewed-attestation registry intentionally empty |
+| #194 | merged | C1 operator-attestation trust root; reviewed-attestation registry intentionally empty |
 | #195 | merged | A11 content-addressed habitat persistence repair; exact validation pinned in merged PR metadata |
 | #196 | merged | A11 wrapper script-bootstrap hotfix; exact validation pinned in merged PR metadata |
+| #197 | open Draft | C2 phone prediction-error runtime witness preflight; no real phone evidence contained in repository |
 
 ## 7. Frozen PR register
 
@@ -252,9 +255,9 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 Order is constrained by evidence and authority boundaries:
 
 1. **Phone M2-E continuation:** update the phone checkout to merged `main` and restart only `scripts/habitat/supervisor.sh`; do **not** run `resume --reviewed` again. Continue the existing real habitat window from the already-resumed state.
-2. **C1 trust root (#194):** this lineage supplies the one-operator contract; its Draft/Ready/merged state must be read live. No C2 production evidence may be accepted while #194 is unmerged, and merging #194 does not itself create a real attestation or production verifier.
-3. **Real phone launch attestation:** only after #194 is merged, the operator may create and locally verify one real launch attestation using private companion nonce material. Raw nonce material stays private; only approved digest/public fields may enter review.
-4. **C2 — First capability-forcing real observation:** only after an exact real attestation is reviewed/pinned, bind one real attested runtime/source verifier and retain the first positive-confidence observation honestly. Do not inflate one observation into 37/37 production coverage.
+2. **#197 witness preflight:** validate and merge the operator-side phone prediction-error witness machinery. Its merge alone changes no real-observation counter.
+3. **Real phone witness:** after #197 merges, run the witness against that exact clean merged head with the operator-private nonce and exactly two real full-engine interactions. Raw trace stays private; only the public-safe review JSON leaves the companion.
+4. **C2 reviewed pin + first retained observation:** review the exact public witness, pin that attestation digest, register the C1 runtime-provenance verifier and the `prediction_error_pressure` production source verifier, then retain exactly one positive-confidence real observation through the existing immutable sink.
 5. Continue M3-B real source-batch observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
 
 The immediate project state remains **M3-B in progress**, with reviewed real operator attestations at zero, real production verifier/observation counters at zero, and no cutover authority.
