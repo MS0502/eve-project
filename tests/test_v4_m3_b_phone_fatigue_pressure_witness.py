@@ -65,13 +65,20 @@ def test_snapshot_derives_exact_governed_fatigue_fields() -> None:
     assert snapshot.active_processing_ticks == 400_000
     assert snapshot.recovery_interval_ticks == 1_600_000
     assert snapshot.queue_pressure == pytest.approx(0.5)
-    assert snapshot.raw_values == (
-        ("active_processing_ticks", 400_000),
-        ("queue_pressure", pytest.approx(0.5)),
-        ("recovery_interval_ticks", 1_600_000),
-        ("sampling_window_ticks", 2_000_000),
-        ("task_switch_count", 3),
+    fields = tuple(field for field, _ in snapshot.raw_values)
+    raw = dict(snapshot.raw_values)
+    assert fields == (
+        "active_processing_ticks",
+        "queue_pressure",
+        "recovery_interval_ticks",
+        "sampling_window_ticks",
+        "task_switch_count",
     )
+    assert raw["active_processing_ticks"] == 400_000
+    assert raw["queue_pressure"] == pytest.approx(0.5)
+    assert raw["recovery_interval_ticks"] == 1_600_000
+    assert raw["sampling_window_ticks"] == 2_000_000
+    assert raw["task_switch_count"] == 3
 
     record = snapshot.to_operational_raw_record()
     assert record.axis == "fatigue_pressure"
@@ -89,7 +96,8 @@ def test_three_real_shape_snapshots_derive_positive_confidence() -> None:
     assert 0.0 <= evidence.value <= 1.0
     assert 0.5 <= evidence.confidence <= 1.0
     assert evidence.observed_tick == 2
-    assert evidence.fixture_only is False
+    assert evidence.synthetic is False
+    assert evidence.proposal_only is False
 
 
 def test_public_review_is_digest_only_and_claims_no_promotion() -> None:
