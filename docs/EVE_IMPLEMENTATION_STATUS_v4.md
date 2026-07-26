@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-26**  
-Rebaseline base/prerequisite: `1161bb15d7bba0629d4862c05e8a61126cdb12c0` — PR #202 squash merge  
+Rebaseline base/prerequisite: `9b8ceceb22e2eee08f940e1673b624cbaa9bcf1a` — PR #203 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -19,7 +19,7 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
 | M2-E | **phone supervisor running; quota/circadian/midnight thresholds observed, final readiness/seal still false; cutover not authorized** | #166-#168, #192, #195, #196 plus operator-reported habitat continuation |
 | M3-A | **complete** | #169 drive-dynamics design |
-| M3-B | **in progress** | #170-#190 structural/read-only chain; #194 C1; #197/#198 witness surface; #199 reviewed activation + one-shot durable retention; #200 first receipt pin; #201/#202 `energy_budget` phone witness acquisition; #203 live reviewed `energy_budget` activation + sequence-two retention staging |
+| M3-B | **in progress** | #170-#190 structural/read-only chain; #194 C1; #197/#198 witness surface; #199 reviewed activation + first durable retention path; #200 first receipt pin; #201/#202 `energy_budget` phone witness acquisition; #203 reviewed `energy_budget` activation + sequence-two retention staging; post-merge real sequence-two append verified and pinned by this rebaseline |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
@@ -59,7 +59,8 @@ Merged M3-B work includes:
 - reviewed real phone witness C2 activation + one-shot operator-private durable retention command (#199);
 - first real retained-observation public receipt pin (#200);
 - `energy_budget` full-engine phone operational witness v1 preflight (#201);
-- Android-compatible versioned `energy_budget` v2 acquisition fallback (#202).
+- Android-compatible versioned `energy_budget` v2 acquisition fallback (#202);
+- reviewed `energy_budget` witness activation + exact sequence-two retention staging (#203).
 
 After #198 merged, the operator executed the exact full-engine phone witness on head `b4968be9aeb6eefc7274f9985ab333f08e470daf`. The public-safe v2 record pins:
 
@@ -115,9 +116,31 @@ synthetic:             false
 
 The canonical `public_review_digest` was independently recomputed and matched exactly. No private raw CPU/memory/battery/process values or nonce material were copied into the repository.
 
-PR #203 is the live reviewed `energy_budget` activation/retention-staging PR. Its code head pins that witness, registers the second reviewed attestation/runtime-provenance/source-verifier path, and issues token-protected `energy_budget` verification/capture objects. Its durable retention command is staged as **sequence 2 only** and refuses execution unless the existing operator-private stream contains the exact first `prediction_error_pressure` event and exact public chain digest pinned by #200. #203/CI does not perform the real phone append.
+PR #203 merged as `9b8ceceb22e2eee08f940e1673b624cbaa9bcf1a`. It pins the reviewed witness, registers the second reviewed attestation/runtime-provenance/source-verifier path, issues token-protected `energy_budget` verification/capture objects, and stages durable retention as **sequence 2 only**. The staged path refuses execution unless the operator-private stream already contains the exact sequence-1 `prediction_error_pressure` event and public chain digest pinned by #200.
 
-The boundary on the #203 code head, before a real post-merge sequence-two append and separate receipt pin, is:
+After #203 merged, the operator executed that sequence-two retention command exactly once on the clean merged head. The public-safe receipt now pinned by this rebaseline was independently canonical-digest verified and proves:
+
+```text
+axis:                                      energy_budget
+prior event:                               m3b:c2:retained:prediction_error_pressure:000001
+new event:                                 m3b:c2:retained:energy_budget:000002
+sequence:                                  2
+receipt digest:                            56401653404f9dee07804ed6a1027368baf7f118dcf6ca6f24e85a050891e3df
+prior event envelope digest:               07deb0e7345db33ac7655229044c8d62e7b14198bd7d80611ace6f5352adb493
+event envelope digest:                     1e4bd659ef348ac39588ba2bc13440bd96a81a9c24a4cdf804bf9ef48b23f664
+store before -> after count:                1 -> 2
+store before chain digest:                  d51406d84dc755f72bd2ab661563c75cf19244710bf98376dbe3174ff101c8ce
+store after chain digest:                   d4660b5cef058bad1b9d1b6b1cb2987c78ef9dbbee403c85562ab945535883e0
+store transition hash:                      1189dcb8ae01370c9095ad676f2f724b2d579184d48ccef861496b04011b57a6
+readback verified:                          true
+retained real observation delta:            1
+observation window started:                 false
+cutover authorized:                         false
+```
+
+The private SQLite database, WAL, raw operational measurements, private nonce, private witness companion, and private filesystem path remain outside the repository. Sequence 1 and sequence 2 are immutable prior history and must not be appended again.
+
+The exact current boundary after the sequence-two receipt pin is:
 
 ```text
 source bindings:                                  37/37
@@ -130,8 +153,8 @@ registered runtime provenance verifiers (C2):     2
 verified production runtime anchors (C2):         2
 registered production source verifiers (C2):      2/37
 verified positive-confidence candidates:          2/37
-retained real observation:                        1/37
-retained positive-confidence real observation:    1/37
+retained real observation:                        2/37
+retained positive-confidence real observation:    2/37
 M3-B observation window eligible:                 false
 M3-B observation window started:                  false
 M3-B complete:                                    false
@@ -140,7 +163,7 @@ M3-E authority open:                              false
 cutover authorized:                               false
 ```
 
-The first real retained observation is evidenced, but one retained observation is not 37-axis coverage and does not start the M3-B observation window. The retained `prediction_error_pressure` event must not be appended again. `energy_budget` becomes retained only after the post-merge sequence-two phone append succeeds and its public receipt is separately reviewed/pinned.
+Two retained real observations are not 37-axis coverage and do not start the M3-B observation window. Neither retained event may be replayed to increase coverage.
 
 No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, self-hashed launch metadata, or unreviewed public attestation digest may be reclassified as production evidence. The M2-E habitat driver remains a synthetic scripted shadow workload and cannot substitute for C2 production-source observations.
 
@@ -197,35 +220,21 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #201 remains an immutable merged prerequisite pin:
+PR #203 is the latest merged prerequisite pin:
 
 ```text
-exact head:   fce245e5c4e63f2224b6fe69d54375315896c177
-exact run:    30187041821
-focused:      5 passed
-full:         3,160 passed
-artifact:     exact-head-validation-fce245e5c4e63f2224b6fe69d54375315896c177
-artifact SHA: ec8b3b6f045e9f39007bd98b0a0b55f680a78622038f5ef1c918abdd4457522c
-M2-E run:     30187041822
-M2-E:         6/6 jobs passed
-merge SHA:    f178b9e0b0fbaa341776fbef66e6c5c87fe5a157
-```
-
-PR #202 is the latest merged prerequisite pin:
-
-```text
-exact head:   7a7d936f3969498a28bb36e6343976218885bf22
-exact run:    30189162107
+exact head:   d02a0f5604f55668dead8f6e5d304f63b6e9fb18
+exact run:    30190700284
 focused:      6 passed
-full:         3,166 passed
-artifact:     exact-head-validation-7a7d936f3969498a28bb36e6343976218885bf22
-artifact SHA: dd77f40e7d3082ad906eb8004cc49ee4a06b1c696788dc1d3305df5d8c8ec1af
-M2-E run:     30189162116
+full:         3,172 passed
+artifact:     exact-head-validation-d02a0f5604f55668dead8f6e5d304f63b6e9fb18
+artifact SHA: 313e18d44e1805e27b56ca5e5305f26616a27be0714b2cf452e31a1514244ef2
+M2-E run:     30190700292
 M2-E:         6/6 jobs passed
-merge SHA:    1161bb15d7bba0629d4862c05e8a61126cdb12c0
+merge SHA:    9b8ceceb22e2eee08f940e1673b624cbaa9bcf1a
 ```
 
-The #201 and #202 exact-head/M2-E evidence remains reusable unless one of the explicit invalidators above occurs. The successful post-#202 phone witness is external observation evidence and does not invalidate either repository validation. #203 is a genuine new code head and therefore receives its own validation only on the final forward-registered exact head; discovery/registration-only heads are not merge evidence.
+The #203 exact-head/M2-E evidence remains reusable unless one of the explicit invalidators above occurs. The successful post-#203 phone retention append changes only operator-private companion state and does not invalidate #203 repository validation. This receipt-pin rebaseline is a genuine new repository head and therefore receives its own validation only on its final head; #203's full-suite/M2-E runs must not be scheduled again.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -311,7 +320,7 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #200 | merged | first real operator-private retention receipt pin; retained coverage `1/37` |
 | #201 | merged | `energy_budget` full-engine phone operational witness v1 preflight; first real execution exposed Android `/proc/stat` access blocker and produced no witness |
 | #202 | merged | versioned Android-compatible `energy_budget` v2 acquisition fallback; exact phone witness subsequently produced on its merge head |
-| #203 | live Draft PR | reviewed `energy_budget` witness activation + exact sequence-two retention staging; real append not yet executed |
+| #203 | merged | reviewed `energy_budget` witness activation + sequence-two retention staging; post-merge real sequence-two append succeeded and is pinned by this rebaseline |
 
 ## 7. Frozen PR register
 
@@ -335,11 +344,10 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 Order is constrained by evidence and authority boundaries:
 
 1. **M2-E habitat continuation:** leave the already-running guarded supervisor alone and do **not** run `resume --reviewed` again. `ready=false` remains authoritative until every acceptance check and sealing condition is actually satisfied.
-2. **Do not duplicate the first retained event:** `prediction_error_pressure` sequence 1 is complete and immutable. It is only the required prior history for the next append, never an append target again.
-3. **Validate/merge #203 only on its final forward-registered exact head:** reuse #201/#202 exact-head and M2-E evidence as immutable prerequisites. Discovery/registration heads are not merge evidence.
-4. **After #203 merge, append `energy_budget` exactly once as sequence 2:** use the existing operator-private C2 retention root/database containing the pinned sequence-1 event and the already-produced operator-private v2 public-review file. The command must prove exact prior event/chain continuity and store count `1 -> 2`.
-5. **Return only the public sequence-two receipt:** keep the private SQLite DB/WAL, raw witness material, nonce, and private path out of GitHub/chat. Independently recompute the receipt digest before pinning it in a later PR.
-6. **Advance retained coverage only after receipt pin:** successful real append + separate repository review/pin may move retained coverage from `1/37` to `2/37`; PR #203 by itself does not.
-7. Satisfy the later 37-axis retained positive-confidence coverage/window-entry contract before starting the M3-B observation window. Only completed/stable M3-B may open M3-C.
+2. **Do not duplicate retained events:** sequence 1 `prediction_error_pressure` and sequence 2 `energy_budget` are complete and immutable. They are prior chain history only, never append targets again.
+3. **Reuse #203 validation:** exact run `30190700284`, artifact SHA-256 `313e18d44e1805e27b56ca5e5305f26616a27be0714b2cf452e31a1514244ef2`, and M2-E run `30190700292` remain the merged prerequisite evidence. A new chat/session is not a rerun trigger.
+4. **Pin this sequence-two receipt on one final receipt-pin head:** this rebaseline advances canonical retained coverage from `1/37` to `2/37` only because the real phone append/readback already succeeded and the receipt digest was independently recomputed.
+5. **Continue with a new production-origin axis:** the next real retained append must be sequence 3, use a separately reviewed production-source witness, and prove exact continuity from the sequence-2 `energy_budget` event/chain. Existing events must not be replayed.
+6. Satisfy the later 37-axis retained positive-confidence coverage/window-entry contract before starting the M3-B observation window. Only completed/stable M3-B may open M3-C.
 
-The immediate project state remains **M3-B in progress**. Two real phone witnesses are reviewable on the #203 code head, but only the first is durably retained and repository-pinned at `1/37`. The observation window is still not started. M3-C, M3-E, and cutover remain closed.
+The immediate project state remains **M3-B in progress**. Two independently reviewed real phone observations are durably retained and public-receipt pinned at `2/37`. The observation window is still not started. M3-C, M3-E, and cutover remain closed.
