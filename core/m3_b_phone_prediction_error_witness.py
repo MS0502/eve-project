@@ -98,6 +98,28 @@ def _attestation_review_mapping(
     }
 
 
+def _validate_snapshot_sequence(
+    snapshots: Sequence[PredictionErrorRuntimeSourceSnapshot],
+    *,
+    source_instance_id: str,
+) -> tuple[PredictionErrorRuntimeSourceSnapshot, ...]:
+    items = tuple(snapshots)
+    if len(items) != REQUIRED_RAW_RECORD_COUNT:
+        raise PhonePredictionErrorWitnessError("phone witness requires exactly two runtime snapshots")
+    if any(type(item) is not PredictionErrorRuntimeSourceSnapshot for item in items):
+        raise PhonePredictionErrorWitnessError("witness snapshots must use exact immutable bridge type")
+    if any(item.fixture_only for item in items):
+        raise PhonePredictionErrorWitnessError("phone witness snapshots cannot be fixture_only")
+    if any(item.source_instance_id != source_instance_id for item in items):
+        raise PhonePredictionErrorWitnessError("attestation and snapshots must bind one source instance")
+    ticks = tuple(item.logical_tick for item in items)
+    if ticks != tuple(sorted(set(ticks))):
+        raise PhonePredictionErrorWitnessError("runtime snapshot ticks must be strictly increasing")
+    if ticks[-1] - ticks[0] < REQUIRED_LOGICAL_SPAN_TICKS:
+        raise PhonePredictionErrorWitnessError("runtime snapshots do not satisfy minimum logical span")
+    return items
+
+
 @dataclass(frozen=True, slots=True)
 class PhonePredictionErrorWitness:
     """Bounded private companion material plus a public digest-only review surface."""
@@ -123,20 +145,10 @@ class PhonePredictionErrorWitness:
             raise PhonePredictionErrorWitnessError("witness requires exact public launch attestation")
         if self.attestation.fixture_only:
             raise PhonePredictionErrorWitnessError("phone witness cannot be fixture_only")
-        snapshots = tuple(self.snapshots)
-        if len(snapshots) != REQUIRED_RAW_RECORD_COUNT:
-            raise PhonePredictionErrorWitnessError("phone witness requires exactly two runtime snapshots")
-        if any(type(item) is not PredictionErrorRuntimeSourceSnapshot for item in snapshots):
-            raise PhonePredictionErrorWitnessError("witness snapshots must use exact immutable bridge type")
-        if any(item.fixture_only for item in snapshots):
-            raise PhonePredictionErrorWitnessError("phone witness snapshots cannot be fixture_only")
-        if any(item.source_instance_id != self.attestation.source_instance_id for item in snapshots):
-            raise PhonePredictionErrorWitnessError("attestation and snapshots must bind one source instance")
-        ticks = tuple(item.logical_tick for item in snapshots)
-        if ticks != tuple(sorted(set(ticks))):
-            raise PhonePredictionErrorWitnessError("runtime snapshot ticks must be strictly increasing")
-        if ticks[-1] - ticks[0] < REQUIRED_LOGICAL_SPAN_TICKS:
-            raise PhonePredictionErrorWitnessError("runtime snapshots do not satisfy minimum logical span")
+        snapshots = _validate_snapshot_sequence(
+            self.snapshots,
+            source_instance_id=self.attestation.source_instance_id,
+        )
         if type(self.evidence) is not RegistryAxisPositiveConfidenceEvidence:
             raise PhonePredictionErrorWitnessError("witness requires exact positive-confidence evidence")
         if self.evidence.axis != AXIS or self.evidence.source_instance_id != self.attestation.source_instance_id:
@@ -224,7 +236,10 @@ def build_phone_prediction_error_witness(
 ) -> PhonePredictionErrorWitness:
     """Bind one actual phone runtime session without registering or retaining it."""
 
-    items = tuple(snapshots)
+    items = _validate_snapshot_sequence(
+        snapshots,
+        source_instance_id=source_instance_id,
+    )
     attestation = build_operator_public_launch_attestation(
         OperatorLaunchBinding(
             runtime_instance_id=runtime_instance_id,
