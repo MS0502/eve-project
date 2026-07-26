@@ -1,13 +1,13 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-26**  
-Rebaseline base/prerequisite: `b894c0abc3d34bec8d9207a3aa40bda9291ec402` — PR #197 squash merge  
+Rebaseline base/prerequisite: `b4968be9aeb6eefc7274f9985ab333f08e470daf` — PR #198 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
 ## 1. Current authority and milestone state
 
-The pre-kernel legacy runtime remains authoritative. The merged event-store, migration, recovery, affect, provenance, and capture machinery does not by itself transfer runtime, persistence, affect, goal, expression, or cutover authority.
+The pre-kernel legacy runtime remains authoritative. The merged event-store, migration, recovery, affect, provenance, capture, reviewed-verifier, and retention machinery does not by itself transfer runtime, persistence, affect, goal, expression, or cutover authority.
 
 | Milestone | Current state | Repository basis |
 |---|---|---|
@@ -17,14 +17,14 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-B | merged | #162 read-capability extraction and exact technical decisions |
 | M2-C | merged | #164 bounded migration/dual-read comparison |
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
-| M2-E | **A11 repair + wrapper-entrypoint hotfix merged; reviewed resume already succeeded; phone supervisor restart pending; cutover not authorized** | #166 candidate, #167 human acceptance record, #168 chaos + phone habitat driver, #192 guarded recovery/reviewed-resume, #195 A11 content-addressed repair, #196 script bootstrap hotfix |
+| M2-E | **phone supervisor running; quota/circadian/midnight thresholds observed, final readiness/seal still false; cutover not authorized** | #166-#168, #192, #195, #196 plus operator-reported habitat continuation |
 | M3-A | **complete** | #169 drive-dynamics design |
-| M3-B | **in progress** | #170-#190 merged shadow/read-only chain; #194 merged C1 trust root; #197 merged phone prediction-error witness preflight; #198 is the public-review v2 completeness lineage |
+| M3-B | **in progress** | #170-#190 structural/read-only chain; #194 C1; #197/#198 witness surface; #199 lineage reviews the first real phone witness and stages durable retention |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
-`M2-E` acceptance is not a production cutover authorization. The reviewed resume was executed once after #195 and returned `resume_exit=0`; it must **not** be repeated. PR #196 fixed the subsequent supervisor script-entrypoint failure and merged as `5664fc3bc22054c2d39142b3125416aea6089c63`. The remaining M2-E phone action is checkout update plus supervisor restart only. The M3-B observation window is a separate gate and has **not started**.
+`M2-E` acceptance is not a production cutover authorization. The reviewed resume was executed once after #195 and returned `resume_exit=0`; it must **not** be repeated. PR #196 fixed the later supervisor script-entrypoint failure. The operator subsequently reported the guarded phone supervisor running at `events=288/288`, `runtime_sim_hours=24.86/24`, `midnights=3/3`, `deaths=0`, `divergence=0`, `unauthorized=0`, but `ready=false`. The acceptance contract independently requires all checks, including `target_day_met` (five calendar days), before sealing; therefore the repository does not infer readiness from quota/circadian/midnight completion alone. The M3-B observation window is separate and has **not started**.
 
 ### Executable-audit compatibility notes
 
@@ -34,11 +34,11 @@ M1 status: **closed for mechanism verification**. This is the historical #158 hu
 
 The canonical M1 human-acceptance record SHA-256 remains `aff557da810b7faa0c9dc57bde214a9760a0d3099c8031cb6eb7a24398cf8522`. At that decision point the status contract stated **M2-A remains blocked until v4.2 approval**; that sentence is retained as historical acceptance evidence only, because v4.2 was later approved and M2-A subsequently merged in #161. The absorbed PRs #11, #7, and #4 are closed; this is likewise retained as the historical M1 disposition record.
 
-M3-A drive-dynamics design status: the merged #169 artifact remains a **documentation-only** design boundary over the **63-axis Affect Migration Plan**, including **48 bidirectional named transitions**, with **no runtime integration** in that design artifact and **integration eligibility only after persistence cutover**. M3-A is now complete as a design milestone, while its historical no-runtime-integration boundary remains authoritative for what #169 itself proved.
+M3-A drive-dynamics design status: the merged #169 artifact remains a **documentation-only** design boundary over the **63-axis Affect Migration Plan**, including **48 bidirectional named transitions**, with **no runtime integration** in that design artifact and **integration eligibility only after persistence cutover**. M3-A is complete as a design milestone, while its historical no-runtime-integration boundary remains authoritative for what #169 itself proved.
 
 ## 2. M3-B exact current boundary
 
-Merged M3-B work now includes:
+Merged M3-B work includes:
 
 - bounded read-only affect projection (#170);
 - source-ownership preflight (#171);
@@ -53,38 +53,52 @@ Merged M3-B work now includes:
 - executable verifier issuance anti-forgery boundary (#188);
 - real `prediction_error_pressure` runtime source bridge (#189);
 - production-runtime provenance preflight with fixture-classification binding (#190);
-- one-operator attestation trust-root contract with an intentionally empty reviewed registry (#194);
-- operator-side full-engine phone prediction-error witness preflight (#197).
+- one-operator attestation trust-root contract (#194);
+- operator-side full-engine phone prediction-error witness preflight (#197);
+- public-safe witness review v2 completeness (#198).
 
-PR #197 merged the acquisition surface that binds an actual full-engine phone session to C1 and two read-only prediction-error snapshots while keeping all production counters closed. PR #198 is the public-review completeness lineage: it upgrades the emitted public review to schema v2 and includes the complete public-safe `RegistryAxisPositiveConfidenceEvidence` mapping so later C2 review can verify the exact evidence without requiring raw prediction/error material to leave the private companion. Whether #198 is Draft, Ready, or merged must be read from live PR metadata; that metadata-only state does not change the counters below.
-
-The structural/real-observation boundary remains:
+After #198 merged, the operator executed the exact full-engine phone witness on head `b4968be9aeb6eefc7274f9985ab333f08e470daf`. The public-safe v2 record pins:
 
 ```text
-source bindings:                              37/37
-production capture adapter:                   present
-immutable retention sink:                     present
-verifier issuance anti-forgery boundary:      present
-prediction_error runtime source bridge:       present
-production runtime provenance preflight:      present
-operator attestation trust-root:              merged in #194
-phone prediction-error witness preflight:     merged in #197; no phone evidence yet
-public-safe evidence review surface:          supplied by #198 lineage; real evidence absent
-reviewed real operator attestations:           0
-registered runtime provenance verifiers:      0
-verified production runtime anchors:          0
-registered production source verifiers:       0/37
-retained real observation:                    0/37
-positive-confidence real observation:         0/37
-M3-B observation window eligible:             false
-M3-B observation window started:              false
-M3-B complete:                                false
-M3-C open:                                    false
-M3-E authority open:                          false
-cutover authorized:                           false
+public review digest: 6a3d34120d9773f28544aa82d963cf2e65220f6f899aeab42c132660f87ad81e
+attestation digest:   85b55eee61618ad98476f71c4dadcb9b2e4383d79aefd93a41a2c34634efecda
+evidence digest:      14549d2b9f37f2a8b00a5bc9de61dbdad8e12dbb8a4d4e08e254ef0e9848b3dc
+source:               runtime:ai-adapter:primary
+axis:                 prediction_error_pressure
+confidence:           1.0
+fixture_only:         false
 ```
 
-No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, self-hashed launch metadata, or unreviewed public attestation digest may be reclassified as production evidence. Production provenance requires an independently reviewable trust root and an exact reviewed registration. The M2-E habitat driver is explicitly a synthetic scripted shadow workload and cannot be substituted for the C2 `prediction_error_pressure` phone runtime witness.
+The raw prediction/error snapshots and private nonce remain outside the repository.
+
+The #199 lineage is the merge-stable C2 reviewed activation owner. It deliberately leaves the historical C1/preflight empty registries untouched and adds a versioned C2 activation layer that recomputes the exact public review, registers exactly one reviewed attestation, one runtime-provenance verifier, and one `prediction_error_pressure` production-source verifier, and issues token-protected verification/capture objects. Live PR metadata is authoritative for whether that lineage is Draft, Ready, or merged.
+
+The current #199 tree boundary is:
+
+```text
+source bindings:                                  37/37
+production capture adapter:                       present
+immutable retention sink:                         present
+verifier issuance anti-forgery boundary:          present
+prediction_error runtime source bridge:           present
+reviewed real operator attestations (C2):          1
+registered runtime provenance verifiers (C2):     1
+verified production runtime anchors (C2):         1
+registered production source verifiers (C2):      1/37
+verified positive-confidence candidates:          1/37
+retained real observation:                        0/37
+retained positive-confidence real observation:    0/37
+M3-B observation window eligible:                 false
+M3-B observation window started:                  false
+M3-B complete:                                    false
+M3-C open:                                        false
+M3-E authority open:                              false
+cutover authorized:                               false
+```
+
+The one verified candidate is **not** a retained observation. A disposable CI SQLite append is only mechanism evidence. The retained-real-observation counter may move to `1/37` only after the post-merge operator command performs an exact one-event durable append/readback on the phone and its public receipt is separately pinned.
+
+No audit fixture, detached synthetic evidence, test verifier, self-authored runtime metadata, `fixture_only=False`, PID, argv/environment flag, caller identity, self-hashed launch metadata, or unreviewed public attestation digest may be reclassified as production evidence. The M2-E habitat driver remains a synthetic scripted shadow workload and cannot substitute for the C2 `prediction_error_pressure` phone runtime witness.
 
 ## 3. M2-E habitat incidents, A1 visibility, A11 Fix 2, and wrapper hotfix
 
@@ -124,7 +138,7 @@ Habitat Fix 2 (#195) applies A11 rather than weakening the threshold: large pers
 
 The reviewed resume command was executed once after #195 merged and the operator reported `resume_exit=0`. That successful resume is complete and must not be repeated merely because the supervisor later failed to start.
 
-PR #196 closed the separate script-entrypoint defect: `m2_e_window_runtime_guarded_a11.py` now installs the repository-root bootstrap before `core...` imports, and a supervisor-equivalent subprocess regression executes the wrapper as a real script. Its accepted exact head was `4944c01df3b0978ae73ea3060abd39bee14e41c1`; the squash merge is `5664fc3bc22054c2d39142b3125416aea6089c63`.
+PR #196 closed the separate script-entrypoint defect: `m2_e_window_runtime_guarded_a11.py` installs the repository-root bootstrap before `core...` imports, and a supervisor-equivalent subprocess regression executes the wrapper as a real script. Its accepted exact head was `4944c01df3b0978ae73ea3060abd39bee14e41c1`; the squash merge is `5664fc3bc22054c2d39142b3125416aea6089c63`.
 
 ## 4. Validation reuse and new-chat rule
 
@@ -139,21 +153,21 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #197 is the latest merged prerequisite pin:
+PR #198 is the latest merged prerequisite pin:
 
 ```text
-exact head:   249274ee14323e6b54369c56ab8f562006b69ad8
-exact run:    30181928260
+exact head:   72dbbc7930064dbfa09b0be4ed6d6586eb4db403
+exact run:    30182375335
 focused:      4 passed
 full:         3,150 passed
-artifact:     exact-head-validation-249274ee14323e6b54369c56ab8f562006b69ad8
-artifact SHA: 7238d513bfe8b555e194c56ce8333919432651b17059c3f0d430325193b03f9b
-M2-E run:     30181928269
+artifact:     exact-head-validation-72dbbc7930064dbfa09b0be4ed6d6586eb4db403
+artifact SHA: 28f9c68c667c99e2037a3fa708e8505b62080c7682962511145f4940aa5f5beb
+M2-E run:     30182375334
 M2-E:         6/6 jobs passed
-merge SHA:    b894c0abc3d34bec8d9207a3aa40bda9291ec402
+merge SHA:    b4968be9aeb6eefc7274f9985ab333f08e470daf
 ```
 
-The #197 artifact was directly checked as present, unexpired, and digest-matching before merge. Its merged PR now carries a permanent reuse record. Therefore #197 is reused as PR #198's prerequisite and must not be rerun merely because the public-review contract is corrected in a new PR. PR #198 is a genuine new code head and requires its own final exact-head validation.
+PR #198's merged PR carries its permanent exact-head reuse record and `main` was directly verified identical to its squash merge. The arrival of the real phone witness does not invalidate #198. PR #199 is a genuine new code head and therefore receives its own validation exactly once on the final forward-registered head.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -169,13 +183,13 @@ On 2026-07-25, before the #191 governance rebaseline was opened, a status report
 
 ### 5.3 Private companion boundary
 
-Raw phone companion contents, SQLite/WAL files, backups, private nonce material, raw prediction/error witness mappings, and other non-public habitat/runtime evidence must not be copied into the public repository. Public records may contain approved public evidence schemas, bounded summaries, and cryptographic digests/references needed for authorized recomputation. The `RegistryAxisPositiveConfidenceEvidence` mapping is review-safe because it contains bounded derived value/confidence and provenance/digests, not the raw prediction/error mappings.
+Raw phone companion contents, SQLite/WAL files, backups, private nonce material, raw prediction/error witness mappings, and other non-public habitat/runtime evidence must not be copied into the public repository. Public records may contain approved public evidence schemas, bounded summaries, and cryptographic digests/references needed for authorized recomputation. The `RegistryAxisPositiveConfidenceEvidence` mapping is review-safe because it contains bounded derived value/confidence and provenance/digests, not raw prediction/error mappings. A public retention receipt may expose event/chain/capture/verifier digests and counts but not the private SQLite database path or raw witness material.
 
 ### 5.4 No automatic authority promotion
 
 Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision.
 
-## 6. PR registry — verified repository history through #198
+## 6. PR registry — verified repository history through #199
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -230,11 +244,12 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #191 | merged | STATUS/reporting-integrity rebaseline + exact-head reuse governance |
 | #192 | merged | A1 guarded M2-E habitat recovery + reviewed resume |
 | #193 | merged | B2 STATUS/reuse rebaseline and frozen-PR disposition |
-| #194 | merged | C1 operator-attestation trust root; reviewed-attestation registry intentionally empty |
-| #195 | merged | A11 content-addressed habitat persistence repair; exact validation pinned in merged PR metadata |
-| #196 | merged | A11 wrapper script-bootstrap hotfix; exact validation pinned in merged PR metadata |
-| #197 | merged | C2 phone prediction-error runtime witness preflight; no real phone evidence contained in repository |
-| #198 | live PR state authoritative | C2 public-review v2 completeness hotfix; still no real phone evidence |
+| #194 | merged | C1 operator-attestation trust root |
+| #195 | merged | A11 content-addressed habitat persistence repair |
+| #196 | merged | A11 wrapper script-bootstrap hotfix |
+| #197 | merged | C2 phone prediction-error runtime witness preflight |
+| #198 | merged | C2 public-review v2 completeness hotfix |
+| #199 | live PR state authoritative | reviewed real phone witness activation + one-shot durable retention command; real retention still pending phone execution |
 
 ## 7. Frozen PR register
 
@@ -257,10 +272,10 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 
 Order is constrained by evidence and authority boundaries:
 
-1. **Phone M2-E continuation:** update the phone checkout to merged `main` and restart only `scripts/habitat/supervisor.sh`; do **not** run `resume --reviewed` again. Continue the existing real habitat window from the already-resumed state.
-2. **C2 public-review v2 (#198 lineage):** this lineage completes the public-safe witness surface by carrying the exact positive-confidence evidence mapping without raw prediction/error material. Live PR metadata is authoritative for its merge state, and its merge alone changes no real-observation counter.
-3. **Real phone witness:** only after #198 is merged, run the witness against that exact clean merged head with the operator-private nonce and exactly two real full-engine interactions. Raw trace stays private; only the public-safe v2 review JSON leaves the companion.
-4. **C2 reviewed pin + first retained observation:** review the exact v2 public witness, pin that attestation digest, register the C1 runtime-provenance verifier and the `prediction_error_pressure` production source verifier, then retain exactly one positive-confidence real observation through the existing immutable sink.
-5. Continue M3-B real source-batch observations and its separate observation window. Only a completed/stable M3-B may open M3-C.
+1. **M2-E habitat continuation:** leave the already-running guarded supervisor alone and do **not** run `resume --reviewed` again. `ready=false` remains authoritative until every acceptance check and sealing condition is actually satisfied.
+2. **C2 reviewed activation (#199 lineage):** validate and merge the exact reviewed phone witness registration/runtime/source-verifier layer and the one-shot operator retention command. Its merge alone leaves retained coverage at `0/37`.
+3. **First real retained observation:** on the phone, update to the exact merged #199 `main` head and execute the C2 retention command once against the existing public-review v2 file. The private SQLite database stays private; only the public receipt leaves the companion.
+4. **Receipt pin:** a later exact-head PR must verify and pin that public receipt before repository status may move retained real observation from `0/37` to `1/37`. One retained observation remains one observation and does not start the observation window automatically.
+5. Continue M3-B production source coverage for the remaining axes and satisfy its separate observation window. Only completed/stable M3-B may open M3-C.
 
-The immediate project state remains **M3-B in progress**, with reviewed real operator attestations at zero, real production verifier/observation counters at zero, and no cutover authority.
+The immediate project state remains **M3-B in progress**. The first phone witness is reviewed and verifier-eligible in the #199 tree, but durable retained coverage is still zero until the real phone append/readback occurs. M3-C, M3-E, and cutover remain closed.
