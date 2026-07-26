@@ -5,8 +5,9 @@
 Baseline is PR #194 squash merge `a09ebb8abbbf68c9235795a7c89d8b8ea5d75378`.
 PR #194's accepted exact-head evidence remains reusable as the prerequisite because the
 artifact is present with the recorded SHA-256 and the merge ancestry is intact. A new
-chat/operator session is not an invalidator. This PR is a new code head and therefore
-requires its own final exact-head validation after forward registration.
+chat/operator session is not an invalidator. PR #197 subsequently merged this preflight
+as `b894c0abc3d34bec8d9207a3aa40bda9291ec402`; its accepted exact-head evidence is the
+prerequisite for the #198 public-review completeness hotfix and is reused rather than rerun.
 
 ## Why this preflight exists
 
@@ -41,7 +42,7 @@ phone full-engine session while keeping the C2 review/registration boundary clos
    locally;
 9. writes recalculable raw trace/evidence material only into an operator-private companion
    outside the repository;
-10. emits only a public-safe digest/review JSON object on stdout.
+10. emits only a public-safe review JSON object on stdout.
 
 The fixed source identity is `runtime:ai-adapter:primary` by default. The runtime instance
 ID and launch-attestation ID are explicit operator arguments. They are identifiers, not
@@ -59,21 +60,27 @@ Private companion material may contain:
 
 It never serializes the private nonce itself.
 
-The public review object contains only:
+The public review v2 object contains only review-safe material:
 
 - public C1 attestation fields/digests;
 - local verification trace digest;
-- source/evidence integrity digests;
-- record count and observed tick;
-- private-material digest/reference classification;
+- the complete `RegistryAxisPositiveConfidenceEvidence.to_mapping()` structure, containing
+  bounded value/confidence, source/provenance identifiers, schema/version fields, and
+  cryptographic source/raw-observation digests but no raw prediction/error mappings;
+- the canonical evidence digest and observed tick;
+- snapshot integrity digests;
+- record count and private-material digest/reference classification;
 - explicit false values for registration, retention, observation-window, M3 completion,
   M3-C/M3-E, and cutover claims.
 
-Raw prediction/error mappings and the private nonce must not be pasted into GitHub or chat.
+The public review schema is `eve.m3-b.phone-prediction-error-public-review.v2`. The v1
+shape from PR #197 is superseded for future phone acquisition before any real witness was
+created. Raw prediction/error mappings and the private nonce must not be pasted into GitHub
+or chat.
 
-## What this PR deliberately does not do
+## What this preflight deliberately does not do
 
-After this preflight merges, counters remain:
+After the preflight and public-review completeness hotfix merge, counters remain:
 
 ```text
 reviewed real operator attestations:          0
@@ -97,9 +104,10 @@ observation sink.
 
 ## C2 entry after this preflight
 
-After merge, the phone operator may run the witness against the exact merged head. The
-resulting public-safe JSON can then be reviewed. Only a later exact-head PR carrying that
-specific reviewed digest may:
+After the v2 public-review surface is merged, the phone operator may run the witness against
+the exact merged head. The resulting public-safe JSON contains the evidence structure needed
+for later exact verification without exposing the operator-private raw trace. Only a later
+exact-head PR carrying that specific reviewed witness may:
 
 1. add the exact reviewed attestation registration;
 2. add an executable runtime-provenance verifier for the C1 trust domain;
