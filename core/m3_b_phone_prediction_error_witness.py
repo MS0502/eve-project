@@ -33,7 +33,7 @@ from core.m3_b_prediction_error_runtime_source_bridge import (
 from core.m3_b_registry_observation_evidence import RegistryAxisPositiveConfidenceEvidence
 
 WITNESS_SCHEMA_VERSION = "eve.m3-b.phone-prediction-error-witness.v1"
-PUBLIC_REVIEW_SCHEMA_VERSION = "eve.m3-b.phone-prediction-error-public-review.v1"
+PUBLIC_REVIEW_SCHEMA_VERSION = "eve.m3-b.phone-prediction-error-public-review.v2"
 ENTRYPOINT_ID = "scripts/operator/m3_b_phone_prediction_error_witness.py:main"
 DEFAULT_SOURCE_INSTANCE_ID = "runtime:ai-adapter:primary"
 REQUIRED_RAW_RECORD_COUNT = 2
@@ -192,7 +192,7 @@ class PhonePredictionErrorWitness:
         return _digest(self.private_mapping(), "phone_prediction_error_private_witness")
 
     def public_review_mapping(self) -> dict[str, Any]:
-        """Safe review material: exact launch/evidence digests, never raw trace or nonce."""
+        """Safe review material: exact launch/evidence structure and digests, never raw trace or nonce."""
         mapping = {
             "authority": self.authority,
             "attestation": self.attestation.to_mapping(),
@@ -201,6 +201,7 @@ class PhonePredictionErrorWitness:
                 self.local_verification_trace_digest,
             ),
             "cutover_authorized": self.cutover_authorized,
+            "evidence": self.evidence.to_mapping(),
             "evidence_digest": self.evidence.evidence_digest,
             "evidence_observed_tick": self.evidence.observed_tick,
             "fixture_only": False,
