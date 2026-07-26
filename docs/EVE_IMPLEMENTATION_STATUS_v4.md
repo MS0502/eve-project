@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-26**  
-Rebaseline base/prerequisite: `90933501e1a3b15b4721d5ffd944c00b168daf4e` — PR #207 squash merge  
+Rebaseline base/prerequisite: `f0edb05201671814fed131ccbb73d2cb3b8d3f59` — PR #208 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -19,7 +19,7 @@ The pre-kernel legacy runtime remains authoritative. The merged event-store, mig
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
 | M2-E | **phone supervisor running; quota/circadian/midnight thresholds observed, final readiness/seal still false; cutover not authorized** | #166-#168, #192, #195, #196 plus operator-reported habitat continuation |
 | M3-A | **complete** | #169 drive-dynamics design |
-| M3-B | **in progress** | #170-#190 structural/read-only chain; #194 C1; #197/#198 witness surface; #199/#200 prediction-error review+retention; #201-#204 `energy_budget` acquisition/review/retention; #205-#207 `fatigue_pressure` acquisition/review/retention with canonical retained coverage `3/37`; #208 `recovery_need` phone-witness preflight is current Draft |
+| M3-B | **in progress** | #170-#190 structural/read-only chain; #194 C1; #197/#198 witness surface; #199/#200 prediction-error review+retention; #201-#204 `energy_budget` acquisition/review/retention; #205-#207 `fatigue_pressure` acquisition/review/retention; #208 `recovery_need` phone-witness preflight merged; #209 Draft reviews that exact witness and stages sequence-four retention while canonical retained coverage remains `3/37` |
 | M3-C | closed | requires stable/completed M3-B |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
@@ -64,7 +64,8 @@ Merged M3-B work includes:
 - public-safe sequence-two `energy_budget` retained-observation receipt pin and canonical retained-count advance to `2/37` (#204);
 - `fatigue_pressure` full-engine phone operational witness preflight (#205);
 - reviewed `fatigue_pressure` witness activation + exact sequence-three retention staging (#206);
-- public-safe sequence-three `fatigue_pressure` retained-observation receipt pin and canonical retained-count advance to `3/37` (#207).
+- public-safe sequence-three `fatigue_pressure` retained-observation receipt pin and canonical retained-count advance to `3/37` (#207);
+- `recovery_need` full-engine phone operational witness preflight (#208).
 
 After #198 merged, the operator executed the exact full-engine phone witness on head `b4968be9aeb6eefc7274f9985ab333f08e470daf`. The public-safe v2 record pins:
 
@@ -194,7 +195,30 @@ The receipt digest was independently recomputed from the canonical sorted compac
 
 PR #207 merged as `90933501e1a3b15b4721d5ffd944c00b168daf4e`. It pins the public-safe sequence-three receipt above and makes canonical retained real-observation coverage `3/37`. The receipt pin itself does not add a fourth reviewed witness or verifier and does not start the M3-B observation window.
 
-The exact current reviewed/retained boundary is:
+PR #208 merged as `f0edb05201671814fed131ccbb73d2cb3b8d3f59`. The operator then executed its `recovery_need` phone witness exactly once on that clean merged head. The public-safe record supplied for #209 was independently canonical-digest verified:
+
+```text
+public review digest:  e46df034d01b13e768ce37d14261b8ed20fdec30101945bea492d97e482e4c33
+attestation digest:    ce8cda9955a415ed05200a83fd6b3e8d4cd4028bef29f73b8b17a1d5e3ad25e1
+evidence digest:       535495759c0140d875da628d2fe5cc9ffc0904d5f91fa9546a784dd51b3baa4b
+source:                runtime:phone-operational-recovery:primary
+axis:                  recovery_need
+confidence:            0.9999985112700722
+value:                 0.2559025046410264
+process CPU method:    os_times_process_cpu_v1
+queue method:          kernel_loadavg_1m_capacity_comparison_v1
+cooldown method:       fixed_post_interaction_quiet_window_1s_v1
+overload-count method: loadavg_visible_cpu_capacity_breach_count_v1
+recovery-count method: cpu_and_queue_nonincrease_indicator_count_v1
+fixture_only:          false
+synthetic:             false
+```
+
+The exact attestation, evidence, and full public-review mappings each recompute to their supplied SHA-256 digest. Raw process CPU/wall time, load-average observations, private witness material, private nonce, and private filesystem path remain outside the repository.
+
+PR #209 is currently Draft. Its proposed reviewed activation pins that exact `recovery_need` witness, registers the fourth reviewed attestation/runtime-provenance/source-verifier path, issues token-protected verification/capture objects, and stages durable retention as **sequence 4 only**. The staged append refuses execution unless the operator-private stream contains exactly the immutable sequence-1 `prediction_error_pressure`, sequence-2 `energy_budget`, and sequence-3 `fatigue_pressure` history with the pinned sequence-three envelope and store-chain digest. No sequence-four append is claimed before the operator command actually succeeds.
+
+The exact current reviewed/retained boundary for this Draft is:
 
 ```text
 source bindings:                                  37/37
@@ -202,11 +226,11 @@ production capture adapter:                       present
 immutable retention sink:                         present
 verifier issuance anti-forgery boundary:          present
 prediction_error runtime source bridge:           present
-reviewed real operator attestations (C2):          3
-registered runtime provenance verifiers (C2):     3
-verified production runtime anchors (C2):         3
-registered production source verifiers (C2):      3/37
-verified positive-confidence candidates:          3/37
+reviewed real operator attestations (C2):          4
+registered runtime provenance verifiers (C2):     4
+verified production runtime anchors (C2):         4
+registered production source verifiers (C2):      4/37
+verified positive-confidence candidates:          4/37
 retained real observation:                        3/37
 retained positive-confidence real observation:    3/37
 M3-B observation window eligible:                 false
@@ -272,21 +296,21 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #207 is the latest merged prerequisite pin:
+PR #208 is the latest merged prerequisite pin:
 
 ```text
-exact head:   6e81f77754d1f0d6c543cd15bac6985a2a17a0ec
-exact run:    30197930139
-focused:      no focused tests selected
-full:         3,183 passed
-artifact:     exact-head-validation-6e81f77754d1f0d6c543cd15bac6985a2a17a0ec
-artifact SHA: 46e7d588a05c7edb1827253f023e284ceeff913954c7d681d0c42d6e8a232731
-M2-E run:     30197930127
+exact head:   61b2b8790ac0195e4f8212924177348ad94bcb2b
+exact run:    30198670805
+focused:      7 passed
+full:         3,190 passed
+artifact:     exact-head-validation-61b2b8790ac0195e4f8212924177348ad94bcb2b
+artifact SHA: 7798899f7f24150323dd052e970139108e9fe2fcb3b2a9b9c352a5fcf5ef2a69
+M2-E run:     30198670820
 M2-E:         6/6 jobs passed
-merge SHA:    90933501e1a3b15b4721d5ffd944c00b168daf4e
+merge SHA:    f0edb05201671814fed131ccbb73d2cb3b8d3f59
 ```
 
-The #207 exact-head/M2-E evidence remains reusable unless one of the explicit invalidators above occurs. Its artifact is present, unexpired, and digest-matching, and all six compatibility jobs are successful. Moving to PR #208 or another chat/operator session is not an invalidator. Do not schedule #207 full-suite or M2-E again.
+The #208 exact-head/M2-E evidence remains reusable unless one of the explicit invalidators above occurs. Its artifact has been directly rechecked as present and unexpired with the exact SHA-256 above, and both workflows are successful. Moving to PR #209, another chat, or another operator session is not an invalidator. Do not schedule #208 full-suite or M2-E again.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -308,7 +332,7 @@ Raw phone companion contents, SQLite/WAL files, backups, private nonce material,
 
 Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision.
 
-## 6. PR registry — verified repository history through #207
+## 6. PR registry — verified repository history through #208
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -377,8 +401,9 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #205 | merged | `fatigue_pressure` real-phone witness preflight; exact phone witness subsequently produced on its merge head |
 | #206 | merged | reviewed `fatigue_pressure` witness activation + exact sequence-three retention staging; post-merge real sequence-three append succeeded |
 | #207 | merged | public-safe sequence-three `fatigue_pressure` retention receipt pin; canonical retained coverage `3/37` |
+| #208 | merged | `recovery_need` real-phone witness preflight; exact public-safe witness subsequently produced on its merge head |
 
-Current merge-intended implementation PR: **#208 Draft** — `recovery_need` real-phone witness preflight. Its initial discovery head passed compile/focused/M0/M2-B and intentionally stopped at the forward gate before any full-suite run; the exact discovered additions are being registered on the final head.
+Current merge-intended implementation PR: **#209 Draft** — reviewed `recovery_need` witness activation + exact sequence-four retention staging. Its current discovery head is not merge evidence; only the final forward-registered exact head may receive the accepted full-suite validation.
 
 ## 7. Frozen PR register
 
@@ -403,10 +428,10 @@ Order is constrained by evidence and authority boundaries:
 
 1. **M2-E habitat continuation:** leave the already-running guarded supervisor alone and do **not** run `resume --reviewed` again. `ready=false` remains authoritative until every acceptance check and sealing condition is actually satisfied.
 2. **Do not duplicate retained events:** sequences 1 `prediction_error_pressure`, 2 `energy_budget`, and 3 `fatigue_pressure` are complete and immutable. They are prior chain history only, never append targets again.
-3. **Reuse #207 validation:** exact run `30197930139`, artifact SHA-256 `46e7d588a05c7edb1827253f023e284ceeff913954c7d681d0c42d6e8a232731`, and M2-E run `30197930127` remain the merged prerequisite evidence. The artifact is present/unexpired and all six compatibility jobs are green. A new chat/session is not a rerun trigger.
-4. **Finish #208 on the final registered head only:** the initial discovery head already ran compile/focused/M0/M2-B and stopped at the forward gate with the full suite skipped. Register the exact seven discovered occurrences, update STATUS/reuse governance in this PR, then accept only the final registered head's one full-suite run.
-5. **After #208 merges, collect one new real `recovery_need` phone witness on that exact merge head.** Review its public-safe mapping independently before any fourth attestation/runtime/source verifier registration or sequence-4 retention staging.
-6. **Any future `recovery_need` retained append is sequence 4 only:** it must prove exact continuity from sequence 3 and must not replay sequences 1-3.
+3. **Reuse #208 validation:** exact run `30198670805`, artifact SHA-256 `7798899f7f24150323dd052e970139108e9fe2fcb3b2a9b9c352a5fcf5ef2a69`, and M2-E run `30198670820` are the merged prerequisite evidence. The artifact has been directly rechecked as present/unexpired and both workflows are green. A new chat/session is not a rerun trigger.
+4. **Finish #209 on the final registered head only:** the Draft discovery head may run compile/focused/M0/M2-B and stop at unregistered forward additions. Register the exact discovered fingerprints in this PR, then accept only the final registered head's one full-suite run.
+5. **After #209 merges, execute the `recovery_need` sequence-four retention command exactly once on that clean merge head.** It must append to the existing operator-private retention root and prove exact continuity from sequence 3. Do not replay sequences 1-3.
+6. **Pin only the public-safe sequence-four receipt in the next PR.** Until that receipt is reviewed and pinned, canonical retained coverage remains `3/37`; reviewed/runtime/source/candidate coverage may be `4/37` through #209.
 7. Do not start the M3-B observation window until the later 37-axis retained positive-confidence coverage/window-entry contract is actually satisfied. Only completed/stable M3-B may open M3-C.
 
-The immediate project state remains **M3-B in progress**. Reviewed/verifier/positive-confidence coverage and canonical retained real observations remain `3/37`. #208 is a witness preflight only and does not advance those counters. The observation window is still not started. M3-C, M3-E, and cutover remain closed.
+The immediate project state remains **M3-B in progress**. This Draft advances reviewed/verifier/positive-confidence coverage to `4/37` but does not itself advance canonical retained real observations beyond `3/37`. The observation window is still not started. M3-C, M3-E, and cutover remain closed.
