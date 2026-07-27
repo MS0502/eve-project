@@ -42,26 +42,10 @@ class UserInstructionAdapter:
         self.constraints: list = []
         self.parse_count = 0
 
-    @staticmethod
-    def _is_meta_only_short_instruction(text: str) -> bool:
-        """짧기 지시 자체만 있는 문장인지 판정한다.
-
-        내용 요구가 앞에 붙은 "... 짧게 말해줘"는 수식어이므로 False다.
-        """
-        return re.fullmatch(
-            r'(?:좀\s*)?(?:짧게|간단하게|간결하게)\s*'
-            r'(?:(?:답|말|얘기)(?:해|해줘|해주세요|해봐)|해)'
-            r'\s*[.!?]?\s*',
-            text.strip(),
-        ) is not None
-
     def parse_instruction(self, text: str) -> Optional[UserConstraint]:
         """
         사용자 텍스트에서 메타 지시 추출.
         Returns: UserConstraint or None.
-
-        내용 요구와 결합된 짧기 지시는 constraint만 등록하고 None을 반환해
-        StreamingEngine이 원문을 정상 파이프라인으로 계속 전달하게 한다.
         """
         if not text:
             return None
@@ -82,14 +66,10 @@ class UserInstructionAdapter:
                     remaining=10,
                 )
         
-        # "짧게 답해" / "간단하게". 내용 요구와 결합되면 수식어로 처리.
-        if re.search(r'(?:짧게|간단하게|간결하게)\s*(?:답|말|해|얘기)', t):
+        # "짧게 답해" / 내용 요구 + "짧게 말해"는 constraint 등록 후 계속
+        if (m := re.search(r'^(?:좀\s*)?(?:(.+?)\s+)?(?:짧게|간단하게|간결하게)\s*(?:답|말|해|얘기)', t)):
             self.parse_count += 1
-            constraint = UserConstraint(type="short", duration=5, remaining=5)
-            if self._is_meta_only_short_instruction(t):
-                return constraint
-            self.add_constraint(constraint)
-            return None
+            c = UserConstraint(type="short", duration=5, remaining=5); return c if not m[1] else (self.add_constraint(c) or None)
         
         # "그냥 X라고만 해봐" — 단답 강제
         m = re.search(r'그냥\s*(.{1,15}?)(?:이?라고만|만)\s*(?:해|말해)', t)
