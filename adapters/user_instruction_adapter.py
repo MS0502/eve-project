@@ -66,10 +66,10 @@ class UserInstructionAdapter:
                     remaining=10,
                 )
         
-        # "짧게 답해" / "간단하게"
-        if re.search(r'(?:짧게|간단하게|간결하게)\s*(?:답|말|해|얘기)', t):
+        # "짧게 답해" / 내용 요구 + "짧게 말해"는 constraint 등록 후 계속
+        if (m := re.search(r'^(?:좀\s*)?(?:(.+?)\s+)?(?:짧게|간단하게|간결하게)\s*(?:답|말|해|얘기)', t)):
             self.parse_count += 1
-            return UserConstraint(type="short", duration=5, remaining=5)
+            c = UserConstraint(type="short", duration=5, remaining=5); return c if not m[1] else (self.add_constraint(c) or None)
         
         # "그냥 X라고만 해봐" — 단답 강제
         m = re.search(r'그냥\s*(.{1,15}?)(?:이?라고만|만)\s*(?:해|말해)', t)
