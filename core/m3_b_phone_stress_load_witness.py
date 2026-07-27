@@ -1,14 +1,22 @@
 """Phone-side real-runtime appraised witness preflight for M3-B ``stress_load``.
 
 The witness measures bounded process CPU and kernel load-average behavior around
-three new full-engine interactions. Those operator-private measurements are
-converted by one versioned deterministic appraisal policy into the already
-canonical ``stress_load`` appraisal fields. The detached appraisal records are
-then evaluated by the merged #180 source-binding contract.
+three new full-engine interactions. Those operator-private runtime measurements
+are inputs to one versioned deterministic appraisal bridge. The bridge emits only
+the already-canonical ``stress_load`` appraisal fields, and those detached
+appraisal outputs are then evaluated by the merged #180 source-binding contract.
 
-Raw CPU/wall/load observations remain operator-private. Only bounded derived
-evidence, versioned method identifiers, and cryptographic digests are exposed
-for later review.
+This two-stage boundary is explicit and non-substitutable:
+
+1. real runtime metrics are measured and retained only in the operator-private
+   companion;
+2. the canonical #180 record contains the detached verified appraisal output,
+   not the polled raw runtime metrics, so its ``runtime_polled`` and
+   ``hardware_direct_input`` flags remain false by construction.
+
+The public review discloses that real runtime metrics were used as appraisal
+input while withholding their raw values. It never relabels a raw runtime
+measurement as a detached appraisal fixture.
 
 This module registers no trust or verifier, appends no retained observation,
 starts no M3-B observation window, mutates no registry owner, and grants no
@@ -51,6 +59,8 @@ DEFAULT_SOURCE_INSTANCE_ID = "runtime:phone-appraised-stress:primary"
 REQUIRED_RAW_RECORD_COUNT = 3
 REQUIRED_LOGICAL_SPAN_TICKS = 2
 
+RUNTIME_INPUT_KIND = "operator_private_real_runtime_metrics"
+APPRAISAL_OUTPUT_KIND = "detached_verified_appraisal_trace"
 PROCESS_CPU_METHOD = "os_times_process_cpu_v1"
 QUEUE_METHOD = "kernel_loadavg_1m_visible_cpu_ratio_v1"
 CONTROLLABILITY_METHOD = "one_minus_mean_overload_and_queue_variability_v1"
@@ -116,6 +126,20 @@ def _finite(value: Any, field: str, *, lower: float = 0.0) -> float:
 
 def _clip_unit(value: float) -> float:
     return float(max(0.0, min(1.0, value)))
+
+
+def appraisal_bridge_provenance_boundary() -> dict[str, Any]:
+    """Return the exact two-stage provenance declaration for review/tests."""
+
+    return {
+        "appraisal_bridge_output_detached": True,
+        "appraisal_output_kind": APPRAISAL_OUTPUT_KIND,
+        "canonical_appraised_record_hardware_direct_input": False,
+        "canonical_appraised_record_runtime_polled": False,
+        "raw_runtime_metrics_publicly_retained": False,
+        "runtime_input_kind": RUNTIME_INPUT_KIND,
+        "runtime_metrics_used_as_appraisal_input": True,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +261,7 @@ class PhoneStressLoadRuntimeSnapshot:
             "process_cpu_measurement_method": self.process_cpu_measurement_method,
             "process_cpu_seconds": self.process_cpu_seconds,
             "queue_measurement_method": self.queue_measurement_method,
+            "runtime_input_kind": RUNTIME_INPUT_KIND,
             "runtime_source_read_only": self.runtime_source_read_only,
             "source_instance_id": self.source_instance_id,
             "source_schema_version": self.schema_version,
@@ -251,6 +276,7 @@ class PhoneStressLoadRuntimeSnapshot:
     def appraisal_trace_mapping(self) -> dict[str, Any]:
         return {
             "appraisal_input_digest": self.appraisal_input_digest,
+            "appraisal_output_kind": APPRAISAL_OUTPUT_KIND,
             "appraisal_policy_version": self.appraisal_policy_version,
             "appraisal_version": APPRAISAL_SCHEMA_VERSION,
             "controllability_method": self.controllability_method,
@@ -287,6 +313,7 @@ class PhoneStressLoadRuntimeSnapshot:
                 "logical_tick": self.logical_tick,
                 "production_origin_verified": self.production_origin_verified,
                 "production_verifier_registered": self.production_verifier_registered,
+                "provenance_boundary": appraisal_bridge_provenance_boundary(),
                 "retained_real_observation": self.retained_real_observation,
                 "runtime_source_read_only": self.runtime_source_read_only,
                 "source_instance_id": self.source_instance_id,
@@ -327,7 +354,7 @@ class PhoneStressLoadRuntimeSnapshot:
             appraisal_integrity_digest=self.appraisal_integrity_digest,
             raw_values=self.raw_values,
         )
-        return AppraisedSurvivalRawRecord(
+        record = AppraisedSurvivalRawRecord(
             axis=AXIS,
             logical_tick=self.logical_tick,
             observation_id=observation_id,
@@ -341,6 +368,16 @@ class PhoneStressLoadRuntimeSnapshot:
             raw_observation_digest=raw_digest,
             raw_values=self.raw_values,
         )
+        if (
+            record.runtime_polled
+            or record.hardware_direct_input
+            or record.synthetic
+            or not record.appraisal_verified
+        ):
+            raise PhoneStressLoadWitnessError(
+                "appraisal bridge must emit a detached verified non-polled canonical record"
+            )
+        return record
 
     def private_mapping(self) -> dict[str, Any]:
         return {
@@ -352,6 +389,7 @@ class PhoneStressLoadRuntimeSnapshot:
             "authority": self.authority,
             "bridge_schema_version": self.bridge_schema_version,
             "logical_tick": self.logical_tick,
+            "provenance_boundary": appraisal_bridge_provenance_boundary(),
             "raw_values": [[field, value] for field, value in self.raw_values],
             "schema_version": self.schema_version,
             "source_instance_id": self.source_instance_id,
@@ -495,6 +533,7 @@ class PhoneStressLoadWitness:
             "attestation": self.attestation.to_mapping(),
             "evidence": self.evidence.to_mapping(),
             "local_verification_trace_digest": self.local_verification_trace_digest,
+            "provenance_boundary": appraisal_bridge_provenance_boundary(),
             "schema_version": self.schema_version,
             "snapshots": [item.private_mapping() for item in self.snapshots],
         }
@@ -542,6 +581,7 @@ class PhoneStressLoadWitness:
                 {item.process_cpu_measurement_method for item in self.snapshots}
             ),
             "production_source_verifier_registered": self.production_source_verifier_registered,
+            "provenance_boundary": appraisal_bridge_provenance_boundary(),
             "queue_measurement_methods": sorted(
                 {item.queue_measurement_method for item in self.snapshots}
             ),
