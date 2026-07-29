@@ -1,9 +1,11 @@
-"""Dormant bounded writer integration for the M3-C goal-lifecycle stream.
+"""Exact-reviewed bounded activation candidate for the M3-C lifecycle stream.
 
-The writer path exists for review and focused verification, but checked-in code
-contains no reviewed authorization digest or implementation-head pin. Every
-append therefore fails before SQLite construction or filesystem access. A later
-M3-C-I slice may pin an exact reviewed packet; this module does not do so.
+M3-C-H supplied the disconnected writer mechanism. M3-C-I pins one immutable
+reviewed authorization packet to the exact validated M3-C-H implementation,
+one private caller-owned absolute database-path digest, and one bounded storage
+policy. Import and construction still perform no I/O. No runtime startup hook,
+action, scheduler, speech, legacy goal-authority transfer, migration, or M3-E
+authority is added.
 """
 from __future__ import annotations
 
@@ -54,14 +56,34 @@ M3_C_G_PREREQUISITE_ARTIFACT_SHA256 = (
     "2705d825fc827624e71e4a86ba992e9a19f2b90a60d3d4603ac60ab553de86c2"
 )
 
-# Intentionally absent in M3-C-H. Only a later reviewed M3-C-I change may pin
-# these values. There is no environment/file/heuristic fallback and no setter.
-_ACTIVE_REVIEWED_IMPLEMENTATION_HEAD: str | None = None
-_ACTIVE_REVIEWED_AUTHORIZATION_DIGEST: str | None = None
+# M3-C-I exact-reviewed pins. The private absolute path itself is deliberately
+# not stored in this public repository; only its lexical SHA-256 is public.
+_ACTIVE_REVIEWED_IMPLEMENTATION_HEAD: str | None = (
+    "68efeca10c6819cb74ccc884e3c0c784e0b44c95"
+)
+_ACTIVE_REVIEWED_AUTHORIZATION_DIGEST: str | None = (
+    "ab050d04f7ae7a6f920e94696d5b0988e4ad5331e9082d5ec61c30548166c111"
+)
+_ACTIVE_REVIEWED_DATABASE_PATH_DIGEST = (
+    "cfcc91e8bab89beceff3ce8f5ecbc325705bd33b256e9d47ca8bdb9008833b80"
+)
+_ACTIVE_REVIEWED_EXACT_RUN = 30444371019
+_ACTIVE_REVIEWED_FOCUSED_PASSED = 15
+_ACTIVE_REVIEWED_FULL_PASSED = 3303
+_ACTIVE_REVIEWED_ARTIFACT_SHA256 = (
+    "79f7f6a2034ced8b04dfb3ae3ed69f56cdd6eb6c8f0da3cb740fc900f4ef80be"
+)
+_ACTIVE_REVIEWED_M2E_RUN = 30444371035
+_ACTIVE_REVIEWED_SNAPSHOT_INTERVAL_EVENTS = 32
+_ACTIVE_REVIEWED_MAX_EVENT_COUNT = 4096
+_ACTIVE_REVIEWED_MAX_EVENT_BYTES = 16_777_216
+_ACTIVE_REVIEWED_MAX_SNAPSHOT_COUNT = 128
+_ACTIVE_REVIEWED_MAX_SNAPSHOT_BYTES = 16_777_216
+_ACTIVE_REVIEWED_MAX_BACKUPS = 3
 
 
 class M3CDormantWriterError(RuntimeError):
-    """Base fail-closed dormant-writer error."""
+    """Base fail-closed bounded-writer error."""
 
 
 class M3CDormantWriterAuthorizationError(M3CDormantWriterError):
@@ -328,10 +350,40 @@ class GoalLifecycleWriterAuthorizationPacket:
         return _digest(self.to_mapping(), field="m3_c_h_writer_authorization")
 
 
+def active_reviewed_writer_authorization_packet() -> GoalLifecycleWriterAuthorizationPacket:
+    """Return the one immutable M3-C-I packet without exposing the private path."""
+
+    packet = GoalLifecycleWriterAuthorizationPacket(
+        validation=WriterValidationPins(
+            implementation_head=_ACTIVE_REVIEWED_IMPLEMENTATION_HEAD or "",
+            exact_run=_ACTIVE_REVIEWED_EXACT_RUN,
+            focused_passed=_ACTIVE_REVIEWED_FOCUSED_PASSED,
+            full_passed=_ACTIVE_REVIEWED_FULL_PASSED,
+            forward_gate_errors=0,
+            artifact_sha256=_ACTIVE_REVIEWED_ARTIFACT_SHA256,
+            m2e_run=_ACTIVE_REVIEWED_M2E_RUN,
+        ),
+        storage_limits=WriterStorageLimits(
+            snapshot_interval_events=_ACTIVE_REVIEWED_SNAPSHOT_INTERVAL_EVENTS,
+            max_event_count=_ACTIVE_REVIEWED_MAX_EVENT_COUNT,
+            max_event_bytes=_ACTIVE_REVIEWED_MAX_EVENT_BYTES,
+            max_snapshot_count=_ACTIVE_REVIEWED_MAX_SNAPSHOT_COUNT,
+            max_snapshot_bytes=_ACTIVE_REVIEWED_MAX_SNAPSHOT_BYTES,
+            max_backups=_ACTIVE_REVIEWED_MAX_BACKUPS,
+        ),
+        database_path_digest=_ACTIVE_REVIEWED_DATABASE_PATH_DIGEST,
+    )
+    if packet.authorization_digest != _ACTIVE_REVIEWED_AUTHORIZATION_DIGEST:
+        raise M3CDormantWriterAuthorizationError(
+            "checked-in reviewed authorization packet digest is inconsistent"
+        )
+    return packet
+
+
 def verify_active_writer_authorization(
     packet: GoalLifecycleWriterAuthorizationPacket | None,
 ) -> str:
-    """Verify the exact active packet; M3-C-H intentionally has none."""
+    """Verify the exact M3-C-I active packet before any store construction."""
 
     if (
         _ACTIVE_REVIEWED_IMPLEMENTATION_HEAD is None
@@ -443,11 +495,9 @@ class DormantWriterAppendReceipt:
             self.stream_sequence_advanced_by_one,
             self.chain_advanced_and_verified,
             self.direct_reducer_equivalent,
-            self.disposable_or_test_path_only,
             self.sqlite_write_performed,
         )
         required_false = (
-            self.production_authoritative_append_performed,
             self.live_writer_installed,
             self.production_integration_performed,
             self.action_authorized,
@@ -457,7 +507,11 @@ class DormantWriterAppendReceipt:
             self.m3_e_authority_open,
         )
         if not all(required_true) or any(required_false):
-            raise M3CDormantWriterError("append receipt escaped dormant writer scope")
+            raise M3CDormantWriterError("append receipt escaped bounded writer scope")
+        if self.disposable_or_test_path_only == self.production_authoritative_append_performed:
+            raise M3CDormantWriterError(
+                "append receipt must identify exactly one persistence-path class"
+            )
 
     def to_mapping(self) -> dict[str, Any]:
         return {item.name: getattr(self, item.name) for item in fields(self)}
@@ -527,7 +581,7 @@ def build_dormant_writer_rollback_control(
 
 
 class DormantGoalLifecycleWriter:
-    """A disconnected writer path that cannot activate in checked-in M3-C-H."""
+    """Explicit bounded writer requiring the exact reviewed packet per append."""
 
     __slots__ = (
         "_database_path",
@@ -669,7 +723,7 @@ class DormantGoalLifecycleWriter:
         authorization_packet: GoalLifecycleWriterAuthorizationPacket | None = None,
         authority_state: CutoverAuthorityState | None = None,
     ) -> DormantWriterAppendReceipt:
-        """Append one binding only after an exact reviewed packet is pinned."""
+        """Append one binding only after the exact reviewed packet is verified."""
 
         authorization_digest = self._verify_packet_for_writer(authorization_packet)
         assert authorization_packet is not None
@@ -749,6 +803,10 @@ class DormantGoalLifecycleWriter:
             ) from exc
 
         self._accepted_authorization_digest = authorization_digest
+        production_path = (
+            authorization_digest == _ACTIVE_REVIEWED_AUTHORIZATION_DIGEST
+            and self.database_path_digest == _ACTIVE_REVIEWED_DATABASE_PATH_DIGEST
+        )
         return DormantWriterAppendReceipt(
             authorization_digest=authorization_digest,
             implementation_head=authorization_packet.implementation_head,
@@ -765,6 +823,8 @@ class DormantGoalLifecycleWriter:
             reducer_snapshot_digest=expected_snapshot.snapshot_digest,
             integrity_report_digest=after_integrity.report_digest,
             snapshot_digest=snapshot_digest,
+            disposable_or_test_path_only=not production_path,
+            production_authoritative_append_performed=production_path,
         )
 
     def apply_rollback(self, control: DormantWriterRollbackControl) -> str:
