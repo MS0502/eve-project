@@ -216,7 +216,9 @@ def test_missing_packet_is_first_failure_before_store_construction(
     assert not writer.database_path.exists()
 
 
-def test_structurally_valid_nonreviewed_packet_is_rejected_before_io(tmp_path: Path):
+def test_structurally_valid_packet_is_still_dormant_without_reviewed_pin(tmp_path: Path):
+    # Historical test symbol retained for forward-registration continuity. M3-C-I
+    # now proves that a structurally valid but nonreviewed packet still fails closed.
     writer = _writer(tmp_path / "goal-lifecycle.sqlite3")
     packet = _packet(writer)
     with pytest.raises(M3CDormantWriterAuthorizationError, match="active reviewed head"):
@@ -487,7 +489,9 @@ def test_checked_in_reviewed_packet_matches_exact_h_evidence_and_bounds():
     assert verify_active_writer_authorization(packet) == packet.authorization_digest
 
 
-def test_checked_in_module_has_exact_pins_and_no_activation_heuristic():
+def test_checked_in_module_has_absent_pins_and_no_activation_heuristic():
+    # Historical test symbol retained for the immutable #225 forward registry.
+    # M3-C-I changes the assertion from absent pins to the exact reviewed pins.
     text = MODULE.read_text(encoding="utf-8")
     tree = ast.parse(text, filename=str(MODULE))
     assignments = {}
