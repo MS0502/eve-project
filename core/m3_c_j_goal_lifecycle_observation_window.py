@@ -15,7 +15,6 @@ from typing import Any, Mapping, Sequence
 from core.event_kernel import canonical_json_object
 from core.m3_c_h_dormant_goal_lifecycle_writer import (
     DormantWriterAppendReceipt,
-    GoalLifecycleWriterAuthorizationPacket,
     WriterStorageLimits,
     active_reviewed_writer_authorization_packet,
 )
@@ -88,6 +87,7 @@ def _require_positive_int(value: int, *, field: str) -> int:
 
 @dataclass(frozen=True, slots=True)
 class ObservationWindowAuthorizationPacket:
+    window_implementation_head: str
     writer_authorization_digest: str
     writer_implementation_head: str
     database_path_digest: str
@@ -115,6 +115,11 @@ class ObservationWindowAuthorizationPacket:
     m3_e_authority_open: bool = False
 
     def __post_init__(self) -> None:
+        _require_hex(
+            self.window_implementation_head,
+            length=40,
+            field="window_implementation_head",
+        )
         _require_hex(
             self.writer_authorization_digest,
             length=64,
@@ -194,12 +199,14 @@ class ObservationWindowAuthorizationPacket:
 
 def build_observation_window_authorization_candidate(
     *,
+    window_implementation_head: str,
     max_window_events: int = DEFAULT_MAX_WINDOW_EVENTS,
 ) -> ObservationWindowAuthorizationPacket:
     """Build the deterministic candidate packet without activating the window."""
 
     writer_packet = active_reviewed_writer_authorization_packet()
     return ObservationWindowAuthorizationPacket(
+        window_implementation_head=window_implementation_head,
         writer_authorization_digest=writer_packet.authorization_digest,
         writer_implementation_head=writer_packet.implementation_head,
         database_path_digest=writer_packet.database_path_digest,
@@ -223,6 +230,10 @@ def verify_active_observation_window_authorization(
     if not isinstance(packet, ObservationWindowAuthorizationPacket):
         raise M3CObservationWindowAuthorizationError(
             "packet must be ObservationWindowAuthorizationPacket"
+        )
+    if packet.window_implementation_head != _ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD:
+        raise M3CObservationWindowAuthorizationError(
+            "window implementation head is not the active reviewed head"
         )
     if packet.prerequisite_exact_head != M3_C_I_EXACT_HEAD:
         raise M3CObservationWindowAuthorizationError(
