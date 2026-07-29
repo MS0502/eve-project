@@ -1,22 +1,17 @@
 """Disposable SQLite rehearsal for the bounded M3-C goal-lifecycle stream.
 
-The only public operation in this module receives an explicit caller-created
-temporary directory and a synthetic, replay-valid M3-C-D lifecycle chain. It
-writes two disposable SQLite files under that directory to prove one-at-a-time
-append/readback, reducer replay, snapshot-plus-suffix equivalence, verified
-backup restoration, and rollback preservation.
-
-It installs no live writer, invents no database default, touches no legacy goal
-database, changes no production configuration, authorizes no action/scheduler/
-speech effect, transfers no legacy goal authority, and does not open M3-E.
+The public operation requires an explicit caller-created temporary directory and
+synthetic replay-valid M3-C-D candidates. It installs no live writer, invents no
+path default, touches no legacy goal database, changes no production setting,
+transfers no legacy goal authority, and does not open M3-E.
 """
 from __future__ import annotations
 
 import hashlib
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from core.event_kernel import EventEnvelope, canonical_json_object
 from core.m2_e_cutover_activation import CutoverAuthorityState
@@ -55,18 +50,18 @@ class M3CDisposableSQLiteRehearsalError(RuntimeError):
 
 
 def _digest(value: Mapping[str, Any], *, field: str) -> str:
-    text = canonical_json_object(value, field=field)
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    canonical = canonical_json_object(value, field=field)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _require_digest(value: str, *, field: str) -> str:
+def _require_hex(value: str, *, length: int, field: str) -> str:
     if (
         not isinstance(value, str)
-        or len(value) != 64
+        or len(value) != length
         or any(character not in "0123456789abcdef" for character in value)
     ):
         raise M3CDisposableSQLiteRehearsalError(
-            f"{field} must be lowercase SHA-256"
+            f"{field} must be lowercase {length}-character hex"
         )
     return value
 
@@ -74,10 +69,6 @@ def _require_digest(value: str, *, field: str) -> str:
 def _snapshot_from_mapping(
     value: Mapping[str, Any],
 ) -> GoalLifecycleReducerSnapshot:
-    if not isinstance(value, Mapping):
-        raise M3CDisposableSQLiteRehearsalError(
-            "snapshot mapping must be a mapping"
-        )
     plain = dict(value)
     if plain.get("schema_version") != REDUCER_SNAPSHOT_VERSION:
         raise M3CDisposableSQLiteRehearsalError(
@@ -95,19 +86,18 @@ def _snapshot_from_mapping(
             "snapshot mapping shape mismatch"
         )
     try:
-        states = {
-            str(candidate_id): GoalLifecycleState(**dict(state))
-            for candidate_id, state in states_value.items()
-        }
-        steps = {
-            str(candidate_id): int(step)
-            for candidate_id, step in steps_value.items()
-        }
-        transitions = tuple(str(item) for item in transitions_value)
         return GoalLifecycleReducerSnapshot(
-            states=states,
-            last_logical_steps=steps,
-            applied_transition_ids=transitions,
+            states={
+                str(candidate_id): GoalLifecycleState(**dict(state))
+                for candidate_id, state in states_value.items()
+            },
+            last_logical_steps={
+                str(candidate_id): int(step)
+                for candidate_id, step in steps_value.items()
+            },
+            applied_transition_ids=tuple(
+                str(item) for item in transitions_value
+            ),
         )
     except (TypeError, ValueError) as exc:
         raise M3CDisposableSQLiteRehearsalError(
@@ -115,9 +105,15 @@ def _snapshot_from_mapping(
         ) from exc
 
 
-def _reducer(authority_state_digest: str):
-    _require_digest(
+def _reducer(
+    authority_state_digest: str,
+) -> Callable[
+    [GoalLifecycleReducerSnapshot, EventEnvelope],
+    GoalLifecycleReducerSnapshot,
+]:
+    _require_hex(
         authority_state_digest,
+        length=64,
         field="authority_state_digest",
     )
 
@@ -227,7 +223,7 @@ class DisposableSQLiteRehearsalReceipt:
     writer_operationally_enabled: bool = False
 
     def __post_init__(self) -> None:
-        digest_values = (
+        sha256_values = (
             *self.binding_digests,
             *self.event_envelope_digests,
             *self.append_transition_hashes,
@@ -241,12 +237,20 @@ class DisposableSQLiteRehearsalReceipt:
             self.forward_integrity_report_digest,
             self.restored_integrity_report_digest,
             self.backup_sha256,
-            self.prerequisite_exact_head,
             self.prerequisite_artifact_sha256,
-            self.prerequisite_merge_sha,
         )
-        for value in digest_values:
-            _require_digest(value, field="rehearsal digest")
+        for value in sha256_values:
+            _require_hex(value, length=64, field="rehearsal digest")
+        _require_hex(
+            self.prerequisite_exact_head,
+            length=40,
+            field="prerequisite_exact_head",
+        )
+        _require_hex(
+            self.prerequisite_merge_sha,
+            length=40,
+            field="prerequisite_merge_sha",
+        )
         count = len(self.binding_digests)
         if (
             count < 2
@@ -311,55 +315,12 @@ class DisposableSQLiteRehearsalReceipt:
 
     def to_mapping(self) -> dict[str, Any]:
         return {
-            name: list(value) if isinstance(value, tuple) else value
-            for name, value in (
-                ("action_authorized", self.action_authorized),
-                ("append_transition_hashes", self.append_transition_hashes),
-                ("appended_event_count", self.appended_event_count),
-                ("backup_sha256", self.backup_sha256),
-                ("binding_digests", self.binding_digests),
-                ("caller_owned_temporary_path", self.caller_owned_temporary_path),
-                ("checkpoint_sequence", self.checkpoint_sequence),
-                ("checkpoint_snapshot_digest", self.checkpoint_snapshot_digest),
-                ("concrete_sqlite_file_used", self.concrete_sqlite_file_used),
-                ("direct_replay_equivalent", self.direct_replay_equivalent),
-                ("disposable_sqlite_write_performed", self.disposable_sqlite_write_performed),
-                ("event_chain_verified", self.event_chain_verified),
-                ("event_envelope_digests", self.event_envelope_digests),
-                ("failed_database_preservation_required", self.failed_database_preservation_required),
-                ("forward_chain_digest", self.forward_chain_digest),
-                ("forward_database_preserved", self.forward_database_preserved),
-                ("forward_direct_snapshot_digest", self.forward_direct_snapshot_digest),
-                ("forward_event_count", self.forward_event_count),
-                ("forward_integrity_report_digest", self.forward_integrity_report_digest),
-                ("forward_sqlite_snapshot_digest", self.forward_sqlite_snapshot_digest),
-                ("legacy_goal_authority_transferred", self.legacy_goal_authority_transferred),
-                ("live_writer_installed", self.live_writer_installed),
-                ("m3_e_authority_open", self.m3_e_authority_open),
-                ("memory_database_used", self.memory_database_used),
-                ("one_event_per_append_call", self.one_event_per_append_call),
-                ("postcommit_readback_verified", self.postcommit_readback_verified),
-                ("precommit_readback_verified", self.precommit_readback_verified),
-                ("prerequisite_artifact_sha256", self.prerequisite_artifact_sha256),
-                ("prerequisite_exact_head", self.prerequisite_exact_head),
-                ("prerequisite_merge_sha", self.prerequisite_merge_sha),
-                ("prerequisite_pr", self.prerequisite_pr),
-                ("production_authoritative_append_performed", self.production_authoritative_append_performed),
-                ("production_integration_performed", self.production_integration_performed),
-                ("restored_chain_digest", self.restored_chain_digest),
-                ("restored_checkpoint_snapshot_digest", self.restored_checkpoint_snapshot_digest),
-                ("restored_database_is_separate", self.restored_database_is_separate),
-                ("restored_event_count", self.restored_event_count),
-                ("restored_integrity_report_digest", self.restored_integrity_report_digest),
-                ("rollback_checkpoint_restored", self.rollback_checkpoint_restored),
-                ("scheduler_authorized", self.scheduler_authorized),
-                ("schema_version", self.schema_version),
-                ("scope", self.scope),
-                ("snapshot_suffix_equivalent", self.snapshot_suffix_equivalent),
-                ("snapshot_suffix_snapshot_digest", self.snapshot_suffix_snapshot_digest),
-                ("speech_authorized", self.speech_authorized),
-                ("writer_operationally_enabled", self.writer_operationally_enabled),
+            field.name: (
+                list(value)
+                if isinstance((value := getattr(self, field.name)), tuple)
+                else value
             )
+            for field in fields(self)
         }
 
     @property
@@ -415,8 +376,7 @@ def run_disposable_sqlite_rehearsal(
         max_snapshot_bytes=1_048_576,
         max_backups=1,
     )
-    authority_digest = bindings[0].authority_state_digest
-    reducer = _reducer(authority_digest)
+    reducer = _reducer(bindings[0].authority_state_digest)
     forward_store = SQLiteShadowStore(forward_path, policy=policy)
     forward_store.initialize()
 
@@ -437,13 +397,18 @@ def run_disposable_sqlite_rehearsal(
         if index == checkpoint_sequence:
             checkpoint_snapshot = direct_prefix
             snapshot_receipt = forward_store.write_snapshot(
-                snapshot_id=f"m3c:goal-lifecycle:checkpoint:{checkpoint_sequence}",
+                snapshot_id=(
+                    f"m3c:goal-lifecycle:checkpoint:{checkpoint_sequence}"
+                ),
                 stream_id=EVENT_STREAM,
                 through_sequence=checkpoint_sequence,
                 state=checkpoint_snapshot.to_mapping(),
                 state_schema_version=REDUCER_SNAPSHOT_VERSION,
             )
-            if snapshot_receipt.state_digest != checkpoint_snapshot.snapshot_digest:
+            if (
+                snapshot_receipt.state_digest
+                != checkpoint_snapshot.snapshot_digest
+            ):
                 raise M3CDisposableSQLiteRehearsalError(
                     "checkpoint snapshot readback digest mismatch"
                 )
