@@ -1,0 +1,78 @@
+{
+  "schema_version": "eve.m3-c-i.prerequisite-validation-reuse-pin.v1",
+  "purpose": "Prevent duplicate prerequisite validation and immutable operator execution while the exact-reviewed bounded activation candidate moves across chats, reviews, or operator sessions.",
+  "active_base": {
+    "main_sha": "195ed797b49a880265693969065d7169c80d6180",
+    "pr": 226,
+    "title": "Final M3-C-H exact validation evidence pin"
+  },
+  "reviewed_activation": {
+    "implementation_pr": 225,
+    "implementation_head": "68efeca10c6819cb74ccc884e3c0c784e0b44c95",
+    "authorization_digest": "ab050d04f7ae7a6f920e94696d5b0988e4ad5331e9082d5ec61c30548166c111",
+    "database_path_digest": "cfcc91e8bab89beceff3ce8f5ecbc325705bd33b256e9d47ca8bdb9008833b80",
+    "path_plaintext_public": false,
+    "human_reviewed": true,
+    "bounded_writer_authorized": true,
+    "legacy_goal_authority_transferred": false,
+    "legacy_migration_authorized": false,
+    "m3_e_authority_open": false
+  },
+  "storage_policy": {
+    "snapshot_interval_events": 32,
+    "max_event_count": 4096,
+    "max_event_bytes": 16777216,
+    "max_snapshot_count": 128,
+    "max_snapshot_bytes": 16777216,
+    "max_backups": 3
+  },
+  "reused_exact_validation": {
+    "pr": 225,
+    "exact_head": "68efeca10c6819cb74ccc884e3c0c784e0b44c95",
+    "exact_run": 30444371019,
+    "focused": "15 passed",
+    "full": "3303 passed",
+    "forward_gate": "0 / 0 / 0 / 0",
+    "artifact_name": "exact-head-validation-68efeca10c6819cb74ccc884e3c0c784e0b44c95",
+    "artifact_sha256": "79f7f6a2034ced8b04dfb3ae3ed69f56cdd6eb6c8f0da3cb740fc900f4ef80be",
+    "m2e_run": 30444371035,
+    "m2e_result": "6/6 passed",
+    "merge_sha": "18b70d277bec6a09db834b349a97bea11ff21abf"
+  },
+  "non_invalidators": [
+    "chat change",
+    "operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "reporting-only reuse of the pinned prerequisite chain"
+  ],
+  "invalidators": [
+    "a new M3-C-I code or authorization tree requiring its own validation",
+    "artifact loss, corruption, expiry without retained immutable copy, or SHA-256 mismatch",
+    "validation workflow, pinned dependency, focused scope, or forward-registration change",
+    "base ancestry no longer containing 18b70d277bec6a09db834b349a97bea11ff21abf"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_225_validation_because_of_chat_change": false,
+    "rerun_pr_226_reporting_validation_because_of_chat_change": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "issue_new_phone_command_for_m3_c_i_validation": false,
+    "create_or_touch_private_production_database_during_ci": false
+  },
+  "new_tree_rule": "The M3-C-I tree receives one new exact validation only for its actual changed tree. PR 225 validation remains a reused immutable implementation prerequisite and must not be rerun.",
+  "discovery_rule": "Compile, focused tests, M0 invariance, and M2-B may run on discovery. Full-suite must remain blocked until every exact forward fingerprint is registered, then run exactly once on the final registered head.",
+  "current_boundary": {
+    "m3_c_h_merged": true,
+    "reviewed_implementation_head_pin_present": true,
+    "reviewed_authorization_digest_pin_present": true,
+    "private_production_database_path_digest_selected": true,
+    "plaintext_production_database_path_public": false,
+    "bounded_storage_policy_selected": true,
+    "runtime_startup_integration": false,
+    "production_append_executed": false,
+    "legacy_goal_authority_transferred": false,
+    "m3_e_authority_open": false,
+    "m3_c_j_observation_window_started": false
+  },
+  "next_chat_rule": "Inspect this pin, M3_C_H_PREREQUISITE_VALIDATION_REUSE_PIN.json, and EXACT_HEAD_VALIDATION_REUSE_LEDGER.json before scheduling tests or operator commands. Reuse PR 225 evidence; validate only the actual M3-C-I tree; do not rerun phone evidence or retained sequences."
+}
