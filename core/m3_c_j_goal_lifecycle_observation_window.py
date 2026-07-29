@@ -1,10 +1,10 @@
-"""Dormant M3-C-J bounded goal-lifecycle observation-window evaluator.
+"""Exact-reviewed M3-C-J bounded goal-lifecycle observation evaluator.
 
 This module evaluates immutable append receipts and rollback-preservation evidence.
 It performs no SQLite access, writer construction, append, backup, restore, runtime
 integration, action, scheduling, speech, legacy goal-authority transfer, or M3-E
-activation. Checked-in reviewed window pins remain absent until a later exact-head
-review slice.
+activation. The reviewed pins authorize only evaluation of separately produced
+bounded evidence; they do not start the real observation window.
 """
 from __future__ import annotations
 
@@ -35,10 +35,13 @@ M3_C_I_M2E_RUN = 30447974661
 M3_C_I_MERGE_SHA = "51f682e00059698cbb301a75983e11dd4812f574"
 DEFAULT_MAX_WINDOW_EVENTS = 32
 
-# Deliberately absent in this preflight implementation. A later exact-reviewed
-# slice may pin these after this tree has one accepted exact-head artifact.
-_ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD: str | None = None
-_ACTIVE_REVIEWED_WINDOW_AUTHORIZATION_DIGEST: str | None = None
+# M3-C-J exact-reviewed evaluator pins. These authorize evidence evaluation only.
+_ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD: str | None = (
+    "a567f05fbee22b98fe02b612cbd42ff17de34182"
+)
+_ACTIVE_REVIEWED_WINDOW_AUTHORIZATION_DIGEST: str | None = (
+    "803780b19f0c496adb0a3a68ba32bd296a356a8ea3eeaf2fe6a33cb3476510fb"
+)
 
 
 class M3CObservationWindowError(RuntimeError):
@@ -202,7 +205,7 @@ def build_observation_window_authorization_candidate(
     window_implementation_head: str,
     max_window_events: int = DEFAULT_MAX_WINDOW_EVENTS,
 ) -> ObservationWindowAuthorizationPacket:
-    """Build the deterministic candidate packet without activating the window."""
+    """Build the deterministic packet without touching a writer or database."""
 
     writer_packet = active_reviewed_writer_authorization_packet()
     return ObservationWindowAuthorizationPacket(
@@ -215,10 +218,24 @@ def build_observation_window_authorization_candidate(
     )
 
 
+def active_reviewed_observation_window_authorization_packet(
+) -> ObservationWindowAuthorizationPacket:
+    """Return the one immutable reviewed evaluator packet without performing I/O."""
+
+    packet = build_observation_window_authorization_candidate(
+        window_implementation_head=_ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD or "",
+    )
+    if packet.authorization_digest != _ACTIVE_REVIEWED_WINDOW_AUTHORIZATION_DIGEST:
+        raise M3CObservationWindowAuthorizationError(
+            "checked-in observation-window packet digest is inconsistent"
+        )
+    return packet
+
+
 def verify_active_observation_window_authorization(
     packet: ObservationWindowAuthorizationPacket | None,
 ) -> str:
-    """Fail closed until a later slice pins this evaluator's exact reviewed head."""
+    """Verify the exact reviewed evaluator packet before accepting evidence."""
 
     if (
         _ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD is None
