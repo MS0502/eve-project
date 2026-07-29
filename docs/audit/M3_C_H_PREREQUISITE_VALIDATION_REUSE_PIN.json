@@ -1,0 +1,83 @@
+{
+  "schema_version": "eve.m3-c-h.prerequisite-validation-reuse-pin.v1",
+  "purpose": "Prevent duplicate prerequisite validation and immutable operator execution when M3-C-H work moves across chats, reviews, or operator sessions.",
+  "active_base": {
+    "main_sha": "b717b676ec84fd157eabf5b0a947f68c1c6617eb",
+    "pr": 224,
+    "title": "M3-C-G disposable SQLite lifecycle rehearsal"
+  },
+  "immutable_prerequisites": [
+    {
+      "pr": 221,
+      "exact_head": "68b79d3be2d7781f03d30ed782df021409e0e296",
+      "exact_run": 30424108697,
+      "focused": "12 passed",
+      "full": "3258 passed",
+      "forward_gate": "0 errors",
+      "artifact_sha256": "c8624fe797901f3cb6afe6af202cd3ab6fcb3f64ac39426ceadabf7bac131f8c",
+      "m2e_run": 30424108713,
+      "m2e_result": "6/6 passed",
+      "merge_sha": "6b27629bb576a39d51d14e8350c2fca8bba5961b"
+    },
+    {
+      "pr": 222,
+      "exact_head": "844191df9a29d63950ea1ba4f90035261af9418f",
+      "exact_run": 30438518079,
+      "focused": "14 passed",
+      "full": "3272 passed",
+      "forward_gate": "0 / 0 / 0 / 0",
+      "artifact_sha256": "6e65b9da98ef8ce326187961bceec8e683b4d5ba0cdc9feef4e282ae815429ea",
+      "m2e_run": 30438518517,
+      "m2e_result": "6/6 passed",
+      "merge_sha": "938dc3f9d00a8bd7fffe4e4cae38894531462947"
+    },
+    {
+      "pr": 223,
+      "exact_head": "395dea54fdbdac5fad7a2fab35fea1466a52a919",
+      "exact_run": 30439249755,
+      "focused": "no focused tests selected",
+      "full": "3272 passed",
+      "forward_gate": "0 / 0 / 0 / 0",
+      "artifact_sha256": "a5e801992970cdcb2598f60ddee13a6e3957cc70db63335a3cca9a6c48bd3597",
+      "m2e_run": 30439249799,
+      "m2e_result": "6/6 passed",
+      "merge_sha": "91470c1adace585995a2a92d39ebd3e330d57342"
+    },
+    {
+      "pr": 224,
+      "exact_head": "ba14eb0b1064b6454c95870bd737e49d01608c0d",
+      "exact_run": 30442498422,
+      "focused": "16 passed",
+      "full": "3288 passed",
+      "forward_gate": "0 / 0 / 0 / 0",
+      "artifact_sha256": "2705d825fc827624e71e4a86ba992e9a19f2b90a60d3d4603ac60ab553de86c2",
+      "m2e_run": 30442498493,
+      "m2e_result": "6/6 passed",
+      "merge_sha": "b717b676ec84fd157eabf5b0a947f68c1c6617eb"
+    }
+  ],
+  "non_invalidators": [
+    "chat change",
+    "operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "reporting-only reuse of the pinned prerequisite chain"
+  ],
+  "invalidators": [
+    "a new M3-C-H tree or exact head requiring its own validation",
+    "artifact loss, corruption, expiry without retained immutable copy, or SHA-256 mismatch",
+    "validation workflow, pinned dependency, focused scope, or forward-registration change",
+    "base ancestry no longer containing b717b676ec84fd157eabf5b0a947f68c1c6617eb"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_221_validation_because_of_chat_change": false,
+    "rerun_pr_222_validation_because_of_chat_change": false,
+    "rerun_pr_223_validation_because_of_chat_change": false,
+    "rerun_pr_224_validation_because_of_chat_change": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "issue_new_phone_command_for_m3_c_h": false
+  },
+  "new_tree_rule": "M3-C-H receives one new full-suite validation only for its final forward-registered exact head. Discovery, defect-fix discovery, and registration-only heads are not merge evidence and must not be manually rerun.",
+  "activation_rule": "M3-C-H must merge with both reviewed active pins absent. Pinning an implementation head or authorization digest belongs only to a separate M3-C-I exact-reviewed change.",
+  "next_chat_rule": "Inspect this pin and EXACT_HEAD_VALIDATION_REUSE_LEDGER.json before scheduling tests or operator commands. Reuse the immutable prerequisite evidence when policy conditions still match."
+}
