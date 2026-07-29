@@ -1,13 +1,13 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-27**  
-Rebaseline base/prerequisite: `e98e007ea0418995b1056038ba2ad846ecd847de` — PR #213 squash merge  
+Rebaseline base/prerequisite: `a9f70ef78b06744eba01a0b35c60371b10eaf672` — PR #215 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
 ## 1. Current authority and milestone state
 
-The explicit A12 human cutover decision is merged in #213. Until the separately validated #215 execution PR merges, the pre-kernel legacy runtime remains authoritative and the v4-native persistence cutover is not operationally active. On #215 merge, the event kernel plus SQLite store become the authoritative persistence substrate for **v4-native subsystems only**; every legacy domain remains authoritative in the legacy runtime until that domain passes its own migration gate. M3-E affect cutover remains separately closed.
+The explicit A12 human cutover decision is merged in #213 and its separately validated A-2 execution is merged in #215. The event kernel plus SQLite store are now the authoritative persistence substrate for **v4-native subsystems only**. Every legacy domain remains authoritative in the legacy runtime until that domain passes its own separately reviewed migration gate. The minimum seven-day legacy-parallel/rollback-preservation interval is active and is not an automatic migration timer. `m3_authority_open=true`. M3-E affect cutover remains separately closed.
 
 | Milestone | Current state | Repository basis |
 |---|---|---|
@@ -17,14 +17,14 @@ The explicit A12 human cutover decision is merged in #213. Until the separately 
 | M2-B | merged | #162 read-capability extraction and exact technical decisions |
 | M2-C | merged | #164 bounded migration/dual-read comparison |
 | M2-D | merged | #165 bounded recovery/rollback rehearsal |
-| M2-E | **sealed and explicitly human-authorized; #215 is the separate operational activation PR** | #166-#168, #192, #195, #196, sealed habitat evidence, #213 A12 decision, #215 digest-pinned activation candidate |
+| M2-E | **sealed, explicitly human-authorized, operational v4-native cutover active** | #166-#168, #192, #195, #196, sealed habitat evidence, #213 A12 decision, #215 digest-pinned activation |
 | M3-A | **complete** | #169 drive-dynamics design |
 | M3-B | **in progress** | #170-#190 structural/read-only chain; #194 C1; #197-#212 witness/review/retention chain; canonical reviewed/runtime/source/candidate coverage `5/37`, retained coverage `4/37`; `stress_load` sequence 5 is staged but not yet appended |
-| M3-C | **authority gate pending #215 merge; design/implementation not complete** | #169 integration eligibility plus A12 `m3_authority_open` decision; M3-C-A starts after operational cutover |
+| M3-C | **authority open; M3-C-A design under review in #217; runtime implementation not started** | #169 drive dynamics + #215 authority opening + #217 documentation/checker/test candidate |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
-The M2-E habitat window is sealed. The accepted package is pinned by `seal_digest=5bfd2bae9a60107b5bd647eeec30b602a4d6bca922e467755f17a04c990dafbb`, acceptance `12/12`, events `288`, death recoveries `2`, and observed midnights `4`. PR #213 records the explicit human authorization and canonical decision digest `3844e4d0a836924eb881048d45d98d89d5041f87d15a836686119a2d8487efbf`. This decision does not transfer any legacy-domain authority and does not authorize M3-E. The M3-B observation window is separate and has **not started**.
+The M2-E habitat window is sealed. The accepted package is pinned by `seal_digest=5bfd2bae9a60107b5bd647eeec30b602a4d6bca922e467755f17a04c990dafbb`, acceptance `12/12`, events `288`, death recoveries `2`, and observed midnights `4`. PR #213 records the explicit human authorization and canonical decision digest `3844e4d0a836924eb881048d45d98d89d5041f87d15a836686119a2d8487efbf`. PR #215 activates only the v4-native persistence substrate and `m3_authority_open`; it does not transfer any legacy-domain authority and does not authorize M3-E. The M3-B observation window is separate and has **not started**.
 
 ### Executable-audit compatibility notes
 
@@ -34,7 +34,7 @@ M1 status: **closed for mechanism verification**. This is the historical #158 hu
 
 The canonical M1 human-acceptance record SHA-256 remains `aff557da810b7faa0c9dc57bde214a9760a0d3099c8031cb6eb7a24398cf8522`. At that decision point the status contract stated **M2-A remains blocked until v4.2 approval**; that sentence is retained as historical acceptance evidence only, because v4.2 was later approved and M2-A subsequently merged in #161. The absorbed PRs #11, #7, and #4 are closed; this is likewise retained as the historical M1 disposition record.
 
-M3-A drive-dynamics design status: the merged #169 artifact remains a **documentation-only** design boundary over the **63-axis Affect Migration Plan**, including **48 bidirectional named transitions**, with **no runtime integration** in that design artifact and **integration eligibility only after persistence cutover**. M3-A is complete as a design milestone, while its historical no-runtime-integration boundary remains authoritative for what #169 itself proved.
+M3-A drive-dynamics design status: the merged #169 artifact remains a **documentation-only** design boundary over the **63-axis Affect Migration Plan**, including **48 bidirectional named transitions**, with **no runtime integration** in that design artifact and **integration eligibility only after persistence cutover**. M3-A is complete as a design milestone. The persistence-cutover eligibility condition is now satisfied by #215, but that does not retroactively turn #169 into a runtime implementation.
 
 ## 2. M3-B exact current boundary
 
@@ -291,8 +291,9 @@ M3-B observation window eligible:                 false
 M3-B observation window started:                  false
 M3-B complete:                                    false
 A12 human cutover decision accepted:              true — #213
-v4-native operational cutover active:             false until #215 merge
-M3-C authority gate:                              pending #215 merge
+v4-native operational cutover active:             true — #215
+M3-C authority gate:                              open — #215
+M3-C runtime implementation:                      false
 M3-E authority open:                              false
 ```
 
@@ -342,7 +343,7 @@ The later sealed habitat package supersedes the earlier live-window readiness st
 
 ## 4. Validation reuse and new-chat rule
 
-`docs/audit/EXACT_HEAD_VALIDATION_REUSE_LEDGER.json` plus immutable merged-PR validation records are the durable source of truth for validation reuse.
+`docs/audit/EXACT_HEAD_VALIDATION_REUSE_LEDGER.json` plus immutable merged-PR validation records and per-PR durable reuse pins are the source of truth for validation reuse.
 
 Mandatory rule:
 
@@ -353,21 +354,21 @@ Mandatory rule:
 - discovery/intermediate registration heads are not merge evidence;
 - full-suite runs once on the final registered exact head after the forward gate passes.
 
-PR #213 is the latest merged prerequisite pin:
+PR #215 is the latest merged authority prerequisite pin:
 
 ```text
-exact head:   dc22ab5a68a9877396fa3f4871035e2206f635f6
-exact run:    30254003272
-focused:      no focused tests selected
-full:         3,207 passed
-artifact:     exact-head-validation-dc22ab5a68a9877396fa3f4871035e2206f635f6
-artifact SHA: 3d66eab0d81eff29481f78fc8b8381f2bac3b03529b4470ea5f6014b58a788a6
-M2-E run:     30254003095
+exact head:   03f5d2365aae46ebe6cd950bb234c8062c3cdc63
+exact run:    30255739310
+focused:      5 passed
+full:         3,212 passed
+artifact:     exact-head-validation-03f5d2365aae46ebe6cd950bb234c8062c3cdc63
+artifact SHA: c646393008bdc7e6d40177c81e6d86b236f3cb0e1da5d40338b542a1fc3a56be
+M2-E run:     30255739240
 M2-E:         6/6 jobs passed
-merge SHA:    e98e007ea0418995b1056038ba2ad846ecd847de
+merge SHA:    a9f70ef78b06744eba01a0b35c60371b10eaf672
 ```
 
-The #213 exact-head/M2-E evidence remains reusable unless one of the explicit invalidators above occurs. `docs/audit/M2_E_PR213_VALIDATION_REUSE_PIN.json` fixes those values and explicitly marks chat/session/operator-session/PR-metadata changes as non-invalidators. Do not schedule #213 full-suite or M2-E again merely because work moves to #215, Track B, M3-C-A, or another chat.
+The #215 exact-head/M2-E evidence remains reusable unless one of the explicit invalidators above occurs. `docs/audit/M2_E_PR215_VALIDATION_REUSE_PIN.json` is introduced on the active post-cutover work branches to make that reuse durable across chat/session changes. Do not schedule #215 full-suite or M2-E again merely because work moves to Track B, M3-C-A, a receipt-pin PR, or another chat.
 
 ## 5. Governance rules added by the #191 rebaseline
 
@@ -387,9 +388,9 @@ Raw phone companion contents, SQLite/WAL files, backups, private nonce material,
 
 ### 5.4 No automatic authority promotion
 
-Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision. The explicit #213 A12 human decision is such a reviewed decision; it authorizes only the scope recorded there and still requires the separately validated #215 operational activation before the v4-native cutover becomes active.
+Machine-green evidence, PR merge, operator attestation machinery, source registration, retained observations, or an observation-window seal cannot automatically open M3-C/M3-E or authorize cutover. Any authority transition remains a separate explicit reviewed decision. The explicit #213 A12 human decision plus separately validated #215 execution authorize only the v4-native persistence substrate and M3 authority opening recorded there. Neither transfer a legacy domain nor open M3-E.
 
-## 6. PR registry — verified repository history through #213
+## 6. PR registry — verified repository history through #215 plus active #216/#217
 
 This table is regenerated from repository PR state, not prior chat reports.
 
@@ -464,10 +465,12 @@ This table is regenerated from repository PR state, not prior chat reports.
 | #211 | merged | `stress_load` real-phone appraisal witness preflight; exact phone witness subsequently executed once on its merge head |
 | #212 | merged | independent `stress_load` witness review, fifth reviewed/runtime/source/candidate activation, sequence-five retention staging; retained coverage remains `4/37` |
 | #213 | merged | explicit A12 human cutover authorization; legacy per-domain authority retained; M3-E explicitly not authorized |
-| #214 | open, unmerged | Track B legacy short-modifier routing repair discovery; no accepted full-suite run yet |
-| #215 | draft, unmerged | A-2 digest-pinned v4-native persistence activation + seven-day legacy-parallel guard + one-command operational rollback |
+| #214 | closed, unmerged | superseded pre-cutover-base Track B routing discovery; no accepted full-suite evidence |
+| #215 | merged | digest-pinned v4-native persistence authority activation, seven-day legacy-parallel guard, tested private operational rollback; `m3_authority_open=true` |
+| #216 | draft, unmerged | clean post-cutover Track B Layer-1 routing repair; full validation may complete but merge is held until the operator sequence-five append no longer requires main to remain at #215 |
+| #217 | draft, unmerged | M3-C-A deterministic eight-drive goal generation/selection design; checker/focused discovery green, final forward registration/STATUS exact-head pending |
 
-Current merge-intended priority PR: **#215 Draft while assembling its final registered head**. Its discovery head passed focused tests, M0 invariance, and M2-B decision validation and stopped at the expected forward gate; no full-suite run occurred on that discovery head. The final head must include exact forward registration, this same-PR STATUS update, and #213 validation reuse pin before it is validated once and marked Ready.
+Current merge boundary: **do not change `main` away from `a9f70ef78b06744eba01a0b35c60371b10eaf672` until the operator executes the staged sequence-five `stress_load` append pinned to that exact head.** Branch work and validation may proceed without changing main.
 
 ## 7. Frozen PR register
 
@@ -488,13 +491,13 @@ These dispositions grant no runtime, persistence, M3, or cutover authority.
 
 ## 8. Current next steps
 
-Order is constrained by evidence and authority boundaries:
+Order is constrained by the exact phone evidence and authority boundaries:
 
-1. **Finish #215 on one final registered head:** discovery/intermediate heads are not merge evidence. Validate full-suite and M2-E exactly once only after forward registration, same-PR STATUS, and #213 reuse pin are present; then mark Ready and squash-merge only if green.
-2. **After #215 merges, execute only the already-staged `stress_load` sequence-five retention append.** Do not rerun the #211 real phone witness or any earlier witness. The append must prove exact continuity from sequence 4 and advance private retained count `4 -> 5`; public canonical retained coverage remains `4/37` until its receipt is independently reviewed and pinned.
-3. **M3-C-A may begin after #215 merge:** design only, using M3-A drive dynamics plus goal generation/selection and the authoritative v4-native persistence substrate. It must prove A9 named-transition compliance and define a test that shows affect changes actual choice. M3-E authority remains untouched.
-4. **Track B remains routing-only:** content-bearing `짧게/길게` modifiers must reach the normal pipeline; only meta-only instructions may early-return. Do not modify `INTENT_POOLS` or SpeechHub structure. SpeechHub pool teardown remains M6 work and the #211 witness stays immutable.
-5. **Do not duplicate accepted validation or phone evidence because of chat/session changes.** #212 and #213 exact-head/full/M2-E records are pinned reusable prerequisites; only real tree/head changes or other explicit invalidators permit rerun.
-6. **Keep legacy authority per-domain.** The #215 seven-day parallel period preserves rollback availability; day seven does not automatically transfer a legacy domain, delete a legacy persistence path, or open M3-E.
+1. **Operator sequence-five append first, while main remains exact #215 merge `a9f70ef78b06744eba01a0b35c60371b10eaf672`.** Execute only `scripts/operator/m3_b_c2_retain_reviewed_stress_load.py` against the already-reviewed public `stress_load` witness and the existing private retained DB. Do not rerun the #211 witness. Canonical retained coverage remains `4/37` until the resulting public-safe receipt is independently reviewed and pinned.
+2. **Track B #216 remains routing-only.** It may be validated on its own branch, but do not merge it before step 1 because that would change the exact phone expected head. After sequence-five execution, merge only if its final exact-head/forward/full/M2-E evidence is green. `INTENT_POOLS` and SpeechHub structure remain untouched; pool teardown stays M6.
+3. **Finish M3-C-A #217 as design-only.** Register only its static checker/test forward occurrences, keep the same-PR STATUS current, then run one final registered exact-head validation. Its design must integrate all eight M3-A drives, recheck the 59/4 Affect Plan boundary, prove A9 no-continuous/no-duplicate behavior, and show a drive-state-only counterfactual that flips the deterministic selected goal proposal. No M3-E authority or legacy goal-domain transfer.
+4. **After the sequence-five receipt is reviewed, pin it publicly and only then advance retained real-observation coverage to `5/37`.** Private SQLite/WAL, nonce, raw witness values, and filesystem paths remain outside the repository.
+5. **Do not duplicate accepted validation because of chat/session changes.** #212, #213, and #215 exact-head/full/M2-E evidence are durable prerequisites; only a real tree/head change, artifact loss/corruption/digest mismatch, validation-scope/dependency change, or ancestry break permits a rerun.
+6. **Keep legacy authority per-domain and M3-E closed.** The seven-day parallel interval preserves rollback availability; reaching day seven cannot automatically transfer a legacy domain, delete a legacy persistence path, or open M3-E.
 
-The immediate project state is **A12 human-authorized with A-2 operational cutover pending #215 merge**. M3-B reviewed/runtime/source/candidate coverage is `5/37`; retained real-observation coverage is `4/37` until the real sequence-five append is executed and separately reviewed. The M3-B observation window is still not started. M3-C's authority gate opens only with the #215 merge; M3-E remains closed.
+The immediate project state is **M2-E operationally cut over for v4-native persistence, M3-C authority open, M3-B retained sequence five awaiting the operator-private append, Track B repaired on a clean draft branch, and M3-C-A design under exact static review**.
