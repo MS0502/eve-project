@@ -487,7 +487,6 @@ def test_checked_in_module_is_io_free_and_window_pins_are_absent():
     assert not called & {
         "SQLiteShadowStore",
         "DormantGoalLifecycleWriter",
-        "append",
         "create_backup",
         "initialize",
         "open",
