@@ -1,7 +1,7 @@
 # EVE v4 Implementation Status
 
 Last repository rebaseline: **2026-07-29**  
-Rebaseline base/prerequisite: `9a93d259a80b92791602b9032908d4188e5d655b` — PR #218 squash merge  
+Rebaseline base/prerequisite: `3a09a6ddd2f3b64d5483fd8564be0e645043538f` — PR #219 squash merge  
 Active constitution: **EVE v4.2**  
 Constitution status: **ACTIVE CONSTITUTIONAL AUTHORITY**
 
@@ -29,7 +29,7 @@ automatically transfer a domain, delete legacy persistence, or open M3-E.
 | M2-E | operational v4-native cutover active | #166-#168, #192, #195-#196, #213, #215 |
 | M3-A | complete, design-only | #169 |
 | M3-B | in progress; reviewed/runtime/source/candidate `5/37`; retained `5/37` | #170-#212 plus sequence-five receipt pin #218 |
-| M3-C | authority open; M3-C-A design complete; M3-C-B pure selection kernel under review | #215, #217, current candidate |
+| M3-C | authority open; M3-C-A design and M3-C-B pure selection kernel merged; M3-C-C pure lifecycle kernel under review | #215, #217, #219, current candidate |
 | M3-D | closed | requires M3-C continuity inputs |
 | M3-E | closed | separate reviewed affect/goal cutover; no authority open |
 
@@ -117,14 +117,25 @@ PR #217 completed the M3-C-A design boundary:
 M3-C-A changes no production runtime, persistence writer, scheduler, action,
 speech, memory/vector/model/AGP state, legacy goal authority, or M3-E authority.
 
-## 4. M3-C-B pure selection-kernel candidate
+## 4. M3-C-B merged pure selection kernel
 
-The current M3-C-B candidate implements the #217 arithmetic in one isolated,
-pure standard-library module. It accepts only canonical internal semantic goal
-candidates and exact eight-drive samples, then returns an immutable deterministic
-selection receipt.
+PR #219 merged the #217 arithmetic as one isolated standard-library kernel. It
+accepts canonical internal semantic goal candidates and exact eight-drive
+samples, then returns an immutable deterministic selection receipt.
 
-The candidate is deliberately unintegrated:
+```text
+PR:             #219
+exact head:     39d118decc6f9353623da8c71724d7302fccc7ef
+exact run:      30422131822
+focused:        9 passed
+full:           3,227 passed
+artifact SHA:   49552c718cc501758276317ec139caf6d1fecedf393037f90b95a4ba7bf6a689
+M2-E run:       30422131843
+M2-E:           6/6 jobs passed
+merge SHA:      3a09a6ddd2f3b64d5483fd8564be0e645043538f
+```
+
+The merged kernel remains deliberately unintegrated:
 
 ```text
 production loop import:                 false
@@ -140,24 +151,43 @@ Selection uses exact v1 thresholds `0.20/0.10/0.30/0.08/0.12/30s`,
 argmax with lexical candidate-id tie-break, and replay-carried monotonic time.
 Repeated unchanged evaluation returns no transition-eligible result.
 
-## 5. Validation reuse and new-chat rule
+## 5. M3-C-C pure lifecycle-kernel candidate
+
+The current candidate consumes immutable M3-C-B score/selection evidence and
+derives at most one exact #217 lifecycle edge:
+
+```text
+absent -> proposed
+proposed -> validated | rejected | expired
+validated -> eligible | rejected
+eligible -> selected | withdrawn
+selected -> superseded | expired
+rejected | expired | withdrawn | superseded -> absent
+```
+
+It returns a deterministic transition candidate or a no-transition receipt.
+It does not construct or append an event, write persistence, integrate with the
+production loop, execute an action, schedule work, generate speech, transfer
+legacy goal-domain authority, or open M3-E.
+
+## 6. Validation reuse and new-chat rule
 
 Accepted exact-head evidence is reused when head, artifact digest, validation
 scope/dependency, and ancestry still match.
 
-Latest merged receipt/governance prerequisite:
+Latest merged implementation prerequisite:
 
 ```text
-PR:             #218
-exact head:     173e9c24ba7bb95442f4d3e93c2f1b9614508279
-exact run:      30421245663
-focused:        no focused tests selected
-full:           3,218 passed
-artifact:       exact-head-validation-173e9c24ba7bb95442f4d3e93c2f1b9614508279
-artifact SHA:   ee355c4ba084cd5f4d8e89db3b832e9bce79e5aa75760b41fc0009889801654c
-M2-E run:       30421245704
+PR:             #219
+exact head:     39d118decc6f9353623da8c71724d7302fccc7ef
+exact run:      30422131822
+focused:        9 passed
+full:           3,227 passed
+artifact:       exact-head-validation-39d118decc6f9353623da8c71724d7302fccc7ef
+artifact SHA:   49552c718cc501758276317ec139caf6d1fecedf393037f90b95a4ba7bf6a689
+M2-E run:       30422131843
 M2-E:           6/6 jobs passed
-merge SHA:      9a93d259a80b92791602b9032908d4188e5d655b
+merge SHA:      3a09a6ddd2f3b64d5483fd8564be0e645043538f
 ```
 
 Mandatory reuse rule:
@@ -168,10 +198,10 @@ Mandatory reuse rule:
   validation-scope/dependency change, or ancestry break is an invalidator;
 - discovery/intermediate heads are not merge evidence;
 - full suite runs once on the final registered exact head;
-- do not rerun #211 witness, sequences 1-5, or accepted #215/#216/#217/#218
+- do not rerun #211 witness, sequences 1-5, or accepted #215-#219
   prerequisite validation merely because work moves to another chat.
 
-## 6. Historical executable-audit compatibility
+## 7. Historical executable-audit compatibility
 
 M1 status: **closed for mechanism verification**.
 
@@ -198,7 +228,7 @@ integration eligibility only after persistence cutover
 absorbed PRs #11, #7, and #4 are closed
 ```
 
-## 7. Private companion and reporting boundary
+## 8. Private companion and reporting boundary
 
 Raw phone companion contents, SQLite/WAL files, backups, nonces, interaction
 text, CPU/wall/load/battery/context-switch observations, and private filesystem
@@ -210,7 +240,7 @@ Machine-green evidence, retained observations, or elapsed parallel time cannot
 automatically transfer a legacy domain, complete M3-B, open M3-E, or authorize
 an affect/goal cutover.
 
-## 8. Frozen PR register
+## 9. Frozen PR register
 
 The remaining open frozen legacy-lineage PR is:
 
@@ -221,15 +251,15 @@ The remaining open frozen legacy-lineage PR is:
 Its residual scope remains unabsorbed and must not be closed as superseded
 without a separate exact review.
 
-## 9. Authoritative next steps
+## 10. Authoritative next steps
 
-1. Review M3-C-B as a separately validated pure deterministic
-   goal-candidate scoring/selection kernel derived from #217.
-2. Keep M3-C-B disconnected from production orchestration: no action execution,
-   speech generation, scheduler integration, persistence write/event append,
+1. Review M3-C-C as a separately validated pure lifecycle
+   transition-candidate kernel derived from #217/#219.
+2. Keep M3-C-C disconnected from production orchestration and authoritative
+   persistence: no event append, state write, action, scheduler, speech,
    legacy `GoalManagement` authority transfer, or M3-E cutover.
-3. Treat `transition_eligible` results only as candidates for a later separately
-   reviewed lifecycle/event persistence gate.
+3. After acceptance, stage an event-envelope/reducer preflight that can prove
+   deterministic replay without opening a live writer.
 4. Continue M3-B production-origin coverage separately. `5/37` is not M3-B
    completion.
 5. Reuse exact validation pins across chat changes and run new validation only
@@ -237,4 +267,5 @@ without a separate exact review.
 
 The immediate project state is: v4-native persistence authority active,
 legacy authority retained per domain, M3-B retained coverage `5/37`, M3-C-A
-design complete, M3-C-B pure selection kernel under review, and M3-E closed.
+design and M3-C-B selection kernel merged, M3-C-C lifecycle kernel under
+review, and M3-E closed.
