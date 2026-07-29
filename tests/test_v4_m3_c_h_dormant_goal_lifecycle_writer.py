@@ -39,7 +39,9 @@ from core.m3_c_h_dormant_goal_lifecycle_writer import (
     M3CDormantWriterRecoveryRequired,
     WriterStorageLimits,
     WriterValidationPins,
+    active_reviewed_writer_authorization_packet,
     build_dormant_writer_rollback_control,
+    verify_active_writer_authorization,
 )
 from core.sqlite_shadow_store import (
     SQLiteShadowStore,
@@ -209,17 +211,15 @@ def test_missing_packet_is_first_failure_before_store_construction(
         raise AssertionError("store construction must be unreachable")
 
     monkeypatch.setattr(dormant_module, "SQLiteShadowStore", forbidden_store)
-    with pytest.raises(M3CDormantWriterAuthorizationError, match="absent"):
+    with pytest.raises(M3CDormantWriterAuthorizationError, match="authorization packet"):
         writer.append(_bindings()[0])
     assert not writer.database_path.exists()
 
 
-def test_structurally_valid_packet_is_still_dormant_without_reviewed_pin(
-    tmp_path: Path,
-):
+def test_structurally_valid_nonreviewed_packet_is_rejected_before_io(tmp_path: Path):
     writer = _writer(tmp_path / "goal-lifecycle.sqlite3")
     packet = _packet(writer)
-    with pytest.raises(M3CDormantWriterAuthorizationError, match="absent"):
+    with pytest.raises(M3CDormantWriterAuthorizationError, match="active reviewed head"):
         writer.append(_bindings()[0], authorization_packet=packet)
     assert not writer.database_path.exists()
 
@@ -275,6 +275,7 @@ def test_test_only_pin_exercises_one_verified_append(
     assert receipt.postcommit_readback_verified is True
     assert receipt.direct_reducer_equivalent is True
     assert receipt.sqlite_write_performed is True
+    assert receipt.disposable_or_test_path_only is True
     assert receipt.production_authoritative_append_performed is False
     assert receipt.live_writer_installed is False
     assert receipt.production_integration_performed is False
@@ -459,7 +460,34 @@ def test_scope_escape_packet_is_rejected():
         )
 
 
-def test_checked_in_module_has_absent_pins_and_no_activation_heuristic():
+def test_checked_in_reviewed_packet_matches_exact_h_evidence_and_bounds():
+    packet = active_reviewed_writer_authorization_packet()
+    assert packet.implementation_head == "68efeca10c6819cb74ccc884e3c0c784e0b44c95"
+    assert packet.validation.exact_run == 30444371019
+    assert packet.validation.focused_passed == 15
+    assert packet.validation.full_passed == 3303
+    assert packet.validation.artifact_sha256 == (
+        "79f7f6a2034ced8b04dfb3ae3ed69f56cdd6eb6c8f0da3cb740fc900f4ef80be"
+    )
+    assert packet.validation.m2e_run == 30444371035
+    assert packet.storage_limits.to_mapping() == {
+        "snapshot_interval_events": 32,
+        "max_event_count": 4096,
+        "max_event_bytes": 16_777_216,
+        "max_snapshot_count": 128,
+        "max_snapshot_bytes": 16_777_216,
+        "max_backups": 3,
+    }
+    assert packet.database_path_digest == (
+        "cfcc91e8bab89beceff3ce8f5ecbc325705bd33b256e9d47ca8bdb9008833b80"
+    )
+    assert packet.authorization_digest == (
+        "ab050d04f7ae7a6f920e94696d5b0988e4ad5331e9082d5ec61c30548166c111"
+    )
+    assert verify_active_writer_authorization(packet) == packet.authorization_digest
+
+
+def test_checked_in_module_has_exact_pins_and_no_activation_heuristic():
     text = MODULE.read_text(encoding="utf-8")
     tree = ast.parse(text, filename=str(MODULE))
     assignments = {}
@@ -477,12 +505,18 @@ def test_checked_in_module_has_absent_pins_and_no_activation_heuristic():
                 called.add(node.func.id)
             elif isinstance(node.func, ast.Attribute):
                 called.add(node.func.attr)
-    for name in (
-        "_ACTIVE_REVIEWED_IMPLEMENTATION_HEAD",
-        "_ACTIVE_REVIEWED_AUTHORIZATION_DIGEST",
-    ):
+    expected = {
+        "_ACTIVE_REVIEWED_IMPLEMENTATION_HEAD": (
+            "68efeca10c6819cb74ccc884e3c0c784e0b44c95"
+        ),
+        "_ACTIVE_REVIEWED_AUTHORIZATION_DIGEST": (
+            "ab050d04f7ae7a6f920e94696d5b0988e4ad5331e9082d5ec61c30548166c111"
+        ),
+    }
+    for name, value in expected.items():
         assert isinstance(assignments[name], ast.Constant)
-        assert assignments[name].value is None
+        assert assignments[name].value == value
+    assert "/data/data/" not in text
     assert "os" not in imported_modules
     assert "sys" not in imported_modules
     assert not any(
