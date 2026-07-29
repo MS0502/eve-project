@@ -1,0 +1,59 @@
+{
+  "schema_version": "eve.m3-c-i.exact-validation-reuse-pin.v1",
+  "purpose": "Preserve the accepted M3-C-I exact-head validation as an immutable prerequisite across M3-C-J chat, review, and operator-session changes.",
+  "pr": 227,
+  "base_sha": "195ed797b49a880265693969065d7169c80d6180",
+  "exact_head": "bec44a796834e037c41fbb941d090de416cf1e23",
+  "exact_run": 30447974882,
+  "focused": "16 passed",
+  "full": "3304 passed",
+  "forward_gate": "0 / 0 / 0 / 0",
+  "artifact_name": "exact-head-validation-bec44a796834e037c41fbb941d090de416cf1e23",
+  "artifact_sha256": "650d11a611b9ae8dcf49fe540b117a26e49fedab5576c366f332eda9d7b92f0f",
+  "m2e_run": 30447974661,
+  "m2e_result": "6/6 passed",
+  "merge_sha": "51f682e00059698cbb301a75983e11dd4812f574",
+  "reviewed_writer_packet": {
+    "implementation_head": "68efeca10c6819cb74ccc884e3c0c784e0b44c95",
+    "authorization_digest": "ab050d04f7ae7a6f920e94696d5b0988e4ad5331e9082d5ec61c30548166c111",
+    "database_path_digest": "cfcc91e8bab89beceff3ce8f5ecbc325705bd33b256e9d47ca8bdb9008833b80",
+    "plaintext_path_public": false,
+    "snapshot_interval_events": 32,
+    "max_event_count": 4096,
+    "max_event_bytes": 16777216,
+    "max_snapshot_count": 128,
+    "max_snapshot_bytes": 16777216,
+    "max_backups": 3
+  },
+  "validation_execution_history": {
+    "discovery_head": "065bdd757ff83ca9e07a8d9264c1578e567a60b5",
+    "discovery_full_suite_executed": false,
+    "discovery_failure": "historical forward-registry symbols renamed",
+    "final_head_full_suite_executions": 1,
+    "prerequisite_225_validation_rerun": false,
+    "phone_witness_211_rerun": false,
+    "retained_sequences_1_through_5_rerun": false
+  },
+  "non_invalidators": [
+    "chat change",
+    "operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "reporting-only reuse of this exact evidence",
+    "creation of a new descendant branch whose ancestry contains the merge SHA"
+  ],
+  "invalidators": [
+    "artifact loss, corruption, expiry without retained immutable copy, or SHA-256 mismatch",
+    "base ancestry no longer containing 51f682e00059698cbb301a75983e11dd4812f574",
+    "change to the M3-C-I implementation tree, packet digest, path digest, or storage policy",
+    "change to the validation workflow or pinned compatibility dependency"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_227_validation_because_of_chat_change": false,
+    "rerun_pr_225_validation_because_of_m3_c_j": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "touch_private_production_database_during_m3_c_j_preflight_ci": false
+  },
+  "new_tree_rule": "M3-C-J receives its own exact-head validation only for its actual changed tree. The M3-C-I evidence above remains reused and immutable.",
+  "next_chat_rule": "Read this pin and M3_C_I_PREREQUISITE_VALIDATION_REUSE_PIN.json before scheduling validation or operator commands. Do not rerun accepted M3-C-I, M3-C-H, phone-witness, or retained-sequence evidence merely because the chat or session changed."
+}
