@@ -42,6 +42,7 @@ from core.m3_c_j_goal_lifecycle_observation_window import (
     ObservationWindowAuthorizationPacket,
     ObservationWindowBaseline,
     RollbackPreservationEvidence,
+    active_reviewed_observation_window_authorization_packet,
     build_observation_window_authorization_candidate,
     evaluate_observation_window,
     verify_active_observation_window_authorization,
@@ -52,6 +53,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "core/m3_c_j_goal_lifecycle_observation_window.py"
 WINDOW_HEAD = "3" * 40
 WRITER_HEAD = "1" * 40
+ACTIVE_WINDOW_HEAD = "a567f05fbee22b98fe02b612cbd42ff17de34182"
+ACTIVE_WINDOW_DIGEST = "803780b19f0c496adb0a3a68ba32bd296a356a8ea3eeaf2fe6a33cb3476510fb"
 
 
 def _digest(label: str) -> str:
@@ -273,10 +276,15 @@ def _evaluate(evidence):
 
 
 def test_candidate_packet_pins_exact_m3_c_i_evidence_without_activation():
-    packet = build_observation_window_authorization_candidate(
-        window_implementation_head=WINDOW_HEAD,
+    # Historical test symbol retained. The packet is now exact-reviewed, but
+    # constructing/verifying it still starts no writer, database, or window.
+    packet = active_reviewed_observation_window_authorization_packet()
+    candidate = build_observation_window_authorization_candidate(
+        window_implementation_head=ACTIVE_WINDOW_HEAD,
     )
-    assert packet.window_implementation_head == WINDOW_HEAD
+    assert packet == candidate
+    assert packet.window_implementation_head == ACTIVE_WINDOW_HEAD
+    assert packet.authorization_digest == ACTIVE_WINDOW_DIGEST
     assert packet.prerequisite_exact_head == (
         "bec44a796834e037c41fbb941d090de416cf1e23"
     )
@@ -290,8 +298,7 @@ def test_candidate_packet_pins_exact_m3_c_i_evidence_without_activation():
     assert packet.prerequisite_merge_sha == (
         "51f682e00059698cbb301a75983e11dd4812f574"
     )
-    with pytest.raises(M3CObservationWindowAuthorizationError, match="absent"):
-        verify_active_observation_window_authorization(packet)
+    assert verify_active_observation_window_authorization(packet) == ACTIVE_WINDOW_DIGEST
 
 
 def test_exact_test_pins_accept_four_event_window_and_rollback(
@@ -460,6 +467,8 @@ def test_packet_and_receipt_are_deterministic_and_immutable(
 
 
 def test_checked_in_module_is_io_free_and_window_pins_are_absent():
+    # Historical test symbol retained for the PR #228 forward registry. M3-C-J
+    # now asserts exact reviewed pins while preserving the I/O-free boundary.
     text = MODULE.read_text(encoding="utf-8")
     tree = ast.parse(text, filename=str(MODULE))
     assignments = {}
@@ -477,12 +486,13 @@ def test_checked_in_module_is_io_free_and_window_pins_are_absent():
                 called.add(node.func.id)
             elif isinstance(node.func, ast.Attribute):
                 called.add(node.func.attr)
-    for name in (
-        "_ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD",
-        "_ACTIVE_REVIEWED_WINDOW_AUTHORIZATION_DIGEST",
-    ):
+    expected = {
+        "_ACTIVE_REVIEWED_WINDOW_IMPLEMENTATION_HEAD": ACTIVE_WINDOW_HEAD,
+        "_ACTIVE_REVIEWED_WINDOW_AUTHORIZATION_DIGEST": ACTIVE_WINDOW_DIGEST,
+    }
+    for name, value in expected.items():
         assert isinstance(assignments[name], ast.Constant)
-        assert assignments[name].value is None
+        assert assignments[name].value == value
     assert not imported_modules & {"os", "pathlib", "shutil", "sqlite3", "subprocess"}
     assert not called & {
         "SQLiteShadowStore",
