@@ -2,9 +2,9 @@
   "schema_version": "eve.m3-c-h.prerequisite-validation-reuse-pin.v1",
   "purpose": "Prevent duplicate prerequisite validation and immutable operator execution when M3-C-H work moves across chats, reviews, or operator sessions.",
   "active_base": {
-    "main_sha": "b717b676ec84fd157eabf5b0a947f68c1c6617eb",
-    "pr": 224,
-    "title": "M3-C-G disposable SQLite lifecycle rehearsal"
+    "main_sha": "18b70d277bec6a09db834b349a97bea11ff21abf",
+    "pr": 225,
+    "title": "M3-C-H dormant bounded lifecycle writer"
   },
   "immutable_prerequisites": [
     {
@@ -54,6 +54,19 @@
       "m2e_run": 30442498493,
       "m2e_result": "6/6 passed",
       "merge_sha": "b717b676ec84fd157eabf5b0a947f68c1c6617eb"
+    },
+    {
+      "pr": 225,
+      "exact_head": "68efeca10c6819cb74ccc884e3c0c784e0b44c95",
+      "exact_run": 30444371019,
+      "focused": "15 passed",
+      "full": "3303 passed",
+      "forward_gate": "0 / 0 / 0 / 0",
+      "artifact_name": "exact-head-validation-68efeca10c6819cb74ccc884e3c0c784e0b44c95",
+      "artifact_sha256": "79f7f6a2034ced8b04dfb3ae3ed69f56cdd6eb6c8f0da3cb740fc900f4ef80be",
+      "m2e_run": 30444371035,
+      "m2e_result": "6/6 passed",
+      "merge_sha": "18b70d277bec6a09db834b349a97bea11ff21abf"
     }
   ],
   "non_invalidators": [
@@ -63,21 +76,33 @@
     "reporting-only reuse of the pinned prerequisite chain"
   ],
   "invalidators": [
-    "a new M3-C-H tree or exact head requiring its own validation",
+    "a new implementation or authorization-pin tree requiring its own validation",
     "artifact loss, corruption, expiry without retained immutable copy, or SHA-256 mismatch",
     "validation workflow, pinned dependency, focused scope, or forward-registration change",
-    "base ancestry no longer containing b717b676ec84fd157eabf5b0a947f68c1c6617eb"
+    "base ancestry no longer containing 18b70d277bec6a09db834b349a97bea11ff21abf"
   ],
   "execution_prohibitions": {
     "rerun_pr_221_validation_because_of_chat_change": false,
     "rerun_pr_222_validation_because_of_chat_change": false,
     "rerun_pr_223_validation_because_of_chat_change": false,
     "rerun_pr_224_validation_because_of_chat_change": false,
+    "rerun_pr_225_validation_because_of_chat_change": false,
     "rerun_phone_witness_pr_211": false,
     "rerun_retention_sequences_1_through_5": false,
-    "issue_new_phone_command_for_m3_c_h": false
+    "issue_new_phone_command_for_m3_c_h_or_m3_c_i_preflight": false
   },
-  "new_tree_rule": "M3-C-H receives one new full-suite validation only for its final forward-registered exact head. Discovery, defect-fix discovery, and registration-only heads are not merge evidence and must not be manually rerun.",
-  "activation_rule": "M3-C-H must merge with both reviewed active pins absent. Pinning an implementation head or authorization digest belongs only to a separate M3-C-I exact-reviewed change.",
-  "next_chat_rule": "Inspect this pin and EXACT_HEAD_VALIDATION_REUSE_LEDGER.json before scheduling tests or operator commands. Reuse the immutable prerequisite evidence when policy conditions still match."
+  "new_tree_rule": "A later M3-C-I tree receives its own exact validation only after the immutable path, storage policy, packet digest, implementation-head pin, rollback contract, and explicit human review are present. The pinned M3-C-H full suite and M2-E run must be reused rather than rerun as prerequisites.",
+  "activation_rule": "M3-C-H is merged with both reviewed active pins absent. Pinning an implementation head or authorization digest belongs only to a separate M3-C-I exact-reviewed change and is not implied by chat continuation, repository access, or this reuse record.",
+  "current_boundary": {
+    "m3_c_h_merged": true,
+    "writer_reachable_by_default": false,
+    "reviewed_implementation_head_pin_present": false,
+    "reviewed_authorization_digest_pin_present": false,
+    "production_database_path_selected": false,
+    "production_writer_enabled": false,
+    "legacy_goal_authority_transferred": false,
+    "m3_e_authority_open": false,
+    "next_stage": "M3-C-I exact reviewed bounded activation candidate"
+  },
+  "next_chat_rule": "Inspect this pin and EXACT_HEAD_VALIDATION_REUSE_LEDGER.json before scheduling tests or operator commands. Reuse PR 225 evidence when policy conditions still match, do not rerun phone evidence or retained sequences, and do not infer M3-C-I authorization from a chat change."
 }
