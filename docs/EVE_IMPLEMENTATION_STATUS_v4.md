@@ -163,6 +163,18 @@ Repository disposition is preserved: #82, #84, and #86 are closed/unmerged and
 superseded; #109 remains open/unmerged. The **absorbed PRs #11, #7, and #4 are
 closed**. These historical statements grant no current runtime or authority.
 
+Executable-audit literal compatibility:
+
+```text
+M3-A drive-dynamics design status
+documentation-only
+63-axis Affect Migration Plan
+48 bidirectional named transitions
+no runtime integration
+integration eligibility only after persistence cutover
+absorbed PRs #11, #7, and #4 are closed
+```
+
 ## 6. Private companion and reporting boundary
 
 Raw phone companion contents, SQLite/WAL files, backups, nonces, interaction
