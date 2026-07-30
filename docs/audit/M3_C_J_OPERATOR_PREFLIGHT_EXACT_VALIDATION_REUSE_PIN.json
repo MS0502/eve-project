@@ -1,0 +1,69 @@
+{
+  "schema_version": "eve.m3-c-j.operator-preflight-exact-validation-reuse-pin.v1",
+  "purpose": "Preserve the accepted PR #230 private-device operator-preflight validation as the immutable prerequisite for the exact-reviewed operator authorization pin and one later private-device command.",
+  "pr": 230,
+  "base_sha": "361ed88be399ed7650a946b58e713bc14253384e",
+  "exact_head": "d8eb3c2d6b576cc313712f831f8b2f1556cdefb2",
+  "exact_run": 30529376866,
+  "focused": "9 passed",
+  "full": "3324 passed",
+  "forward_gate": "0 / 0 / 0 / 0",
+  "artifact_name": "exact-head-validation-d8eb3c2d6b576cc313712f831f8b2f1556cdefb2",
+  "artifact_sha256": "52b20d6961565175295fad732dbb0a24fced943b85fb114743438b20f6672aaa",
+  "m2e_run": 30529377107,
+  "m2e_result": "6/6 passed",
+  "merge_sha": "4488103356b7bf285badba451acafd0768885dac",
+  "validation_execution_history": {
+    "first_discovery_head": "5c1bac2f0e34f3893a51199421a1c4b5f4aed268",
+    "first_discovery_full_suite_executed": false,
+    "first_discovery_failure": "new M2-B decision surface required exact technical decisions",
+    "second_discovery_head": "fcf4169b5924eb21a343e15e3486ef46b86c2373",
+    "second_discovery_full_suite_executed": false,
+    "second_discovery_failure": "18 new current-tree fingerprints required forward registration",
+    "final_registered_head_full_suite_executions": 1,
+    "pr_229_validation_rerun": false,
+    "pr_228_validation_rerun": false,
+    "pr_227_validation_rerun": false,
+    "pr_225_validation_rerun": false,
+    "phone_witness_211_rerun": false,
+    "retained_sequences_1_through_5_rerun": false
+  },
+  "reviewed_operator_candidate": {
+    "implementation_head": "d8eb3c2d6b576cc313712f831f8b2f1556cdefb2",
+    "authorization_digest": "e360c0e669af3ba89a6f552c81c67e3b3d908171665ed20b510a0044003d13a5",
+    "required_transition_count": 4,
+    "max_window_events": 32,
+    "production_append_authorized": true,
+    "runtime_integration_authorized": false,
+    "action_authorized": false,
+    "scheduler_authorized": false,
+    "speech_authorized": false,
+    "legacy_goal_authority_transferred": false,
+    "legacy_migration_authorized": false,
+    "m3_e_authority_open": false
+  },
+  "non_invalidators": [
+    "chat change",
+    "operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "reporting-only reuse of this exact evidence",
+    "creation of a descendant operator-pin branch containing the merge SHA"
+  ],
+  "invalidators": [
+    "artifact loss, corruption, expiry without retained immutable copy, or SHA-256 mismatch",
+    "base ancestry no longer containing 4488103356b7bf285badba451acafd0768885dac",
+    "change to the reviewed operator implementation, packet schema, prerequisite pins, private path digest, writer/window packet, or event bound",
+    "change to the validation workflow or pinned compatibility dependency"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_230_validation_because_of_chat_change": false,
+    "rerun_pr_229_228_227_or_225_validation_because_of_operator_pin": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "access_private_production_database_during_operator_pin_ci": false,
+    "issue_private_device_command_during_operator_pin_ci": false,
+    "start_real_observation_window_during_operator_pin_ci": false
+  },
+  "new_tree_rule": "The exact-reviewed operator-pin tree receives one new exact-head validation for its own changed tree. PR #230 evidence remains reused and immutable.",
+  "next_chat_rule": "Read this pin, M3_C_J_REVIEWED_PIN_EXACT_VALIDATION_REUSE.json, M3_C_J_PREFLIGHT_EXACT_VALIDATION_REUSE_PIN.json, and the main exact-head reuse ledger before scheduling validation or any private-device command. Chat changes do not invalidate accepted evidence."
+}

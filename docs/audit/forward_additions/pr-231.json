@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "introduced_by_pr": 231,
+      "owner": "M3-C-J isolated exact-reviewed operator pin",
+      "path": "core/m3_c_j_private_device_operator_pin.py",
+      "symbols": [
+        "execute_exact_reviewed_private_device_observation_window"
+      ],
+      "categories": [
+        "mutation"
+      ],
+      "fingerprints": {
+        "9f604c92850900e926b138309003598ca5320d073b441052993feb7602467689": 2,
+        "a7d53ac616ccf850dbfcc8145a5515d8aa72899f4329fe14da495a9b0ae600e3": 2
+      },
+      "disposition": "M3_C_J_SYNCHRONOUS_SCOPED_REVIEWED_PIN_ONLY",
+      "rationale": "The four attribute assignments open and restore exactly two otherwise absent PR #230 authorization values around one synchronous explicit operator call. The adapter refuses an already-active scope, verifies the immutable implementation head and packet digest before assignment, restores both values in finally on success or failure, and does not expose a runtime startup hook or persistent enabled default. The immutable PR #230 implementation remains byte-for-byte unchanged so its accepted source-bound M2-B evidence remains stable. This scope grants no ambient runtime integration, action, scheduler, speech, legacy migration, goal-authority transfer, M3-E authority, phone-witness replay, retained-sequence replay, or retry authority."
+    },
+    {
+      "introduced_by_pr": 231,
+      "owner": "M3-C-J focused isolated-pin regression harness",
+      "path": "tests/test_v4_m3_c_j_private_device_operator_pin.py",
+      "symbols": [
+        "_digest"
+      ],
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "fingerprints": {
+        "cc96f2f7030bd8ebc60143cfcf557bfe5583627c0aabc3e6b060f82bd2b6f38e": 1
+      },
+      "disposition": "M3_C_J_TEST_ONLY_DETERMINISTIC_LABEL_DIGEST",
+      "rationale": "This occurrence deterministically hashes fixed test labels to construct synthetic evidence and drive samples under pytest temporary paths. It performs no learning, adaptive update, runtime mutation, production database access, real operator command, phone-witness replay, retained-sequence replay, or authority transfer."
+    }
+  ]
+}

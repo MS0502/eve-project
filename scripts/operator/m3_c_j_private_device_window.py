@@ -19,11 +19,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from core.m3_c_j_private_device_operator import (  # noqa: E402
-    PrivateDeviceGoalInput,
-    build_private_device_operator_authorization_candidate,
-    execute_private_device_observation_window,
-    verify_active_private_device_operator_authorization,
+from core.m3_c_j_private_device_operator import PrivateDeviceGoalInput  # noqa: E402
+from core.m3_c_j_private_device_operator_pin import (  # noqa: E402
+    active_reviewed_private_device_operator_authorization_packet,
+    execute_exact_reviewed_private_device_observation_window,
+    verify_reviewed_private_device_operator_authorization,
 )
 
 PRIVATE_FILENAME = "m3_c_j_private_device_bundle_v1.json"
@@ -139,10 +139,8 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repository_head = _repository_head(args.expected_head)
-    packet = build_private_device_operator_authorization_candidate(
-        operator_implementation_head=repository_head,
-    )
-    verify_active_private_device_operator_authorization(packet)
+    packet = active_reviewed_private_device_operator_authorization_packet()
+    verify_reviewed_private_device_operator_authorization(packet)
 
     database_path = _outside_repository(Path(args.database_path), "database path")
     private_root = _outside_repository(Path(args.private_root), "private root")
@@ -157,6 +155,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         journal_path,
         {
             "database_path_plaintext_public": False,
+            "launch_repository_head": repository_head,
             "operator_authorization_digest": packet.authorization_digest,
             "operator_implementation_head": packet.operator_implementation_head,
             "phone_witness_replayed": False,
@@ -166,7 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         },
     )
 
-    bundle = execute_private_device_observation_window(
+    bundle = execute_exact_reviewed_private_device_observation_window(
         packet,
         operator_input=operator_input,
         private_nonce=private_nonce,
@@ -184,6 +183,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         journal_path,
         {
             "database_path_plaintext_public": False,
+            "launch_repository_head": repository_head,
             "operator_authorization_digest": packet.authorization_digest,
             "operator_implementation_head": packet.operator_implementation_head,
             "operator_receipt_digest": bundle.operator_receipt.receipt_digest,
