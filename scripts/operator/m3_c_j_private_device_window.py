@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 
 from core.m3_c_j_private_device_operator import (  # noqa: E402
     PrivateDeviceGoalInput,
-    build_private_device_operator_authorization_candidate,
+    active_reviewed_private_device_operator_authorization_packet,
     execute_private_device_observation_window,
     verify_active_private_device_operator_authorization,
 )
@@ -139,9 +139,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repository_head = _repository_head(args.expected_head)
-    packet = build_private_device_operator_authorization_candidate(
-        operator_implementation_head=repository_head,
-    )
+    packet = active_reviewed_private_device_operator_authorization_packet()
     verify_active_private_device_operator_authorization(packet)
 
     database_path = _outside_repository(Path(args.database_path), "database path")
