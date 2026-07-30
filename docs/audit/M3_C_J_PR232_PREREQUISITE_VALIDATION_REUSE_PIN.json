@@ -1,0 +1,63 @@
+{
+  "schema_version": "eve.m3-c-j.private-path-rebind-prerequisite-reuse.v1",
+  "purpose": "Preserve accepted PR #231 and its immutable M3-C-J prerequisite chain while validating only the new private-path rebind tree.",
+  "pr": 231,
+  "base_sha": "4488103356b7bf285badba451acafd0768885dac",
+  "exact_head": "3286bc84670680e3afc3f406efbfe25e24324175",
+  "exact_run": 30532061696,
+  "focused": "4 passed",
+  "full": "3328 passed",
+  "forward_gate": "0 / 0 / 0 / 0",
+  "artifact_name": "exact-head-validation-3286bc84670680e3afc3f406efbfe25e24324175",
+  "artifact_sha256": "6fda94f82ec94ca878e0abe3c9988676e30fd0601fc4356112fe38611628ff69",
+  "m2e_run": 30532061677,
+  "m2e_result": "6/6 passed",
+  "merge_sha": "59c61101ab2bd1eff29ca9473eb209ef06a8f313",
+  "reused_operator_packet": {
+    "implementation_head": "d8eb3c2d6b576cc313712f831f8b2f1556cdefb2",
+    "authorization_digest": "e360c0e669af3ba89a6f552c81c67e3b3d908171665ed20b510a0044003d13a5",
+    "database_path_digest": "cfcc91e8bab89beceff3ce8f5ecbc325705bd33b256e9d47ca8bdb9008833b80",
+    "required_transition_count": 4,
+    "max_window_events": 32,
+    "runtime_integration_authorized": false,
+    "legacy_goal_authority_transferred": false,
+    "legacy_migration_authorized": false,
+    "m3_e_authority_open": false
+  },
+  "validation_execution_history": {
+    "pr_231_full_suite_executions": 1,
+    "pr_230_validation_rerun": false,
+    "pr_229_validation_rerun": false,
+    "pr_228_validation_rerun": false,
+    "pr_227_validation_rerun": false,
+    "pr_225_validation_rerun": false,
+    "phone_witness_211_rerun": false,
+    "retained_sequences_1_through_5_rerun": false,
+    "failed_local_path_lookup_was_operator_execution": false,
+    "failed_local_path_lookup_accessed_sqlite": false
+  },
+  "non_invalidators": [
+    "chat change",
+    "shell or operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "failed pre-I/O placeholder, stdin, history, or empty-environment path lookup",
+    "creation of a descendant private-path rebind branch containing the PR #231 merge SHA"
+  ],
+  "invalidators": [
+    "change to the accepted PR #230 operator implementation or PR #231 isolated operator pin",
+    "change beyond the explicitly reviewed private-path digest and its derived writer/window/operator authorization digests",
+    "change to storage limits, event count, transition count, runtime authority flags, or validation workflow",
+    "artifact loss, corruption, or SHA-256 mismatch"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_231_or_prerequisite_validation_because_of_path_recovery_failure": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "access_private_production_database_during_rebind_ci": false,
+    "issue_private_device_command_during_rebind_ci": false,
+    "start_real_observation_window_during_rebind_ci": false,
+    "silently_retry_partial_or_completed_private_device_execution": false
+  },
+  "new_tree_rule": "PR #232 receives validation only for its isolated rebind adapter, entrypoint, tests, and audit records. Accepted prerequisite evidence remains immutable and is not rerun.",
+  "next_chat_rule": "Read this pin and PR #231's durable post-merge record before any validation or operator action. A chat or shell change never authorizes duplicate CI, witness, retained-sequence, or private-device execution."
+}
