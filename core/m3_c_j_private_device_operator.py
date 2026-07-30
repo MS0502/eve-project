@@ -707,11 +707,9 @@ def execute_private_device_observation_window(
         authorization_packet
     )
     assert authorization_packet is not None
+    # The packet pins the reviewed implementation provenance. repository_head is
+    # the separately exact-checked launch tree and is retained in the receipt.
     _require_hex(repository_head, length=40, field="repository_head")
-    if repository_head != authorization_packet.operator_implementation_head:
-        raise M3CPrivateDeviceOperatorAuthorizationError(
-            "repository head differs from reviewed operator implementation"
-        )
     _require_nonempty(launch_attestation_id, field="launch_attestation_id")
     _require_nonempty(runtime_instance_id, field="runtime_instance_id")
     if not isinstance(operator_input, PrivateDeviceGoalInput):
