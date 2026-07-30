@@ -9,6 +9,7 @@ import pytest
 import core.m3_c_h_dormant_goal_lifecycle_writer as writer_module
 import core.m3_c_j_goal_lifecycle_observation_window as window_module
 import core.m3_c_j_private_device_operator as operator_module
+import core.m3_c_j_private_device_operator_pin as pin_module
 from core.m3_c_b_goal_selection_kernel import ALLOWED_DRIVES, DriveSample, GoalCandidate
 from core.m3_c_h_dormant_goal_lifecycle_writer import (
     GoalLifecycleWriterAuthorizationPacket,
@@ -23,9 +24,11 @@ from core.m3_c_j_private_device_operator import (
     M3CPrivateDeviceOperatorAuthorizationError,
     PrivateDeviceGoalInput,
     PrivateDeviceOperatorAuthorizationPacket,
+)
+from core.m3_c_j_private_device_operator_pin import (
     active_reviewed_private_device_operator_authorization_packet,
-    execute_private_device_observation_window,
-    verify_active_private_device_operator_authorization,
+    execute_exact_reviewed_private_device_observation_window,
+    verify_reviewed_private_device_operator_authorization,
 )
 from core.sqlite_shadow_store import ShadowStoragePolicy
 
@@ -121,7 +124,7 @@ def _temporary_packets(database_path: Path):
     return writer, window, operator
 
 
-def _activate_temporary_packets(
+def _activate_temporary_dependencies(
     database_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -146,22 +149,18 @@ def _activate_temporary_packets(
         window.authorization_digest,
     )
     monkeypatch.setattr(
-        operator_module,
-        "_ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD",
-        operator.operator_implementation_head,
-    )
-    monkeypatch.setattr(
-        operator_module,
-        "_ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST",
-        operator.authorization_digest,
-    )
-    monkeypatch.setattr(
         operator_module, "active_reviewed_writer_authorization_packet", lambda: writer
     )
     monkeypatch.setattr(
         operator_module,
         "active_reviewed_observation_window_authorization_packet",
         lambda: window,
+    )
+    monkeypatch.setattr(
+        pin_module, "REVIEWED_OPERATOR_IMPLEMENTATION_HEAD", operator.operator_implementation_head
+    )
+    monkeypatch.setattr(
+        pin_module, "REVIEWED_OPERATOR_AUTHORIZATION_DIGEST", operator.authorization_digest
     )
     return operator
 
@@ -178,28 +177,30 @@ def test_exact_reviewed_operator_packet_is_pinned_without_io():
     assert packet.legacy_goal_authority_transferred is False
     assert packet.legacy_migration_authorized is False
     assert packet.m3_e_authority_open is False
-    assert verify_active_private_device_operator_authorization(packet) == (
+    assert verify_reviewed_private_device_operator_authorization(packet) == (
         PINNED_AUTHORIZATION_DIGEST
     )
+    assert operator_module._ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD is None
+    assert operator_module._ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST is None
 
 
 def test_nonreviewed_packet_and_scope_escape_fail_closed():
     packet = active_reviewed_private_device_operator_authorization_packet()
-    with pytest.raises(M3CPrivateDeviceOperatorAuthorizationError, match="active reviewed"):
-        verify_active_private_device_operator_authorization(
+    with pytest.raises(M3CPrivateDeviceOperatorAuthorizationError, match="reviewed head"):
+        verify_reviewed_private_device_operator_authorization(
             replace(packet, operator_implementation_head="6" * 40)
         )
     with pytest.raises(M3CPrivateDeviceOperatorAuthorizationError, match="scope"):
         replace(packet, runtime_integration_authorized=True)
 
 
-def test_launch_head_is_receipt_bound_separately_from_implementation_provenance(
+def test_launch_head_is_receipt_bound_and_pin_scope_is_restored(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ):
     database = tmp_path / "database" / "goal.sqlite3"
-    operator = _activate_temporary_packets(database, monkeypatch)
-    bundle = execute_private_device_observation_window(
+    operator = _activate_temporary_dependencies(database, monkeypatch)
+    bundle = execute_exact_reviewed_private_device_observation_window(
         operator,
         operator_input=_input(),
         private_nonce=b"p" * 32,
@@ -215,18 +216,23 @@ def test_launch_head_is_receipt_bound_separately_from_implementation_provenance(
     assert bundle.operator_receipt.exact_transition_count == 4
     assert bundle.operator_receipt.writer_disabled_after_append is True
     assert bundle.operator_receipt.separate_restore_verified is True
+    assert operator_module._ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD is None
+    assert operator_module._ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST is None
 
 
-def test_operator_command_uses_active_packet_and_exact_launch_checkout():
+def test_operator_command_checks_launch_before_private_paths_and_uses_pin_adapter():
     source = (
         Path(__file__).resolve().parents[1]
         / "scripts/operator/m3_c_j_private_device_window.py"
     ).read_text(encoding="utf-8")
+    assert "m3_c_j_private_device_operator_pin" in source
     assert "active_reviewed_private_device_operator_authorization_packet" in source
+    assert "execute_exact_reviewed_private_device_observation_window" in source
     assert "build_private_device_operator_authorization_candidate" not in source
     assert "repository_head = _repository_head(args.expected_head)" in source
     assert source.index("repository_head = _repository_head(args.expected_head)") < source.index(
         "database_path = _outside_repository"
     )
-    assert "phone_witness_replayed\": False" in source
-    assert "retained_sequences_replayed\": False" in source
+    assert '"launch_repository_head": repository_head' in source
+    assert '"phone_witness_replayed": False' in source
+    assert '"retained_sequences_replayed": False' in source
