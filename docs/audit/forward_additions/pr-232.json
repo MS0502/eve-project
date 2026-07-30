@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "introduced_by_pr": 232,
+      "owner": "M3-C-J isolated private database-path rebind",
+      "path": "core/m3_c_j_private_device_path_rebind.py",
+      "symbols": [
+        "execute_rebound_private_device_observation_window"
+      ],
+      "categories": [
+        "mutation"
+      ],
+      "fingerprints": {
+        "05a7872269e4e88851f5288c4632ab1fbea3195208c083eca27d268d1f7d5a37": 2,
+        "31d058f5cb93e68f403751a79cccd11d448861e31d98d81be27e8fce23c45e1c": 2,
+        "3ef551a293a4e4d5797ce6ef09ce6a7b7f5f08908edf9c2f3af5cead8cd50db0": 2,
+        "3faec01050253380804c8a462c88c12672c31a81a288efb93351d47943bc34e0": 2,
+        "eb32c80dd113aba19ac8b0dbd358e415ca48abfbc9428d0d47147ba32d9cb31f": 2
+      },
+      "disposition": "M3_C_J_SYNCHRONOUS_SCOPED_PRIVATE_PATH_REBIND_ONLY",
+      "rationale": "Each fingerprint occurs exactly twice: once to replace one reviewed writer/window/operator in-memory pin immediately before the explicit synchronous private-device call and once to restore the prior accepted value in finally. The adapter first verifies the immutable prerequisite packets, all rebound authorization digests, a clean lowercase launch head, and the exact lexical private database-path digest. It refuses a non-pristine scope and an unreviewed path before SQLite construction. No startup hook, persistent enabled default, ambient runtime capability, action, scheduler, speech, legacy migration, goal-authority transfer, M3-E authority, phone-witness replay, retained-sequence replay, or silent retry is introduced. PR #225/#229/#230/#231 implementation files remain byte-for-byte unchanged."
+    },
+    {
+      "introduced_by_pr": 232,
+      "owner": "M3-C-J rebound operator process entrypoint",
+      "path": "scripts/operator/m3_c_j_private_device_window_rebound.py",
+      "symbols": [
+        "main"
+      ],
+      "categories": [
+        "mutation"
+      ],
+      "fingerprints": {
+        "2d617113c0d21db60efa1424ae5133f2b68c14ae6c3bf6aa3234c2c53dac4594": 2,
+        "6d64ad8f6f34bbd7a0ed2e8177ebc50ab6434f7049e6cfa5cd9f175d92cd5e43": 2,
+        "914d01fc65da3d38e8c94afa98414a6eab7ba2e1c7c0cb421c7b8e6d80b90e7c": 2
+      },
+      "disposition": "M3_C_J_PROCESS_LOCAL_ENTRYPOINT_BINDING_ONLY",
+      "rationale": "The wrapper swaps exactly three imported operator functions inside main so the accepted PR #230 parser and output discipline use the reviewed rebound packet. Every binding is restored in finally on success or failure, and the process exits after the explicit command. Import is side-effect free. The wrapper performs no database access itself and grants no persistent or ambient runtime authority."
+    }
+  ]
+}
