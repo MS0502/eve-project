@@ -1,12 +1,11 @@
-"""Exact-reviewed single-use private-device operator for the M3-C-J window.
+"""Single-use private-device operator preflight for the M3-C-J window.
 
-Import is side-effect free. The reviewed implementation head and authorization
-packet digest are pinned, but they authorize only one separately invoked bounded
-operator command with explicit private paths, nonce material, and reviewed input.
-The operator requires a new empty reviewed database path, creates a verified
-baseline backup, appends exactly one four-transition lifecycle chain, disables
-the writer, verifies final integrity/replay, restores the baseline into a
-separate path, and returns private/public evidence mappings.
+Import is side-effect free. The execution function is unreachable until a later
+exact-reviewed operator implementation head and authorization digest are pinned.
+When separately invoked, it requires a new empty reviewed database path, creates
+a verified baseline backup, appends exactly one four-transition lifecycle chain,
+disables the writer, verifies final integrity/replay, restores the baseline into
+a separate path, and returns private/public evidence mappings.
 """
 from __future__ import annotations
 
@@ -78,14 +77,11 @@ M3_C_J_PIN_MERGE_SHA = "361ed88be399ed7650a946b58e713bc14253384e"
 REQUIRED_TRANSITION_COUNT = 4
 EXPECTED_LIFECYCLE_STATES = ("proposed", "validated", "eligible", "selected")
 
-# M3-C-J exact-reviewed operator pins. These authorize only an explicit,
-# single-use private-device command; import still performs no I/O or execution.
-_ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD: str | None = (
-    "d8eb3c2d6b576cc313712f831f8b2f1556cdefb2"
-)
-_ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST: str | None = (
-    "e360c0e669af3ba89a6f552c81c67e3b3d908171665ed20b510a0044003d13a5"
-)
+# Deliberately absent in this preflight. A later exact-reviewed pin slice may
+# authorize this operator tree, but still cannot execute it without explicit
+# private caller paths, nonce material, and a reviewed input file.
+_ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD: str | None = None
+_ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST: str | None = None
 
 
 class M3CPrivateDeviceOperatorError(RuntimeError):
@@ -436,25 +432,9 @@ def build_private_device_operator_authorization_candidate(
     )
 
 
-def active_reviewed_private_device_operator_authorization_packet(
-) -> PrivateDeviceOperatorAuthorizationPacket:
-    """Return the one immutable reviewed operator packet without performing I/O."""
-
-    packet = build_private_device_operator_authorization_candidate(
-        operator_implementation_head=_ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD or "",
-    )
-    if packet.authorization_digest != _ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST:
-        raise M3CPrivateDeviceOperatorAuthorizationError(
-            "checked-in private-device operator packet digest is inconsistent"
-        )
-    return packet
-
-
 def verify_active_private_device_operator_authorization(
     packet: PrivateDeviceOperatorAuthorizationPacket | None,
 ) -> str:
-    """Verify the exact reviewed operator packet before any private path access."""
-
     if (
         _ACTIVE_REVIEWED_OPERATOR_IMPLEMENTATION_HEAD is None
         or _ACTIVE_REVIEWED_OPERATOR_AUTHORIZATION_DIGEST is None
@@ -707,9 +687,11 @@ def execute_private_device_observation_window(
         authorization_packet
     )
     assert authorization_packet is not None
-    # The packet pins the reviewed implementation provenance. repository_head is
-    # the separately exact-checked launch tree and is retained in the receipt.
     _require_hex(repository_head, length=40, field="repository_head")
+    if repository_head != authorization_packet.operator_implementation_head:
+        raise M3CPrivateDeviceOperatorAuthorizationError(
+            "repository head differs from reviewed operator implementation"
+        )
     _require_nonempty(launch_attestation_id, field="launch_attestation_id")
     _require_nonempty(runtime_instance_id, field="runtime_instance_id")
     if not isinstance(operator_input, PrivateDeviceGoalInput):
