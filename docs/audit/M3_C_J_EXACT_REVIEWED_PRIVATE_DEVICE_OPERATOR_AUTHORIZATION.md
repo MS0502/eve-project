@@ -20,6 +20,14 @@ merge SHA:      4488103356b7bf285badba451acafd0768885dac
 
 The downloaded artifact SHA-256 was recomputed before this pin was created. PR #230 full-suite ran exactly once on its final registered head. Earlier discovery heads stopped before full-suite.
 
+## Immutable implementation and isolated pin adapter
+
+`core/m3_c_j_private_device_operator.py` remains byte-for-byte identical to the accepted PR #230 tree. This preserves the exact reviewed implementation and its M2-B evidence identifiers rather than shifting historical source-bound IDs merely to add authorization metadata.
+
+The authorization lives in the separate import-side-effect-free adapter `core/m3_c_j_private_device_operator_pin.py`. It owns the reviewed constants, packet verification, synchronous scoped invocation, launch-head receipt binding, and unconditional restoration of the preflight module's absent authorization pins.
+
+The scoped invocation is permitted only because the operator is an explicit single-use process with no runtime integration. It refuses an already-active scope, opens only the two reviewed in-memory pin values, executes one synchronous call, and restores both values in `finally`. It grants no ambient capability to another runtime caller.
+
 ## Reviewed packet
 
 ```text
@@ -46,9 +54,11 @@ The packet binds the reviewed PR #230 implementation provenance, active writer/w
 The pinned implementation head is immutable provenance and cannot equal a descendant pin commit without a circular commit-hash dependency. The explicit operator command therefore performs a separate clean-checkout attestation:
 
 1. `--expected-head` must equal the actual clean checkout head;
-2. the packet must equal the checked-in reviewed implementation packet;
-3. the receipt records both `operator_implementation_head` and `repository_head`;
-4. private paths are not inspected until both checks pass.
+2. the packet must equal the reviewed PR #230 implementation packet;
+3. the immutable preflight call receives its reviewed implementation head;
+4. the adapter deterministically replaces only the returned receipt's `repository_head` with the independently verified launch head;
+5. the receipt therefore records both `operator_implementation_head` and `repository_head`;
+6. private paths are not inspected until packet and launch checks pass.
 
 The exact launch head for a real command must be the accepted final head of this pin PR or a later separately reviewed descendant that explicitly reuses it. A chat, branch, PR metadata, or operator-session change is not authorization.
 
