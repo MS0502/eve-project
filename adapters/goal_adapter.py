@@ -112,3 +112,5 @@ class GoalAdapter:
             authoritative_call=authoritative_call,
         )
         return execution.authoritative_result
+
+# from core.m3_c_m_dormant_production_origin_shadow_tap import ProductionGoalOperation
