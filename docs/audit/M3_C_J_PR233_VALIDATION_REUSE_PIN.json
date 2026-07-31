@@ -1,0 +1,88 @@
+{
+  "schema_version": "eve.m3-c-j.pr233-validation-reuse-pin.v1",
+  "purpose": "Reuse merged PR #233 exact evidence while validating only the new private-device public-review audit tree and permanently prohibiting duplicate execution of the completed single-use observation window.",
+  "pr": 233,
+  "base_sha": "af0b971e366631f9c93eb8c8c0dff87b04828312",
+  "exact_head": "64ea123c4fc7f60184755f0bb764ae012085239e",
+  "exact_run": 30600834200,
+  "focused": "0 selected; no changed Python",
+  "full": "3332 passed",
+  "forward_gate": "0 / 0 / 0 / 0",
+  "artifact_name": "exact-head-validation-64ea123c4fc7f60184755f0bb764ae012085239e",
+  "artifact_sha256": "d3e55213ec2b46c86232aaaf00e272245e783f878f8459992c7f08eaaa9aa4cf",
+  "m2e_run": 30600834190,
+  "m2e_result": "6/6 passed",
+  "merge_sha": "901045d16df81d51be927173a26bb627b7572ff5",
+  "reviewed_readiness": {
+    "readiness_review_digest": "61f9fdc30142f7c99ff645ecb4d0ff1263969cc6e88cc9950ad82f20c6f6717f",
+    "private_input_digest": "893694b44997cb0fd1b487e8f031a2a37352ff8aa96a11f00f272b6371172620",
+    "private_input_binding_digest": "e3ec5e68baee57758e24d18ff2cbf6c85866b163fb58b04428ab724ef4388776",
+    "selection_receipt_digest": "fcb2dd0aa7c75e19fdb71694d542c38507050fb88ead2bec88af67d9d8c4bd88",
+    "database_path_digest": "269c89e0e6d5614e2ca86ae5e68b261f3bb0d67bc12bf2045957052cf82ef715"
+  },
+  "completed_private_device_execution": {
+    "public_review_digest": "3954f979a16d7f71892debcef442b60c67bcb75f47131d30e2126e04ada670ff",
+    "launch_head": "901045d16df81d51be927173a26bb627b7572ff5",
+    "operator_implementation_head": "d8eb3c2d6b576cc313712f831f8b2f1556cdefb2",
+    "operator_authorization_digest": "a344de2cb41a2ffcf3923680b57c297ba340127b9f92e11d4a6ead72deffc7bb",
+    "window_authorization_digest": "7347ae8a0e9cf8b5c44e519728847e8a2e2cb87bd4ea7fc2baf63880f3f30e69",
+    "window_receipt_digest": "c14499605104cfb66e7caec55e5146322e00e1b2d049a30e9bdbb132634aeab0",
+    "rollback_evidence_digest": "d70aad0ee03a43588bed66e00769933d499269f1143eb71078561ce0155891cb",
+    "completed_operator_executions": 1,
+    "exact_transition_count": 4,
+    "observed_event_count": 4,
+    "first_sequence": 1,
+    "last_sequence": 4,
+    "duplicate_acceptance_count": 0,
+    "conflict_acceptance_count": 0
+  },
+  "prelaunch_failure_classification": {
+    "direct_file_import_failure_count": 1,
+    "operator_main_reached": false,
+    "single_use_paths_absent_after_failure": true,
+    "single_use_execution_consumed": false,
+    "successful_launch_used_module_entrypoint": true
+  },
+  "validation_execution_history": {
+    "pr_233_full_suite_executions": 1,
+    "pr_232_validation_rerun": false,
+    "pr_231_validation_rerun": false,
+    "pr_230_validation_rerun": false,
+    "pr_229_validation_rerun": false,
+    "pr_228_validation_rerun": false,
+    "pr_227_validation_rerun": false,
+    "pr_225_validation_rerun": false,
+    "phone_witness_211_rerun": false,
+    "retained_sequences_1_through_5_rerun": false,
+    "controlled_input_readiness_rerun": false,
+    "completed_private_device_operator_rerun": false
+  },
+  "non_invalidators": [
+    "chat change",
+    "shell or operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "documentation-only audit of the already returned public receipt",
+    "preservation of the completed private database and evidence in place"
+  ],
+  "invalidators": [
+    "change to the accepted public review JSON or its canonical digest",
+    "change to the PR #233 launch ancestry or accepted prerequisite chain",
+    "claim that private path plaintext, input plaintext, nonce, journal, bundle, backup, or restore evidence was committed",
+    "claim that runtime integration, legacy authority transfer, migration, action, scheduler, speech, or M3-E was authorized",
+    "artifact loss, corruption, or SHA-256 mismatch"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_233_or_prerequisite_validation_because_of_chat_change": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "rerun_controlled_input_readiness": false,
+    "rerun_completed_private_device_operator": false,
+    "delete_or_recreate_private_database_or_sidecars": false,
+    "delete_or_recreate_private_journal_or_bundle": false,
+    "delete_or_recreate_backup_or_restore_evidence": false,
+    "access_private_production_database_during_audit_ci": false,
+    "open_runtime_integration_or_m3_e_from_this_receipt": false
+  },
+  "new_tree_rule": "This audit PR receives one final-head validation for its documentation tree only. Accepted PR #233 and prerequisite evidence remain immutable and are not rerun. The completed private-device command is never executed from CI.",
+  "next_chat_rule": "Read this pin and M3_C_J_PRIVATE_DEVICE_PUBLIC_REVIEW.json before any validation or continuation. Chat or shell changes never authorize duplicate CI, readiness, witness, retained-sequence, database, backup, restore, or private-device execution."
+}
