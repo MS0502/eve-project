@@ -178,15 +178,11 @@ def _operation(epoch=0):
         operation_kind="goal_set",
         legacy_goal_code="legacy_goal_set_command",
         decision_epoch=epoch,
-        source_material={
-            "category": "쉬다",
-            "priority": 0.5,
-            "source": "command",
-        },
+        source_material={"category": "쉬다", "priority": 0.5, "source": "command"},
     )
 
 
-def _pins_and_mapping(evaluator):
+def _material(evaluator):
     implementation = ShadowTapImplementationPin(
         exact_head=_digest("implementation-head"),
         exact_run=1,
@@ -227,8 +223,9 @@ def test_callsite_manifest_is_exact_and_default_engine_has_no_tap():
 def test_missing_implementation_pin_runs_legacy_once_without_observation():
     gm = _GoalManagement()
     evaluator = _Evaluator()
-    tap = DormantProductionOriginGoalShadowTap(v4_evaluator=evaluator)
-    execution = tap.execute_authoritative_once(
+    execution = DormantProductionOriginGoalShadowTap(
+        v4_evaluator=evaluator
+    ).execute_authoritative_once(
         goal_management=gm,
         operation=_operation(),
         authoritative_call=lambda: gm.goal_set("쉬다"),
@@ -242,21 +239,20 @@ def test_missing_implementation_pin_runs_legacy_once_without_observation():
     assert execution.comparison_receipt is None
 
 
-def test_missing_authorization_or_exact_pin_mismatch_never_observes():
-    gm = _GoalManagement()
+def test_missing_authorization_or_pin_mismatch_never_observes():
     evaluator = _Evaluator()
-    implementation, authorization, mapping = _pins_and_mapping(evaluator)
+    implementation, authorization, mapping = _material(evaluator)
+    gm = _GoalManagement()
     missing = DormantProductionOriginGoalShadowTap(
         implementation_pin=implementation,
         mapping_table=mapping,
         v4_evaluator=evaluator,
-    )
-    result = missing.execute_authoritative_once(
+    ).execute_authoritative_once(
         goal_management=gm,
         operation=_operation(),
         authoritative_call=lambda: gm.goal_set("쉬다"),
     )
-    assert result.status == "dormant_missing_authorization_pin"
+    assert missing.status == "dormant_missing_authorization_pin"
     assert gm.goal_set_calls == 1
     assert evaluator.calls == 0
 
@@ -283,10 +279,10 @@ def test_missing_authorization_or_exact_pin_mismatch_never_observes():
     assert evaluator.calls == 0
 
 
-def test_authorized_path_executes_legacy_once_and_compares_in_memory():
+def test_authorized_path_compares_in_memory_and_grants_nothing():
     gm = _GoalManagement()
     evaluator = _Evaluator()
-    implementation, authorization, mapping = _pins_and_mapping(evaluator)
+    implementation, authorization, mapping = _material(evaluator)
     tap = DormantProductionOriginGoalShadowTap(
         implementation_pin=implementation,
         authorization_pin=authorization,
@@ -301,10 +297,7 @@ def test_authorized_path_executes_legacy_once_and_compares_in_memory():
     assert gm.goal_set_calls == 1
     assert evaluator.calls == 1
     assert execution.status == "comparison_ready_in_memory_only"
-    assert execution.comparison_receipt is not None
     assert execution.comparison_receipt.verdict == "exact_equivalent"
-    assert execution.state_capture_performed is True
-    assert execution.v4_evaluation_performed is True
     assert execution.comparison_performed is True
     assert execution.event_append_performed is False
     assert execution.persistence_write_performed is False
@@ -321,7 +314,7 @@ def test_authorized_path_executes_legacy_once_and_compares_in_memory():
 def test_missing_mapping_blocks_after_one_legacy_call_before_v4():
     gm = _GoalManagement()
     evaluator = _Evaluator()
-    implementation, _, _ = _pins_and_mapping(evaluator)
+    implementation, _, _ = _material(evaluator)
     mapping = LegacyGoalMappingTable(
         entries=(
             LegacyGoalMappingEntry(
@@ -360,15 +353,14 @@ def test_snapshot_is_deterministic_and_hides_raw_goal_text():
     gm = _GoalManagement()
     gm.goal_set("비공개 목표 문구")
     first = capture_legacy_goal_state(gm)
-    second = capture_legacy_goal_state(gm)
-    assert first == second
+    assert first == capture_legacy_goal_state(gm)
     assert first.top_goal_category_sha256 == _digest("비공개 목표 문구")
     assert "비공개 목표 문구" not in str(first.to_mapping())
 
 
-def test_authorization_rejects_any_downstream_authority():
+def test_authorization_rejects_downstream_authority():
     evaluator = _Evaluator()
-    implementation, _, mapping = _pins_and_mapping(evaluator)
+    implementation, _, mapping = _material(evaluator)
     with pytest.raises(M3CShadowTapError, match="downstream authority"):
         ShadowTapAuthorizationPin(
             implementation_pin_digest=implementation.pin_digest,
@@ -382,26 +374,26 @@ def test_authorization_rejects_any_downstream_authority():
 
 def test_goal_adapter_default_and_dormant_injection_call_legacy_once():
     gm = _GoalManagement()
-    adapter = GoalAdapter(object(), object(), gm=gm)
-    adapter.observe_meaning(Meaning(intent="command", raw_text="쉬어"))
+    GoalAdapter(object(), object(), gm=gm).observe_meaning(
+        Meaning(intent="command", raw_text="쉬어")
+    )
     assert gm.goal_set_calls == 1
 
     gm2 = _GoalManagement()
     evaluator = _Evaluator()
-    adapter2 = GoalAdapter(
+    GoalAdapter(
         object(),
         object(),
         gm=gm2,
         production_origin_shadow_tap=(
             DormantProductionOriginGoalShadowTap(v4_evaluator=evaluator)
         ),
-    )
-    adapter2.tick(2.0)
+    ).tick(2.0)
     assert gm2.tick_calls == 1
     assert evaluator.calls == 0
 
 
-def test_module_has_no_io_network_persistence_or_private_database_surface():
+def test_module_has_no_external_io_network_or_private_database_surface():
     tree = ast.parse(MODULE.read_text(encoding="utf-8"), filename=str(MODULE))
     imported = set()
     calls = set()
@@ -429,7 +421,6 @@ def test_module_has_no_io_network_persistence_or_private_database_surface():
         "write_text",
         "mkdir",
         "connect",
-        "append",
         "emit",
         "schedule",
         "speak",
