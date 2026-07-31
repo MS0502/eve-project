@@ -1,0 +1,61 @@
+{
+  "schema_version": "eve.m3-c-j.pr232-validation-reuse-pin.v1",
+  "purpose": "Reuse merged PR #232 exact evidence while validating only the new controlled-input readiness audit tree.",
+  "pr": 232,
+  "base_sha": "59c61101ab2bd1eff29ca9473eb209ef06a8f313",
+  "exact_head": "653f3c4c80ce2656986b211f7bd48e8d4e67c902",
+  "exact_run": 30536098540,
+  "focused": "4 passed",
+  "full": "3332 passed",
+  "forward_gate": "0 / 0 / 0 / 0",
+  "artifact_name": "exact-head-validation-653f3c4c80ce2656986b211f7bd48e8d4e67c902",
+  "artifact_sha256": "484e3e3f652b857b52c0fc3d33471f4279cf7eba23fb365a842f56432bf3be0e",
+  "m2e_run": 30536098541,
+  "m2e_result": "6/6 passed",
+  "merge_sha": "af0b971e366631f9c93eb8c8c0dff87b04828312",
+  "reused_rebound_packet": {
+    "database_path_digest": "269c89e0e6d5614e2ca86ae5e68b261f3bb0d67bc12bf2045957052cf82ef715",
+    "writer_authorization_digest": "852e20984a9d670ec2a690106984ebc5d0071daae63bac0c6ebf7f7b255bb1d4",
+    "window_authorization_digest": "7347ae8a0e9cf8b5c44e519728847e8a2e2cb87bd4ea7fc2baf63880f3f30e69",
+    "operator_authorization_digest": "a344de2cb41a2ffcf3923680b57c297ba340127b9f92e11d4a6ead72deffc7bb",
+    "required_transition_count": 4,
+    "max_window_events": 32
+  },
+  "validation_execution_history": {
+    "pr_232_full_suite_executions": 1,
+    "pr_231_validation_rerun": false,
+    "pr_230_validation_rerun": false,
+    "pr_229_validation_rerun": false,
+    "pr_228_validation_rerun": false,
+    "pr_227_validation_rerun": false,
+    "pr_225_validation_rerun": false,
+    "phone_witness_211_rerun": false,
+    "retained_sequences_1_through_5_rerun": false,
+    "readiness_command_accessed_sqlite": false,
+    "readiness_command_issued_operator": false
+  },
+  "non_invalidators": [
+    "chat change",
+    "shell or operator-session change",
+    "PR body, title, comment, review, Draft, or Ready metadata change",
+    "creation and review of a new canonical private input without production database access",
+    "documentation-only descendant audit tree preserving the PR #232 implementation"
+  ],
+  "invalidators": [
+    "change to the PR #232 rebind implementation or accepted prerequisite chain",
+    "change to the reviewed private input after its public digest and binding digest were accepted",
+    "change to storage limits, event count, transition count, authority flags, or validation workflow",
+    "artifact loss, corruption, or SHA-256 mismatch",
+    "ancestry break from PR #232 merge SHA"
+  ],
+  "execution_prohibitions": {
+    "rerun_pr_232_or_prerequisite_validation_because_of_chat_change": false,
+    "rerun_phone_witness_pr_211": false,
+    "rerun_retention_sequences_1_through_5": false,
+    "access_private_production_database_during_audit_ci": false,
+    "issue_private_device_command_during_audit_ci": false,
+    "silently_retry_partial_or_completed_private_device_execution": false
+  },
+  "new_tree_rule": "This audit PR receives one final-head validation for its documentation tree only. Accepted PR #232 and prerequisite evidence remain immutable and are not rerun.",
+  "next_chat_rule": "Read this pin and M3_C_J_CONTROLLED_INPUT_READINESS_REVIEW.json before any validation or operator action. Chat or shell changes never authorize duplicate CI, witness, retained-sequence, readiness, or private-device execution."
+}
