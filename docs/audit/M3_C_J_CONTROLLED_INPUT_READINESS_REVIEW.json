@@ -1,0 +1,62 @@
+{
+  "schema_version": "eve.m3-c-j.controlled-input-readiness-public-pin.v1",
+  "purpose": "Pin the human-reviewed public readiness result for one operator-controlled M3-C-J private-device input without publishing the private input, nonce, database path plaintext, or private filesystem state.",
+  "reviewed_on": "2026-07-31",
+  "base_merge_sha": "af0b971e366631f9c93eb8c8c0dff87b04828312",
+  "readiness_review_digest": "61f9fdc30142f7c99ff645ecb4d0ff1263969cc6e88cc9950ad82f20c6f6717f",
+  "readiness_review": {
+    "canonical_input_created": true,
+    "controlled_input_kind": "operator_controlled_new_window_material",
+    "database_path_digest": "269c89e0e6d5614e2ca86ae5e68b261f3bb0d67bc12bf2045957052cf82ef715",
+    "database_path_digest_matches": true,
+    "decision_kind": "initial_selection",
+    "evaluated_winner_score": 0.5238636363636363,
+    "exact_transition_count": 4,
+    "live_drive_observation_claimed": false,
+    "nonce_private": true,
+    "operator_command_issued": false,
+    "phone_witness_replayed": false,
+    "private_input_binding_digest": "e3ec5e68baee57758e24d18ff2cbf6c85866b163fb58b04428ab724ef4388776",
+    "private_input_digest": "893694b44997cb0fd1b487e8f031a2a37352ff8aa96a11f00f272b6371172620",
+    "production_database_accessed": false,
+    "repository_head": "af0b971e366631f9c93eb8c8c0dff87b04828312",
+    "retained_sequences_replayed": false,
+    "schema_version": "eve.m3-c-j.controlled-input-readiness-review.v1",
+    "selected_candidate_id": "8c4428577b1d07713c4de86f0024e452c36eb85f26f14cc987ec35e7845358de",
+    "selection_receipt_digest": "fcb2dd0aa7c75e19fdb71694d542c38507050fb88ead2bec88af67d9d8c4bd88",
+    "single_use_paths_absent": true,
+    "transition_eligible": true,
+    "transition_states": [
+      "proposed",
+      "validated",
+      "eligible",
+      "selected"
+    ]
+  },
+  "human_review": {
+    "controlled_values_reviewed": true,
+    "readiness_execution_treated_as_review_approval": true,
+    "merge_and_continue_delegated": true,
+    "one_explicit_private_device_command_eligible_after_merge": true,
+    "silent_retry_authorized": false
+  },
+  "public_boundary": {
+    "private_input_plaintext_committed": false,
+    "private_nonce_committed": false,
+    "database_path_plaintext_committed": false,
+    "private_output_root_committed": false,
+    "live_drive_observation_claimed": false,
+    "production_database_accessed": false,
+    "operator_command_issued": false,
+    "observation_window_started": false,
+    "phone_witness_replayed": false,
+    "retained_sequences_1_through_5_replayed": false,
+    "runtime_integration_authorized": false,
+    "action_scheduler_speech_authorized": false,
+    "legacy_goal_authority_transferred": false,
+    "legacy_migration_authorized": false,
+    "m3_e_authority_open": false
+  },
+  "single_use_rule": "After this audit record merges, exactly one explicit private-device command may consume the reviewed private input and nonce on a clean accepted launch head. A partial or completed attempt is immutable and must not be deleted or silently retried.",
+  "next_chat_rule": "A chat, shell, or operator-session change does not invalidate PR #232 validation, this reviewed readiness result, the #211 witness, or retained sequences 1 through 5, and does not authorize duplicate execution."
+}
