@@ -24,6 +24,7 @@ from core.m3_c_o_private_device_goal_dual_read_operator import (  # noqa: E402
     read_canonical_private_package,
 )
 from core.m3_c_p_private_device_goal_window_authorization_pin import (  # noqa: E402
+    M3CPAuthorizationPinError,
     active_local_reviewed_authorization_pin,
     binding_from_private_package,
 )
@@ -104,7 +105,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # The capture command requires every runtime activation seam to remain closed.
     try:
         active_local_reviewed_authorization_pin()
-    except Exception as exc:
+    except M3CPAuthorizationPinError as exc:
         if "no active local reviewed" not in str(exc):
             raise
     else:
