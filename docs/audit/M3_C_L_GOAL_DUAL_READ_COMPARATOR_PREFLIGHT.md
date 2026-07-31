@@ -74,8 +74,7 @@ It emits one immutable canonical comparison receipt.
 `state_changed` is derived only from the before/after digest inequality. It is
 not a caller-supplied boolean.
 
-The fixture represents the future order in which legacy executes exactly once
-as the sole behavior authority. M3-C-L does not perform that execution itself.
+The fixture represents the future order in which legacy executes exactly once as the sole behavior authority. M3-C-L does not perform that execution itself.
 
 ## V4 shadow observation contract
 
