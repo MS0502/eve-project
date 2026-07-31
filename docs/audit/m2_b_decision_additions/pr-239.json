@@ -1,0 +1,40 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 239,
+  "base_candidate_surface_digest": "fe3c3dd983b2015e1f52cc3325a6cff66e3fe64e6401e2281c5cdcb590355ed4",
+  "candidate_surface_digest": "e5ab2400934cd8148f32dd6b9261822671235049842da8e27cecd195d31a3dfa",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "011a2b76c8df90f8849a8ffeee729bb0d06205b7d3247a455fece925a3b1263b",
+        "22c46ecdc7c1a205d9aaf8a358677b54e0b13b2cc01b4c36acd8ca772ed9c5f8",
+        "24acb24c1ec9fc649491e223e2a61747cb4e91920b1feb5bf23fcbed2879d2f2",
+        "2bba65108532bb149db492c612b6a5ed3136cda3eacb70325687e13ae65267d2",
+        "301abaa0b1c061abe18fb77698c6d535a193259f66e404ad802c52bc3ea7c401",
+        "3c6dd90f9673ca5b05fc9311689ebe2a5ece73814118d4914b535819c703e3e4",
+        "418ab3be643bedadf0674d9c1b1d499d5fbec068f52524075aafa9a585e09e4a",
+        "44be76ee1c47115e712684379f1dfdde6878bf9c45b35f8d4b7d85875ccba08e",
+        "4d974ffa759cd9860086b2d3cf1570ce328eb43945f8e0abb5d228b6b8dc03cb",
+        "5461dbd5817fec3a9b7d2c6f9a233b2879baef599fa95fd2caa026e40c8a03b9",
+        "68b731986a1cce84e62e45630a0cb368cada7a6866191a0198f98f63df1ff720",
+        "834e3e9f025838f40f1987dfb26bc19544a152c17530e984c7e16ab4c3d5c139",
+        "8ed7a704fffc23432b4310c7046b464d113e14d56e525e0ca16aa1973cfebc2d",
+        "a04399d220b76cd01f518cb4164fe26317bd12138f3d38850c853efd22933cc3",
+        "a2debe78f155a4fe157b26292112dec60c8bb4c363b21c0d0b2059e7821aa9a5",
+        "a80c70346b4705185d683d66dd787728ef4381d794e0fb5905a3495e804bb5f0",
+        "b7cd5e93e6ac3d0e8a6ff840d337ecaa4dfc86e2b6ea804650e9573fb9e1eef6",
+        "c65ddd44e690c62aaf226f62eedc4dab1da5d6147c2fa5fa3d782f394b906ca7",
+        "ca8ffc891bc8d7f2bc53348385eec7251f6bc670fc66c6c8edd92ad511118aeb",
+        "cd9e397ded6eecf431fff2a4d0d7dce7dc9c464f8d903bd15de920be2591a3a7",
+        "edd798f1fe4e64f35cf051e4a9ba5ec3818df6225d367c30ea32b4a0f534cc63",
+        "edfbfb80a342f2d5e89f18bd44f83e02682d9e752dbcad70eb7382c9c68a944d"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "The apparent raw source is the strictly schema-validated canonical M3-C-O private review package, not ambient user text or an unrestricted runtime input. The reviewed evaluator resolves only an exact source-observation digest from the bounded package, then invokes the already accepted deterministic M3-C-B selection and M3-C-C lifecycle kernels to construct an in-memory M3-C-L shadow observation. Canonical JSON parsing, mapping lookup, digest helpers, receipt construction, and the restore_round96 sha256 findings are conservative static call-graph propagation or generic-name collisions; they do not expose a new raw file-read, model, network, sensor, speech, expression, publication, or external-output sink. The explicit operator remains unreachable because both checked-in exact pins are absent, installs no default runtime tap, reads no existing M3-C-J database or sidecar, retains only digest records in a new bounded store, restores the GoalAdapter seam in finally, and preserves legacy as the sole authoritative goal path.",
+      "owner": "M3-C-O default-absent private-device goal dual-read operator",
+      "denial_semantics": "Execution fails before private path resolution unless an isolated later exact implementation pin and one locally reviewed authorization digest are active. The package requires exact keys, canonical JSON, reviewed mapping/evaluator/policy/rollback/path bindings, 4-16 unique production observations, a clean exact checkout, new non-overlapping private paths, and an empty default GoalAdapter seam. These findings grant no ambient runtime integration, raw-text retention, existing private-evidence access, event append, action, scheduler, speech, legacy goal authority transfer, migration, or M3-E capability."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
