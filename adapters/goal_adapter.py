@@ -33,9 +33,9 @@ class GoalAdapter:
     def __init__(self,
                  hormone_adapter,
                  activation_adapter,
-                 gm: GoalManagement | None = None):
+                 gm: GoalManagement | None = None, production_origin_shadow_tap=None):
         self.hormone_adapter = hormone_adapter
-        self.activation_adapter = activation_adapter
+        self.activation_adapter, self.production_origin_shadow_tap = activation_adapter, production_origin_shadow_tap
         if gm is not None:
             self.gm = gm
         else:
@@ -52,7 +52,7 @@ class GoalAdapter:
             if kw in text:
                 if not self._has_active_goal(cat):
                     try:
-                        self.gm.goal_set(cat, priority=0.5, source="command")
+                        self._goal_call("goal_set", "legacy_goal_set_command", {"category": cat, "priority": 0.5, "source": "command"}, lambda: self.gm.goal_set(cat, priority=0.5, source="command"))
                     except Exception:
                         pass
 
@@ -88,6 +88,29 @@ class GoalAdapter:
 
     def tick(self, dt: float = 1.0):
         try:
-            self.gm.tick(dt=dt)
+            self._goal_call("tick", "legacy_goal_tick", {"dt": dt}, lambda: self.gm.tick(dt=dt))
         except Exception:
             pass
+
+    def _goal_call(self, operation_kind, legacy_goal_code, source_material, authoritative_call):
+        """Keep legacy authoritative; dynamically load the opt-in shadow seam."""
+        if self.production_origin_shadow_tap is None:
+            return authoritative_call()
+        module = __import__(
+            "core.m3_c_m_dormant_production_origin_shadow_tap",
+            fromlist=("ProductionGoalOperation",),
+        )
+        operation = module.ProductionGoalOperation.from_source_material(
+            operation_kind=operation_kind,
+            legacy_goal_code=legacy_goal_code,
+            decision_epoch=max(0, int(getattr(self.gm, "tick_count", 0))),
+            source_material=source_material,
+        )
+        execution = self.production_origin_shadow_tap.execute_authoritative_once(
+            goal_management=self.gm,
+            operation=operation,
+            authoritative_call=authoritative_call,
+        )
+        return execution.authoritative_result
+
+# from core.m3_c_m_dormant_production_origin_shadow_tap import ProductionGoalOperation
