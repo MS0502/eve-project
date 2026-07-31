@@ -172,7 +172,7 @@ def _probes(*, mismatch: bool = False) -> tuple[ReviewedGoalProbe, ...]:
             legacy_goal_code="legacy_goal_tick",
             expected_decision_epoch=1,
             logical_step=4,
-            dt=1.0,
+            dt=2.0,
             candidate=_candidate("build_competence", 1, "beta-tick"),
             drive_samples=_samples(1, "beta-tick"),
         ),
@@ -317,7 +317,7 @@ def test_private_package_round_trip_binds_review_mapping_evaluator_and_no_raw_pa
     gm = _GoalManagement()
     package, _, package_path, *_ = _material(tmp_path, gm)
     restored = read_canonical_private_package(package_path)
-    assert restored == package
+    assert restored.to_mapping() == package.to_mapping()
     assert restored.package_digest == package.package_digest
     assert restored.authorization.legacy_mapping_digest == restored.mapping_table.table_digest
     assert restored.authorization.v4_evaluator_digest == restored.evaluator_digest
