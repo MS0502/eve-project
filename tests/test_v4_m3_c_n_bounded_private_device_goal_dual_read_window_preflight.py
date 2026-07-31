@@ -154,15 +154,17 @@ def _records(verdicts):
 
 def test_accepted_m3_c_m_evidence_binds_raw_git_shas_and_compatibility_pin():
     evidence = ACCEPTED_M3_C_M_EVIDENCE
+    compatibility = evidence.compatibility_shadow_pin
     assert evidence.exact_head == M3_C_M_EXACT_HEAD
     assert evidence.exact_run == M3_C_M_EXACT_RUN
     assert evidence.artifact_sha256 == M3_C_M_ARTIFACT_SHA256
     assert evidence.merge_sha == M3_C_M_MERGE_SHA
     assert len(evidence.exact_head) == 40
     assert len(evidence.merge_sha) == 40
-    assert len(evidence.compatibility_shadow_pin.exact_head) == 64
-    assert len(evidence.compatibility_shadow_pin.merge_sha) == 64
-    assert evidence.exact_head not in str(evidence.compatibility_shadow_pin.to_mapping())
+    assert compatibility.exact_head == _d(evidence.exact_head)
+    assert compatibility.merge_sha == _d(evidence.merge_sha)
+    assert len(compatibility.exact_head) == 64
+    assert len(compatibility.merge_sha) == 64
 
 
 def test_no_active_authorization_or_executable_operator_is_checked_in():
@@ -254,6 +256,7 @@ def test_four_clean_records_are_only_eligible_for_later_human_gate_review():
     assert receipt.blocking_verdict_count == 0
     assert receipt.human_gate_review_eligible is True
     assert receipt.final_record_digest == records[-1].record_digest
+    assert receipt.to_mapping()["final_record_digest"] == records[-1].record_digest
     assert receipt.legacy_goal_authority_transferred is False
     assert receipt.legacy_migration_authorized is False
     assert receipt.m3_e_authority_open is False
