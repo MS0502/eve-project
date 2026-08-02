@@ -145,3 +145,11 @@ def test_consumed_pin_reuses_original_capture_path_identity():
     source = (ROOT / "core/m3_c_r_contracts.py").read_text(encoding="utf-8")
     assert 'original_pin_path=paths["pin"]' in source
     assert "private_output_path_digest(original_pin_path)" in source
+
+
+def test_stage_two_reuses_completed_capture_after_pin_consumption():
+    source = STAGES[1].read_text(encoding="utf-8")
+    assert "_completed_capture_receipt" in source
+    assert 'paths["consumed_pin"].exists()' in source
+    assert "load_local_pin_for_binding" in source
+    assert 'paths["pin_receipt"]' in source
