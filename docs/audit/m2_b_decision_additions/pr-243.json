@@ -1,0 +1,21 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 243,
+  "base_candidate_surface_digest": "46076350ae4a71e01a3c1c0241831871a1ef6fabe4d2d79de1938283463b83df",
+  "candidate_surface_digest": "88d4935159152d2e0991ed39b5b559e410b5a19528e15fd4e800205b21f6972c",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "2b0448bddaadf77d0959741616aadc38477b3dfa40d285d79f5a5540f36170e6",
+        "e5faa14eba2e1da3bb2c787965bb8cdd45ca58951f8670d9829007958fb69455",
+        "f47776732691e1844bd1b3870c0e7b74dc43cac58e18367d1fd31cfcb2e55aec"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "These findings are conservative propagation from the explicit Android/Linux MemAvailable telemetry read through splitlines, startswith, and split while parsing /proc/meminfo. The value is used only by the fixed fail-closed M3-C-R memory preflight to refuse full-engine construction below the reviewed threshold. It is not user text, private goal material, model input, memory content, speech/expression material, network input, or a new runtime data authority, and the transformation calls do not add a separate read surface beyond the explicit bounded telemetry source.",
+      "owner": "M3-C-R resumable phone goal-window memory preflight",
+      "denial_semantics": "The telemetry grants only permission to stop before engine construction. It cannot lower the fixed 3072 MiB threshold, disclose private text or paths, generate or mutate goal state, install the shadow tap by default, append authoritative events, transfer legacy goal authority, authorize migration/action/scheduler/speech, or open M3-E. Missing, malformed, or insufficient memory telemetry fails closed before the full engine is built."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
