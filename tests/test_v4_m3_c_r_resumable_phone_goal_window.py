@@ -139,3 +139,9 @@ def test_stage_four_preserves_partial_state_instead_of_retrying():
     assert "consume_local_pin" in source
     assert '"engine_load_count": 1' in source
     assert "require_memory_headroom()" in source
+
+
+def test_consumed_pin_reuses_original_capture_path_identity():
+    source = (ROOT / "core/m3_c_r_contracts.py").read_text(encoding="utf-8")
+    assert 'original_pin_path=paths["pin"]' in source
+    assert "private_output_path_digest(original_pin_path)" in source
