@@ -1,7 +1,7 @@
 {
   "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
   "introduced_by_pr": 243,
-  "base_candidate_surface_digest": "46076350ae4a71e01a3c1c0241831871a1ef6fabe4d2d79de1938283463b83df",
+  "base_candidate_surface_digest": "e5ab2400934cd8148f32dd6b9261822671235049842da8e27cecd195d31a3dfa",
   "candidate_surface_digest": "88d4935159152d2e0991ed39b5b559e410b5a19528e15fd4e800205b21f6972c",
   "edge_decision_groups": [],
   "unresolved_call_decision_groups": [
