@@ -229,7 +229,12 @@ def require_review_confirmation(private_root: str | Path) -> dict[str, Any]:
     return actual
 
 
-def _existing_pin_receipt(binding: M3CPOperatorAuthorizationBinding, pin_path: Path):
+def _existing_pin_receipt(
+    binding: M3CPOperatorAuthorizationBinding,
+    pin_path: Path,
+    *,
+    original_pin_path: Path,
+):
     pin = local_pin_from_mapping(load_canonical_mapping(pin_path, field="local authorization pin"))
     expected = build_local_reviewed_authorization_pin(binding)
     if pin != expected:
@@ -247,7 +252,7 @@ def _existing_pin_receipt(binding: M3CPOperatorAuthorizationBinding, pin_path: P
         evaluator_digest=binding.evaluator_digest,
         reviewer_id_digest=text_digest(binding.reviewer_id),
         pin_digest=pin.pin_digest,
-        private_output_path_digest=private_output_path_digest(pin_path),
+        private_output_path_digest=private_output_path_digest(original_pin_path),
         private_pin_file_sha256=file_sha256(pin_path),
     )
     return pin, receipt
@@ -262,7 +267,9 @@ def capture_or_reuse_local_pin(private_root: str | Path) -> dict[str, Any]:
         raise M3CRResumableOperatorError("both active and consumed local pin paths exist")
     pin_path = paths["consumed_pin"] if paths["consumed_pin"].exists() else paths["pin"]
     if pin_path.exists():
-        pin, receipt = _existing_pin_receipt(binding, pin_path)
+        pin, receipt = _existing_pin_receipt(
+            binding, pin_path, original_pin_path=paths["pin"]
+        )
     else:
         pin, receipt = capture_local_reviewed_authorization(
             binding, private_output_path=paths["pin"], human_review_confirmed=True
