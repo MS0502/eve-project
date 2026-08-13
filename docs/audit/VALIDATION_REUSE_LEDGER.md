@@ -25,19 +25,36 @@ Valid reasons to obtain new evidence include an actual changed head/tree, artifa
 
 A reported but not directly compared SHA/run is `comparison-pending`, not automatically `revalidation-pending`.
 
+### Task B1 reproducible validation identity
+
+For B1 and later environment-pinned validation, the reusable identity is the SHA-256 of canonical JSON containing exactly:
+
+```text
+commit_sha
+tree_sha
+python_pin
+requirements_lock_sha256
+validation_contract_sha256
+```
+
+The Python pin is `.python-version`; the lock is `requirements-lock.txt`; the contract is `docs/audit/VALIDATION_CONTRACT.json`. Chat/session/shell/branch/PR/workflow-run metadata are excluded from identity. A metadata-only change therefore cannot create a new validation obligation.
+
 ## 2. Execution discipline
 
 - Prefer one final validation run on the final candidate head.
-- Avoid intermediate pushes that exist only to retrigger the same suite.
+- Avoid intermediate PR synchronizations that exist only to retrigger the same suite.
 - If a PR-triggered exact-head workflow already validated the exact final head, do not manually dispatch the same workflow merely because the conversation changed.
-- Do not run a separate M2-E job when the accepted exact-head workflow already generated and validated the required M2-E candidate evidence for the same scope, unless a distinct M2-E acceptance contract explicitly requires a separate run.
-- After merge, record the exact PR head, accepted run, merge SHA, artifact identity/digest when available, and current-main comparison. Future sessions start from this ledger plus the live repository, not from conversational memory alone.
+- The repository's distinct M2-E window-driver remains separate evidence when its acceptance contract requires it; reuse a successful run for the same final identity rather than duplicating it.
+- After merge, record exact PR head, accepted run, merge SHA, artifact identity/digest when available, and current-main comparison. Future sessions start from this ledger plus the live repository, not conversational memory alone.
 
 ## 3. Accepted historical evidence
+
+The following records predate B1's exact interpreter/lock policy. They remain **accepted legacy evidence / environment-unpinned / not environment-reproducible** for the claims they established. B1 never retroactively invalidates them.
 
 ### PR #243 — M3-C-R resumable phone goal-window operator
 
 ```text
+classification: accepted legacy evidence / environment-unpinned / not environment-reproducible
 exact head: a4c8d0ec1a1767b5ccdbc105c40af94a327eb741
 exact-head run: 30736080203
 focused: 9 passed
@@ -51,11 +68,12 @@ artifact SHA-256: 710e56e3c35455504e2862add82ec067756e707ba833e3cf3d476a0cc0fc25
 squash merge: d9491f6b1dd2149338e37bb199274b63636e66f4
 ```
 
-Reuse boundary: this evidence certifies the accepted #243 implementation head. Do not rerun it for M3-C-S merely because the habitat retarget, chat/session, or operator context changed. A code/tree change to the operator would require its own new-head evidence.
+Reuse boundary: this evidence certifies the accepted #243 implementation head. Do not rerun it merely because habitat, chat/session, branch, or operator context changed.
 
 ### PR #245 — persistence integrity and semantic rebaseline preconditions
 
 ```text
+classification: accepted legacy evidence / environment-unpinned / not environment-reproducible
 exact head: 7582f1f38a9ed4e064942a48be93f7fbb01be580
 exact-head run: 31683667893
 result: all exact-head stages including full suite succeeded
@@ -66,28 +84,36 @@ post-merge main comparison: de3b15b6d4008555bdcf06e3ed53c62851ab3d8a
 parent: d9491f6b1dd2149338e37bb199274b63636e66f4
 ```
 
-Reuse boundary: #245 is a docs/governance pin. Its accepted evidence is not a substitute for runtime implementation validation required by Task B.
+Reuse boundary: #245 is accepted governance evidence. It is not a substitute for Task B runtime/environment validation.
 
-## 4. Current planned evidence boundaries
+### PR #247 — workstation retarget and t=0 operational correction
 
-### M3-C-S retarget / operational correction (Task A)
+```text
+classification: accepted legacy evidence / environment-unpinned / not environment-reproducible
+exact head: 3a1aa1e9dc52ca738e20d2791eb7fb9408f2c77c
+exact-head run: 31689169525
+M2-E run: 31689169521
+exact-head artifact: exact-head-validation-3a1aa1e9dc52ca738e20d2791eb7fb9408f2c77c
+artifact SHA-256: e6b4ff8e797bcb9ba46330dff2ca5eb792f781107124515485854e16c8c21cba
+squash merge / accepted main: 0f33a91715845ce7814ad465c771bdec6df6f17b
+parent: de3b15b6d4008555bdcf06e3ed53c62851ab3d8a
+```
 
-Task A is docs-only. Opening its PR may trigger the repository's existing exact-head workflow once. If that PR-triggered run succeeds on the final exact head, that run is the sole new exact-head evidence required for the Task A head; do not manually retrigger it because of chat/session changes.
+Reuse boundary: #247 is the accepted B1 baseline. Its acceptance is preserved even though its interpreter and broad dependency install were not environment-pinned.
 
-Previously accepted #243/#245 runs remain historical prerequisite evidence and are not rerun for Task A.
+## 4. Task B1 evidence boundary
 
-### Persistence-integrity runtime implementation (Task B)
+The final B1 candidate must contain all of the following before acceptance validation starts:
 
-Task B changes runtime behavior and the exact-head workflow deterministic environment. Therefore #245's run cannot certify the final Task B head.
+1. exact `.python-version` pin;
+2. runtime/development/experimental-legacy dependency split;
+3. hash-pinned `requirements-lock.txt`;
+4. setup-python and common environment preflight in exact-head and M2-E;
+5. `VALIDATION_CONTRACT.json` and identity digest rule;
+6. this ledger update.
 
-Required discipline:
-
-1. consolidate implementation/tests/workflow pins before opening or synchronizing the final PR head where practical;
-2. accept exactly one successful exact-head full-suite run for the final Task B head;
-3. if a code fix changes that head, the previous run remains evidence for the old head but cannot certify the new one;
-4. do not duplicate a separate validation solely because a new chat starts;
-5. after squash merge, append Task B's exact head/run/artifact/merge/main comparison here.
+The first successful pinned B1 exact-head on the final candidate establishes the **reproducible-from-here** boundary. If the candidate head/tree, Python pin, lock digest, or validation-contract digest changes, old evidence stays attached to the old identity and the new identity must validate. Do not rerun #243/#245/#247 for B1.
 
 ## 5. Continuity versus code validation
 
-The 30-day M3-C-S workstation continuity witness is operational evidence and is not created by rerunning CI. Conversely, CI exact-head evidence does not claim that 30 days of live process/store continuity occurred. Keep these evidence classes separate.
+The M3-C-S workstation continuity witness and Task B2 physical sustained-load gate are operational/physical evidence and are not created by rerunning CI. Conversely, CI exact-head/M2-E evidence does not claim live workstation continuity or physical sustained-load proof. Keep these evidence classes separate.
