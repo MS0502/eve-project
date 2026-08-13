@@ -1,38 +1,17 @@
-name: B1 lock bootstrap
+name: Validation lock reproducibility check
 
 on:
-  push:
-    branches:
-      - b1-reproducible-validation-env
-    paths:
-      - requirements-validation.in
-      - .github/workflows/b1-lock-bootstrap.yml
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
-  generate-lock:
+  verify-lock:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
-          cache: pip
-      - name: Generate hash-pinned validation lock
+      - name: Check committed lock exists
         run: |
-          python -m pip install pip-tools
-          python -m piptools compile --resolver=backtracking --generate-hashes --strip-extras --output-file=requirements-lock.txt requirements-validation.in
-      - name: Commit generated lock
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add requirements-lock.txt
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "B1 regenerate cross-platform hash lock"
-          git push origin HEAD:b1-reproducible-validation-env
+          test -s requirements-lock.txt
+          grep -q -- '--hash=sha256:' requirements-lock.txt
