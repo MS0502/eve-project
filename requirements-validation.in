@@ -1,0 +1,4 @@
+# Direct dependencies for reproducible validation. requirements-lock.txt is generated from this file.
+numpy>=1.24,<3
+pytest>=7.4,<9
+markdown-strings==3.4.0
