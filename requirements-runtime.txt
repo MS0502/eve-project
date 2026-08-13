@@ -1,0 +1,3 @@
+# B1 production/runtime required dependency surface.
+# Keep this file limited to dependencies required by the default EVE engine.
+numpy>=1.24,<3
