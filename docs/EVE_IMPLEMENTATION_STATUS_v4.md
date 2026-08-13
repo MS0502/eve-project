@@ -262,3 +262,45 @@ The immediate project state is: v4-native persistence authority active,
 legacy authority retained per domain, M3-B retained coverage `5/37`, M3-C-A/B/C
 merged, M3-C-D event/reducer preflight under review, separate M3-D closed, and
 M3-E closed.
+
+## 12. Seventh phone-habitat discovery and M3-C-R recovery candidate
+
+On 2026-08-01 the phone completed the canonical M3-C private goal-window package,
+review summary, and 34-entry forbidden prior-path digest set under
+`~/.local/share/eve-m3c-private-goal-window-4d22013a-20260801`. The accepted
+package digest is
+`bdc250fce7c746d527c378e240ec1fd3b307c3c1763306f43b8f4fafc3bd6c88`,
+with four probes ordered `goal_set, tick, goal_set, tick`.
+
+Android then terminated Termux near the interactive `read -r` review prompt.
+The observed device state was approximately 10 GiB total RAM with only about
+225 MiB available after the full engine had loaded. This is recorded as the
+**seventh phone-habitat discovery**: a low-memory residency failure amplified by
+an indefinite interactive wait while the engine remained resident.
+
+```text
+canonical package complete: true
+package review complete: true
+immutable stage-1 inputs intact: true
+pin complete: false
+operator receipt complete: false
+private store complete: false
+public review complete: false
+package corruption observed: false
+legacy goal authority transferred: false
+M3-E authority open: false
+```
+
+The M3-C-R candidate replaces the monolithic block with five resumable,
+non-interactive stages. Stages 1, 2, 3, and 5 load no engine. Stage 4 is the only
+stage allowed to call `build_full_engine()`, exactly once on the first successful
+execution. A fixed 3072 MiB `MemAvailable` gate runs before engine construction,
+and stage 4 repeats that gate immediately before loading. Matching completed
+outputs are reused; conflicting or partial canonical outputs are preserved and
+fail closed. Any store/backup/restore artifact without a completed operator
+receipt blocks automatic retry.
+
+This candidate is repository code and documentation only. It does not execute
+the phone workflow, alter the immutable private inputs, transfer legacy goal
+authority, authorize migration, open action/scheduler/speech authority, or open
+M3-E.
