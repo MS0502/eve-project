@@ -39,10 +39,17 @@ jobs:
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
     steps:
       - name: Checkout exact target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
+
+      - name: Set up exact Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
 
       - name: Verify exact head and clean worktree
         shell: bash
@@ -54,26 +61,33 @@ jobs:
           git rev-parse HEAD | tee /tmp/final-head.txt
           git diff --name-only "$BASE_SHA"..."$TARGET_SHA" | sort | tee /tmp/changed-files.txt
 
-      - name: Install SHA-pinned compatibility dependency
+      - name: Install hash-pinned validation environment
         shell: bash
         run: |
           set -euo pipefail
+          python -m pip install --require-hashes -r requirements-lock.txt
+          python -m pip check
           python - <<'PY'
           import hashlib
+          import json
           import pathlib
           import subprocess
           import sys
           import urllib.request
 
+          contract = json.loads(pathlib.Path('docs/audit/VALIDATION_CONTRACT.json').read_text(encoding='utf-8'))
+          artifact = contract['compatibility_artifact']
           url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = pathlib.Path('/tmp/markdown_strings-3.4.0.tar.gz')
+          assert hashlib.sha256(url.encode()).hexdigest() == artifact['url_sha256']
+          target = pathlib.Path('/tmp') / artifact['name']
           urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
+          assert hashlib.sha256(target.read_bytes()).hexdigest() == artifact['content_sha256']
           subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
           PY
-          python -m pip install -r requirements.txt
-          python -m pip check
+          EVE_VALIDATION_COMMIT="$(git rev-parse HEAD)" \
+          EVE_VALIDATION_TREE="$(git rev-parse HEAD^{tree})" \
+          EVE_VALIDATION_IDENTITY_OUTPUT=/tmp/validation-identity.json \
+            python scripts/audit/validation_preflight.py
 
       - name: Compile changed Python
         shell: bash
@@ -108,24 +122,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/audit/m2_d_rehearsal.py \
-            --output /tmp/m2-d-rehearsal.json \
-            --pretty
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          packet = json.loads(Path('/tmp/m2-d-rehearsal.json').read_text())
-          print(json.dumps({
-              'packet_digest': packet['packet_digest'],
-              'passed_count': packet['passed_count'],
-              'failed_count': packet['failed_count'],
-              'machine_passed': packet['machine_passed'],
-              'human_accepted': packet['human_accepted'],
-              'authoritative_recovery': packet['authoritative_recovery'],
-              'cutover_authorized': packet['cutover_authorized'],
-          }, sort_keys=True))
-          PY
+          python scripts/audit/m2_d_rehearsal.py --output /tmp/m2-d-rehearsal.json --pretty
 
       - name: Generate M2-E cutover candidate evidence
         shell: bash
@@ -137,33 +134,13 @@ jobs:
             --workflow "${{ github.run_id }}" \
             --output /tmp/m2-e-cutover-candidate.json \
             --pretty
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          packet = json.loads(Path('/tmp/m2-e-cutover-candidate.json').read_text())
-          print(json.dumps({
-              'candidate_head': packet['candidate_head'],
-              'workflow': packet['workflow'],
-              'packet_digest': packet['packet_digest'],
-              'machine_passed': packet['machine_passed'],
-              'eligible_for_human_review': packet['eligible_for_human_review'],
-              'human_accepted': packet['human_accepted'],
-              'cutover_authorized': packet['cutover_authorized'],
-              'event_store_authority': packet['event_store_authority'],
-          }, sort_keys=True))
-          PY
 
       - name: Verify M0 audit invariance
         shell: bash
         run: |
           set -euo pipefail
           for phase in base head; do
-            if test "$phase" = base; then
-              sha="$BASE_SHA"
-            else
-              sha="$TARGET_SHA"
-            fi
+            if test "$phase" = base; then sha="$BASE_SHA"; else sha="$TARGET_SHA"; fi
             git checkout --detach "$sha"
             test -z "$(git status --short)"
             for item in \
@@ -177,9 +154,7 @@ jobs:
             done
           done
           git checkout --detach "$TARGET_SHA"
-          for name in a b c d; do
-            diff -u "/tmp/base-${name}.json" "/tmp/head-${name}.json"
-          done
+          for name in a b c d; do diff -u "/tmp/base-${name}.json" "/tmp/head-${name}.json"; done
           test -z "$(git status --short)"
           printf '%s\n' 'M0-A through M0-D canonical outputs are byte-identical.' | tee /tmp/invariance.txt
 
@@ -188,19 +163,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/audit/m2_b_read_capability_manifest.py \
-            --output /tmp/m2-b-read-capability-candidates.json \
-            --pretty
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          report = json.loads(Path('/tmp/m2-b-read-capability-candidates.json').read_text())
-          print(json.dumps({
-            'report_digest': report['report_digest'],
-            **report['summary'],
-          }, sort_keys=True))
-          PY
+          python scripts/audit/m2_b_read_capability_manifest.py --output /tmp/m2-b-read-capability-candidates.json --pretty
 
       - name: Validate exact M2-B technical decisions
         if: always()
@@ -209,17 +172,14 @@ jobs:
           set -euo pipefail
           addition_args=()
           if test -d docs/audit/m2_b_decision_additions; then
-            while IFS= read -r path; do
-              addition_args+=(--additions "$path")
-            done < <(find docs/audit/m2_b_decision_additions -type f -name '*.json' | sort)
+            while IFS= read -r path; do addition_args+=(--additions "$path"); done < <(find docs/audit/m2_b_decision_additions -type f -name '*.json' | sort)
           fi
           python scripts/audit/m2_b_decision_groups.py \
             --candidate /tmp/m2-b-read-capability-candidates.json \
             --decisions docs/audit/M2_B_READ_CAPABILITY_DECISION_GROUPS.json \
             "${addition_args[@]}" \
             --output /tmp/m2-b-decision-validation.json \
-            --pretty \
-            --strict
+            --pretty --strict
           cat /tmp/m2-b-decision-validation.json
 
       - name: Verify forward regression gate
@@ -227,13 +187,8 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if test -n "$CURRENT_PR"; then
-            args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA")
-          fi
-          python scripts/audit/forward_regression_bundle.py \
-            --output /tmp/forward-regression.json \
-            --pretty \
-            "${args[@]}"
+          if test -n "$CURRENT_PR"; then args+=(--current-pr "$CURRENT_PR" --base-sha "$BASE_SHA"); fi
+          python scripts/audit/forward_regression_bundle.py --output /tmp/forward-regression.json --pretty "${args[@]}"
           cat /tmp/forward-regression.json
 
       - name: Collect full suite
@@ -263,6 +218,7 @@ jobs:
           path: |
             /tmp/final-head.txt
             /tmp/changed-files.txt
+            /tmp/validation-identity.json
             /tmp/focused-paths.txt
             /tmp/focused.txt
             /tmp/m2-d-rehearsal.json
