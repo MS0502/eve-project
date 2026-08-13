@@ -1,38 +1,23 @@
-name: B1 lock bootstrap
+name: Validation lock reproducibility check
 
 on:
-  push:
-    branches:
-      - b1-reproducible-validation-env
-    paths:
-      - requirements-validation.in
-      - .python-version
-      - .github/workflows/b1-lock-bootstrap.yml
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  generate-lock:
-    if: github.actor != 'github-actions[bot]'
+  verify-lock:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
           cache: pip
-      - name: Generate hash-pinned validation lock
+      - name: Reproduce validation lock
         run: |
-          python -m pip install --upgrade pip pip-tools
+          python -m pip install pip-tools
+          cp requirements-lock.txt /tmp/requirements-lock.expected.txt
           python -m piptools compile --resolver=backtracking --generate-hashes --strip-extras --output-file=requirements-lock.txt requirements-validation.in
-      - name: Commit generated lock
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add requirements-lock.txt
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "B1 generate hash-pinned validation lock"
-          git push origin HEAD:b1-reproducible-validation-env
+          diff -u /tmp/requirements-lock.expected.txt requirements-lock.txt
