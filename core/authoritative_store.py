@@ -22,19 +22,14 @@ Durability protocol
 SQLite WAL is requested and verified.  A verified ``DELETE`` rollback journal
 is the only controlled fallback.  Every connection verifies
 ``PRAGMA synchronous=FULL``.  An adjacent OS advisory lock permits exactly one
-authoritative writer process at a time.  SQLite extended result codes and the
-exact Windows sharing/lock-violation codes distinguish approved transient I/O
-from integrity or unprovable failures.  Approved transient operations use a
-bounded exponential retry; exhaustion still fails closed with exit code 86.
+authoritative writer process at a time.
 """
 from __future__ import annotations
 
 import hashlib
 import json
-import logging
 import os
 import sqlite3
-import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,6 +55,172 @@ APPEND_RECEIPT_SCHEMA_VERSION = "eve.authoritative-append-receipt.v1"
 VERIFICATION_SCHEMA_VERSION = "eve.authoritative-verification.v1"
 STARTUP_SCHEMA_VERSION = "eve.authoritative-startup.v1"
 GENESIS_HASH = "0" * 64
+
+FAULT_BEFORE_EVENT_APPEND = "before_event_append"
+FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT = "after_event_row_write_before_commit"
+FAULT_AFTER_EVENT_TRANSACTION_COMMIT = "after_event_transaction_commit"
+FAULT_BEFORE_ACCEPTED_TAIL_UPDATE = "before_accepted_tail_update"
+FAULT_DURING_ACCEPTED_TAIL_UPDATE = "during_accepted_tail_update"
+FAULT_AFTER_ACCEPTED_TAIL_UPDATE = "after_accepted_tail_update"
+FAULT_POINTS = (
+    FAULT_BEFORE_EVENT_APPEND,
+    FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT,
+    FAULT_AFTER_EVENT_TRANSACTION_COMMIT,
+    FAULT_BEFORE_ACCEPTED_TAIL_UPDATE,
+    FAULT_DURING_ACCEPTED_TAIL_UPDATE,
+    FAULT_AFTER_ACCEPTED_TAIL_UPDATE,
+)
+
+StateT = TypeVar("StateT")
+FaultInjector = Callable[[str], None]
+WalProbe = Callable[[sqlite3.Connection], str]
+
+
+class AuthorityPersistenceError(RuntimeError):
+    """Base class for authoritative persistence failures."""
+
+
+class AuthorityUnprovable(AuthorityPersistenceError):
+    """Accepted history cannot be proven and the process must exit 86."""
+
+
+class AuthorityAmbiguity(AuthorityUnprovable):
+    """More than one defensible authority state is possible."""
+
+
+class AuthorityBusy(AuthorityUnprovable):
+    """Another authoritative writer holds the exclusive process lock."""
+
+
+class AuthorityNotOpen(AuthorityPersistenceError):
+    """The explicit startup/open protocol has not completed."""
+
+
+class AuthorityAppendRejected(AuthorityPersistenceError):
+    """A proposed append violates the accepted-history contract."""
+
+
+class InjectedAuthorityFault(RuntimeError):
+    """Deterministic test-only interruption raised by a fault injector."""
+
+
+def _canonical(value: Mapping[str, Any], *, field: str) -> str:
+    return canonical_json_object(value, field=field)
+
+
+def _sha256(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _digest(value: Mapping[str, Any], *, field: str) -> str:
+    return _sha256(_canonical(value, field=field).encode("utf-8"))
+
+
+def _canonical_sort_key(value: str) -> str:
+    return " ".join(value.strip().rstrip(";").split())
+
+
+def _type_exact_equal(left: Path, right: Path) -> bool:
+    return os.path.normcase(os.path.abspath(left)) == os.path.normcase(os.path.abspath(right))
+
+
+def load(environ: Mapping[str, str] | None = None) -> Path:
+    """Resolve the explicit authority path and reject the M2 shadow path."""
+
+    source = os.environ if environ is None else environ
+    raw = source.get(AUTHORITY_PATH_ENV, "").strip()
+    if not raw:
+        raise AuthorityPersistenceError(f"{AUTHORITY_PATH_ENV} is required")
+    authority = Path(raw).expanduser()
+    if str(authority) == ":memory:" or authority.name == "":
+        raise AuthorityPersistenceError("authority requires a concrete SQLite file")
+    shadow_raw = source.get(SHADOW_PATH_ENV, "").strip()
+    if shadow_raw and _type_exact_equal(authority, Path(shadow_raw).expanduser()):
+        raise AuthorityPersistenceError("authority path must differ from the shadow path")
+    return authority
+
+
+def _base_payload(envelope: EventEnvelope) -> dict[str, Any]:
+    return {
+        "authority": envelope.authority,
+        "causal_context_json": envelope.causal_context_json,
+        "causation_id": envelope.causation_id,
+        "correlation_id": envelope.correlation_id,
+        "event_id": envelope.event_id,
+        "event_type": envelope.event_type,
+        "payload_json": envelope.payload_json,
+        "producer": envelope.producer,
+        "producer_version": envelope.producer_version,
+        "schema_version": envelope.schema_version,
+        "sequence": envelope.sequence,
+        "stream_id": envelope.stream_id,
+    }
+
+
+def canonical_record(envelope: EventEnvelope) -> bytes:
+    value = {
+        "envelope": _base_payload(envelope),
+        "schema": EVENT_SERIALIZATION_VERSION,
+    }
+    return _canonical(value, field="authoritative_event").encode("utf-8")
+
+
+def digest(*, content_hash: str, ordinal: int, prev_hash: str) -> str:
+    return _digest(
+        {
+            "content_hash": content_hash,
+            "ordinal": ordinal,
+            "prev_hash": prev_hash,
+            "schema": EVENT_SERIALIZATION_VERSION,
+        },
+        field="authoritative_event_hash",
+    )
+
+
+def receipt_digest(
+    *, revision: int, accepted_ordinal: int, accepted_event_hash: str, previous_tail_hash: str
+) -> str:
+    return _digest(
+        {
+            "accepted_event_hash": accepted_event_hash,
+            "accepted_ordinal": accepted_ordinal,
+            "previous_tail_hash": previous_tail_hash,
+            "revision": revision,
+            "schema": TAIL_SCHEMA_VERSION,
+        },
+        field="accepted_tail_hash",
+    )
+
+
+def from_mapping(raw: bytes) -> EventEnvelope:
+    try:
+        text = raw.decode("utf-8")
+        value = json.loads(text)
+        if not isinstance(value, dict):
+            raise AuthorityUnprovable("event bytes do not encode an object")
+        if _canonical(value, field="persisted_authoritative_event") != text:
+            raise AuthorityUnprovable("event bytes are not canonical")
+        if value.get("schema") != EVENT_SERIALIZATION_VERSION:
+            raise AuthorityUnprovable("event serialization version differs")
+        material = value.get("envelope")
+        if not isinstance(material, dict):
+            raise AuthorityUnprovable("event envelope material is absent")
+        envelope = EventEnvelope(**material)
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError, InvalidEventEnvelope) as exc:
+        raise AuthorityUnprovable("accepted event bytes are malformed") from exc
+    if canonical_record(envelope) != raw:
+        raise AuthorityUnprovable("accepted event reserialization differs")
+    return envelope
+
+
+authority_path_from_environment = load
+
+
+# Keep transient-I/O support below the historical serialization helpers.  The
+# M2-B decision evidence hashes their exact source and call-site line numbers.
+import logging
+import time
+
 DEFAULT_TRANSIENT_MAX_ATTEMPTS = 4
 DEFAULT_TRANSIENT_BACKOFF_INITIAL_SECONDS = 0.25
 DEFAULT_TRANSIENT_BACKOFF_MAX_SECONDS = 2.0
@@ -112,54 +273,8 @@ _SQLITE_INTEGRITY_IOERR_CODES = frozenset(
     }
 )
 
-FAULT_BEFORE_EVENT_APPEND = "before_event_append"
-FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT = "after_event_row_write_before_commit"
-FAULT_AFTER_EVENT_TRANSACTION_COMMIT = "after_event_transaction_commit"
-FAULT_BEFORE_ACCEPTED_TAIL_UPDATE = "before_accepted_tail_update"
-FAULT_DURING_ACCEPTED_TAIL_UPDATE = "during_accepted_tail_update"
-FAULT_AFTER_ACCEPTED_TAIL_UPDATE = "after_accepted_tail_update"
-FAULT_POINTS = (
-    FAULT_BEFORE_EVENT_APPEND,
-    FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT,
-    FAULT_AFTER_EVENT_TRANSACTION_COMMIT,
-    FAULT_BEFORE_ACCEPTED_TAIL_UPDATE,
-    FAULT_DURING_ACCEPTED_TAIL_UPDATE,
-    FAULT_AFTER_ACCEPTED_TAIL_UPDATE,
-)
-
-StateT = TypeVar("StateT")
-FaultInjector = Callable[[str], None]
-WalProbe = Callable[[sqlite3.Connection], str]
 RetryObserver = Callable[[Mapping[str, Any]], None]
 RetrySleeper = Callable[[float], None]
-
-
-class AuthorityPersistenceError(RuntimeError):
-    """Base class for authoritative persistence failures."""
-
-
-class AuthorityUnprovable(AuthorityPersistenceError):
-    """Accepted history cannot be proven and the process must exit 86."""
-
-
-class AuthorityAmbiguity(AuthorityUnprovable):
-    """More than one defensible authority state is possible."""
-
-
-class AuthorityBusy(AuthorityUnprovable):
-    """Another authoritative writer holds the exclusive process lock."""
-
-
-class AuthorityNotOpen(AuthorityPersistenceError):
-    """The explicit startup/open protocol has not completed."""
-
-
-class AuthorityAppendRejected(AuthorityPersistenceError):
-    """A proposed append violates the accepted-history contract."""
-
-
-class InjectedAuthorityFault(RuntimeError):
-    """Deterministic test-only interruption raised by a fault injector."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -353,118 +468,6 @@ def retry_authority_operation(
                 sleeper=sleeper,
             )
     raise AssertionError("bounded authority retry loop did not terminate")
-
-
-def _canonical(value: Mapping[str, Any], *, field: str) -> str:
-    return canonical_json_object(value, field=field)
-
-
-def _sha256(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
-
-
-def _digest(value: Mapping[str, Any], *, field: str) -> str:
-    return _sha256(_canonical(value, field=field).encode("utf-8"))
-
-
-def _canonical_sort_key(value: str) -> str:
-    return " ".join(value.strip().rstrip(";").split())
-
-
-def _type_exact_equal(left: Path, right: Path) -> bool:
-    return os.path.normcase(os.path.abspath(left)) == os.path.normcase(os.path.abspath(right))
-
-
-def load(environ: Mapping[str, str] | None = None) -> Path:
-    """Resolve the explicit authority path and reject the M2 shadow path."""
-
-    source = os.environ if environ is None else environ
-    raw = source.get(AUTHORITY_PATH_ENV, "").strip()
-    if not raw:
-        raise AuthorityPersistenceError(f"{AUTHORITY_PATH_ENV} is required")
-    authority = Path(raw).expanduser()
-    if str(authority) == ":memory:" or authority.name == "":
-        raise AuthorityPersistenceError("authority requires a concrete SQLite file")
-    shadow_raw = source.get(SHADOW_PATH_ENV, "").strip()
-    if shadow_raw and _type_exact_equal(authority, Path(shadow_raw).expanduser()):
-        raise AuthorityPersistenceError("authority path must differ from the shadow path")
-    return authority
-
-
-def _base_payload(envelope: EventEnvelope) -> dict[str, Any]:
-    return {
-        "authority": envelope.authority,
-        "causal_context_json": envelope.causal_context_json,
-        "causation_id": envelope.causation_id,
-        "correlation_id": envelope.correlation_id,
-        "event_id": envelope.event_id,
-        "event_type": envelope.event_type,
-        "payload_json": envelope.payload_json,
-        "producer": envelope.producer,
-        "producer_version": envelope.producer_version,
-        "schema_version": envelope.schema_version,
-        "sequence": envelope.sequence,
-        "stream_id": envelope.stream_id,
-    }
-
-
-def canonical_record(envelope: EventEnvelope) -> bytes:
-    value = {
-        "envelope": _base_payload(envelope),
-        "schema": EVENT_SERIALIZATION_VERSION,
-    }
-    return _canonical(value, field="authoritative_event").encode("utf-8")
-
-
-def digest(*, content_hash: str, ordinal: int, prev_hash: str) -> str:
-    return _digest(
-        {
-            "content_hash": content_hash,
-            "ordinal": ordinal,
-            "prev_hash": prev_hash,
-            "schema": EVENT_SERIALIZATION_VERSION,
-        },
-        field="authoritative_event_hash",
-    )
-
-
-def receipt_digest(
-    *, revision: int, accepted_ordinal: int, accepted_event_hash: str, previous_tail_hash: str
-) -> str:
-    return _digest(
-        {
-            "accepted_event_hash": accepted_event_hash,
-            "accepted_ordinal": accepted_ordinal,
-            "previous_tail_hash": previous_tail_hash,
-            "revision": revision,
-            "schema": TAIL_SCHEMA_VERSION,
-        },
-        field="accepted_tail_hash",
-    )
-
-
-def from_mapping(raw: bytes) -> EventEnvelope:
-    try:
-        text = raw.decode("utf-8")
-        value = json.loads(text)
-        if not isinstance(value, dict):
-            raise AuthorityUnprovable("event bytes do not encode an object")
-        if _canonical(value, field="persisted_authoritative_event") != text:
-            raise AuthorityUnprovable("event bytes are not canonical")
-        if value.get("schema") != EVENT_SERIALIZATION_VERSION:
-            raise AuthorityUnprovable("event serialization version differs")
-        material = value.get("envelope")
-        if not isinstance(material, dict):
-            raise AuthorityUnprovable("event envelope material is absent")
-        envelope = EventEnvelope(**material)
-    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError, InvalidEventEnvelope) as exc:
-        raise AuthorityUnprovable("accepted event bytes are malformed") from exc
-    if canonical_record(envelope) != raw:
-        raise AuthorityUnprovable("accepted event reserialization differs")
-    return envelope
-
-
-authority_path_from_environment = load
 
 
 @dataclass(frozen=True, slots=True)
