@@ -270,6 +270,62 @@ def classify_authority_failure(exc: BaseException) -> AuthorityFailureClassifica
     )
 
 
+def _handle_authority_retry(
+    exc: AuthorityBusy | AuthorityUnprovable | sqlite3.Error | OSError,
+    *,
+    operation_name: str,
+    attempt: int,
+    max_attempts: int,
+    backoff_initial: float,
+    backoff_max: float,
+    observer: RetryObserver | None = None,
+    sleeper: RetrySleeper = time.sleep,
+) -> None:
+    """Log one classification, sleep only for an approved pending retry, or raise."""
+
+    if max_attempts < 1:
+        raise ValueError("transient max attempts must be at least one")
+    if backoff_initial <= 0 or backoff_max < backoff_initial:
+        raise ValueError("transient backoff bounds are invalid")
+    classification = classify_authority_failure(exc)
+    transient = classification.classification == "TRANSIENT"
+    exhausted = transient and attempt >= max_attempts
+    delay = min(backoff_initial * (2 ** (attempt - 1)), backoff_max)
+    record = {
+        "event": "authority_failure_classified",
+        "operation": operation_name,
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+        "retry_scheduled": transient and not exhausted,
+        "retry_exhausted": exhausted,
+        "next_backoff_seconds": delay if transient and not exhausted else None,
+        **classification.record(),
+    }
+    _LOGGER.warning(
+        "authority_failure_classified %s",
+        json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+    )
+    if observer is not None:
+        observer(record)
+    if not transient:
+        if isinstance(exc, AuthorityUnprovable):
+            raise exc
+        raise AuthorityUnprovable(
+            f"{operation_name} failed closed: {classification.reason}"
+        ) from exc
+    if exhausted:
+        message = (
+            f"{operation_name} transient retry limit exhausted after {attempt} attempts; "
+            f"source={classification.source}; "
+            f"sqlite_extended_errcode={classification.sqlite_extended_errcode}; "
+            f"windows_error_code={classification.windows_error_code}"
+        )
+        if isinstance(exc, AuthorityBusy):
+            raise AuthorityBusy(message) from exc
+        raise AuthorityUnprovable(message) from exc
+    sleeper(delay)
+
+
 def retry_authority_operation(
     operation: Callable[[int], StateT],
     *,
@@ -282,51 +338,20 @@ def retry_authority_operation(
 ) -> StateT:
     """Run a retry-safe operation with bounded, evidence-producing backoff."""
 
-    if max_attempts < 1:
-        raise ValueError("transient max attempts must be at least one")
-    if backoff_initial <= 0 or backoff_max < backoff_initial:
-        raise ValueError("transient backoff bounds are invalid")
     for attempt in range(1, max_attempts + 1):
         try:
             return operation(attempt)
         except (AuthorityBusy, AuthorityUnprovable, sqlite3.Error, OSError) as exc:
-            classification = classify_authority_failure(exc)
-            transient = classification.classification == "TRANSIENT"
-            exhausted = transient and attempt >= max_attempts
-            delay = min(backoff_initial * (2 ** (attempt - 1)), backoff_max)
-            record = {
-                "event": "authority_failure_classified",
-                "operation": operation_name,
-                "attempt": attempt,
-                "max_attempts": max_attempts,
-                "retry_scheduled": transient and not exhausted,
-                "retry_exhausted": exhausted,
-                "next_backoff_seconds": delay if transient and not exhausted else None,
-                **classification.record(),
-            }
-            _LOGGER.warning(
-                "authority_failure_classified %s",
-                json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+            _handle_authority_retry(
+                exc,
+                operation_name=operation_name,
+                attempt=attempt,
+                max_attempts=max_attempts,
+                backoff_initial=backoff_initial,
+                backoff_max=backoff_max,
+                observer=observer,
+                sleeper=sleeper,
             )
-            if observer is not None:
-                observer(record)
-            if not transient:
-                if isinstance(exc, AuthorityUnprovable):
-                    raise
-                raise AuthorityUnprovable(
-                    f"{operation_name} failed closed: {classification.reason}"
-                ) from exc
-            if exhausted:
-                message = (
-                    f"{operation_name} transient retry limit exhausted after {attempt} attempts; "
-                    f"source={classification.source}; "
-                    f"sqlite_extended_errcode={classification.sqlite_extended_errcode}; "
-                    f"windows_error_code={classification.windows_error_code}"
-                )
-                if isinstance(exc, AuthorityBusy):
-                    raise AuthorityBusy(message) from exc
-                raise AuthorityUnprovable(message) from exc
-            sleeper(delay)
     raise AssertionError("bounded authority retry loop did not terminate")
 
 
@@ -703,10 +728,16 @@ class AuthoritativeStore:
         if not self._opened:
             raise AuthorityNotOpen("authoritative store requires explicit open()")
 
-    def _retry(self, operation_name: str, operation: Callable[[int], StateT]) -> StateT:
-        return retry_authority_operation(
-            operation,
+    def _retry_failure(
+        self,
+        operation_name: str,
+        attempt: int,
+        exc: AuthorityBusy | AuthorityUnprovable | sqlite3.Error | OSError,
+    ) -> None:
+        _handle_authority_retry(
+            exc,
             operation_name=operation_name,
+            attempt=attempt,
             max_attempts=self._transient_max_attempts,
             backoff_initial=self._transient_backoff_initial,
             backoff_max=self._transient_backoff_max,
@@ -939,10 +970,10 @@ class AuthoritativeStore:
         if self._opened:
             raise AuthorityPersistenceError("authoritative store is already open")
 
-        def attempt(_attempt: int) -> StartupReport:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._writer_lock.acquire()
+        for attempt in range(1, self._transient_max_attempts + 1):
             try:
+                self._path.parent.mkdir(parents=True, exist_ok=True)
+                self._writer_lock.acquire()
                 with self._resolve_store(validate_schema=False) as connection:
                     self._journal_mode = self._policy_flags(connection)
                     objects = int(
@@ -974,17 +1005,21 @@ class AuthoritativeStore:
                     state.tail_hash,
                     recovered,
                 )
-            except Exception:
+            except (AuthorityBusy, AuthorityUnprovable, sqlite3.Error, OSError) as exc:
+                self._writer_lock.release()
+                self._journal_mode = ""
+                self._retry_failure("authoritative_startup", attempt, exc)
+            except AuthorityPersistenceError:
                 self._writer_lock.release()
                 self._journal_mode = ""
                 raise
-
-        try:
-            return self._retry("authoritative_startup", attempt)
-        except AuthorityPersistenceError:
-            raise
-        except Exception as exc:
-            raise AuthorityUnprovable("authoritative startup verification failed") from exc
+            except Exception as exc:
+                self._writer_lock.release()
+                self._journal_mode = ""
+                raise AuthorityUnprovable(
+                    "authoritative startup verification failed"
+                ) from exc
+        raise AssertionError("bounded authoritative startup retry did not terminate")
 
     open = run
 
@@ -1068,49 +1103,101 @@ class AuthoritativeStore:
             raise AuthorityAppendRejected("authority accepts EventEnvelope only")
         raw = canonical_record(envelope)
 
-        def attempt(attempt_number: int) -> AuthorityAppendReceipt:
-            self._reject(FAULT_BEFORE_EVENT_APPEND)
-            with self._resolve_store() as connection:
-                state = self._state_record(connection)
-                if envelope.event_id in state.known_event_ids:
-                    if attempt_number == 1:
-                        raise AuthorityAppendRejected(f"duplicate event id: {envelope.event_id}")
-                    return self._accepted_append_receipt(connection, envelope, raw, state)
-
-                candidate = connection.execute(
-                    "SELECT * FROM event_candidate WHERE slot=1"
-                ).fetchone()
-                if candidate is not None:
-                    if attempt_number == 1:
-                        raise AuthorityAmbiguity("unaccepted residue requires restart verification")
-                    recovered = self._entry(candidate, state)
-                    if recovered != envelope or bytes(candidate["event_bytes"]) != raw:
-                        raise AuthorityAmbiguity("retried append candidate differs")
-                    ordinal = int(candidate["expected_ordinal"])
-                    content_hash = str(candidate["content_hash"])
-                    event_hash = str(candidate["event_hash"])
-                else:
-                    expected_sequence = state.stream_sequences.get(envelope.stream_id, 0) + 1
-                    if envelope.sequence != expected_sequence:
-                        raise AuthorityAppendRejected(
-                            f"expected sequence {expected_sequence} for {envelope.stream_id}"
+        for attempt in range(1, self._transient_max_attempts + 1):
+            try:
+                self._reject(FAULT_BEFORE_EVENT_APPEND)
+                with self._resolve_store() as connection:
+                    state = self._state_record(connection)
+                    if envelope.event_id in state.known_event_ids:
+                        if attempt == 1:
+                            raise AuthorityAppendRejected(
+                                f"duplicate event id: {envelope.event_id}"
+                            )
+                        return self._accepted_append_receipt(
+                            connection, envelope, raw, state
                         )
-                    if (
-                        envelope.causation_id is not None
-                        and envelope.causation_id not in state.known_event_ids
-                    ):
-                        raise AuthorityAppendRejected(f"unknown causation: {envelope.causation_id}")
-                    ordinal = len(state.events) + 1
-                    content_hash = _sha256(raw)
-                    event_hash = digest(
-                        content_hash=content_hash,
-                        ordinal=ordinal,
-                        prev_hash=state.event_chain_head,
-                    )
+
+                    candidate = connection.execute(
+                        "SELECT * FROM event_candidate WHERE slot=1"
+                    ).fetchone()
+                    if candidate is not None:
+                        if attempt == 1:
+                            raise AuthorityAmbiguity(
+                                "unaccepted residue requires restart verification"
+                            )
+                        recovered = self._entry(candidate, state)
+                        if recovered != envelope or bytes(candidate["event_bytes"]) != raw:
+                            raise AuthorityAmbiguity("retried append candidate differs")
+                        ordinal = int(candidate["expected_ordinal"])
+                        content_hash = str(candidate["content_hash"])
+                        event_hash = str(candidate["event_hash"])
+                    else:
+                        expected_sequence = (
+                            state.stream_sequences.get(envelope.stream_id, 0) + 1
+                        )
+                        if envelope.sequence != expected_sequence:
+                            raise AuthorityAppendRejected(
+                                f"expected sequence {expected_sequence} for {envelope.stream_id}"
+                            )
+                        if (
+                            envelope.causation_id is not None
+                            and envelope.causation_id not in state.known_event_ids
+                        ):
+                            raise AuthorityAppendRejected(
+                                f"unknown causation: {envelope.causation_id}"
+                            )
+                        ordinal = len(state.events) + 1
+                        content_hash = _sha256(raw)
+                        event_hash = digest(
+                            content_hash=content_hash,
+                            ordinal=ordinal,
+                            prev_hash=state.event_chain_head,
+                        )
+                        connection.execute("BEGIN IMMEDIATE")
+                        try:
+                            connection.execute(
+                                "INSERT INTO event_candidate VALUES(1,?,?,?,?,?,?,?,?,?)",
+                                (
+                                    ordinal,
+                                    envelope.event_id,
+                                    envelope.stream_id,
+                                    envelope.sequence,
+                                    raw,
+                                    len(raw),
+                                    content_hash,
+                                    state.event_chain_head,
+                                    event_hash,
+                                ),
+                            )
+                            self._reject(FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT)
+                            connection.commit()
+                        except sqlite3.Error:
+                            raise
+                        except Exception:
+                            connection.rollback()
+                            raise
+
+                        self._reject(FAULT_AFTER_EVENT_TRANSACTION_COMMIT)
+
+                    self._reject(FAULT_BEFORE_ACCEPTED_TAIL_UPDATE)
                     connection.execute("BEGIN IMMEDIATE")
                     try:
+                        current = self._state_record(connection)
+                        candidate = connection.execute(
+                            "SELECT * FROM event_candidate WHERE slot=1"
+                        ).fetchone()
+                        if candidate is None:
+                            raise AuthorityAmbiguity(
+                                "candidate disappeared before acceptance"
+                            )
+                        accepted_candidate = self._entry(candidate, current)
+                        if (
+                            accepted_candidate != envelope
+                            or bytes(candidate["event_bytes"]) != raw
+                        ):
+                            raise AuthorityAmbiguity("candidate differs before acceptance")
                         connection.execute(
-                            "INSERT INTO event_candidate VALUES(1,?,?,?,?,?,?,?,?,?)",
+                            "INSERT INTO authority_events VALUES(?,?,?,?,?,?,?,?,?)",
                             (
                                 ordinal,
                                 envelope.event_id,
@@ -1119,11 +1206,28 @@ class AuthoritativeStore:
                                 raw,
                                 len(raw),
                                 content_hash,
-                                state.event_chain_head,
+                                current.event_chain_head,
                                 event_hash,
                             ),
                         )
-                        self._reject(FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT)
+                        next_tail_hash = receipt_digest(
+                            revision=ordinal,
+                            accepted_ordinal=ordinal,
+                            accepted_event_hash=event_hash,
+                            previous_tail_hash=current.tail_hash,
+                        )
+                        connection.execute(
+                            "INSERT INTO accepted_tail VALUES(?,?,?,?,?)",
+                            (
+                                ordinal,
+                                ordinal,
+                                event_hash,
+                                current.tail_hash,
+                                next_tail_hash,
+                            ),
+                        )
+                        self._reject(FAULT_DURING_ACCEPTED_TAIL_UPDATE)
+                        connection.execute("DELETE FROM event_candidate WHERE slot=1")
                         connection.commit()
                     except sqlite3.Error:
                         raise
@@ -1131,113 +1235,83 @@ class AuthoritativeStore:
                         connection.rollback()
                         raise
 
-                    self._reject(FAULT_AFTER_EVENT_TRANSACTION_COMMIT)
-
-                self._reject(FAULT_BEFORE_ACCEPTED_TAIL_UPDATE)
-                connection.execute("BEGIN IMMEDIATE")
-                try:
-                    current = self._state_record(connection)
-                    candidate = connection.execute(
-                        "SELECT * FROM event_candidate WHERE slot=1"
-                    ).fetchone()
-                    if candidate is None:
-                        raise AuthorityAmbiguity("candidate disappeared before acceptance")
-                    accepted_candidate = self._entry(candidate, current)
-                    if accepted_candidate != envelope or bytes(candidate["event_bytes"]) != raw:
-                        raise AuthorityAmbiguity("candidate differs before acceptance")
-                    connection.execute(
-                        "INSERT INTO authority_events VALUES(?,?,?,?,?,?,?,?,?)",
-                        (
-                            ordinal,
-                            envelope.event_id,
-                            envelope.stream_id,
-                            envelope.sequence,
-                            raw,
-                            len(raw),
-                            content_hash,
-                            current.event_chain_head,
-                            event_hash,
-                        ),
+                    self._reject(FAULT_AFTER_ACCEPTED_TAIL_UPDATE)
+                    verified = self._state_record(connection)
+                    if (
+                        len(verified.events) != ordinal
+                        or verified.event_chain_head != event_hash
+                        or verified.tail_hash != next_tail_hash
+                    ):
+                        raise AuthorityUnprovable("accepted append readback differs")
+                    return AuthorityAppendReceipt(
+                        ordinal,
+                        envelope.event_id,
+                        envelope.stream_id,
+                        envelope.sequence,
+                        content_hash,
+                        state.event_chain_head,
+                        event_hash,
+                        next_tail_hash,
+                        True,
+                        True,
+                        True,
                     )
-                    next_tail_hash = receipt_digest(
-                        revision=ordinal,
-                        accepted_ordinal=ordinal,
-                        accepted_event_hash=event_hash,
-                        previous_tail_hash=current.tail_hash,
-                    )
-                    connection.execute(
-                        "INSERT INTO accepted_tail VALUES(?,?,?,?,?)",
-                        (ordinal, ordinal, event_hash, current.tail_hash, next_tail_hash),
-                    )
-                    self._reject(FAULT_DURING_ACCEPTED_TAIL_UPDATE)
-                    connection.execute("DELETE FROM event_candidate WHERE slot=1")
-                    connection.commit()
-                except sqlite3.Error:
-                    raise
-                except Exception:
-                    connection.rollback()
-                    raise
-
-                self._reject(FAULT_AFTER_ACCEPTED_TAIL_UPDATE)
-                verified = self._state_record(connection)
-                if (
-                    len(verified.events) != ordinal
-                    or verified.event_chain_head != event_hash
-                    or verified.tail_hash != next_tail_hash
-                ):
-                    raise AuthorityUnprovable("accepted append readback differs")
-                return AuthorityAppendReceipt(
-                    ordinal,
-                    envelope.event_id,
-                    envelope.stream_id,
-                    envelope.sequence,
-                    content_hash,
-                    state.event_chain_head,
-                    event_hash,
-                    next_tail_hash,
-                    True,
-                    True,
-                    True,
-                )
-
-        return self._retry("authoritative_append", attempt)
+            except (AuthorityBusy, AuthorityUnprovable, sqlite3.Error, OSError) as exc:
+                self._retry_failure("authoritative_append", attempt, exc)
+        raise AssertionError("bounded authoritative append retry did not terminate")
 
     def report(self) -> VerificationReport:
         self._validate_boundary()
 
-        def attempt(_attempt: int) -> VerificationReport:
-            with self._resolve_store() as connection:
-                state = self._state_record(connection)
-                candidates = int(
-                    connection.execute("SELECT COUNT(*) FROM event_candidate").fetchone()[0]
-                )
-                if candidates:
-                    raise AuthorityAmbiguity("unaccepted residue requires restart verification")
-                mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower()
-                synchronous = int(connection.execute("PRAGMA synchronous").fetchone()[0])
-                if mode != self._journal_mode or synchronous != 2:
-                    raise AuthorityUnprovable("journal or synchronous mode drifted")
-                return VerificationReport(
-                    len(state.events),
-                    state.event_chain_head,
-                    state.tail_hash,
-                    candidates,
-                    mode,
-                    "FULL",
-                )
-
-        return self._retry("authoritative_verify", attempt)
+        for attempt in range(1, self._transient_max_attempts + 1):
+            try:
+                with self._resolve_store() as connection:
+                    state = self._state_record(connection)
+                    candidates = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM event_candidate"
+                        ).fetchone()[0]
+                    )
+                    if candidates:
+                        raise AuthorityAmbiguity(
+                            "unaccepted residue requires restart verification"
+                        )
+                    mode = str(
+                        connection.execute("PRAGMA journal_mode").fetchone()[0]
+                    ).lower()
+                    synchronous = int(
+                        connection.execute("PRAGMA synchronous").fetchone()[0]
+                    )
+                    if mode != self._journal_mode or synchronous != 2:
+                        raise AuthorityUnprovable(
+                            "journal or synchronous mode drifted"
+                        )
+                    return VerificationReport(
+                        len(state.events),
+                        state.event_chain_head,
+                        state.tail_hash,
+                        candidates,
+                        mode,
+                        "FULL",
+                    )
+            except (AuthorityBusy, AuthorityUnprovable, sqlite3.Error, OSError) as exc:
+                self._retry_failure("authoritative_verify", attempt, exc)
+        raise AssertionError("bounded authoritative verification retry did not terminate")
 
     verify = report
 
     def events(self, *, stream_id: str | None = None) -> tuple[EventEnvelope, ...]:
         self._validate_boundary()
 
-        def attempt(_attempt: int) -> tuple[EventEnvelope, ...]:
-            with self._resolve_store() as connection:
-                return self._state_record(connection).events
-
-        events = self._retry("authoritative_events", attempt)
+        for attempt in range(1, self._transient_max_attempts + 1):
+            try:
+                with self._resolve_store() as connection:
+                    events = self._state_record(connection).events
+                break
+            except (AuthorityBusy, AuthorityUnprovable, sqlite3.Error, OSError) as exc:
+                self._retry_failure("authoritative_events", attempt, exc)
+        else:
+            raise AssertionError("bounded authoritative events retry did not terminate")
         if stream_id is None:
             return events
         return tuple(event for event in events if event.stream_id == stream_id)

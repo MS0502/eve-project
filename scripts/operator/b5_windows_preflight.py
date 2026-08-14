@@ -92,8 +92,7 @@ def _power_indexes(output: str) -> dict[str, list[int]]:
         else:
             unlabeled.append(int(match.group(1), 16))
     if not ac and not dc and len(unlabeled) == 2:
-        ac.append(unlabeled[0])
-        dc.append(unlabeled[1])
+        return {"ac": [unlabeled[0]], "dc": [unlabeled[1]]}
     return {"ac": ac, "dc": dc}
 
 
