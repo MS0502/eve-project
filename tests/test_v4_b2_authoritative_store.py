@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "core" / "authoritative_store.py"
 VERIFY = ROOT / "scripts" / "audit" / "b2_authority_verify.py"
 FAULT_WORKER = ROOT / "scripts" / "audit" / "b2_authority_fault_worker.py"
+PHYSICAL_GATE = ROOT / "scripts" / "operator" / "b2_authority_physical_gate.py"
 
 
 def event(sequence: int, *, stream: str = "authority:test") -> EventEnvelope:
@@ -398,3 +399,22 @@ def test_module_does_not_upgrade_or_import_the_shadow_store():
     assert "events_shadow" not in source
     assert "EVE_SQLITE_SHADOW_PATH" in source
     assert "EVE_AUTHORITY_PATH" in source
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows RSS API contract")
+def test_physical_gate_reads_process_rss_on_windows():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from scripts.operator.b2_authority_physical_gate import _rss_bytes; "
+                "value = _rss_bytes(); assert isinstance(value, int) and value > 0"
+            ),
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
