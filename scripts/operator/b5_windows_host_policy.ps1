@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Capture', 'Apply')]
+    [ValidateSet('Capture')]
     [string]$Action,
     [Parameter(Mandatory = $true)]
     [string]$Output
@@ -54,6 +54,7 @@ function Get-RawHostState {
         power = [ordered]@{
             active_scheme = (& powercfg.exe /getactivescheme 2>&1 | Out-String).Trim()
             sleep = (& powercfg.exe /query SCHEME_CURRENT SUB_SLEEP 2>&1 | Out-String).Trim()
+            disk = (& powercfg.exe /query SCHEME_CURRENT SUB_DISK DISKIDLE 2>&1 | Out-String).Trim()
             lid = (& powercfg.exe /qh SCHEME_CURRENT SUB_BUTTONS LIDACTION 2>&1 | Out-String).Trim()
             available_sleep_states = (& powercfg.exe /availablesleepstates 2>&1 | Out-String).Trim()
             hiberboot_enabled = Get-RegistryValue 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' 'HiberbootEnabled'
@@ -80,54 +81,17 @@ $parent = Split-Path -Parent $outputPath
 New-Item -ItemType Directory -Path $parent -Force | Out-Null
 $before = Get-RawHostState
 $changes = @()
-
-if ($Action -eq 'Apply') {
-    if (-not (Test-Administrator)) {
-        throw 'Host policy application requires an elevated administrator token.'
-    }
-    $auPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'
-    New-Item -Path $auPath -Force | Out-Null
-    New-ItemProperty -LiteralPath $auPath -Name NoAutoRebootWithLoggedOnUsers -PropertyType DWord -Value 1 -Force | Out-Null
-    New-ItemProperty -LiteralPath $auPath -Name AlwaysAutoRebootAtScheduledTime -PropertyType DWord -Value 0 -Force | Out-Null
-    $changes += [ordered]@{
-        item = 'windows_update_automatic_reboot'
-        changed = $true
-        target = 'NoAutoRebootWithLoggedOnUsers=1; AlwaysAutoRebootAtScheduledTime=0'
-        rationale = 'Prevent an automatic forced reboot while an operator session is active; service restart continuity remains mandatory for every reboot.'
-    }
-
-    & powercfg.exe /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0 | Out-Null
-    & powercfg.exe /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0 | Out-Null
-    & powercfg.exe /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0 2>$null | Out-Null
-    & powercfg.exe /setactive SCHEME_CURRENT | Out-Null
-    $changes += [ordered]@{
-        item = 'plugged_in_idle_and_lid'
-        changed = $true
-        target = 'AC sleep=never; AC hibernate=never; lid close=do nothing when the setting exists'
-        rationale = 'The 30-day authority process must not be suspended by plugged-in idle policy or an incidental lid action.'
-    }
-
-    $powerPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power'
-    New-ItemProperty -LiteralPath $powerPath -Name HiberbootEnabled -PropertyType DWord -Value 0 -Force | Out-Null
-    $changes += [ordered]@{
-        item = 'fast_startup'
-        changed = $true
-        target = 'HiberbootEnabled=0'
-        rationale = 'Every subsequent boot must execute a full service and tail-chain startup path rather than restore a hiberboot image.'
-    }
-
-    $changes += [ordered]@{
-        item = 'defender_realtime'
-        changed = $false
-        target = 'real-time protection remains enabled; no B5 exclusion is added'
-        rationale = 'B5 must prove SQLite authority access under the installed security posture and must not weaken Defender as a convenience.'
-    }
-}
-
 $after = Get-RawHostState
 $packet = [ordered]@{
     schema = 'eve.b5-windows-host-policy-record.v1'
     action = $Action
+    mutation_permitted = $false
+    manual_only = [ordered]@{
+        windows_update_policy = 'Minseok reviews and changes this only in the Windows GUI; NoAutoRebootWithLoggedOnUsers and related values are capture-only here.'
+        defender_exclusions = 'Minseok reviews and changes exclusions only in Windows Security; no B5 exclusion is added by this script.'
+        plugged_in_power_and_lid = 'Minseok reviews AC sleep, hibernate, hard-disk idle, and lid settings in the Windows GUI.'
+    }
+    privileged_script = 'scripts/operator/b5_windows_service.ps1'
     before = $before
     changes = $changes
     after = $after

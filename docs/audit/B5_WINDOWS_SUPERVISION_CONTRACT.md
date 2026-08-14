@@ -87,17 +87,55 @@ default.
 | Item | Required B5 policy |
 |---|---|
 | Windows Update | no forced automatic reboot while an operator is logged on; every reboot still relies on the automatic service and full startup verification |
-| sleep/hibernate | AC idle sleep and hibernate are disabled |
-| lid close | do nothing, or prove the physical device has no lid |
+| sleep/hibernate/disk | AC idle sleep, hibernate, and hard-disk-off timeouts are disabled |
+| lid close | do nothing on AC power, or prove the physical device has no lid |
 | Fast Startup | `HiberbootEnabled=0`, forcing the complete startup path |
-| Defender | real-time protection stays enabled, no authority-directory exclusion is added, and a raw create/fsync/rename/read/remove access probe succeeds |
+| Defender | real-time protection stays enabled; Minseok records one exact outside-repository proof-store directory exclusion; no broader path/process/type exclusion is allowed |
 | power plan | active scheme is identified and its plugged-in idle settings meet the no-suspend policy |
 | service | `EveB5Supervisor` exists with Automatic start |
 
-`b5_windows_host_policy.ps1 Apply` records before/after raw host state and the
-reason for every change.  It does not disable Defender or add an exclusion.
+`b5_windows_host_policy.ps1 Capture` is read-only and records before/after raw
+host state.  It has no apply mode.  Windows Update, Defender, sleep/hibernate,
+and lid settings are reviewed by Minseok in the Windows GUI and remain
+`UNRESOLVED` until separately observed.  The sole scripted privileged setup and
+service-control entrypoint is `b5_windows_service.ps1`; it is dry-run by
+default, prints a content-digested plan, and requires both `-Apply` and that
+exact reviewed digest.  Its companion `b5_windows_service_rollback.ps1` is also
+dry-run by default and refuses drifted service files.
+
+Fast Startup is the one conditional host registry target in the privileged
+setup script.  It enforces
+`HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled=0`.
+When the recaptured value already exists as zero, the plan records that result
+and performs no registry write.  If it drifts, the plan digest changes and the
+conditional write requires review.  Shutdown followed by power-on must execute
+the complete supervisor and startup-tail verification path rather than resume
+a hiberboot image.
+
 `b5_windows_preflight.py` separately evaluates the installed state and records
 the pinned numpy version.  Any `UNRESOLVED` item makes the preflight exit 86.
+Its current no-exclusion check conflicts with the reviewed exact proof-store
+exclusion and must be corrected before physical execution.
+
+`core/authoritative_store.py` currently converts every startup `sqlite3.Error`
+to `AuthorityUnprovable`, while `b5_runtime_probe.py` converts broad `OSError`
+and persistence errors to exit 86.  The implementation therefore does not yet
+separate transient busy/locked/I/O/sharing failures from accepted-history
+integrity failure.  This is a B5 blocker: known transient availability failures
+require bounded retry and non-86 supervisor backoff, while actual chain/tail
+mismatch, malformed accepted history, failed integrity verification, or a
+genuinely ambiguous commit outcome continue to require exit 86 and the
+sentinel.  Exact requirements and code evidence are in the B5-A review.
+
+The detailed pre-administration review, exact commands, observed values,
+rollback paths, GUI-only steps, and user-level Task Scheduler alternative are
+recorded in `docs/audit/B5_A_PRIVILEGED_OPERATION_REVIEW.md`.  A limited
+per-user logon task preserves exit-86, sentinel, and child-crash semantics once
+it starts.  It does not satisfy unattended reboot continuity before logon.
+Enabling automatic logon is itself privileged and is not an administrator-free
+alternative; the current physical gate also explicitly requires an Automatic
+Windows service.  The service path therefore remains required unless a later
+review changes the gate contract.
 
 ## Physical proof on the Ryzen 7 8840U Windows workstation
 
@@ -127,17 +165,29 @@ green verdict without these observations is invalid.
 
 ## Operator ordering
 
-1. Freeze the final PR tree and create a new lock-installed runtime environment.
-2. Install WinSW as `EveB5Supervisor`, targeting the supervisor in that exact
-   checkout and environment.
-3. Apply and capture the host policy; run a preliminary fail-closed preflight.
-4. Capture the clean running service before reboot, physically reboot Windows,
+1. Commit and review the B5-A document and PowerShell preparation in a separate
+   Draft PR while PR #252 remains Draft.  This step performs no host mutation.
+2. Resolve the transient-I/O classifier and its deterministic tests in a
+   separate reviewed change.  Update preflight to bind the exact proof-store
+   Defender exclusion and AC disk-idle requirement before granting UAC.
+3. Minseok completes and records the GUI-only Defender, Windows Update, lid,
+   disk, sleep, and hibernate decisions.  Any unreadable item remains
+   `UNRESOLVED`.
+4. Freeze the final PR tree and create a new lock-installed runtime environment.
+5. Run the service script without `-Apply`, review every printed path, command,
+   before/after value, rollback target, and the plan SHA-256, then separately
+   authorize the exact plan if acceptable.
+6. With the reviewed digest, enforce Fast Startup off and install WinSW as
+   `EveB5Supervisor`, targeting the supervisor in that exact checkout and
+   environment.  Capture GUI-only host settings and run a preliminary
+   fail-closed preflight.
+7. Capture the clean running service before reboot, physically reboot Windows,
    capture the automatically started service after boot, and run the final
    preflight after reboot so any pending-reboot state must be cleared.
-5. Run exit-93, exit-86, repeated-service-start, and explicit-clear proofs.
-6. Finalize the physical receipt on the clean exact PR head and attach its
+8. Run exit-93, exit-86, repeated-service-start, and explicit-clear proofs.
+9. Finalize the physical receipt on the clean exact PR head and attach its
    digest and raw evidence to the Draft PR.
-7. Only after the exact-head workflow, M2-E window driver, and physical receipt
+10. Only after the exact-head workflow, M2-E window driver, and physical receipt
    are green may the PR become Ready and be squash-merged.
 
 None of these steps starts t=0 or authorizes runtime authority.
