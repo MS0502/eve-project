@@ -1,0 +1,61 @@
+name: B2 authoritative persistence smoke
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - core/authoritative_store.py
+      - scripts/audit/b2_authority_fault_worker.py
+      - scripts/audit/b2_authority_verify.py
+      - scripts/operator/b2_authority_physical_gate.py
+      - scripts/operator/b2_authority_establish.py
+      - tests/test_v4_b2_authoritative_store.py
+      - docs/audit/B2_AUTHORITATIVE_PERSISTENCE_CONTRACT.md
+      - .github/workflows/b2-authority-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Install pinned validation environment
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes -r requirements-lock.txt
+          python -m pip check
+          EVE_VALIDATION_COMMIT="$(git rev-parse HEAD)" \
+          EVE_VALIDATION_TREE="$(git rev-parse HEAD^{tree})" \
+          EVE_VALIDATION_IDENTITY_OUTPUT=/tmp/b2-validation-identity.json \
+            python scripts/audit/validation_preflight.py
+      - name: Run deterministic fault and integrity matrix
+        run: |
+          set -euo pipefail
+          python -m pytest -q --tb=short tests/test_v4_b2_authoritative_store.py \
+            | tee /tmp/b2-focused-tests.txt
+      - name: Verify a fresh authority database
+        run: |
+          set -euo pipefail
+          python scripts/audit/b2_authority_verify.py \
+            --database "$RUNNER_TEMP/b2-authority-smoke.sqlite3" \
+            --create | tee /tmp/b2-startup-verification.json
+      - name: Upload deterministic B2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b2-authority-smoke-${{ github.sha }}
+          path: |
+            /tmp/b2-validation-identity.json
+            /tmp/b2-focused-tests.txt
+            /tmp/b2-startup-verification.json
+          if-no-files-found: error
