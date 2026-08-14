@@ -22,14 +22,19 @@ Durability protocol
 SQLite WAL is requested and verified.  A verified ``DELETE`` rollback journal
 is the only controlled fallback.  Every connection verifies
 ``PRAGMA synchronous=FULL``.  An adjacent OS advisory lock permits exactly one
-authoritative writer process at a time.
+authoritative writer process at a time.  SQLite extended result codes and the
+exact Windows sharing/lock-violation codes distinguish approved transient I/O
+from integrity or unprovable failures.  Approved transient operations use a
+bounded exponential retry; exhaustion still fails closed with exit code 86.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,6 +60,57 @@ APPEND_RECEIPT_SCHEMA_VERSION = "eve.authoritative-append-receipt.v1"
 VERIFICATION_SCHEMA_VERSION = "eve.authoritative-verification.v1"
 STARTUP_SCHEMA_VERSION = "eve.authoritative-startup.v1"
 GENESIS_HASH = "0" * 64
+DEFAULT_TRANSIENT_MAX_ATTEMPTS = 4
+DEFAULT_TRANSIENT_BACKOFF_INITIAL_SECONDS = 0.25
+DEFAULT_TRANSIENT_BACKOFF_MAX_SECONDS = 2.0
+
+_LOGGER = logging.getLogger(__name__)
+_SQLITE_PRIMARY_MASK = 0xFF
+_WINDOWS_TRANSIENT_ERROR_CODES = frozenset({32, 33})
+
+
+def _sqlite_ioerr_extended(subcode: int) -> int:
+    """Build SQLite's stable ``SQLITE_IOERR | (subcode << 8)`` value."""
+
+    return int(sqlite3.SQLITE_IOERR) | (subcode << 8)
+
+
+_SQLITE_TRANSIENT_IOERR_CODES = frozenset(
+    _sqlite_ioerr_extended(subcode)
+    for subcode in (
+        1,  # READ
+        3,  # WRITE
+        4,  # FSYNC
+        5,  # DIR_FSYNC
+        6,  # TRUNCATE
+        7,  # FSTAT
+        8,  # UNLOCK
+        9,  # RDLOCK
+        10,  # DELETE
+        11,  # BLOCKED
+        13,  # ACCESS
+        14,  # CHECKRESERVEDLOCK
+        15,  # LOCK
+        16,  # CLOSE
+        17,  # DIR_CLOSE
+        18,  # SHMOPEN
+        19,  # SHMSIZE
+        20,  # SHMLOCK
+        21,  # SHMMAP
+        22,  # SEEK
+        23,  # DELETE_NOENT
+        24,  # MMAP
+        25,  # GETTEMPPATH
+        26,  # CONVPATH
+    )
+)
+_SQLITE_INTEGRITY_IOERR_CODES = frozenset(
+    {
+        _sqlite_ioerr_extended(2),  # SHORT_READ
+        _sqlite_ioerr_extended(32),  # DATA
+        _sqlite_ioerr_extended(33),  # CORRUPTFS
+    }
+)
 
 FAULT_BEFORE_EVENT_APPEND = "before_event_append"
 FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT = "after_event_row_write_before_commit"
@@ -74,6 +130,8 @@ FAULT_POINTS = (
 StateT = TypeVar("StateT")
 FaultInjector = Callable[[str], None]
 WalProbe = Callable[[sqlite3.Connection], str]
+RetryObserver = Callable[[Mapping[str, Any]], None]
+RetrySleeper = Callable[[float], None]
 
 
 class AuthorityPersistenceError(RuntimeError):
@@ -102,6 +160,174 @@ class AuthorityAppendRejected(AuthorityPersistenceError):
 
 class InjectedAuthorityFault(RuntimeError):
     """Deterministic test-only interruption raised by a fault injector."""
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorityFailureClassification:
+    """Stable evidence explaining whether an authority failure may be retried."""
+
+    classification: str
+    source: str
+    reason: str
+    sqlite_extended_errcode: int | None = None
+    sqlite_primary_errcode: int | None = None
+    sqlite_errorname: str | None = None
+    windows_error_code: int | None = None
+
+    def record(self) -> dict[str, Any]:
+        return {
+            "classification": self.classification,
+            "source": self.source,
+            "reason": self.reason,
+            "sqlite_extended_errcode": self.sqlite_extended_errcode,
+            "sqlite_primary_errcode": self.sqlite_primary_errcode,
+            "sqlite_errorname": self.sqlite_errorname,
+            "windows_error_code": self.windows_error_code,
+        }
+
+
+def classify_authority_failure(exc: BaseException) -> AuthorityFailureClassification:
+    """Classify using SQLite's extended code or the exact Windows sharing code."""
+
+    if isinstance(exc, AuthorityBusy):
+        cause = exc.__cause__
+        windows_error = getattr(cause, "winerror", None)
+        return AuthorityFailureClassification(
+            "TRANSIENT",
+            "writer_lock",
+            "the single-writer advisory lock is currently held",
+            windows_error_code=windows_error if isinstance(windows_error, int) else None,
+        )
+    if isinstance(exc, AuthorityUnprovable):
+        return AuthorityFailureClassification(
+            "INTEGRITY",
+            "authority_verification",
+            str(exc),
+        )
+    if isinstance(exc, sqlite3.Error):
+        code = getattr(exc, "sqlite_errorcode", None)
+        extended = int(code) if isinstance(code, int) else None
+        primary = extended & _SQLITE_PRIMARY_MASK if extended is not None else None
+        name_value = getattr(exc, "sqlite_errorname", None)
+        name = str(name_value) if name_value else None
+        if primary in {sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB}:
+            classification = "INTEGRITY"
+            reason = "SQLite reports corrupt or non-database content"
+        elif extended in _SQLITE_INTEGRITY_IOERR_CODES:
+            classification = "INTEGRITY"
+            reason = (
+                "SQLite extended I/O code reports truncated, checksum-invalid, "
+                "or corrupt storage"
+            )
+        elif primary in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}:
+            classification = "TRANSIENT"
+            reason = "SQLite reports a temporary busy or locked condition"
+        elif extended in _SQLITE_TRANSIENT_IOERR_CODES:
+            classification = "TRANSIENT"
+            reason = "SQLite extended I/O code identifies a retryable operating-system operation"
+        elif primary == sqlite3.SQLITE_IOERR and extended == sqlite3.SQLITE_IOERR:
+            classification = "UNPROVABLE"
+            reason = (
+                "SQLite supplied only primary SQLITE_IOERR; the required extended "
+                "subtype is unavailable"
+            )
+        elif primary == sqlite3.SQLITE_IOERR:
+            classification = "UNPROVABLE"
+            reason = "SQLite extended I/O subtype is not on the approved transient whitelist"
+        else:
+            classification = "UNPROVABLE"
+            reason = (
+                "SQLite error is neither an approved transient code nor a proven "
+                "integrity code"
+            )
+        return AuthorityFailureClassification(
+            classification,
+            "sqlite",
+            reason,
+            sqlite_extended_errcode=extended,
+            sqlite_primary_errcode=primary,
+            sqlite_errorname=name,
+        )
+    if isinstance(exc, OSError):
+        windows_error = getattr(exc, "winerror", None)
+        if isinstance(windows_error, int) and windows_error in _WINDOWS_TRANSIENT_ERROR_CODES:
+            return AuthorityFailureClassification(
+                "TRANSIENT",
+                "windows",
+                "Windows reports a temporary sharing or lock violation",
+                windows_error_code=windows_error,
+            )
+        return AuthorityFailureClassification(
+            "UNPROVABLE",
+            "os",
+            "operating-system failure is not an approved Windows transient code",
+            windows_error_code=windows_error if isinstance(windows_error, int) else None,
+        )
+    return AuthorityFailureClassification(
+        "UNPROVABLE",
+        "python",
+        "failure type has no approved transient classification",
+    )
+
+
+def retry_authority_operation(
+    operation: Callable[[int], StateT],
+    *,
+    operation_name: str,
+    max_attempts: int = DEFAULT_TRANSIENT_MAX_ATTEMPTS,
+    backoff_initial: float = DEFAULT_TRANSIENT_BACKOFF_INITIAL_SECONDS,
+    backoff_max: float = DEFAULT_TRANSIENT_BACKOFF_MAX_SECONDS,
+    observer: RetryObserver | None = None,
+    sleeper: RetrySleeper = time.sleep,
+) -> StateT:
+    """Run a retry-safe operation with bounded, evidence-producing backoff."""
+
+    if max_attempts < 1:
+        raise ValueError("transient max attempts must be at least one")
+    if backoff_initial <= 0 or backoff_max < backoff_initial:
+        raise ValueError("transient backoff bounds are invalid")
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return operation(attempt)
+        except (AuthorityBusy, AuthorityUnprovable, sqlite3.Error, OSError) as exc:
+            classification = classify_authority_failure(exc)
+            transient = classification.classification == "TRANSIENT"
+            exhausted = transient and attempt >= max_attempts
+            delay = min(backoff_initial * (2 ** (attempt - 1)), backoff_max)
+            record = {
+                "event": "authority_failure_classified",
+                "operation": operation_name,
+                "attempt": attempt,
+                "max_attempts": max_attempts,
+                "retry_scheduled": transient and not exhausted,
+                "retry_exhausted": exhausted,
+                "next_backoff_seconds": delay if transient and not exhausted else None,
+                **classification.record(),
+            }
+            _LOGGER.warning(
+                "authority_failure_classified %s",
+                json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+            )
+            if observer is not None:
+                observer(record)
+            if not transient:
+                if isinstance(exc, AuthorityUnprovable):
+                    raise
+                raise AuthorityUnprovable(
+                    f"{operation_name} failed closed: {classification.reason}"
+                ) from exc
+            if exhausted:
+                message = (
+                    f"{operation_name} transient retry limit exhausted after {attempt} attempts; "
+                    f"source={classification.source}; "
+                    f"sqlite_extended_errcode={classification.sqlite_extended_errcode}; "
+                    f"windows_error_code={classification.windows_error_code}"
+                )
+                if isinstance(exc, AuthorityBusy):
+                    raise AuthorityBusy(message) from exc
+                raise AuthorityUnprovable(message) from exc
+            sleeper(delay)
+    raise AssertionError("bounded authority retry loop did not terminate")
 
 
 def _canonical(value: Mapping[str, Any], *, field: str) -> str:
@@ -423,6 +649,11 @@ class AuthoritativeStore:
         allow_rollback_fallback: bool = True,
         fault_injector: FaultInjector | None = None,
         wal_probe: WalProbe | None = None,
+        transient_max_attempts: int = DEFAULT_TRANSIENT_MAX_ATTEMPTS,
+        transient_backoff_initial: float = DEFAULT_TRANSIENT_BACKOFF_INITIAL_SECONDS,
+        transient_backoff_max: float = DEFAULT_TRANSIENT_BACKOFF_MAX_SECONDS,
+        retry_observer: RetryObserver | None = None,
+        retry_sleeper: RetrySleeper = time.sleep,
     ) -> None:
         self._path = Path(database_path)
         if str(database_path) == ":memory:" or self._path.name == "":
@@ -438,6 +669,15 @@ class AuthoritativeStore:
         self._allow_rollback_fallback = allow_rollback_fallback
         self._fault_injector = fault_injector
         self._wal_probe = wal_probe
+        if transient_max_attempts < 1:
+            raise ValueError("transient max attempts must be at least one")
+        if transient_backoff_initial <= 0 or transient_backoff_max < transient_backoff_initial:
+            raise ValueError("transient backoff bounds are invalid")
+        self._transient_max_attempts = transient_max_attempts
+        self._transient_backoff_initial = transient_backoff_initial
+        self._transient_backoff_max = transient_backoff_max
+        self._retry_observer = retry_observer
+        self._retry_sleeper = retry_sleeper
         self._writer_lock = _WriterLock(Path(f"{self._path}.writer.lock"))
         self._opened = False
         self._journal_mode = ""
@@ -462,6 +702,17 @@ class AuthoritativeStore:
     def _validate_boundary(self) -> None:
         if not self._opened:
             raise AuthorityNotOpen("authoritative store requires explicit open()")
+
+    def _retry(self, operation_name: str, operation: Callable[[int], StateT]) -> StateT:
+        return retry_authority_operation(
+            operation,
+            operation_name=operation_name,
+            max_attempts=self._transient_max_attempts,
+            backoff_initial=self._transient_backoff_initial,
+            backoff_max=self._transient_backoff_max,
+            observer=self._retry_observer,
+            sleeper=self._retry_sleeper,
+        )
 
     @contextmanager
     def _resolve_store(self, *, validate_schema: bool = True) -> Iterator[sqlite3.Connection]:
@@ -687,51 +938,52 @@ class AuthoritativeStore:
 
         if self._opened:
             raise AuthorityPersistenceError("authoritative store is already open")
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._writer_lock.acquire()
-        try:
-            with self._resolve_store(validate_schema=False) as connection:
-                self._journal_mode = self._policy_flags(connection)
-                objects = int(
-                    connection.execute(
-                        "SELECT COUNT(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'"
-                    ).fetchone()[0]
-                )
-                if objects == 0:
-                    self._plan(connection)
-                self._validate_schema(connection)
-                state = self._state_record(connection)
-                recovered = self._remember(connection, state)
-                if recovered:
+
+        def attempt(_attempt: int) -> StartupReport:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            self._writer_lock.acquire()
+            try:
+                with self._resolve_store(validate_schema=False) as connection:
+                    self._journal_mode = self._policy_flags(connection)
+                    objects = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'"
+                        ).fetchone()[0]
+                    )
+                    if objects == 0:
+                        self._plan(connection)
+                    self._validate_schema(connection)
                     state = self._state_record(connection)
-                candidate_count = int(
-                    connection.execute("SELECT COUNT(*) FROM event_candidate").fetchone()[0]
+                    recovered = self._remember(connection, state)
+                    if recovered:
+                        state = self._state_record(connection)
+                    candidate_count = int(
+                        connection.execute("SELECT COUNT(*) FROM event_candidate").fetchone()[0]
+                    )
+                    if candidate_count:
+                        raise AuthorityAmbiguity("unaccepted residue remains after recovery")
+                self._opened = True
+                return StartupReport(
+                    str(self._path),
+                    self._journal_mode,
+                    self._journal_mode == "wal",
+                    self._journal_mode == "delete",
+                    "FULL",
+                    len(state.events),
+                    state.event_chain_head,
+                    state.tail_hash,
+                    recovered,
                 )
-                if candidate_count:
-                    raise AuthorityAmbiguity("unaccepted residue remains after recovery")
-            self._opened = True
-            return StartupReport(
-                str(self._path),
-                self._journal_mode,
-                self._journal_mode == "wal",
-                self._journal_mode == "delete",
-                "FULL",
-                len(state.events),
-                state.event_chain_head,
-                state.tail_hash,
-                recovered,
-            )
+            except Exception:
+                self._writer_lock.release()
+                self._journal_mode = ""
+                raise
+
+        try:
+            return self._retry("authoritative_startup", attempt)
         except AuthorityPersistenceError:
-            self._writer_lock.release()
-            self._journal_mode = ""
             raise
-        except sqlite3.Error as exc:
-            self._writer_lock.release()
-            self._journal_mode = ""
-            raise AuthorityUnprovable("SQLite could not prove authoritative startup") from exc
         except Exception as exc:
-            self._writer_lock.release()
-            self._journal_mode = ""
             raise AuthorityUnprovable("authoritative startup verification failed") from exc
 
     open = run
@@ -754,148 +1006,238 @@ class AuthoritativeStore:
 
     __exit__ = update
 
+    @staticmethod
+    def _accepted_append_receipt(
+        connection: sqlite3.Connection,
+        envelope: EventEnvelope,
+        raw: bytes,
+        state: _AcceptedState,
+    ) -> AuthorityAppendReceipt:
+        row = connection.execute(
+            "SELECT * FROM authority_events WHERE event_id=?", (envelope.event_id,)
+        ).fetchone()
+        if row is None:
+            raise AuthorityAmbiguity("retried append is absent from accepted history")
+        ordinal = int(row["ordinal"])
+        if ordinal != len(state.events) or bytes(row["event_bytes"]) != raw:
+            raise AuthorityAmbiguity("retried append differs from accepted history")
+        if state.events[-1] != envelope:
+            raise AuthorityAmbiguity("retried append is not the accepted chain head")
+        tail = connection.execute(
+            "SELECT * FROM accepted_tail WHERE accepted_ordinal=?", (ordinal,)
+        ).fetchone()
+        if tail is None or int(tail["revision"]) != ordinal:
+            raise AuthorityAmbiguity("retried append tail receipt is absent")
+        content_hash = str(row["content_hash"])
+        previous_event_hash = str(row["prev_hash"])
+        event_hash = str(row["event_hash"])
+        if content_hash != _sha256(raw) or event_hash != digest(
+            content_hash=content_hash,
+            ordinal=ordinal,
+            prev_hash=previous_event_hash,
+        ):
+            raise AuthorityAmbiguity("retried append event proof differs")
+        previous_tail_hash = str(tail["previous_tail_hash"])
+        tail_hash = str(tail["tail_hash"])
+        if str(tail["accepted_event_hash"]) != event_hash or tail_hash != receipt_digest(
+            revision=ordinal,
+            accepted_ordinal=ordinal,
+            accepted_event_hash=event_hash,
+            previous_tail_hash=previous_tail_hash,
+        ):
+            raise AuthorityAmbiguity("retried append tail proof differs")
+        return AuthorityAppendReceipt(
+            ordinal,
+            envelope.event_id,
+            envelope.stream_id,
+            envelope.sequence,
+            content_hash,
+            previous_event_hash,
+            event_hash,
+            tail_hash,
+            True,
+            True,
+            True,
+        )
+
     def append(self, envelope: EventEnvelope) -> AuthorityAppendReceipt:
         """Durably accept one event using the candidate-to-tail protocol."""
 
         self._validate_boundary()
         if not isinstance(envelope, EventEnvelope):
             raise AuthorityAppendRejected("authority accepts EventEnvelope only")
-        self._reject(FAULT_BEFORE_EVENT_APPEND)
-        with self._resolve_store() as connection:
-            state = self._state_record(connection)
-            if connection.execute("SELECT COUNT(*) FROM event_candidate").fetchone()[0]:
-                raise AuthorityAmbiguity("unaccepted residue requires restart verification")
-            if envelope.event_id in state.known_event_ids:
-                raise AuthorityAppendRejected(f"duplicate event id: {envelope.event_id}")
-            expected_sequence = state.stream_sequences.get(envelope.stream_id, 0) + 1
-            if envelope.sequence != expected_sequence:
-                raise AuthorityAppendRejected(
-                    f"expected sequence {expected_sequence} for {envelope.stream_id}"
-                )
-            if envelope.causation_id is not None and envelope.causation_id not in state.known_event_ids:
-                raise AuthorityAppendRejected(f"unknown causation: {envelope.causation_id}")
-            ordinal = len(state.events) + 1
-            raw = canonical_record(envelope)
-            content_hash = _sha256(raw)
-            event_hash = digest(
-                content_hash=content_hash, ordinal=ordinal, prev_hash=state.event_chain_head
-            )
+        raw = canonical_record(envelope)
 
-            connection.execute("BEGIN IMMEDIATE")
-            try:
-                connection.execute(
-                    "INSERT INTO event_candidate VALUES(1,?,?,?,?,?,?,?,?,?)",
-                    (
-                        ordinal,
-                        envelope.event_id,
-                        envelope.stream_id,
-                        envelope.sequence,
-                        raw,
-                        len(raw),
-                        content_hash,
-                        state.event_chain_head,
-                        event_hash,
-                    ),
-                )
-                self._reject(FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT)
-                connection.commit()
-            except Exception:
-                connection.rollback()
-                raise
+        def attempt(attempt_number: int) -> AuthorityAppendReceipt:
+            self._reject(FAULT_BEFORE_EVENT_APPEND)
+            with self._resolve_store() as connection:
+                state = self._state_record(connection)
+                if envelope.event_id in state.known_event_ids:
+                    if attempt_number == 1:
+                        raise AuthorityAppendRejected(f"duplicate event id: {envelope.event_id}")
+                    return self._accepted_append_receipt(connection, envelope, raw, state)
 
-            self._reject(FAULT_AFTER_EVENT_TRANSACTION_COMMIT)
-            self._reject(FAULT_BEFORE_ACCEPTED_TAIL_UPDATE)
-
-            connection.execute("BEGIN IMMEDIATE")
-            try:
-                current = self._state_record(connection)
                 candidate = connection.execute(
                     "SELECT * FROM event_candidate WHERE slot=1"
                 ).fetchone()
-                if candidate is None:
-                    raise AuthorityAmbiguity("candidate disappeared before acceptance")
-                self._entry(candidate, current)
-                connection.execute(
-                    "INSERT INTO authority_events VALUES(?,?,?,?,?,?,?,?,?)",
-                    (
-                        ordinal,
-                        envelope.event_id,
-                        envelope.stream_id,
-                        envelope.sequence,
-                        raw,
-                        len(raw),
-                        content_hash,
-                        current.event_chain_head,
-                        event_hash,
-                    ),
-                )
-                next_tail_hash = receipt_digest(
-                    revision=ordinal,
-                    accepted_ordinal=ordinal,
-                    accepted_event_hash=event_hash,
-                    previous_tail_hash=current.tail_hash,
-                )
-                connection.execute(
-                    "INSERT INTO accepted_tail VALUES(?,?,?,?,?)",
-                    (ordinal, ordinal, event_hash, current.tail_hash, next_tail_hash),
-                )
-                self._reject(FAULT_DURING_ACCEPTED_TAIL_UPDATE)
-                connection.execute("DELETE FROM event_candidate WHERE slot=1")
-                connection.commit()
-            except Exception:
-                connection.rollback()
-                raise
+                if candidate is not None:
+                    if attempt_number == 1:
+                        raise AuthorityAmbiguity("unaccepted residue requires restart verification")
+                    recovered = self._entry(candidate, state)
+                    if recovered != envelope or bytes(candidate["event_bytes"]) != raw:
+                        raise AuthorityAmbiguity("retried append candidate differs")
+                    ordinal = int(candidate["expected_ordinal"])
+                    content_hash = str(candidate["content_hash"])
+                    event_hash = str(candidate["event_hash"])
+                else:
+                    expected_sequence = state.stream_sequences.get(envelope.stream_id, 0) + 1
+                    if envelope.sequence != expected_sequence:
+                        raise AuthorityAppendRejected(
+                            f"expected sequence {expected_sequence} for {envelope.stream_id}"
+                        )
+                    if (
+                        envelope.causation_id is not None
+                        and envelope.causation_id not in state.known_event_ids
+                    ):
+                        raise AuthorityAppendRejected(f"unknown causation: {envelope.causation_id}")
+                    ordinal = len(state.events) + 1
+                    content_hash = _sha256(raw)
+                    event_hash = digest(
+                        content_hash=content_hash,
+                        ordinal=ordinal,
+                        prev_hash=state.event_chain_head,
+                    )
+                    connection.execute("BEGIN IMMEDIATE")
+                    try:
+                        connection.execute(
+                            "INSERT INTO event_candidate VALUES(1,?,?,?,?,?,?,?,?,?)",
+                            (
+                                ordinal,
+                                envelope.event_id,
+                                envelope.stream_id,
+                                envelope.sequence,
+                                raw,
+                                len(raw),
+                                content_hash,
+                                state.event_chain_head,
+                                event_hash,
+                            ),
+                        )
+                        self._reject(FAULT_AFTER_EVENT_ROW_WRITE_BEFORE_COMMIT)
+                        connection.commit()
+                    except sqlite3.Error:
+                        raise
+                    except Exception:
+                        connection.rollback()
+                        raise
 
-            self._reject(FAULT_AFTER_ACCEPTED_TAIL_UPDATE)
-            verified = self._state_record(connection)
-            if (
-                len(verified.events) != ordinal
-                or verified.event_chain_head != event_hash
-                or verified.tail_hash != next_tail_hash
-            ):
-                raise AuthorityUnprovable("accepted append readback differs")
-            return AuthorityAppendReceipt(
-                ordinal,
-                envelope.event_id,
-                envelope.stream_id,
-                envelope.sequence,
-                content_hash,
-                state.event_chain_head,
-                event_hash,
-                next_tail_hash,
-                True,
-                True,
-                True,
-            )
+                    self._reject(FAULT_AFTER_EVENT_TRANSACTION_COMMIT)
+
+                self._reject(FAULT_BEFORE_ACCEPTED_TAIL_UPDATE)
+                connection.execute("BEGIN IMMEDIATE")
+                try:
+                    current = self._state_record(connection)
+                    candidate = connection.execute(
+                        "SELECT * FROM event_candidate WHERE slot=1"
+                    ).fetchone()
+                    if candidate is None:
+                        raise AuthorityAmbiguity("candidate disappeared before acceptance")
+                    accepted_candidate = self._entry(candidate, current)
+                    if accepted_candidate != envelope or bytes(candidate["event_bytes"]) != raw:
+                        raise AuthorityAmbiguity("candidate differs before acceptance")
+                    connection.execute(
+                        "INSERT INTO authority_events VALUES(?,?,?,?,?,?,?,?,?)",
+                        (
+                            ordinal,
+                            envelope.event_id,
+                            envelope.stream_id,
+                            envelope.sequence,
+                            raw,
+                            len(raw),
+                            content_hash,
+                            current.event_chain_head,
+                            event_hash,
+                        ),
+                    )
+                    next_tail_hash = receipt_digest(
+                        revision=ordinal,
+                        accepted_ordinal=ordinal,
+                        accepted_event_hash=event_hash,
+                        previous_tail_hash=current.tail_hash,
+                    )
+                    connection.execute(
+                        "INSERT INTO accepted_tail VALUES(?,?,?,?,?)",
+                        (ordinal, ordinal, event_hash, current.tail_hash, next_tail_hash),
+                    )
+                    self._reject(FAULT_DURING_ACCEPTED_TAIL_UPDATE)
+                    connection.execute("DELETE FROM event_candidate WHERE slot=1")
+                    connection.commit()
+                except sqlite3.Error:
+                    raise
+                except Exception:
+                    connection.rollback()
+                    raise
+
+                self._reject(FAULT_AFTER_ACCEPTED_TAIL_UPDATE)
+                verified = self._state_record(connection)
+                if (
+                    len(verified.events) != ordinal
+                    or verified.event_chain_head != event_hash
+                    or verified.tail_hash != next_tail_hash
+                ):
+                    raise AuthorityUnprovable("accepted append readback differs")
+                return AuthorityAppendReceipt(
+                    ordinal,
+                    envelope.event_id,
+                    envelope.stream_id,
+                    envelope.sequence,
+                    content_hash,
+                    state.event_chain_head,
+                    event_hash,
+                    next_tail_hash,
+                    True,
+                    True,
+                    True,
+                )
+
+        return self._retry("authoritative_append", attempt)
 
     def report(self) -> VerificationReport:
         self._validate_boundary()
-        with self._resolve_store() as connection:
-            state = self._state_record(connection)
-            candidates = int(
-                connection.execute("SELECT COUNT(*) FROM event_candidate").fetchone()[0]
-            )
-            if candidates:
-                raise AuthorityAmbiguity("unaccepted residue requires restart verification")
-            mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower()
-            synchronous = int(connection.execute("PRAGMA synchronous").fetchone()[0])
-            if mode != self._journal_mode or synchronous != 2:
-                raise AuthorityUnprovable("journal or synchronous mode drifted")
-            return VerificationReport(
-                len(state.events),
-                state.event_chain_head,
-                state.tail_hash,
-                candidates,
-                mode,
-                "FULL",
-            )
+
+        def attempt(_attempt: int) -> VerificationReport:
+            with self._resolve_store() as connection:
+                state = self._state_record(connection)
+                candidates = int(
+                    connection.execute("SELECT COUNT(*) FROM event_candidate").fetchone()[0]
+                )
+                if candidates:
+                    raise AuthorityAmbiguity("unaccepted residue requires restart verification")
+                mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+                synchronous = int(connection.execute("PRAGMA synchronous").fetchone()[0])
+                if mode != self._journal_mode or synchronous != 2:
+                    raise AuthorityUnprovable("journal or synchronous mode drifted")
+                return VerificationReport(
+                    len(state.events),
+                    state.event_chain_head,
+                    state.tail_hash,
+                    candidates,
+                    mode,
+                    "FULL",
+                )
+
+        return self._retry("authoritative_verify", attempt)
 
     verify = report
 
     def events(self, *, stream_id: str | None = None) -> tuple[EventEnvelope, ...]:
         self._validate_boundary()
-        with self._resolve_store() as connection:
-            events = self._state_record(connection).events
+
+        def attempt(_attempt: int) -> tuple[EventEnvelope, ...]:
+            with self._resolve_store() as connection:
+                return self._state_record(connection).events
+
+        events = self._retry("authoritative_events", attempt)
         if stream_id is None:
             return events
         return tuple(event for event in events if event.stream_id == stream_id)

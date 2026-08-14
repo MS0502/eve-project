@@ -114,18 +114,29 @@ a hiberboot image.
 
 `b5_windows_preflight.py` separately evaluates the installed state and records
 the pinned numpy version.  Any `UNRESOLVED` item makes the preflight exit 86.
-Its current no-exclusion check conflicts with the reviewed exact proof-store
-exclusion and must be corrected before physical execution.
+It reads `HiberbootEnabled` on every run and requires an exact zero; queries the
+AC sleep, hibernate, disk-idle, and lid-close indexes; and requires the exact
+outside-repository proof-store Defender directory exclusion rather than
+accepting a broader parent.  An unavailable Defender exclusion query, absent
+exact match, broader exclusion, nonzero Fast Startup value, nonzero AC disk
+idle timeout, or AC lid sleep action is `UNRESOLVED`, not pass.
 
-`core/authoritative_store.py` currently converts every startup `sqlite3.Error`
-to `AuthorityUnprovable`, while `b5_runtime_probe.py` converts broad `OSError`
-and persistence errors to exit 86.  The implementation therefore does not yet
-separate transient busy/locked/I/O/sharing failures from accepted-history
-integrity failure.  This is a B5 blocker: known transient availability failures
-require bounded retry and non-86 supervisor backoff, while actual chain/tail
-mismatch, malformed accepted history, failed integrity verification, or a
-genuinely ambiguous commit outcome continue to require exit 86 and the
-sentinel.  Exact requirements and code evidence are in the B5-A review.
+`core/authoritative_store.py` classifies failures from Python's SQLite extended
+result code (the `sqlite3_extended_errcode()` value exposed as
+`sqlite_errorcode`) and direct Windows file error codes.  `SQLITE_BUSY`,
+`SQLITE_LOCKED`, the approved `SQLITE_IOERR_*` operation whitelist, and Windows
+sharing/lock violations 32 and 33 receive at most four attempts with bounded
+exponential backoff.  Every decision records the extended and primary SQLite
+codes, name, Windows code, reason, attempt, limit, and retry result.  Append
+retry never blindly duplicates a write: it must prove the exact durable
+candidate or the exact accepted chain-head event before continuing or returning
+a receipt.  Runtime-probe store hashing uses the same classifier.
+
+`SQLITE_CORRUPT`, `SQLITE_NOTADB`, `SQLITE_IOERR_CORRUPTFS`, checksum/truncation
+I/O codes, chain/tail mismatch, malformed accepted history, and any state that
+cannot be proved remain immediate exit 86 without retry.  A transient failure
+that exhausts its finite attempt limit also becomes exit 86; there is no
+infinite retry or automatic sentinel bypass.
 
 The detailed pre-administration review, exact commands, observed values,
 rollback paths, GUI-only steps, and user-level Task Scheduler alternative are

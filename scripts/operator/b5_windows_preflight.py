@@ -79,6 +79,7 @@ def _powershell_json(script: str) -> tuple[Any | None, dict[str, Any]]:
 def _power_indexes(output: str) -> dict[str, list[int]]:
     ac: list[int] = []
     dc: list[int] = []
+    unlabeled: list[int] = []
     for line in output.splitlines():
         match = re.search(r"0x([0-9a-fA-F]+)\s*$", line)
         if not match:
@@ -88,19 +89,34 @@ def _power_indexes(output: str) -> dict[str, list[int]]:
             ac.append(int(match.group(1), 16))
         elif " dc " in f" {lowered} " or "현재 dc" in lowered:
             dc.append(int(match.group(1), 16))
+        else:
+            unlabeled.append(int(match.group(1), 16))
+    if not ac and not dc and len(unlabeled) == 2:
+        ac.append(unlabeled[0])
+        dc.append(unlabeled[1])
     return {"ac": ac, "dc": dc}
 
 
-def _path_is_excluded(authority_dir: Path, exclusions: list[str]) -> bool:
+def _defender_exclusion_state(authority_dir: Path, exclusions: list[str]) -> dict[str, Any]:
     target = authority_dir.resolve()
+    exact_matches: list[str] = []
+    broader_parent_matches: list[str] = []
     for value in exclusions:
         try:
-            candidate = Path(value).expanduser().resolve()
+            candidate = Path(os.path.expandvars(value)).expanduser().resolve()
+            if os.path.normcase(str(candidate)) == os.path.normcase(str(target)):
+                exact_matches.append(value)
+                continue
             target.relative_to(candidate)
-            return True
+            broader_parent_matches.append(value)
         except (OSError, ValueError):
             continue
-    return False
+    return {
+        "target": str(target),
+        "exact_match": bool(exact_matches),
+        "exact_matches": exact_matches,
+        "broader_parent_matches": broader_parent_matches,
+    }
 
 
 def _defender_access_probe(authority_dir: Path) -> dict[str, Any]:
@@ -161,18 +177,34 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
         and update.get("PendingFileRename") is False
     )
 
-    sleep_raw = _run(["powercfg.exe", "/query", "SCHEME_CURRENT", "SUB_SLEEP"])
+    sleep_raw = {
+        "standby_idle": _run(
+            ["powercfg.exe", "/qh", "SCHEME_CURRENT", "SUB_SLEEP", "STANDBYIDLE"]
+        ),
+        "hibernate_idle": _run(
+            ["powercfg.exe", "/qh", "SCHEME_CURRENT", "SUB_SLEEP", "HIBERNATEIDLE"]
+        ),
+    }
+    disk_raw = _run(
+        ["powercfg.exe", "/qh", "SCHEME_CURRENT", "SUB_DISK", "DISKIDLE"]
+    )
     lid_raw = _run(
         ["powercfg.exe", "/qh", "SCHEME_CURRENT", "SUB_BUTTONS", "LIDACTION"]
     )
     active_raw = _run(["powercfg.exe", "/getactivescheme"])
-    sleep_indexes = _power_indexes(sleep_raw["stdout"])
+    sleep_indexes = {
+        name: _power_indexes(raw["stdout"]) for name, raw in sleep_raw.items()
+    }
+    disk_indexes = _power_indexes(disk_raw["stdout"])
     lid_indexes = _power_indexes(lid_raw["stdout"])
-    sleep_passed = (
-        sleep_raw["return_code"] == 0
-        and len(sleep_indexes["ac"]) >= 2
-        and sleep_indexes["ac"][0] == 0
-        and sleep_indexes["ac"][1] == 0
+    sleep_passed = all(raw["return_code"] == 0 for raw in sleep_raw.values()) and all(
+        indexes["ac"] and indexes["ac"][0] == 0
+        for indexes in sleep_indexes.values()
+    )
+    disk_passed = bool(
+        disk_raw["return_code"] == 0
+        and disk_indexes["ac"]
+        and disk_indexes["ac"][0] == 0
     )
     lid_verdict = "PASS" if lid_indexes["ac"] and lid_indexes["ac"][0] == 0 else "UNRESOLVED"
     chassis, chassis_raw = _powershell_json(
@@ -189,9 +221,8 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
     fast_passed = isinstance(fast, dict) and fast.get("HiberbootEnabled") == 0
 
     defender, defender_raw = _powershell_json(
-        "$i=[Security.Principal.WindowsIdentity]::GetCurrent();"
-        "$a=[Security.Principal.WindowsPrincipal]::new($i).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator);"
-        "$s=Get-MpComputerStatus; $p=Get-MpPreference;"
+        "$a=$true; try {$p=Get-MpPreference -ErrorAction Stop} catch {$a=$false;$p=$null};"
+        "$s=Get-MpComputerStatus;"
         "[ordered]@{ExclusionQueryAvailable=$a;AntivirusEnabled=$s.AntivirusEnabled;"
         "RealTimeProtectionEnabled=$s.RealTimeProtectionEnabled;"
         "BehaviorMonitorEnabled=$s.BehaviorMonitorEnabled;"
@@ -202,13 +233,15 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
     exclusions: list[str] = []
     if isinstance(defender, dict) and isinstance(defender.get("ExclusionPath"), list):
         exclusions = [str(value) for value in defender["ExclusionPath"]]
+    exclusion_state = _defender_exclusion_state(authority_dir, exclusions)
     defender_passed = bool(
         isinstance(defender, dict)
         and defender.get("ExclusionQueryAvailable") is True
         and defender.get("AntivirusEnabled") is True
         and defender.get("RealTimeProtectionEnabled") is True
         and defender.get("DisableRealtimeMonitoring") is False
-        and not _path_is_excluded(authority_dir, exclusions)
+        and exclusion_state["exact_match"] is True
+        and not exclusion_state["broader_parent_matches"]
         and access_probe.get("passed") is True
     )
 
@@ -255,6 +288,12 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
                 "required_policy": "plugged-in sleep and hibernate idle timeouts are disabled",
                 "raw": sleep_raw,
             },
+            "disk_idle": {
+                "verdict": "PASS" if disk_passed else "UNRESOLVED",
+                "current_setting": disk_indexes,
+                "required_policy": "plugged-in disk idle timeout is disabled (AC index 0)",
+                "raw": disk_raw,
+            },
             "lid_close": {
                 "verdict": lid_verdict,
                 "current_setting": {"indexes": lid_indexes, "chassis_types": chassis_values},
@@ -270,17 +309,28 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
             "defender_authority_directory": {
                 "verdict": "PASS" if defender_passed else "UNRESOLVED",
                 "current_setting": defender,
-                "authority_directory_excluded": _path_is_excluded(authority_dir, exclusions),
+                "authority_directory_exclusion": exclusion_state,
                 "access_probe": access_probe,
-                "required_policy": "Defender real-time protection remains enabled, no authority-directory exclusion is added, and file access succeeds",
+                "required_policy": (
+                    "Defender real-time protection remains enabled, the exact authority "
+                    "store directory (not a broader parent) is excluded, and file access succeeds"
+                ),
                 "raw": defender_raw,
             },
             "plugged_in_power_plan": {
                 "verdict": "PASS"
-                if active_raw["return_code"] == 0 and sleep_passed
+                if (
+                    active_raw["return_code"] == 0
+                    and sleep_passed
+                    and disk_passed
+                    and lid_verdict in {"PASS", "NOT_APPLICABLE"}
+                )
                 else "UNRESOLVED",
                 "current_setting": active_raw["stdout"],
-                "required_policy": "an identified active plan with plugged-in idle sleep and hibernate disabled",
+                "required_policy": (
+                    "an identified active plan with plugged-in sleep, hibernate, and disk "
+                    "idle disabled and lid close set to do nothing when applicable"
+                ),
                 "raw": active_raw,
             },
             "service_configuration": {

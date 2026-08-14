@@ -22,6 +22,7 @@ from core.authoritative_store import (  # noqa: E402
     AuthorityPersistenceError,
     AuthorityUnprovable,
     AuthoritativeStore,
+    retry_authority_operation,
 )
 
 CONTROL_SCHEMA = "eve.b5-runtime-probe-control.v1"
@@ -103,29 +104,45 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ready", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        def observe_retry(record: Mapping[str, Any]) -> None:
+            fields = dict(record)
+            event = str(fields.pop("event", "authority_failure_classified"))
+            _append_raw(args.raw_log, event, **fields)
+
         control = _load_control(args.control)
         action = str(control["action"])
         marker_value = control.get("crash_marker")
         marker = Path(str(marker_value)).resolve() if marker_value else None
+        initial_store_hash = retry_authority_operation(
+            lambda _attempt: _sha256(args.database),
+            operation_name="b5_runtime_probe_initial_store_hash",
+            observer=observe_retry,
+        )
         _append_raw(
             args.raw_log,
             "probe_started",
             action=action,
             database=str(args.database.resolve()),
-            store_sha256=_sha256(args.database),
+            store_sha256=initial_store_hash,
         )
-        store = AuthoritativeStore(args.database)
+
+        store = AuthoritativeStore(args.database, retry_observer=observe_retry)
         try:
             startup = store.open()
             verification = store.verify()
         finally:
             store.close()
+        verified_store_hash = retry_authority_operation(
+            lambda _attempt: _sha256(args.database),
+            operation_name="b5_runtime_probe_verified_store_hash",
+            observer=observe_retry,
+        )
         _append_raw(
             args.raw_log,
             "startup_tail_chain_verified",
             startup=asdict(startup),
             verification=asdict(verification),
-            store_sha256=_sha256(args.database),
+            store_sha256=verified_store_hash,
         )
         if action == "crash_93_once_then_hold":
             if marker is None:
@@ -152,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             "numpy_version": __import__("numpy").__version__,
             "database": {
                 "path": str(args.database.resolve()),
-                "sha256": _sha256(args.database),
+                "sha256": verified_store_hash,
                 "startup": asdict(startup),
                 "verification": asdict(verification),
             },
