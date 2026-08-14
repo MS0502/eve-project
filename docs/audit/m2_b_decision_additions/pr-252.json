@@ -1,0 +1,21 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 252,
+  "base_candidate_surface_digest": "0ae7b4b4ae8a37fd19f8a8a11bf1be1519e7c25e8bb5ed01f6659b51df7999a6",
+  "candidate_surface_digest": "3352096bf786fcc254176e08539f7ac0a49e7255c3ef04659b54b7f3512e1ab7",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "363b2d1b17bdddef146df67c347a53f7304962cf2eb9f238db26385549e76f72",
+        "a03e2384e4926439408ba9ee11f97614b223cb7207a43802060bd0f4c293f584",
+        "c5c140ca1889216e6da2fd5c605128a718119727c05825ba79f45196d49c26be"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "These findings are conservative propagation from the exact canonical event bytes supplied to the B5-B idempotent append proof. The bytes are hashed only to compare the candidate content hash with an already durable candidate or accepted-head row after a transient commit ambiguity. The apparent restore_round96_package sha256 file-read path is a global-leaf static-analysis ambiguity; that module is neither imported nor invoked. No user text, private goal, legacy memory, model output, network input, or speech/expression material is read, interpreted, or disclosed.",
+      "owner": "B5-B idempotent authoritative append proof",
+      "denial_semantics": "This review permits only deterministic SHA-256 comparison of the exact append candidate against the existing authoritative candidate or accepted chain head. It cannot accept a different event, append twice, repair or truncate history, activate runtime authority, promote the shadow store, originate events, expose payloads, authorize migration or action, generate expression, or open cognition, SNN, Brian2, model, vector, GPU, vision, or speech scope. A mismatch, ambiguous durable state, corrupt chain, missing proof, or exhausted transient retry fails closed with process exit code 86."
+    }
+  ],
+  "parse_error_decision_groups": []
+}

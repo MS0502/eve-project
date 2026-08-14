@@ -72,6 +72,14 @@ OMP_NUM_THREADS=1
 
 These values must be applied in CI and at runtime before affected Python/numerical-library initialization. Runtime must reject or normalize an incompatible launch before authoritative mutation; it may not silently run an authoritative lineage under an unrecorded environment.
 
+On the accepted Windows workstation, the authoritative runtime environment is
+installed only from `requirements-lock.txt` with `pip --require-hashes`.  The
+range declaration in `requirements-runtime.txt` is not an authoritative-runtime
+installation source.  A durable B5 environment receipt binds the lock digest,
+interpreter path, Python version, every locked installed distribution, and the
+installed numpy version; the supervisor rejects a different interpreter or
+environment before starting its child.
+
 ### 3.3 Supervision policy is implemented
 
 The production supervisor policy is:
@@ -81,10 +89,25 @@ The production supervisor policy is:
 - **do not restart** after an integrity failure such as tail mismatch or inability to verify the accepted tail;
 - integrity failure exits through dedicated status `EVE_EXIT_INTEGRITY_FAILURE = 86`;
 - the supervisor keeps EVE stopped on exit 86 and surfaces an operator-visible alert/log condition;
-- a systemd deployment using `Restart=always` must pair it with `RestartPreventExitStatus=86` or an equivalent mechanism that has the same fail-closed semantics;
+- Windows Service Recovery does not distinguish child exit 86 from an ordinary
+  child crash, so WinSW/NSSM starts the B5 supervisor rather than EVE directly;
+- the B5 supervisor alone classifies the child exit: `0` stops normally, `86`
+  latches a durable sentinel and forbids restart, and every other nonzero status
+  restarts with exponential backoff;
+- after child exit 86 the supervisor returns service success only after the
+  sentinel, hash-chained audit record, local critical alert, and stopped state
+  are durable; this prevents Service Recovery from converting the integrity
+  failure into a restart;
+- every subsequent supervisor start checks the sentinel before child creation
+  and stops without launching EVE while the sentinel exists or is invalid;
+- sentinel release requires an explicit operator identity, reason, and expected
+  sentinel SHA-256.  Release archives rather than deletes the sentinel and
+  appends a hash-chained operator-clear record.  There is no automatic clear;
 - no supervisor loop may convert integrity failure into repeated restart/repair attempts.
 
-The exact service-unit packaging may differ by workstation OS, but semantic equivalence to these rules is mandatory.
+The concrete Windows contract and physical proof procedure are recorded in
+`docs/audit/B5_WINDOWS_SUPERVISION_CONTRACT.md`.  The prior systemd example is
+not a valid workstation implementation and is not Windows evidence.
 
 ### 3.4 Configuration freeze at t=0
 
