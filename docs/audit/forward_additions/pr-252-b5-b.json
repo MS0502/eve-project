@@ -14,7 +14,7 @@
       "rationale": "Adds bounded transient-retry configuration and an exact readback proof for a retried append. The execute findings in _accepted_append_receipt are SELECT-only proof reads; accepted-history writes remain in the existing two-transaction append protocol. No retry can accept a different event, repair or truncate history, activate runtime authority, promote the shadow store, or bypass exit 86 after exhaustion or failed proof.",
       "owner": "B5-B authoritative transient-I/O classification",
       "disposition": "B5_B_BOUNDED_FAIL_CLOSED_AUTHORITY_RETRY",
-      "introduced_by_pr": 254,
+      "introduced_by_pr": 252,
       "fingerprints": {
         "27fe55a0163f1c819ad2d8c854c60ca42de683fdb4ff94b91f4a3b7b291ac4cd": 1,
         "55b4518d0052e1d24c5acdb1a7f2f499201eac613eda124444142adf0dc88b72": 1,
@@ -36,7 +36,7 @@
       "rationale": "The observe token is a lexical false positive: this nested callback removes the event label from an in-memory copy and appends the classifier's fixed code/reason/attempt evidence to the explicit B5 proof log. It performs no learning, adaptation, authority activation, accepted append, model/vector action, or automatic recovery.",
       "owner": "B5-B runtime-probe retry evidence",
       "disposition": "B5_B_PHYSICAL_PROBE_CLASSIFICATION_LOG_ONLY",
-      "introduced_by_pr": 254,
+      "introduced_by_pr": 252,
       "fingerprints": {
         "0f00c978af2d1adf659408aa5590dc3fffa4c2ac2e2db0f681d71f79e2af893c": 1,
         "cbcb077c027f7ebf21f90295342d457a0fdcf9787badf8867fef69c04180f1d6": 1
@@ -54,7 +54,7 @@
       "rationale": "List appends collect read-only power indexes and exact/broader Defender exclusion matches for one fail-closed preflight receipt. They do not change Windows settings, Defender, the authority store, runtime activation, or t=0; missing or ambiguous observations remain UNRESOLVED.",
       "owner": "B5-B Windows continuity preflight",
       "disposition": "B5_B_READ_ONLY_HOST_PREFLIGHT_CLASSIFICATION",
-      "introduced_by_pr": 254,
+      "introduced_by_pr": 252,
       "fingerprints": {
         "33919b6f013aabbd701edd249c6b07fb910695636be9d1fb62989d468a42bb66": 1,
         "4938ba5f33f07a0de4c3496e835804f690729c584cd6609bced49153056599df": 1,
@@ -81,7 +81,7 @@
       "rationale": "All writes and mutations are deterministic pytest fixtures confined to temporary databases, logs, controls, and synthetic exception objects. Direct SQLite mutation deliberately corrupts a disposable accepted-tail row to prove immediate exit 86 without retry. The tests never touch a physical, t=0, or runtime authority store and cannot activate services or change host policy.",
       "owner": "B5-B transient-I/O focused tests",
       "disposition": "B5_B_DISPOSABLE_TRANSIENT_AND_CORRUPTION_TESTS_ONLY",
-      "introduced_by_pr": 254,
+      "introduced_by_pr": 252,
       "fingerprints": {
         "118a3911ceaad7a66b05351380ae72f823d935891dd4c1604d64c5d2e424a5a9": 1,
         "1fe5b83293bd7b0486103633ce42f6b5a7c176c1b5c0e70ba5abdf039e9622e5": 1,
