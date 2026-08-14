@@ -1,0 +1,50 @@
+{
+  "schema": "eve.validation.contract.v1",
+  "python_pin_path": ".python-version",
+  "validation_lock_path": "requirements-lock.txt",
+  "validation_input_path": "requirements-validation.in",
+  "dependency_surfaces": {
+    "runtime": "requirements-runtime.txt",
+    "development": "requirements-dev.txt",
+    "experimental_legacy": "requirements-experimental-legacy.txt"
+  },
+  "required_runtime_distributions": ["numpy"],
+  "required_development_distributions": ["pytest"],
+  "experimental_legacy_distributions": [
+    "brian2",
+    "brian2tools",
+    "scipy",
+    "h5py",
+    "faiss-cpu",
+    "matplotlib",
+    "seaborn",
+    "tqdm",
+    "pyyaml",
+    "jupyter"
+  ],
+  "compatibility_artifact": {
+    "name": "markdown_strings-3.4.0.tar.gz",
+    "url_sha256": "5853992485578fae1a7280fee2981500653f74349fc609b92baaaaa4fa67f4c9",
+    "content_sha256": "7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b"
+  },
+  "identity": {
+    "algorithm": "sha256",
+    "components": [
+      "commit_sha",
+      "tree_sha",
+      "python_pin",
+      "requirements_lock_sha256",
+      "validation_contract_sha256"
+    ],
+    "excluded_metadata": [
+      "chat",
+      "session",
+      "shell",
+      "branch",
+      "pull_request",
+      "workflow_run"
+    ]
+  },
+  "snn_policy": "experimental-legacy; Phase 2-3 review only; not production runtime",
+  "reproducible_boundary": "first-successful-pinned-b1-exact-head"
+}

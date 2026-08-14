@@ -1,0 +1,7 @@
+# Direct PyPI dependencies for reproducible validation.
+# requirements-lock.txt is generated from this file with hashes.
+# colorama is explicit so the same hash-pinned lock is complete on Windows and POSIX.
+# markdown_strings is a separately SHA-pinned compatibility artifact bound by VALIDATION_CONTRACT.json.
+colorama==0.4.6
+numpy>=1.24,<3
+pytest>=7.4,<9

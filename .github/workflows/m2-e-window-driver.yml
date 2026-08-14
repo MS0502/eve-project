@@ -35,62 +35,37 @@ jobs:
       TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
     steps:
       - name: Checkout exact target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
-      - name: Verify exact synthetic-only target
+      - name: Set up exact Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Install and verify pinned environment
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test -z "$(git status --short)"
           test ! -e "$RUNNER_TEMP/m2e-chaos-workspace"
-      - name: Install SHA-pinned compatibility dependency
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - "$RUNNER_TEMP" <<'PY'
-          import hashlib
-          import pathlib
-          import subprocess
-          import sys
-          import urllib.request
-
-          root = pathlib.Path(sys.argv[1])
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = root / 'markdown_strings-3.4.0.tar.gz'
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
-          PY
-          python -m pip install -r requirements.txt
+          python -m pip install --require-hashes -r requirements-lock.txt
           python -m pip check
+          EVE_VALIDATION_COMMIT="$(git rev-parse HEAD)" EVE_VALIDATION_TREE="$(git rev-parse HEAD^{tree})" EVE_VALIDATION_IDENTITY_OUTPUT="$RUNNER_TEMP/validation-identity.json" python scripts/audit/validation_preflight.py
       - name: Run hard-kill and corruption matrix
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/audit/m2_e_window_driver.py chaos \
-            --workspace "$RUNNER_TEMP/m2e-chaos-workspace" \
-            --repetitions 3 \
-            --output "$RUNNER_TEMP/m2e-chaos-evidence.json" \
-            --pretty
+          python scripts/audit/m2_e_window_driver.py chaos --workspace "$RUNNER_TEMP/m2e-chaos-workspace" --repetitions 3 --output "$RUNNER_TEMP/m2e-chaos-evidence.json" --pretty
           python - "$RUNNER_TEMP" <<'PY'
-          import hashlib
-          import json
-          import pathlib
-          import sys
+          import hashlib, json, pathlib, sys
           root = pathlib.Path(sys.argv[1])
           evidence = root / "m2e-chaos-evidence.json"
-          payload = {
-              "files": {evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()},
-              "raw_store_source": "synthetic_only",
-              "target_sha": "${{ env.TARGET_SHA }}",
-          }
-          (root / "m2e-chaos-artifact-hashes.json").write_text(
-              json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
-          )
+          payload = {"files": {evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()}, "raw_store_source": "synthetic_only", "target_sha": "${{ env.TARGET_SHA }}"}
+          (root / "m2e-chaos-artifact-hashes.json").write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Upload chaos evidence
         if: always()
@@ -98,6 +73,7 @@ jobs:
         with:
           name: m2e-chaos-${{ runner.os }}-${{ env.TARGET_SHA }}
           path: |
+            ${{ runner.temp }}/validation-identity.json
             ${{ runner.temp }}/m2e-chaos-evidence.json
             ${{ runner.temp }}/m2e-chaos-artifact-hashes.json
           if-no-files-found: error
@@ -114,62 +90,42 @@ jobs:
       TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
     steps:
       - name: Checkout exact target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
-      - name: Install SHA-pinned compatibility dependency
+      - name: Set up exact Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Install and verify pinned environment
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          python - "$RUNNER_TEMP" <<'PY'
-          import hashlib
-          import pathlib
-          import subprocess
-          import sys
-          import urllib.request
-
-          root = pathlib.Path(sys.argv[1])
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = root / 'markdown_strings-3.4.0.tar.gz'
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
-          PY
-          python -m pip install -r requirements.txt
+          python -m pip install --require-hashes -r requirements-lock.txt
           python -m pip check
+          EVE_VALIDATION_COMMIT="$(git rev-parse HEAD)" EVE_VALIDATION_TREE="$(git rev-parse HEAD^{tree})" EVE_VALIDATION_IDENTITY_OUTPUT="$RUNNER_TEMP/validation-identity.json" python scripts/audit/validation_preflight.py
       - name: Create portable synthetic backup
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/audit/m2_e_window_driver.py portability-create \
-            --workspace "$RUNNER_TEMP/m2e-portability-source" \
-            --backup-output "$RUNNER_TEMP/portable-shadow.sqlite3" \
-            --manifest-output "$RUNNER_TEMP/portable-manifest.json" \
-            --pretty
+          python scripts/audit/m2_e_window_driver.py portability-create --workspace "$RUNNER_TEMP/m2e-portability-source" --backup-output "$RUNNER_TEMP/portable-shadow.sqlite3" --manifest-output "$RUNNER_TEMP/portable-manifest.json" --pretty
           python - "$RUNNER_TEMP" <<'PY'
-          import hashlib
-          import json
-          import pathlib
-          import sys
+          import hashlib, json, pathlib, sys
           root = pathlib.Path(sys.argv[1])
           names = ["portable-shadow.sqlite3", "portable-manifest.json"]
-          payload = {
-              "files": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names},
-              "source_os": "${{ runner.os }}",
-              "target_sha": "${{ env.TARGET_SHA }}",
-          }
-          (root / "portable-artifact-hashes.json").write_text(
-              json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
-          )
+          payload = {"files": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names}, "source_os": "${{ runner.os }}", "target_sha": "${{ env.TARGET_SHA }}"}
+          (root / "portable-artifact-hashes.json").write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Upload portability source
         uses: actions/upload-artifact@v4
         with:
           name: m2e-portability-${{ runner.os }}-${{ env.TARGET_SHA }}
           path: |
+            ${{ runner.temp }}/validation-identity.json
             ${{ runner.temp }}/portable-shadow.sqlite3
             ${{ runner.temp }}/portable-manifest.json
             ${{ runner.temp }}/portable-artifact-hashes.json
@@ -194,63 +150,40 @@ jobs:
       TARGET_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.sha }}
     steps:
       - name: Checkout exact target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
+      - name: Set up exact Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
       - name: Download opposite-OS backup
         uses: actions/download-artifact@v4
         with:
           name: m2e-portability-${{ matrix.source }}-${{ env.TARGET_SHA }}
           path: ${{ runner.temp }}/portable-input
-      - name: Install SHA-pinned compatibility dependency
+      - name: Install and verify pinned environment
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
-          python - "$RUNNER_TEMP" <<'PY'
-          import hashlib
-          import pathlib
-          import subprocess
-          import sys
-          import urllib.request
-
-          root = pathlib.Path(sys.argv[1])
-          url = 'https://files.pythonhosted.org/packages/72/d2/ef65d0f3c150bfc99f5c4a516ae57e7c3acddfaacc1196dd296b1299ea7f/markdown_strings-3.4.0.tar.gz'
-          expected = '7574de0606160d7291ac2e1933a8ed47d31f0b49b674f128da1f548930c8578b'
-          target = root / 'markdown_strings-3.4.0.tar.gz'
-          urllib.request.urlretrieve(url, target)
-          assert hashlib.sha256(target.read_bytes()).hexdigest() == expected
-          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-deps', str(target)])
-          PY
-          python -m pip install -r requirements.txt
+          python -m pip install --require-hashes -r requirements-lock.txt
           python -m pip check
+          EVE_VALIDATION_COMMIT="$(git rev-parse HEAD)" EVE_VALIDATION_TREE="$(git rev-parse HEAD^{tree})" EVE_VALIDATION_IDENTITY_OUTPUT="$RUNNER_TEMP/validation-identity.json" python scripts/audit/validation_preflight.py
       - name: Restore and replay on target OS
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/audit/m2_e_window_driver.py portability-verify \
-            --backup "$RUNNER_TEMP/portable-input/portable-shadow.sqlite3" \
-            --manifest "$RUNNER_TEMP/portable-input/portable-manifest.json" \
-            --workspace "$RUNNER_TEMP/m2e-portability-target" \
-            --output "$RUNNER_TEMP/portability-verification.json" \
-            --pretty
+          python scripts/audit/m2_e_window_driver.py portability-verify --backup "$RUNNER_TEMP/portable-input/portable-shadow.sqlite3" --manifest "$RUNNER_TEMP/portable-input/portable-manifest.json" --workspace "$RUNNER_TEMP/m2e-portability-target" --output "$RUNNER_TEMP/portability-verification.json" --pretty
           python - "$RUNNER_TEMP" <<'PY'
-          import hashlib
-          import json
-          import pathlib
-          import sys
+          import hashlib, json, pathlib, sys
           root = pathlib.Path(sys.argv[1])
           evidence = root / "portability-verification.json"
-          payload = {
-              "files": {evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()},
-              "source_os": "${{ matrix.source }}",
-              "target_os": "${{ matrix.target }}",
-              "target_sha": "${{ env.TARGET_SHA }}",
-          }
-          (root / "portability-verification-hashes.json").write_text(
-              json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
-          )
+          payload = {"files": {evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()}, "source_os": "${{ matrix.source }}", "target_os": "${{ matrix.target }}", "target_sha": "${{ env.TARGET_SHA }}"}
+          (root / "portability-verification-hashes.json").write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Upload portability verification
         if: always()
@@ -258,6 +191,7 @@ jobs:
         with:
           name: m2e-portability-${{ matrix.source }}-to-${{ matrix.target }}-${{ env.TARGET_SHA }}
           path: |
+            ${{ runner.temp }}/validation-identity.json
             ${{ runner.temp }}/portability-verification.json
             ${{ runner.temp }}/portability-verification-hashes.json
           if-no-files-found: error

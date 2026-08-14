@@ -1,0 +1,2 @@
+# B1 development and test-only dependencies.
+pytest>=7.4,<9

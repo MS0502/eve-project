@@ -1,0 +1,17 @@
+name: Validation lock reproducibility check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify-lock:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+      - name: Check committed lock exists
+        run: |
+          test -s requirements-lock.txt
+          grep -q -- '--hash=sha256:' requirements-lock.txt
