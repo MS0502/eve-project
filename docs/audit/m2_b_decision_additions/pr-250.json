@@ -1,0 +1,31 @@
+{
+  "schema_version": "eve.m2-b-read-capability-decision-additions.v1",
+  "introduced_by_pr": 250,
+  "base_candidate_surface_digest": "88d4935159152d2e0991ed39b5b559e410b5a19528e15fd4e800205b21f6972c",
+  "candidate_surface_digest": "0ae7b4b4ae8a37fd19f8a8a11bf1be1519e7c25e8bb5ed01f6659b51df7999a6",
+  "edge_decision_groups": [],
+  "unresolved_call_decision_groups": [
+    {
+      "finding_ids": [
+        "1d194b548abcfa3fb3b1927fa69d85b23d5f348e11eab9c641a26e8776463f4a",
+        "39ebb6104ac5d9abcbc5bae0b98b2b8cdf146d30c7349c6a4a189432f46145be",
+        "7dcd6c103b7540ff6d6b5f6e950fd7ccba151a6192ea713f402c651575d5c582",
+        "85da2cc0fba5f3551bd6d3e35543e6ab66aa7d692e115761857b77fdebe1ea83",
+        "9ddc60acffcb926045a6d26104c7e3f79b48cd7638bff787c72038474a4a07b9",
+        "a6acd7d4b81fe62cea5a485a1f3584734bbf9a03afbd0a47f87217ae41cbdc6a",
+        "a78236cc22118edc0dea2f2618720f18427bfab3383f219288e0e917e76c70ec",
+        "bbde6076e152c5f7bad59f0c38723f6bd14ec0294cedc57b36dac935390d0be2",
+        "c5ae5b18bb722de41095a0f83b3bd429b7087026332f968f54403e476b884f6a",
+        "ce5f6fb2a04c15d0edf579d285f40cad921bf12b2f3be9b6c8b1fcfdea782a0a",
+        "cf8d3b6696ce2a8cdb98641974f84d916eb8cb01fbb406ffacdb06120b4dce53",
+        "d506fdc1c3c8219728c1948c8f2dc1d36c206cb95ff403b2819e77568a7d126d",
+        "f25a4d110ec0773f56764d5cd85ca435728186e116270d252b8f313a8eb2b05b"
+      ],
+      "decision": "NOT_CAPABILITY_BOUNDARY",
+      "rationale": "These findings are conservative propagation through the B2 authority store's canonical event decoder and SHA-256 chain construction. The decoder accepts only persisted bytes, validates canonical JSON and the unchanged EventEnvelope contract, and is then checked against indexed columns and both accepted hash chains. The digest path transforms already-bounded hash and ordinal fields into integrity evidence. The apparent restore_round96_package sha256 path is a global-leaf static-analysis ambiguity; no such module is imported or invoked. None of these operations reads user text, private goals, legacy memory, model output, network input, or speech/expression material, and none introduces an M2-B read or expression capability.",
+      "owner": "B2 authoritative accepted-history persistence",
+      "denial_semantics": "The reviewed transformations can only reject malformed or inconsistent persisted authority records, calculate canonical integrity hashes, or reconstruct an EventEnvelope for deterministic replay. They cannot authorize migration, repair or truncate accepted history, promote the M2 shadow store, activate runtime authority, originate events, interpret content as instructions, disclose stored payloads, generate expression, schedule actions, or open any cognition, SNN, Brian2, model, vector, or speech scope. Any unprovable accepted byte, schema, event chain, or tail chain fails closed with process exit code 86."
+    }
+  ],
+  "parse_error_decision_groups": []
+}
