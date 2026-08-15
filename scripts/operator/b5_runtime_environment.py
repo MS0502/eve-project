@@ -13,6 +13,7 @@ import importlib.metadata
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import venv
@@ -22,7 +23,7 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parents[2]
 LOCK = ROOT / "requirements-lock.txt"
 RUNTIME_RANGE = ROOT / "requirements-runtime.txt"
-SCHEMA = "eve.b5-runtime-environment.v1"
+SCHEMA = "eve.b5-runtime-environment.v2"
 INSTALL_COMMAND = [
     "-m",
     "pip",
@@ -47,9 +48,20 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _git(*args: str) -> str:
+def _git_executable() -> Path:
+    candidate = shutil.which("git")
+    if candidate is None:
+        raise RuntimeEnvironmentError("Git repository verifier is absent")
+    executable = Path(candidate).resolve()
+    if not executable.is_file():
+        raise RuntimeEnvironmentError("Git repository verifier is not a file")
+    return executable
+
+
+def _git(*args: str, executable: Path | None = None) -> str:
+    verifier = _git_executable() if executable is None else executable.resolve()
     return subprocess.check_output(
-        ["git", *args], cwd=ROOT, text=True, encoding="utf-8"
+        [str(verifier), *args], cwd=ROOT, text=True, encoding="utf-8"
     ).strip()
 
 
@@ -121,7 +133,8 @@ def install(environment: Path, output: Path) -> dict[str, Any]:
     output = _outside_repository(output, "runtime receipt")
     if environment.exists():
         raise RuntimeEnvironmentError("runtime environment must be a new path")
-    if _git("status", "--porcelain"):
+    git_executable = _git_executable()
+    if _git("status", "--porcelain", executable=git_executable):
         raise RuntimeEnvironmentError("runtime installation requires a clean checkout")
     expected_python = (ROOT / ".python-version").read_text(encoding="utf-8").strip()
     if platform.python_version() != expected_python:
@@ -139,9 +152,16 @@ def install(environment: Path, output: Path) -> dict[str, Any]:
         "authoritative_runtime": False,
         "t0_started": False,
         "repository": {
-            "commit_sha": _git("rev-parse", "HEAD"),
-            "tree_sha": _git("rev-parse", "HEAD^{tree}"),
+            "commit_sha": _git("rev-parse", "HEAD", executable=git_executable),
+            "tree_sha": _git(
+                "rev-parse", "HEAD^{tree}", executable=git_executable
+            ),
             "clean_checkout": True,
+        },
+        "repository_verifier": {
+            "kind": "git",
+            "executable": str(git_executable),
+            "sha256": _sha256(git_executable),
         },
         "python": {
             "bootstrap_version": platform.python_version(),
@@ -181,6 +201,14 @@ def load_and_verify_receipt(
         raise RuntimeEnvironmentError("runtime receipt digest differs")
     if payload.get("schema") != SCHEMA:
         raise RuntimeEnvironmentError("runtime receipt schema differs")
+    verifier = payload.get("repository_verifier", {})
+    git_executable = Path(str(verifier.get("executable", ""))).resolve()
+    if (
+        verifier.get("kind") != "git"
+        or not git_executable.is_file()
+        or verifier.get("sha256") != _sha256(git_executable)
+    ):
+        raise RuntimeEnvironmentError("runtime receipt repository verifier differs")
     source = payload.get("dependency_source", {})
     if (
         source.get("path") != "requirements-lock.txt"
@@ -192,8 +220,10 @@ def load_and_verify_receipt(
         raise RuntimeEnvironmentError("runtime receipt is not bound to the hash-pinned lock")
     repository = payload.get("repository", {})
     if require_repository_identity and (
-        repository.get("commit_sha") != _git("rev-parse", "HEAD")
-        or repository.get("tree_sha") != _git("rev-parse", "HEAD^{tree}")
+        repository.get("commit_sha")
+        != _git("rev-parse", "HEAD", executable=git_executable)
+        or repository.get("tree_sha")
+        != _git("rev-parse", "HEAD^{tree}", executable=git_executable)
         or repository.get("clean_checkout") is not True
     ):
         raise RuntimeEnvironmentError("runtime receipt repository identity differs")

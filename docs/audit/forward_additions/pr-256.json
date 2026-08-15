@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "tests/test_v4_b5_windows_supervision.py",
+      "categories": [
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "test_runtime_receipt_rejects_changed_git_verifier"
+      ],
+      "rationale": "Tampering and the receipt rewrite are confined to a pytest temporary JSON fixture. The test proves that a changed repository-verifier SHA-256 fails closed; it does not alter a real Git executable, service, runtime environment, authority store, registry, Windows Update policy, Defender state, or t=0.",
+      "owner": "B5-D LocalSystem repository-verifier pin tests",
+      "disposition": "B5_D_DISPOSABLE_VERIFIER_TAMPER_TEST_ONLY",
+      "introduced_by_pr": 256,
+      "fingerprints": {
+        "23f04bfef9e05707b98c994a326de677ec10dd990dd53d42c85262cebb7a1e65": 1,
+        "e2b09511915a4abb380b05e8dac897c8fed988a3b080a5bbbbf34955f3ad087e": 2,
+        "eddce223e6ab8a88912b92218732c835f50e442c58d5512b170312e130339424": 1
+      }
+    }
+  ]
+}
