@@ -58,10 +58,20 @@ def _git_executable() -> Path:
     return executable
 
 
+def _git_argv(executable: Path, *args: str) -> list[str]:
+    safe_directory = ROOT.resolve().as_posix()
+    return [
+        str(executable.resolve()),
+        "-c",
+        f"safe.directory={safe_directory}",
+        *args,
+    ]
+
+
 def _git(*args: str, executable: Path | None = None) -> str:
     verifier = _git_executable() if executable is None else executable.resolve()
     return subprocess.check_output(
-        [str(verifier), *args], cwd=ROOT, text=True, encoding="utf-8"
+        _git_argv(verifier, *args), cwd=ROOT, text=True, encoding="utf-8"
     ).strip()
 
 

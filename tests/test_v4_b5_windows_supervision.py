@@ -315,6 +315,29 @@ def test_runtime_receipt_rejects_changed_git_verifier(tmp_path: Path):
         runtime.load_and_verify_receipt(receipt)
 
 
+def test_git_verifier_scopes_safe_directory_to_exact_checkout(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    calls: list[list[str]] = []
+
+    def check_output(command: list[str], **_kwargs: object) -> str:
+        calls.append(command)
+        return "pinned-output\n"
+
+    monkeypatch.setattr(runtime.subprocess, "check_output", check_output)
+    executable = runtime._git_executable()
+    assert runtime._git("rev-parse", "HEAD", executable=executable) == "pinned-output"
+    assert calls == [
+        [
+            str(executable),
+            "-c",
+            f"safe.directory={runtime.ROOT.resolve().as_posix()}",
+            "rev-parse",
+            "HEAD",
+        ]
+    ]
+
+
 def test_supervisor_rejects_child_from_different_interpreter(tmp_path: Path):
     paths = _paths(tmp_path)
     receipt = tmp_path / "runtime.json"

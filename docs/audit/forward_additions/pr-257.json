@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "tests/test_v4_b5_windows_supervision.py",
+      "categories": [
+        "mutation"
+      ],
+      "symbols": [
+        "test_git_verifier_scopes_safe_directory_to_exact_checkout.check_output"
+      ],
+      "rationale": "The list append records one mocked subprocess argument vector in memory so the test can prove safe.directory is command-scoped to the exact checkout. It performs no Git command, persistent Git configuration, repository write, service change, registry write, authority-store mutation, runtime activation, or t=0 transition.",
+      "owner": "B5-E LocalSystem safe-directory scope test",
+      "disposition": "B5_E_IN_MEMORY_COMMAND_VECTOR_ASSERTION_ONLY",
+      "introduced_by_pr": 257,
+      "fingerprints": {
+        "9f3c86cc21841b228d683af83af99a452d4b3e03a1dcaa04181b4acf7551b2a6": 1
+      }
+    }
+  ]
+}
