@@ -58,14 +58,18 @@ def _git(*args: str) -> str:
     ).strip()
 
 
-def _cpu_identity(*, os_name: str | None = None) -> dict[str, Any]:
-    platform_processor = platform.processor().strip()
+def _cpu_identity(
+    *, os_name: str | None = None, platform_processor: str | None = None
+) -> dict[str, Any]:
+    reported_processor = (
+        platform.processor() if platform_processor is None else platform_processor
+    ).strip()
     effective_os_name = os.name if os_name is None else os_name
     if effective_os_name != "nt":
         return {
             "source": "platform.processor",
-            "name": platform_processor,
-            "platform_processor": platform_processor,
+            "name": reported_processor,
+            "platform_processor": reported_processor,
             "raw": None,
         }
 
@@ -109,7 +113,7 @@ def _cpu_identity(*, os_name: str | None = None) -> dict[str, Any]:
         "manufacturer": str(observed.get("Manufacturer", "")).strip(),
         "processor_id": str(observed.get("ProcessorId", "")).strip(),
         "description": str(observed.get("Description", "")).strip(),
-        "platform_processor": platform_processor,
+        "platform_processor": reported_processor,
         "raw": raw,
     }
 

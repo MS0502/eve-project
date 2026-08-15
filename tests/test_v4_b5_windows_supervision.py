@@ -426,7 +426,10 @@ def test_windows_cpu_identity_uses_win32_processor_name(monkeypatch):
         )
 
     monkeypatch.setattr(physical_gate.subprocess, "run", run_cpu_query)
-    identity = physical_gate._cpu_identity(os_name="nt")
+    identity = physical_gate._cpu_identity(
+        os_name="nt",
+        platform_processor="AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    )
 
     assert identity["source"] == "Win32_Processor"
     assert identity["name"] == observed["Name"]
@@ -441,7 +444,7 @@ def test_windows_cpu_identity_fails_closed_without_wmi_name(monkeypatch):
 
     monkeypatch.setattr(physical_gate.subprocess, "run", run_cpu_query)
     with pytest.raises(RuntimeError, match="name is absent"):
-        physical_gate._cpu_identity(os_name="nt")
+        physical_gate._cpu_identity(os_name="nt", platform_processor="generic")
 
 
 def test_restart_continuity_proof_requires_real_reboot_and_matching_store():
