@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0-forward-additions-fragment",
+  "registered_addition_groups": [
+    {
+      "path": "scripts/operator/b5_windows_physical_gate.py",
+      "categories": [
+        "adaptive_numeric",
+        "mutation"
+      ],
+      "symbols": [
+        "_validated_ready",
+        "finalize",
+        "load_restart_continuity_proof"
+      ],
+      "rationale": "Validates two immutable, caller-supplied outside-repository gate-d capture receipts and recomputes reboot continuity before finalizing the B5 evidence packet. Dictionary reads and copy mutations are local proof validation only; they do not learn, alter Windows Update policy, change the service, write accepted history, activate runtime authority, or start t=0.",
+      "owner": "B5-C Windows restart-continuity proof",
+      "disposition": "B5_C_READ_ONLY_REBOOT_EVIDENCE_VALIDATION",
+      "introduced_by_pr": 255,
+      "fingerprints": {
+        "4fe2b57a8ee75e43fa2885d276aeaea761172b5dffd8eaacc8e2614eda0d63a5": 2,
+        "b7ea93a4698b48e3327cc3319e641c9a469dd0cdbd6b8c690ae54379a7181c61": 1,
+        "d552251599a119526e241a174b662ddab879ae741f7b0043e5e7432d84d2e5c6": 1
+      }
+    },
+    {
+      "path": "scripts/operator/b5_windows_preflight.py",
+      "categories": [
+        "adaptive_numeric"
+      ],
+      "symbols": [
+        "classify_windows_update",
+        "collect"
+      ],
+      "rationale": "Classifies the Windows Update row from gate-d restart-continuity evidence plus clear pending-reboot indicators. The update token is a lexical false positive over a fixed policy verdict; no adaptive state, registry write, service mutation, automatic acceptance, authority activation, or t=0 transition is introduced.",
+      "owner": "B5-C Windows Update preflight classification",
+      "disposition": "B5_C_GATE_D_BOUND_UPDATE_ACCEPTANCE",
+      "introduced_by_pr": 255,
+      "fingerprints": {
+        "bb98b1d4e4c79f8a2653b7d2e0571d4472b9574cbf93d92b88c3d9b2b3e589c9": 1,
+        "dd19989ed8a78cd61f2d36f00267b87261a086597e0356e89c1d13c805450a15": 1
+      }
+    },
+    {
+      "path": "tests/test_v4_b5_windows_supervision.py",
+      "categories": [
+        "adaptive_numeric",
+        "direct_write",
+        "mutation"
+      ],
+      "symbols": [
+        "_reboot_capture",
+        "test_restart_continuity_loader_binds_both_raw_capture_files",
+        "test_restart_continuity_proof_requires_real_reboot_and_matching_store",
+        "test_windows_update_acceptance_is_gate_d_bound_not_registry_bound"
+      ],
+      "rationale": "Creates and tampers only pytest temporary JSON receipts and in-memory fixtures to prove exact capture binding, real boot-identity change, matching store continuity, fail-closed invalid evidence, pending-reboot rejection, and gate-d-bound acceptance. It cannot touch the installed service, physical authority-store copy, Windows registry, runtime activation, or t=0.",
+      "owner": "B5-C restart-continuity focused tests",
+      "disposition": "B5_C_DISPOSABLE_REBOOT_PROOF_TESTS_ONLY",
+      "introduced_by_pr": 255,
+      "fingerprints": {
+        "0316daf70cd8ed679ecda12927de48741846d804957ff0f8855dd0a0a9dd1ce4": 1,
+        "2e6fa2e66bb5e86497721a430dde1e4d88f2ea859f1cfe15965cfefcc0e0b875": 1,
+        "4e74f566253db388ce2a85569644bfa0569ea04e64aae676f4b46c7ca949dc4a": 1,
+        "6105f12527c16fbb6b7432dcd72c39a1ef57b7355a1be07999f7491a6e18dc8f": 2,
+        "99e77637d994e3c083209da54988ec50bbd64bb26b3c8065bc624b211aa54f47": 1,
+        "a0379a8a44e0f8ed2abe688a7cb7d21ed4772c85944b20d8954994ce34530100": 1,
+        "d1b0686f5945ee214fe4a79aa2926aac4bf0cb55504a2b670965d96236149c3d": 1,
+        "eac0a1e2036b2678a93bfb539036a26dab4572151a4c11e482005fe2450aa613": 3
+      }
+    }
+  ]
+}

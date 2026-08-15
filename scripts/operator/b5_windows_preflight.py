@@ -240,6 +240,21 @@ def collect(
         "PendingFileRename=($null -ne (Get-ItemProperty -LiteralPath $s -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)}"
         "|ConvertTo-Json -Compress"
     )
+    legacy_update_policy_observation = (
+        {
+            "NoAutoRebootWithLoggedOnUsers": update.get(
+                "NoAutoRebootWithLoggedOnUsers"
+            ),
+            "AlwaysAutoRebootAtScheduledTime": update.get(
+                "AlwaysAutoRebootAtScheduledTime"
+            ),
+            "CBSRebootPending": update.get("CBSRebootPending"),
+            "WURebootRequired": update.get("WURebootRequired"),
+            "PendingFileRename": update.get("PendingFileRename"),
+        }
+        if isinstance(update, dict)
+        else None
+    )
     restart_continuity = _restart_continuity_evidence(
         before_reboot_capture, after_reboot_capture
     )
@@ -348,6 +363,7 @@ def collect(
                 "verdict": update_classification["verdict"],
                 "reason": update_classification["reason"],
                 "current_setting": update,
+                "legacy_registry_policy_observation": legacy_update_policy_observation,
                 "restart_continuity": restart_continuity,
                 "pending_state_clear": update_classification[
                     "pending_state_clear"
