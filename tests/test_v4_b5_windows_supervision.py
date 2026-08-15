@@ -13,6 +13,7 @@ import pytest
 from core.authoritative_store import AuthorityUnprovable, AuthoritativeStore
 from core.event_kernel import EventEnvelope
 from scripts.operator import b5_runtime_environment as runtime
+from scripts.operator import b5_windows_physical_gate as physical_gate
 from scripts.operator.b5_windows_physical_gate import (
     RESTART_CONTINUITY_SCHEMA,
     inject_tail_mismatch,
@@ -398,6 +399,49 @@ def test_runtime_probe_returns_86_for_tail_mismatch(tmp_path: Path):
         check=False,
     )
     assert result.returncode == 86
+
+
+def test_windows_cpu_identity_uses_win32_processor_name(monkeypatch):
+    observed = {
+        "Name": "AMD Ryzen 7 8840U w/ Radeon 780M Graphics",
+        "Manufacturer": "AuthenticAMD",
+        "ProcessorId": "178BFBFF00A70F52",
+        "Description": "AMD64 Family 25 Model 117 Stepping 2",
+    }
+
+    def run_cpu_query(argv, **kwargs):
+        assert argv[:4] == [
+            "powershell.exe",
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+        ]
+        assert "Get-CimInstance Win32_Processor" in argv[-1]
+        assert kwargs["check"] is False
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            stdout=json.dumps(observed),
+            stderr="",
+        )
+
+    monkeypatch.setattr(physical_gate.subprocess, "run", run_cpu_query)
+    identity = physical_gate._cpu_identity(os_name="nt")
+
+    assert identity["source"] == "Win32_Processor"
+    assert identity["name"] == observed["Name"]
+    assert identity["manufacturer"] == observed["Manufacturer"]
+    assert identity["processor_id"] == observed["ProcessorId"]
+    assert identity["raw"]["return_code"] == 0
+
+
+def test_windows_cpu_identity_fails_closed_without_wmi_name(monkeypatch):
+    def run_cpu_query(argv, **_kwargs):
+        return subprocess.CompletedProcess(argv, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(physical_gate.subprocess, "run", run_cpu_query)
+    with pytest.raises(RuntimeError, match="name is absent"):
+        physical_gate._cpu_identity(os_name="nt")
 
 
 def test_restart_continuity_proof_requires_real_reboot_and_matching_store():

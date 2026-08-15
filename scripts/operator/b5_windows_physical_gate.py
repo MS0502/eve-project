@@ -58,6 +58,62 @@ def _git(*args: str) -> str:
     ).strip()
 
 
+def _cpu_identity(*, os_name: str | None = None) -> dict[str, Any]:
+    platform_processor = platform.processor().strip()
+    effective_os_name = os.name if os_name is None else os_name
+    if effective_os_name != "nt":
+        return {
+            "source": "platform.processor",
+            "name": platform_processor,
+            "platform_processor": platform_processor,
+            "raw": None,
+        }
+
+    argv = [
+        "powershell.exe",
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        (
+            "$c=Get-CimInstance Win32_Processor | Select-Object -First 1;"
+            "[ordered]@{Name=[string]$c.Name;Manufacturer=[string]$c.Manufacturer;"
+            "ProcessorId=[string]$c.ProcessorId;Description=[string]$c.Description}"
+            "|ConvertTo-Json -Compress"
+        ),
+    ]
+    result = subprocess.run(
+        argv,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    raw = {
+        "argv": argv,
+        "return_code": result.returncode,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+    }
+    if result.returncode != 0:
+        raise RuntimeError("Win32_Processor observation failed")
+    try:
+        observed = json.loads(result.stdout)
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise RuntimeError("Win32_Processor observation is not JSON") from exc
+    if not isinstance(observed, dict) or not str(observed.get("Name", "")).strip():
+        raise RuntimeError("Win32_Processor name is absent")
+    return {
+        "source": "Win32_Processor",
+        "name": str(observed["Name"]).strip(),
+        "manufacturer": str(observed.get("Manufacturer", "")).strip(),
+        "processor_id": str(observed.get("ProcessorId", "")).strip(),
+        "description": str(observed.get("Description", "")).strip(),
+        "platform_processor": platform_processor,
+        "raw": raw,
+    }
+
+
 def _outside_repository(path: Path, field: str) -> Path:
     resolved = path.resolve()
     try:
@@ -386,11 +442,13 @@ def capture(
     sentinel_payload, sentinel_state = (
         _sentinel_payload(sentinel) if sentinel.exists() else (None, "absent")
     )
+    cpu = _cpu_identity()
     packet = {
         "schema": CAPTURE_SCHEMA,
         "label": label,
         "captured_at_utc": _utc_now(),
-        "cpu": platform.processor(),
+        "cpu": cpu["name"],
+        "cpu_observation": cpu,
         "boot": _boot_identity(),
         "service": _service(service_name),
         "store": _store_observation(store),
@@ -420,7 +478,10 @@ def _audit_events(capture_packet: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def finalize(args: argparse.Namespace) -> dict[str, Any]:
-    if "8840U" not in platform.processor().upper() or os.name != "nt":
+    if os.name != "nt":
+        raise RuntimeError("finalization requires the Windows Ryzen 7 8840U host")
+    cpu = _cpu_identity()
+    if "8840U" not in cpu["name"].upper():
         raise RuntimeError("finalization requires the Windows Ryzen 7 8840U host")
     if _git("rev-parse", "HEAD") != args.expected_head or _git("status", "--porcelain"):
         raise RuntimeError("finalization requires the clean exact expected head")
@@ -526,7 +587,8 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
         "environment": {
             "os_name": os.name,
             "platform": platform.platform(),
-            "cpu": platform.processor(),
+            "cpu": cpu["name"],
+            "cpu_observation": cpu,
             "python": platform.python_version(),
             "numpy": preflight["runtime_environment"]["numpy"],
         },
