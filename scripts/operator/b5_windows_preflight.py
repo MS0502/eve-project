@@ -20,8 +20,12 @@ from scripts.operator.b5_runtime_environment import (  # noqa: E402
     RuntimeEnvironmentError,
     load_and_verify_receipt,
 )
+from scripts.operator.b5_windows_physical_gate import (  # noqa: E402
+    RESTART_CONTINUITY_SCHEMA,
+    load_restart_continuity_proof,
+)
 
-SCHEMA = "eve.b5-windows-continuity-preflight.v1"
+SCHEMA = "eve.b5-windows-continuity-preflight.v2"
 
 
 def _canonical(value: Mapping[str, Any]) -> bytes:
@@ -147,7 +151,76 @@ def _defender_access_probe(authority_dir: Path) -> dict[str, Any]:
         return {"passed": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
-def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path) -> dict[str, Any]:
+def _restart_continuity_evidence(
+    before_reboot_capture: Path | None,
+    after_reboot_capture: Path | None,
+) -> dict[str, Any]:
+    if before_reboot_capture is None or after_reboot_capture is None:
+        return {
+            "schema": RESTART_CONTINUITY_SCHEMA,
+            "passed": False,
+            "verdict": "UNRESOLVED",
+            "reason": "gate-d before/after captures were not both supplied",
+            "before_capture": (
+                str(before_reboot_capture.resolve())
+                if before_reboot_capture is not None
+                else None
+            ),
+            "after_capture": (
+                str(after_reboot_capture.resolve())
+                if after_reboot_capture is not None
+                else None
+            ),
+        }
+    try:
+        return load_restart_continuity_proof(
+            before_reboot_capture.resolve(), after_reboot_capture.resolve()
+        )
+    except (OSError, RuntimeError, ValueError) as exc:
+        return {
+            "schema": RESTART_CONTINUITY_SCHEMA,
+            "passed": False,
+            "verdict": "UNRESOLVED",
+            "reason": f"gate-d evidence differs: {type(exc).__name__}: {exc}",
+            "before_capture": str(before_reboot_capture.resolve()),
+            "after_capture": str(after_reboot_capture.resolve()),
+        }
+
+
+def classify_windows_update(
+    current_setting: Any, restart_continuity: Mapping[str, Any]
+) -> dict[str, Any]:
+    pending_state_clear = bool(
+        isinstance(current_setting, dict)
+        and current_setting.get("CBSRebootPending") is False
+        and current_setting.get("WURebootRequired") is False
+        and current_setting.get("PendingFileRename") is False
+    )
+    accepted = bool(
+        restart_continuity.get("schema") == RESTART_CONTINUITY_SCHEMA
+        and restart_continuity.get("passed") is True
+        and restart_continuity.get("verdict") == "ACCEPTED"
+        and pending_state_clear
+    )
+    return {
+        "verdict": "ACCEPTED" if accepted else "UNRESOLVED",
+        "reason": (
+            "restart continuity proven"
+            if accepted
+            else "gate-d is incomplete or a pending reboot indicator remains"
+        ),
+        "pending_state_clear": pending_state_clear,
+        "registry_policy_required": False,
+    }
+
+
+def collect(
+    authority_dir: Path,
+    runtime_receipt_path: Path,
+    change_record: Path,
+    before_reboot_capture: Path | None = None,
+    after_reboot_capture: Path | None = None,
+) -> dict[str, Any]:
     if os.name != "nt":
         raise RuntimeError("B5 Windows preflight requires os.name == 'nt'")
     receipt = load_and_verify_receipt(runtime_receipt_path)
@@ -167,14 +240,25 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
         "PendingFileRename=($null -ne (Get-ItemProperty -LiteralPath $s -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)}"
         "|ConvertTo-Json -Compress"
     )
-    update_passed = bool(
-        isinstance(update, dict)
-        and update.get("NoAutoRebootWithLoggedOnUsers") == 1
-        and update.get("AlwaysAutoRebootAtScheduledTime") == 0
-        and update.get("CBSRebootPending") is False
-        and update.get("WURebootRequired") is False
-        and update.get("PendingFileRename") is False
+    legacy_update_policy_observation = (
+        {
+            "NoAutoRebootWithLoggedOnUsers": update.get(
+                "NoAutoRebootWithLoggedOnUsers"
+            ),
+            "AlwaysAutoRebootAtScheduledTime": update.get(
+                "AlwaysAutoRebootAtScheduledTime"
+            ),
+            "CBSRebootPending": update.get("CBSRebootPending"),
+            "WURebootRequired": update.get("WURebootRequired"),
+            "PendingFileRename": update.get("PendingFileRename"),
+        }
+        if isinstance(update, dict)
+        else None
     )
+    restart_continuity = _restart_continuity_evidence(
+        before_reboot_capture, after_reboot_capture
+    )
+    update_classification = classify_windows_update(update, restart_continuity)
 
     sleep_raw = {
         "standby_idle": _run(
@@ -276,9 +360,21 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
         },
         "checks": {
             "windows_update_automatic_reboot": {
-                "verdict": "PASS" if update_passed else "UNRESOLVED",
+                "verdict": update_classification["verdict"],
+                "reason": update_classification["reason"],
                 "current_setting": update,
-                "required_policy": "no forced automatic reboot while logged on; every reboot still requires service recovery and full tail verification",
+                "legacy_registry_policy_observation": legacy_update_policy_observation,
+                "restart_continuity": restart_continuity,
+                "pending_state_clear": update_classification[
+                    "pending_state_clear"
+                ],
+                "registry_policy_required": update_classification[
+                    "registry_policy_required"
+                ],
+                "required_policy": (
+                    "gate-d proves Automatic-service restart continuity across a real "
+                    "Windows reboot; all pending-reboot indicators are clear"
+                ),
                 "raw": update_raw,
             },
             "sleep_hibernate": {
@@ -344,7 +440,9 @@ def collect(authority_dir: Path, runtime_receipt_path: Path, change_record: Path
     packet["unresolved"] = [
         name for name, value in packet["checks"].items() if value["verdict"] == "UNRESOLVED"
     ]
-    packet["passed"] = all(value in {"PASS", "NOT_APPLICABLE"} for value in verdicts)
+    packet["passed"] = all(
+        value in {"PASS", "ACCEPTED", "NOT_APPLICABLE"} for value in verdicts
+    )
     packet["receipt_sha256"] = hashlib.sha256(_canonical(packet)).hexdigest()
     return packet
 
@@ -354,6 +452,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--authority-directory", type=Path, required=True)
     parser.add_argument("--runtime-receipt", type=Path, required=True)
     parser.add_argument("--host-policy-record", type=Path, required=True)
+    parser.add_argument("--before-reboot-capture", type=Path)
+    parser.add_argument("--after-reboot-capture", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
@@ -363,6 +463,12 @@ def main(argv: list[str] | None = None) -> int:
             args.authority_directory.resolve(),
             args.runtime_receipt.resolve(),
             args.host_policy_record.resolve(),
+            args.before_reboot_capture.resolve()
+            if args.before_reboot_capture is not None
+            else None,
+            args.after_reboot_capture.resolve()
+            if args.after_reboot_capture is not None
+            else None,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with args.output.open("x", encoding="utf-8", newline="\n") as handle:
