@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,13 @@ import pytest
 from core.authoritative_store import AuthorityUnprovable, AuthoritativeStore
 from core.event_kernel import EventEnvelope
 from scripts.operator import b5_runtime_environment as runtime
-from scripts.operator.b5_windows_physical_gate import inject_tail_mismatch
+from scripts.operator.b5_windows_physical_gate import (
+    RESTART_CONTINUITY_SCHEMA,
+    inject_tail_mismatch,
+    load_restart_continuity_proof,
+    prove_restart_continuity,
+)
+from scripts.operator.b5_windows_preflight import classify_windows_update
 from scripts.operator.b5_windows_supervisor import (
     SENTINEL_SCHEMA,
     SupervisorPaths,
@@ -113,6 +120,42 @@ def _run(paths: SupervisorPaths, receipt: Path, code: str, max_restarts: int | N
 
 def _audit(path: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def _reboot_capture(boot: str, *, status: str = "Running") -> dict[str, object]:
+    store_sha256 = "a" * 64
+    verification = {
+        "accepted_count": 3,
+        "event_head": "b" * 64,
+        "tail_head": "b" * 64,
+    }
+    ready: dict[str, object] = {
+        "schema": "eve.b5-runtime-probe-ready.v1",
+        "database": {
+            "sha256": store_sha256,
+            "verification": verification,
+        },
+    }
+    ready["receipt_sha256"] = hashlib.sha256(_canonical(ready)).hexdigest()
+    return {
+        "schema": "eve.b5-windows-physical-capture.v1",
+        "label": "reboot-capture",
+        "receipt_sha256": "c" * 64,
+        "boot": {"last_boot_utc": boot},
+        "service": {
+            "parsed": {
+                "Status": status,
+                "StartType": "Automatic",
+                "StartMode": "Auto",
+            }
+        },
+        "store": {
+            "valid": True,
+            "sha256": store_sha256,
+            "verification": verification,
+        },
+        "ready": {"content": ready},
+    }
 
 
 def test_normal_exit_is_not_restarted(tmp_path: Path):
@@ -302,6 +345,102 @@ def test_runtime_probe_returns_86_for_tail_mismatch(tmp_path: Path):
     assert result.returncode == 86
 
 
+def test_restart_continuity_proof_requires_real_reboot_and_matching_store():
+    before = _reboot_capture("2026-08-15T01:00:00Z")
+    after = _reboot_capture("2026-08-15T02:00:00Z")
+    proof = prove_restart_continuity(before, after)
+    assert proof["passed"] is True
+    assert proof["verdict"] == "ACCEPTED"
+    assert proof["reason"] == "restart continuity proven"
+    assert proof["before"]["store_verification"] == proof["after"]["store_verification"]
+
+    with pytest.raises(RuntimeError, match="identity did not change"):
+        prove_restart_continuity(before, before)
+
+    stopped = _reboot_capture("2026-08-15T02:00:00Z", status="Stopped")
+    with pytest.raises(RuntimeError, match="not running after reboot"):
+        prove_restart_continuity(before, stopped)
+
+    changed = deepcopy(after)
+    changed["store"]["sha256"] = "d" * 64  # type: ignore[index]
+    with pytest.raises(RuntimeError, match="event continuity"):
+        prove_restart_continuity(before, changed)
+
+    invalid_ready = deepcopy(after)
+    invalid_ready["ready"]["content"]["receipt_sha256"] = "0" * 64  # type: ignore[index]
+    with pytest.raises(RuntimeError, match="ready receipt differs"):
+        prove_restart_continuity(before, invalid_ready)
+
+
+def test_windows_update_acceptance_is_gate_d_bound_not_registry_bound():
+    no_registry_policy = {
+        "NoAutoRebootWithLoggedOnUsers": None,
+        "AlwaysAutoRebootAtScheduledTime": None,
+        "CBSRebootPending": False,
+        "WURebootRequired": False,
+        "PendingFileRename": False,
+    }
+    accepted = classify_windows_update(
+        no_registry_policy,
+        {
+            "schema": RESTART_CONTINUITY_SCHEMA,
+            "passed": True,
+            "verdict": "ACCEPTED",
+        },
+    )
+    assert accepted == {
+        "verdict": "ACCEPTED",
+        "reason": "restart continuity proven",
+        "pending_state_clear": True,
+        "registry_policy_required": False,
+    }
+
+    unresolved = classify_windows_update(no_registry_policy, {"passed": False})
+    assert unresolved["verdict"] == "UNRESOLVED"
+
+    pending = dict(no_registry_policy, PendingFileRename=True)
+    still_unresolved = classify_windows_update(
+        pending,
+        {
+            "schema": RESTART_CONTINUITY_SCHEMA,
+            "passed": True,
+            "verdict": "ACCEPTED",
+        },
+    )
+    assert still_unresolved["verdict"] == "UNRESOLVED"
+    assert still_unresolved["pending_state_clear"] is False
+
+
+def test_restart_continuity_loader_binds_both_raw_capture_files(tmp_path: Path):
+    paths = [tmp_path / "before.json", tmp_path / "after.json"]
+    packets = [
+        _reboot_capture("2026-08-15T01:00:00Z"),
+        _reboot_capture("2026-08-15T02:00:00Z"),
+    ]
+    for path, packet in zip(paths, packets, strict=True):
+        unsigned = dict(packet)
+        unsigned.pop("receipt_sha256")
+        payload = dict(unsigned)
+        payload["receipt_sha256"] = hashlib.sha256(_canonical(unsigned)).hexdigest()
+        path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    proof = load_restart_continuity_proof(*paths)
+    assert proof["passed"] is True
+    assert proof["capture_files"]["before"]["sha256"] == hashlib.sha256(
+        paths[0].read_bytes()
+    ).hexdigest()
+    assert proof["capture_files"]["after"]["sha256"] == hashlib.sha256(
+        paths[1].read_bytes()
+    ).hexdigest()
+
+    paths[1].write_text(
+        paths[1].read_text(encoding="utf-8").replace("reboot-capture", "tampered"),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="receipt differs"):
+        load_restart_continuity_proof(*paths)
+
+
 def test_service_definition_starts_supervisor_not_eve_directly():
     source = SERVICE.read_text(encoding="utf-8")
     assert "b5_windows_supervisor.py" in source
@@ -324,7 +463,9 @@ def test_preflight_records_numpy_and_never_treats_unresolved_as_pass():
     source = PREFLIGHT.read_text(encoding="utf-8")
     assert '"numpy": receipt["numpy_version"]' in source
     assert '"UNRESOLVED"' in source
-    assert 'all(value in {"PASS", "NOT_APPLICABLE"}' in source
+    assert 'value in {"PASS", "ACCEPTED", "NOT_APPLICABLE"}' in source
+    assert "--before-reboot-capture" in source
+    assert "--after-reboot-capture" in source
     assert "requirements_runtime_used" in source
 
 

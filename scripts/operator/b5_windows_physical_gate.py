@@ -32,7 +32,8 @@ from scripts.operator.b5_windows_supervisor import (  # noqa: E402
 
 CAPTURE_SCHEMA = "eve.b5-windows-physical-capture.v1"
 INJECTION_SCHEMA = "eve.b5-tail-mismatch-injection.v1"
-GATE_SCHEMA = "eve.b5-windows-8840u-supervision-gate.v1"
+RESTART_CONTINUITY_SCHEMA = "eve.b5-windows-restart-continuity-proof.v1"
+GATE_SCHEMA = "eve.b5-windows-8840u-supervision-gate.v2"
 
 
 def _utc_now() -> str:
@@ -85,6 +86,108 @@ def _load_hashed(path: Path, schema: str) -> dict[str, Any]:
         raise RuntimeError(f"evidence receipt differs: {path}")
     payload["receipt_sha256"] = claimed
     return payload
+
+
+def _validated_ready(capture: Mapping[str, Any], role: str) -> dict[str, Any]:
+    ready = capture.get("ready", {}).get("content", {})
+    if (
+        not isinstance(ready, dict)
+        or ready.get("schema") != "eve.b5-runtime-probe-ready.v1"
+    ):
+        raise RuntimeError(f"{role} startup ready evidence differs")
+    unsigned = dict(ready)
+    claimed = unsigned.pop("receipt_sha256", None)
+    if claimed != hashlib.sha256(_canonical(unsigned)).hexdigest():
+        raise RuntimeError(f"{role} startup ready receipt differs")
+    store = capture.get("store", {})
+    database = ready.get("database", {})
+    if (
+        not isinstance(database, dict)
+        or database.get("sha256") != store.get("sha256")
+        or database.get("verification") != store.get("verification")
+    ):
+        raise RuntimeError(f"{role} startup tail verification evidence differs")
+    return ready
+
+
+def prove_restart_continuity(
+    before: Mapping[str, Any], after: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Validate gate-d from immutable before/after physical captures."""
+    before_boot = before.get("boot", {}).get("last_boot_utc")
+    after_boot = after.get("boot", {}).get("last_boot_utc")
+    if not isinstance(before_boot, str) or not isinstance(after_boot, str):
+        raise RuntimeError("reboot identity is absent")
+    if before_boot == after_boot:
+        raise RuntimeError("reboot identity did not change")
+
+    before_service = before.get("service", {}).get("parsed", {})
+    after_service = after.get("service", {}).get("parsed", {})
+    if not isinstance(before_service, dict) or before_service.get("Status") != "Running":
+        raise RuntimeError("service is not running before reboot")
+    if not isinstance(after_service, dict) or after_service.get("Status") != "Running":
+        raise RuntimeError("service is not running after reboot")
+    if not (
+        after_service.get("StartType") == "Automatic"
+        or after_service.get("StartMode") == "Auto"
+    ):
+        raise RuntimeError("service is not Automatic after reboot")
+
+    before_store = before.get("store", {})
+    after_store = after.get("store", {})
+    if (
+        before_store.get("valid") is not True
+        or after_store.get("valid") is not True
+        or before_store.get("sha256") != after_store.get("sha256")
+        or before_store.get("verification") != after_store.get("verification")
+    ):
+        raise RuntimeError("accepted event continuity across reboot differs")
+
+    before_ready = _validated_ready(before, "pre-reboot")
+    after_ready = _validated_ready(after, "post-reboot")
+    return {
+        "schema": RESTART_CONTINUITY_SCHEMA,
+        "passed": True,
+        "verdict": "ACCEPTED",
+        "reason": "restart continuity proven",
+        "before": {
+            "label": before.get("label"),
+            "capture_receipt_sha256": before.get("receipt_sha256"),
+            "boot": before.get("boot"),
+            "service": before_service,
+            "store_sha256": before_store.get("sha256"),
+            "store_verification": before_store.get("verification"),
+            "ready_receipt_sha256": before_ready.get("receipt_sha256"),
+        },
+        "after": {
+            "label": after.get("label"),
+            "capture_receipt_sha256": after.get("receipt_sha256"),
+            "boot": after.get("boot"),
+            "service": after_service,
+            "store_sha256": after_store.get("sha256"),
+            "store_verification": after_store.get("verification"),
+            "ready_receipt_sha256": after_ready.get("receipt_sha256"),
+        },
+    }
+
+
+def load_restart_continuity_proof(before_path: Path, after_path: Path) -> dict[str, Any]:
+    before_path = _outside_repository(before_path, "before-reboot capture")
+    after_path = _outside_repository(after_path, "after-reboot capture")
+    before = _load_hashed(before_path, CAPTURE_SCHEMA)
+    after = _load_hashed(after_path, CAPTURE_SCHEMA)
+    proof = prove_restart_continuity(before, after)
+    proof["capture_files"] = {
+        "before": {
+            "path": str(before_path.resolve()),
+            "sha256": _sha256(before_path),
+        },
+        "after": {
+            "path": str(after_path.resolve()),
+            "sha256": _sha256(after_path),
+        },
+    }
+    return proof
 
 
 def _run(command: list[str]) -> dict[str, Any]:
@@ -336,31 +439,24 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
     preflight = json.loads(args.preflight.read_text(encoding="utf-8"))
     preflight_hash = preflight.pop("receipt_sha256", None)
     if (
-        preflight.get("schema") != "eve.b5-windows-continuity-preflight.v1"
+        preflight.get("schema") != "eve.b5-windows-continuity-preflight.v2"
         or preflight_hash != hashlib.sha256(_canonical(preflight)).hexdigest()
         or preflight.get("passed") is not True
     ):
         raise RuntimeError("Windows preflight is not green")
     before = captures["before_reboot"]
     after = captures["after_reboot"]
-    if before["boot"]["last_boot_utc"] == after["boot"]["last_boot_utc"]:
-        raise RuntimeError("reboot identity did not change")
-    if after["service"].get("parsed", {}).get("Status") != "Running":
-        raise RuntimeError("service is not running after reboot")
+    restart_continuity = load_restart_continuity_proof(
+        args.before_reboot, args.after_reboot
+    )
+    update_check = preflight.get("checks", {}).get(
+        "windows_update_automatic_reboot", {}
+    )
     if (
-        before["store"].get("valid") is not True
-        or after["store"].get("valid") is not True
-        or before["store"]["sha256"] != after["store"]["sha256"]
-        or before["store"]["verification"] != after["store"]["verification"]
+        update_check.get("verdict") != "ACCEPTED"
+        or update_check.get("restart_continuity") != restart_continuity
     ):
-        raise RuntimeError("accepted event continuity across reboot differs")
-    after_ready = after.get("ready", {}).get("content", {})
-    if (
-        not isinstance(after_ready, dict)
-        or after_ready.get("schema") != "eve.b5-runtime-probe-ready.v1"
-        or after_ready.get("database", {}).get("verification") != after["store"]["verification"]
-    ):
-        raise RuntimeError("post-reboot startup tail verification evidence differs")
+        raise RuntimeError("preflight is not bound to the gate-d captures")
 
     crash = captures["crash_recovered"]
     crash_events = _audit_events(crash)
@@ -451,6 +547,7 @@ def finalize(args: argparse.Namespace) -> dict[str, Any]:
             "exit_93_restarted": {"passed": True, "capture": crash},
             "physical_reboot_continuity": {
                 "passed": True,
+                "proof": restart_continuity,
                 "before": before,
                 "after": after,
             },
