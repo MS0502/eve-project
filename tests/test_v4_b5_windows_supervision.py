@@ -64,15 +64,25 @@ def _store(path: Path, count: int = 1) -> None:
 
 def _receipt(path: Path) -> dict[str, object]:
     python = Path(sys.executable).resolve()
+    git_executable = runtime._git_executable()
     versions = runtime._installed_versions(python)
     packet: dict[str, object] = {
         "schema": runtime.SCHEMA,
         "authoritative_runtime": False,
         "t0_started": False,
         "repository": {
-            "commit_sha": runtime._git("rev-parse", "HEAD"),
-            "tree_sha": runtime._git("rev-parse", "HEAD^{tree}"),
+            "commit_sha": runtime._git(
+                "rev-parse", "HEAD", executable=git_executable
+            ),
+            "tree_sha": runtime._git(
+                "rev-parse", "HEAD^{tree}", executable=git_executable
+            ),
             "clean_checkout": True,
+        },
+        "repository_verifier": {
+            "kind": "git",
+            "executable": str(git_executable),
+            "sha256": runtime._sha256(git_executable),
         },
         "python": {
             "bootstrap_version": runtime._python_version(python),
@@ -280,6 +290,28 @@ def test_runtime_receipt_rejects_range_install_source(tmp_path: Path):
     packet["receipt_sha256"] = hashlib.sha256(_canonical(unsigned)).hexdigest()
     receipt.write_text(json.dumps(packet), encoding="utf-8")
     with pytest.raises(runtime.RuntimeEnvironmentError, match="hash-pinned lock"):
+        runtime.load_and_verify_receipt(receipt)
+
+
+def test_runtime_receipt_uses_pinned_git_when_path_has_no_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    receipt = tmp_path / "runtime.json"
+    packet = _receipt(receipt)
+    monkeypatch.setenv("PATH", "")
+    loaded = runtime.load_and_verify_receipt(receipt)
+    assert loaded["repository_verifier"] == packet["repository_verifier"]
+
+
+def test_runtime_receipt_rejects_changed_git_verifier(tmp_path: Path):
+    receipt = tmp_path / "runtime.json"
+    packet = _receipt(receipt)
+    packet["repository_verifier"]["sha256"] = "0" * 64  # type: ignore[index]
+    unsigned = dict(packet)
+    unsigned.pop("receipt_sha256")
+    packet["receipt_sha256"] = hashlib.sha256(_canonical(unsigned)).hexdigest()
+    receipt.write_text(json.dumps(packet), encoding="utf-8")
+    with pytest.raises(runtime.RuntimeEnvironmentError, match="verifier differs"):
         runtime.load_and_verify_receipt(receipt)
 
 
