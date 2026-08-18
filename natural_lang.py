@@ -293,8 +293,18 @@ class NaturalLanguage:
             {'beliefs_loaded': N, 'categories_added': N, 'connections_made': N}
         """
         if beliefs_dict is None:
-            with open(path, 'r', encoding='utf-8') as f:
-                beliefs_dict = json.load(f)
+            if path is None:
+                # No belief source was supplied.
+                # Stay explicitly empty rather than inventing beliefs.
+                beliefs_dict = {}
+            else:
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        beliefs_dict = json.load(f)
+                except FileNotFoundError:
+                    # Missing source is a degraded but valid empty state.
+                    # JSONDecodeError remains fail-fast.
+                    beliefs_dict = {}
 
         loaded = 0
         categories_added = set()
