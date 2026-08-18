@@ -220,22 +220,45 @@ class EVE_TierAB:
     def learn_beliefs(self, path: str = None,
                      beliefs_dict: Dict = None,
                      max_beliefs: Optional[int] = None) -> Dict[str, int]:
-        result = self.nl.load_beliefs(path=path, beliefs_dict=beliefs_dict,
-                                     max_beliefs=max_beliefs)
-        # 보호 카테고리 자동 등록
-        for belief in self.nl.beliefs.values():
-            if belief.is_innate:
-                triple = belief.triple
-                if triple:
-                    if triple.subject:
-                        self.protected_categories.add(triple.subject)
-                    if triple.object_:
-                        self.protected_categories.add(triple.object_)
+        result = self.nl.load_beliefs(
+            path=path,
+            beliefs_dict=beliefs_dict,
+            max_beliefs=max_beliefs,
+        )
 
-        # 결과에 보호 카테고리 수 추가
+        # Preserve the original protection semantics:
+        # innate triple.subject + triple.object_.
+        #
+        # Compatibility only:
+        # beliefs/triples may be dictionaries or legacy objects.
+        def get_value(obj, name, default=None):
+            if obj is None:
+                return default
+            if isinstance(obj, dict):
+                return obj.get(name, default)
+            return getattr(obj, name, default)
+
+        for belief in self.nl.beliefs.values():
+            if not get_value(belief, 'is_innate', False):
+                continue
+
+            triple = get_value(belief, 'triple')
+            if not triple:
+                continue
+
+            subject = get_value(triple, 'subject', '')
+            object_ = get_value(triple, 'object_', '')
+
+            if subject:
+                self.protected_categories.add(subject)
+
+            if object_:
+                self.protected_categories.add(object_)
+
         result['protected_categories'] = len(self.protected_categories)
         result['connections_made'] = len(self.sa.weights)
         return result
+
 
     def learn_text(self, text: str, link_strength: float = 0.4):
         cats = self.nl.parse(text)
